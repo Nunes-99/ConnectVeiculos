@@ -1,0 +1,11 @@
+marca;modelo;ano;placa;chassi;cor;km;preco;precoCompra;categoria;dataEntrada;status;situacao
+Toyota;Corolla XEi 2.0;2023;ABC1D23;9BRBLWHEXG0123456;Prata;15000;145000.00;128000.00;Carros;15/12/2024;Disponivel;Ativo
+Honda;Civic Touring;2022;DEF4G56;93HFC1650NZ123456;Preto;28000;138000.00;120000.00;Carros;10/12/2024;Disponivel;Ativo
+Volkswagen;T-Cross Highline;2024;GHI7J89;9BWDB45U0PT123456;Branco;5000;165000.00;148000.00;SUV;01/12/2024;Disponivel;Ativo
+Fiat;Argo Drive 1.3;2023;JKL0M12;9BD195129P0123456;Vermelho;22000;78000.00;68000.00;Carros;20/11/2024;Disponivel;Ativo
+Chevrolet;Onix Plus Premier;2023;MNO3P45;9BGKS80X0PB123456;Cinza;18000;92000.00;82000.00;Carros;25/11/2024;Disponivel;Ativo
+Jeep;Compass Limited;2022;PQR6S78;9BWMC9525NP123456;Azul;35000;185000.00;165000.00;SUV;05/11/2024;Disponivel;Ativo
+Hyundai;HB20 Platinum;2024;STU9V01;9BHBG41DBPP123456;Branco Perolizado;8000;98000.00;88000.00;Carros;12/12/2024;Disponivel;Ativo
+Renault;Kwid Intense;2023;VWX2Y34;93YBASR74PJ123456;Laranja;12000;62000.00;54000.00;Carros;18/11/2024;Reservado;Ativo
+Nissan;Kicks Advance;2023;YZA5B67;94DBSRDEXPB123456;Preto;20000;125000.00;112000.00;SUV;08/12/2024;Disponivel;Ativo
+Ford;Territory Titanium;2024;BCD8E90;9BFBXXLCAPB123456;Prata Lunar;3000;215000.00;195000.00;SUV;14/12/2024;Disponivel;Ativo

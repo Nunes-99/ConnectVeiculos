@@ -1,0 +1,129 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Níveis de Acesso</h1>
+    <button class="btn-primary" (click)="openModal()">
+      <span class="material-icons">add</span>
+      Novo Acesso
+    </button>
+  </div>
+
+  <div class="search-bar">
+    <div class="search-input">
+      <span class="material-icons">search</span>
+      <input type="text"
+             [(ngModel)]="searchTerm"
+             placeholder="Buscar por nome..."
+             (keyup.enter)="onSearch()" />
+    </div>
+    <button class="btn-secondary" (click)="onSearch()">Buscar</button>
+  </div>
+
+  @if (loading) {
+    <div class="loading">Carregando...</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Descrição</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (acesso of acessos; track acesso.acsId) {
+            <tr>
+              <td>{{ acesso.acsNome }}</td>
+              <td>{{ acesso.acsDesc || '-' }}</td>
+              <td>
+                <span class="badge" [class.active]="acesso.acsSts" [class.inactive]="!acesso.acsSts">
+                  {{ acesso.acsSts ? 'Ativo' : 'Inativo' }}
+                </span>
+              </td>
+              <td class="actions">
+                <button class="btn-icon" (click)="openModal(acesso)" title="Editar">
+                  <span class="material-icons">edit</span>
+                </button>
+                <button class="btn-icon delete" (click)="remove(acesso.acsId)" title="Excluir">
+                  <span class="material-icons">delete</span>
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="4" class="empty">Nenhum nível de acesso encontrado</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <app-pagination
+      [page]="page"
+      [pageSize]="pageSize"
+      [totalItems]="totalItems"
+      [totalPages]="totalPages"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)">
+    </app-pagination>
+  }
+</div>
+
+@if (showModal) {
+  <div class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>{{ editMode ? 'Editar' : 'Novo' }} Acesso</h2>
+        <button class="btn-close" (click)="closeModal()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="required">Nome</label>
+            <input type="text" formControlName="acsNome" placeholder="Nome do nível de acesso" maxlength="100"
+                   [class.invalid]="hasError('acsNome', 'required') || hasError('acsNome', 'minlength')" />
+            @if (hasError('acsNome', 'required')) {
+              <span class="field-error">Nome é obrigatório</span>
+            }
+            @if (hasError('acsNome', 'minlength')) {
+              <span class="field-error">Nome deve ter no mínimo 3 caracteres</span>
+            }
+          </div>
+          <div class="form-group">
+            <label>Descrição</label>
+            <textarea formControlName="acsDesc" placeholder="Descrição (opcional)" maxlength="255"></textarea>
+          </div>
+          @if (editMode) {
+            <div class="form-row">
+              <div class="form-group">
+                <label class="required">Status</label>
+                <select formControlName="acsSts">
+                  <option [ngValue]="true">Ativo</option>
+                  <option [ngValue]="false">Inativo</option>
+                </select>
+              </div>
+              <div class="form-group"></div>
+            </div>
+          }
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" (click)="closeModal()">Cancelar</button>
+          <button type="submit" class="btn-primary" [disabled]="form.invalid">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<app-confirm-modal
+  [show]="showConfirmModal"
+  titulo="Excluir Acesso"
+  mensagem="Deseja realmente excluir este nível de acesso? Esta ação não pode ser desfeita."
+  textoBotaoConfirmar="Excluir"
+  tipo="danger"
+  (confirmar)="confirmarExclusao()"
+  (cancelar)="cancelarExclusao()">
+</app-confirm-modal>

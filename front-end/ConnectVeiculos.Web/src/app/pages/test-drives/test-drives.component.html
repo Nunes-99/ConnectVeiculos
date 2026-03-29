@@ -1,0 +1,206 @@
+<div class="page-container">
+  <div class="page-header">
+    <div class="title-row">
+      <h1>Test Drives</h1>
+      <button class="btn-info" (click)="showInfo = true" title="Sobre esta tela">
+        <span class="material-icons">info</span>
+      </button>
+    </div>
+  </div>
+
+  @if (showInfo) {
+    <div class="modal-overlay" (click)="showInfo = false">
+      <div class="modal info-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>
+            <span class="material-icons">directions_car</span>
+            O que são Test Drives?
+          </h2>
+          <button class="btn-close" (click)="showInfo = false">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p>
+            Test Drives são <strong>agendamentos de visitas</strong> de clientes interessados em conhecer e testar veículos presencialmente.
+            Eles são gerados quando um cliente solicita um test drive pelo catálogo público.
+          </p>
+          <h3 class="section-title">Fluxo de status</h3>
+          <div class="info-flow">
+            <div class="info-step">
+              <div class="step-icon" style="background: #fff3e0;">
+                <span class="material-icons" style="color: #e65100;">schedule</span>
+              </div>
+              <div class="step-text">
+                <strong>Pendente</strong>
+                <span>Cliente solicitou, aguardando confirmação da loja</span>
+              </div>
+            </div>
+            <div class="info-step">
+              <div class="step-icon" style="background: #e3f2fd;">
+                <span class="material-icons" style="color: #1565c0;">check_circle</span>
+              </div>
+              <div class="step-text">
+                <strong>Confirmado</strong>
+                <span>Loja confirmou o agendamento com o cliente</span>
+              </div>
+            </div>
+            <div class="info-step">
+              <div class="step-icon" style="background: #e8f5e9;">
+                <span class="material-icons" style="color: #2e7d32;">done_all</span>
+              </div>
+              <div class="step-text">
+                <strong>Realizado</strong>
+                <span>O test drive foi realizado com sucesso</span>
+              </div>
+            </div>
+            <div class="info-step">
+              <div class="step-icon" style="background: #ffebee;">
+                <span class="material-icons" style="color: #c62828;">cancel</span>
+              </div>
+              <div class="step-text">
+                <strong>Cancelado</strong>
+                <span>O agendamento foi cancelado pela loja ou pelo cliente</span>
+              </div>
+            </div>
+          </div>
+          <div class="info-tip">
+            <span class="material-icons">tips_and_updates</span>
+            <span>Os test drives aparecerão aqui conforme clientes solicitarem pelo catálogo público.</span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-primary" (click)="showInfo = false">Entendi</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Filtros -->
+  <div class="filtros-bar">
+    <div class="filtro-grupo">
+      <label>Status</label>
+      <select [(ngModel)]="filtroStatus" (change)="loadData()">
+        <option value="">Todos</option>
+        <option value="P">Pendentes</option>
+        <option value="C">Confirmados</option>
+        <option value="R">Realizados</option>
+        <option value="X">Cancelados</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Cards de resumo -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon total">
+        <span class="material-icons">event</span>
+      </div>
+      <div class="stat-info">
+        <span class="stat-label">Total</span>
+        <span class="stat-value">{{ testDrives.length }}</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon pendente">
+        <span class="material-icons">schedule</span>
+      </div>
+      <div class="stat-info">
+        <span class="stat-label">Pendentes</span>
+        <span class="stat-value">{{ getCountByStatus('P') }}</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon confirmado">
+        <span class="material-icons">check_circle</span>
+      </div>
+      <div class="stat-info">
+        <span class="stat-label">Confirmados</span>
+        <span class="stat-value">{{ getCountByStatus('C') }}</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon realizado">
+        <span class="material-icons">done_all</span>
+      </div>
+      <div class="stat-info">
+        <span class="stat-label">Realizados</span>
+        <span class="stat-value">{{ getCountByStatus('R') }}</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon cancelado">
+        <span class="material-icons">cancel</span>
+      </div>
+      <div class="stat-info">
+        <span class="stat-label">Cancelados</span>
+        <span class="stat-value">{{ getCountByStatus('X') }}</span>
+      </div>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="loading">Carregando...</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Veículo</th>
+            <th>Telefone</th>
+            <th>Data</th>
+            <th>Horário</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (td of testDrives; track td.tdrId) {
+            <tr>
+              <td>
+                <strong>{{ td.tdrNomeCliente }}</strong>
+                @if (td.tdrEmail) {
+                  <br><span class="text-muted">{{ td.tdrEmail }}</span>
+                }
+              </td>
+              <td><strong>{{ td.veiculoNome || '-' }}</strong></td>
+              <td>{{ td.tdrTelefone || '-' }}</td>
+              <td>{{ td.tdrDataAgendamento | date:'dd/MM/yyyy' }}</td>
+              <td>{{ td.tdrHorario || '-' }}</td>
+              <td>
+                <span class="badge" [class]="'status-' + td.tdrStatus">
+                  {{ getStatusLabel(td.tdrStatus) }}
+                </span>
+              </td>
+              <td class="actions">
+                @if (td.tdrStatus === 'P') {
+                  <button class="btn-icon confirmar" title="Confirmar" (click)="atualizarStatus(td.tdrId, 'C')">
+                    <span class="material-icons">check_circle</span>
+                  </button>
+                  <button class="btn-icon cancelar" title="Cancelar" (click)="atualizarStatus(td.tdrId, 'X')">
+                    <span class="material-icons">cancel</span>
+                  </button>
+                }
+                @if (td.tdrStatus === 'C') {
+                  <button class="btn-icon realizado" title="Marcar como realizado" (click)="atualizarStatus(td.tdrId, 'R')">
+                    <span class="material-icons">done_all</span>
+                  </button>
+                }
+                @if (td.tdrTelefone) {
+                  <button class="btn-icon whatsapp" title="WhatsApp" (click)="abrirWhatsApp(td)">
+                    <span class="material-icons">chat</span>
+                  </button>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="7" class="empty">Nenhum test drive encontrado</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

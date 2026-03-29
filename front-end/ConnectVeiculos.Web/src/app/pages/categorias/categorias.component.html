@@ -1,0 +1,129 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Categorias de Veículos</h1>
+    <button class="btn-primary" (click)="openModal()">
+      <span class="material-icons">add</span>
+      Nova Categoria
+    </button>
+  </div>
+
+  <div class="search-bar">
+    <div class="search-input">
+      <span class="material-icons">search</span>
+      <input type="text"
+             [(ngModel)]="searchTerm"
+             placeholder="Buscar por nome..."
+             (keyup.enter)="onSearch()" />
+    </div>
+    <button class="btn-secondary" (click)="onSearch()">Buscar</button>
+  </div>
+
+  @if (loading) {
+    <div class="loading">Carregando...</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Descrição</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (categoria of categorias; track categoria.catId) {
+            <tr>
+              <td>{{ categoria.catNome }}</td>
+              <td>{{ categoria.catDesc || '-' }}</td>
+              <td>
+                <span class="badge" [class.active]="categoria.catSts" [class.inactive]="!categoria.catSts">
+                  {{ categoria.catSts ? 'Ativa' : 'Inativa' }}
+                </span>
+              </td>
+              <td class="actions">
+                <button class="btn-icon" (click)="openModal(categoria)" title="Editar">
+                  <span class="material-icons">edit</span>
+                </button>
+                <button class="btn-icon delete" (click)="remove(categoria.catId)" title="Excluir">
+                  <span class="material-icons">delete</span>
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="4" class="empty">Nenhuma categoria encontrada</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <app-pagination
+      [page]="page"
+      [pageSize]="pageSize"
+      [totalItems]="totalItems"
+      [totalPages]="totalPages"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)">
+    </app-pagination>
+  }
+</div>
+
+@if (showModal) {
+  <div class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>{{ editMode ? 'Editar' : 'Nova' }} Categoria</h2>
+        <button class="btn-close" (click)="closeModal()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="required">Nome</label>
+            <input type="text" formControlName="catNome" placeholder="Nome da categoria" maxlength="100"
+                   [class.invalid]="hasError('catNome', 'required') || hasError('catNome', 'minlength')" />
+            @if (hasError('catNome', 'required')) {
+              <span class="field-error">Nome é obrigatório</span>
+            }
+            @if (hasError('catNome', 'minlength')) {
+              <span class="field-error">Nome deve ter no mínimo 3 caracteres</span>
+            }
+          </div>
+          <div class="form-group">
+            <label>Descrição</label>
+            <textarea formControlName="catDesc" placeholder="Descrição (opcional)" maxlength="255"></textarea>
+          </div>
+          @if (editMode) {
+            <div class="form-row">
+              <div class="form-group">
+                <label class="required">Status</label>
+                <select formControlName="catSts">
+                  <option [ngValue]="true">Ativa</option>
+                  <option [ngValue]="false">Inativa</option>
+                </select>
+              </div>
+              <div class="form-group"></div>
+            </div>
+          }
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" (click)="closeModal()">Cancelar</button>
+          <button type="submit" class="btn-primary" [disabled]="form.invalid">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<app-confirm-modal
+  [show]="showConfirmModal"
+  titulo="Excluir Categoria"
+  mensagem="Deseja realmente excluir esta categoria? Esta ação não pode ser desfeita."
+  textoBotaoConfirmar="Excluir"
+  tipo="danger"
+  (confirmar)="confirmarExclusao()"
+  (cancelar)="cancelarExclusao()">
+</app-confirm-modal>

@@ -1,0 +1,45 @@
+<div class="recuperar-container">
+  <div class="recuperar-card">
+    <div class="recuperar-header">
+      <h1>Recuperar Senha</h1>
+      <p>Informe seu e-mail para receber as instrucoes</p>
+    </div>
+
+    @if (!enviado) {
+      <form (ngSubmit)="solicitar()">
+        <div class="form-group">
+          <label for="email">E-mail</label>
+          <input
+            type="email"
+            id="email"
+            [(ngModel)]="email"
+            name="email"
+            placeholder="seu@email.com"
+            [disabled]="loading"
+            autocomplete="email" />
+        </div>
+
+        @if (erro) {
+          <div class="error-message">{{ erro }}</div>
+        }
+
+        <button type="submit" class="btn-primary" [disabled]="loading">
+          @if (loading) {
+            <span>Enviando...</span>
+          } @else {
+            <span>Enviar</span>
+          }
+        </button>
+      </form>
+    } @else {
+      <div class="success-message">
+        <span class="material-icons">check_circle</span>
+        <p>{{ mensagem }}</p>
+      </div>
+    }
+
+    <div class="recuperar-footer">
+      <a routerLink="/login">Voltar para o login</a>
+    </div>
+  </div>
+</div>

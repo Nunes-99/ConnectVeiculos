@@ -1,0 +1,222 @@
+<div class="page-container">
+  <div class="page-header">
+    <div class="title-row">
+      <h1>Leads</h1>
+      <button class="btn-info" (click)="showInfo = true" title="Sobre esta tela">
+        <span class="material-icons">info</span>
+      </button>
+    </div>
+  </div>
+
+  @if (showInfo) {
+    <div class="modal-overlay" (click)="showInfo = false">
+      <div class="modal info-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>
+            <span class="material-icons">lightbulb</span>
+            O que são Leads?
+          </h2>
+          <button class="btn-close" (click)="showInfo = false">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p>
+            Leads são <strong>potenciais compradores</strong> que demonstraram interesse em seus veículos.
+            Eles são gerados automaticamente quando alguém interage com o catálogo público das suas lojas.
+          </p>
+
+          <h3 class="section-title">Como funciona?</h3>
+          <div class="info-flow">
+            <div class="info-step">
+              <div class="step-icon" style="background: #e8eaf6;">
+                <span class="material-icons" style="color: #1a237e;">storefront</span>
+              </div>
+              <div class="step-text">
+                <strong>1. Interação</strong>
+                <span>Cliente vê o catálogo e clica em WhatsApp ou solicita Test Drive</span>
+              </div>
+            </div>
+            <div class="info-step">
+              <div class="step-icon" style="background: #fff3e0;">
+                <span class="material-icons" style="color: #e65100;">person_add</span>
+              </div>
+              <div class="step-text">
+                <strong>2. Lead Criado</strong>
+                <span>O sistema registra automaticamente o lead com status <strong>Novo</strong></span>
+              </div>
+            </div>
+            <div class="info-step">
+              <div class="step-icon" style="background: #e3f2fd;">
+                <span class="material-icons" style="color: #1565c0;">phone_in_talk</span>
+              </div>
+              <div class="step-text">
+                <strong>3. Contato</strong>
+                <span>Vendedor entra em contato e atualiza o status do lead</span>
+              </div>
+            </div>
+            <div class="info-step">
+              <div class="step-icon" style="background: #e8f5e9;">
+                <span class="material-icons" style="color: #2e7d32;">check_circle</span>
+              </div>
+              <div class="step-text">
+                <strong>4. Resultado</strong>
+                <span>Lead é <strong>Convertido</strong> em venda ou marcado como <strong>Perdido</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="info-tip">
+            <span class="material-icons">tips_and_updates</span>
+            <span>Os leads aparecerão aqui conforme clientes interagirem com as vitrines das suas lojas.</span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-primary" (click)="showInfo = false">Entendi</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Filtros -->
+  <div class="filtros-bar">
+    <div class="filtro-grupo">
+      <label>Status</label>
+      <select [(ngModel)]="filtroStatus" (change)="loadData()">
+        <option value="">Todos</option>
+        <option value="NOVO">Novos</option>
+        <option value="CONTATO">Em Contato</option>
+        <option value="NEGOCIANDO">Negociando</option>
+        <option value="CONVERTIDO">Convertidos</option>
+        <option value="PERDIDO">Perdidos</option>
+      </select>
+    </div>
+    <div class="filtro-grupo">
+      <label>Origem</label>
+      <select [(ngModel)]="filtroOrigem" (change)="loadData()">
+        <option value="">Todas as origens</option>
+        <option value="WHATSAPP_CATALOGO">WhatsApp Catálogo</option>
+        <option value="WHATSAPP_DETALHE">WhatsApp Detalhe</option>
+        <option value="TEST_DRIVE">Test Drive</option>
+        <option value="DIRETO">Direto</option>
+        <option value="INDICACAO">Indicação</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Cards de resumo -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon total">
+        <span class="material-icons">people</span>
+      </div>
+      <div class="stat-info">
+        <span class="stat-label">Total</span>
+        <span class="stat-value">{{ leads.length }}</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon novo">
+        <span class="material-icons">fiber_new</span>
+      </div>
+      <div class="stat-info">
+        <span class="stat-label">Novos</span>
+        <span class="stat-value">{{ getCountByStatus('NOVO') }}</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon contato">
+        <span class="material-icons">phone_in_talk</span>
+      </div>
+      <div class="stat-info">
+        <span class="stat-label">Em Contato</span>
+        <span class="stat-value">{{ getCountByStatus('CONTATO') }}</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon negociando">
+        <span class="material-icons">handshake</span>
+      </div>
+      <div class="stat-info">
+        <span class="stat-label">Negociando</span>
+        <span class="stat-value">{{ getCountByStatus('NEGOCIANDO') }}</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon convertido">
+        <span class="material-icons">check_circle</span>
+      </div>
+      <div class="stat-info">
+        <span class="stat-label">Convertidos</span>
+        <span class="stat-value">{{ getCountByStatus('CONVERTIDO') }}</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon perdido">
+        <span class="material-icons">cancel</span>
+      </div>
+      <div class="stat-info">
+        <span class="stat-label">Perdidos</span>
+        <span class="stat-value">{{ getCountByStatus('PERDIDO') }}</span>
+      </div>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="loading">Carregando...</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Telefone</th>
+            <th>Origem</th>
+            <th>Status</th>
+            <th>Data</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (lead of leads; track lead.leaId) {
+            <tr>
+              <td>
+                <strong>{{ lead.leaNomeCliente || 'Visitante' }}</strong>
+                @if (lead.leaEmail) {
+                  <br><span class="text-muted">{{ lead.leaEmail }}</span>
+                }
+              </td>
+              <td>{{ lead.leaTelefone || '-' }}</td>
+              <td><span class="badge-origem">{{ getOrigemLabel(lead.leaOrigem) }}</span></td>
+              <td>
+                <select [ngModel]="lead.leaStatus" (ngModelChange)="atualizarStatus(lead.leaId, $event)"
+                        class="status-select" [class]="'sel-' + lead.leaStatus">
+                  <option value="NOVO">Novo</option>
+                  <option value="CONTATO">Em Contato</option>
+                  <option value="NEGOCIANDO">Negociando</option>
+                  <option value="CONVERTIDO">Convertido</option>
+                  <option value="PERDIDO">Perdido</option>
+                </select>
+              </td>
+              <td>{{ lead.leaDtCriacao | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td class="actions">
+                @if (lead.leaTelefone) {
+                  <button class="btn-icon" title="Ligar" (click)="ligar(lead)">
+                    <span class="material-icons">phone</span>
+                  </button>
+                  <button class="btn-icon whatsapp" title="WhatsApp" (click)="abrirWhatsApp(lead)">
+                    <span class="material-icons">chat</span>
+                  </button>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6" class="empty">Nenhum lead encontrado</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

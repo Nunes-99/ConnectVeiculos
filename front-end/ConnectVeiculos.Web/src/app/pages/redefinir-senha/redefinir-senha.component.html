@@ -1,0 +1,69 @@
+<div class="redefinir-container">
+  <div class="redefinir-card">
+    <div class="redefinir-header">
+      <h1>Redefinir Senha</h1>
+      <p>Informe sua nova senha</p>
+    </div>
+
+    @if (!sucesso) {
+      <form (ngSubmit)="redefinir()">
+        <div class="form-group">
+          <label for="token">Token de Recuperacao</label>
+          <input
+            type="text"
+            id="token"
+            [(ngModel)]="token"
+            name="token"
+            placeholder="Cole aqui o token recebido"
+            [disabled]="loading" />
+        </div>
+
+        <div class="form-group">
+          <label for="novaSenha">Nova Senha</label>
+          <input
+            type="password"
+            id="novaSenha"
+            [(ngModel)]="novaSenha"
+            name="novaSenha"
+            placeholder="Minimo 6 caracteres"
+            [disabled]="loading"
+            autocomplete="new-password" />
+        </div>
+
+        <div class="form-group">
+          <label for="confirmarSenha">Confirmar Senha</label>
+          <input
+            type="password"
+            id="confirmarSenha"
+            [(ngModel)]="confirmarSenha"
+            name="confirmarSenha"
+            placeholder="Repita a nova senha"
+            [disabled]="loading"
+            autocomplete="new-password" />
+        </div>
+
+        @if (erro) {
+          <div class="error-message">{{ erro }}</div>
+        }
+
+        <button type="submit" class="btn-primary" [disabled]="loading">
+          @if (loading) {
+            <span>Redefinindo...</span>
+          } @else {
+            <span>Redefinir Senha</span>
+          }
+        </button>
+      </form>
+    } @else {
+      <div class="success-message">
+        <span class="material-icons">check_circle</span>
+        <p>{{ mensagem }}</p>
+        <p class="redirect-msg">Redirecionando para o login...</p>
+      </div>
+    }
+
+    <div class="redefinir-footer">
+      <a routerLink="/login">Voltar para o login</a>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<veiculos>
+    <veiculo>
+        <marca>Toyota</marca>
+        <modelo>Corolla XEi 2.0</modelo>
+        <ano>2023</ano>
+        <placa>ABC1D23</placa>
+        <chassi>9BRBLWHEXG0123456</chassi>
+        <cor>Prata</cor>
+        <km>15000</km>
+        <preco>145000.00</preco>
+        <precoCompra>128000.00</precoCompra>
+        <categoria>Carros</categoria>
+        <dataEntrada>15/12/2024</dataEntrada>
+        <status>Disponivel</status>
+        <situacao>Ativo</situacao>
+    </veiculo>
+    <veiculo>
+        <marca>Honda</marca>
+        <modelo>Civic Touring</modelo>
+        <ano>2022</ano>
+        <placa>DEF4G56</placa>
+        <chassi>93HFC1650NZ123456</chassi>
+        <cor>Preto</cor>
+        <km>28000</km>
+        <preco>138000.00</preco>
+        <precoCompra>120000.00</precoCompra>
+        <categoria>Carros</categoria>
+        <dataEntrada>10/12/2024</dataEntrada>
+        <status>Disponivel</status>
+        <situacao>Ativo</situacao>
+    </veiculo>
+    <veiculo>
+        <marca>Volkswagen</marca>
+        <modelo>T-Cross Highline</modelo>
+        <ano>2024</ano>
+        <placa>GHI7J89</placa>
+        <chassi>9BWDB45U0PT123456</chassi>
+        <cor>Branco</cor>
+        <km>5000</km>
+        <preco>165000.00</preco>
+        <precoCompra>148000.00</precoCompra>
+        <categoria>SUV</categoria>
+        <dataEntrada>01/12/2024</dataEntrada>
+        <status>Disponivel</status>
+        <situacao>Ativo</situacao>
+    </veiculo>
+    <veiculo>
+        <marca>Fiat</marca>
+        <modelo>Argo Drive 1.3</modelo>
+        <ano>2023</ano>
+        <placa>JKL0M12</placa>
+        <chassi>9BD195129P0123456</chassi>
+        <cor>Vermelho</cor>
+        <km>22000</km>
+        <preco>78000.00</preco>
+        <precoCompra>68000.00</precoCompra>
+        <categoria>Carros</categoria>
+        <dataEntrada>20/11/2024</dataEntrada>
+        <status>Disponivel</status>
+        <situacao>Ativo</situacao>
+    </veiculo>
+    <veiculo>
+        <marca>Jeep</marca>
+        <modelo>Compass Limited</modelo>
+        <ano>2022</ano>
+        <placa>PQR6S78</placa>
+        <chassi>9BWMC9525NP123456</chassi>
+        <cor>Azul</cor>
+        <km>35000</km>
+        <preco>185000.00</preco>
+        <precoCompra>165000.00</precoCompra>
+        <categoria>SUV</categoria>
+        <dataEntrada>05/11/2024</dataEntrada>
+        <status>Disponivel</status>
+        <situacao>Ativo</situacao>
+    </veiculo>
+</veiculos>

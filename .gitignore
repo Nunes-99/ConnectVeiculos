@@ -1,0 +1,32 @@
+# .NET
+**/bin/
+**/obj/
+**/.vs/
+*.user
+*.suo
+*.db
+*.db-shm
+*.db-wal
+logs/
+
+# Node / Angular
+node_modules/
+dist/
+.angular/
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+nul
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Uploads
+uploads/
+
+# Data
+data/

@@ -1,0 +1,497 @@
+<div class="page-container">
+  <!-- Cabecalho de Impressao (visivel apenas na impressao) -->
+  <div class="print-header">
+    <div class="print-logo">
+      <h1>ConnectVeiculos</h1>
+    </div>
+    <div class="print-title">
+      <h2>{{ getTituloRelatorio() }}</h2>
+      <p>{{ getPeriodoRelatorio() }}</p>
+      @if (filtroLoja) {
+        <p>Loja: {{ getSelectedLojaNome() }}</p>
+      }
+    </div>
+  </div>
+
+  <div class="page-header no-print">
+    <h1>Relatórios</h1>
+    <div class="header-actions">
+      <button class="btn-export" (click)="exportarPDF()" [disabled]="loading" title="Exportar PDF">
+        <span class="material-icons">picture_as_pdf</span>
+        PDF
+      </button>
+      <button class="btn-export excel" (click)="exportarExcel()" [disabled]="loading" title="Exportar Excel">
+        <span class="material-icons">table_chart</span>
+        Excel
+      </button>
+      <button class="btn-print" (click)="imprimirRelatorio()" [disabled]="loading">
+        <span class="material-icons">print</span>
+        Imprimir
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs no-print">
+    <button class="tab" [class.active]="activeTab === 'vendas'" (click)="setActiveTab('vendas')">
+      <span class="material-icons">point_of_sale</span>
+      Vendas
+    </button>
+    <button class="tab" [class.active]="activeTab === 'estoque'" (click)="setActiveTab('estoque')">
+      <span class="material-icons">inventory</span>
+      Estoque
+    </button>
+    <button class="tab" [class.active]="activeTab === 'financeiro'" (click)="setActiveTab('financeiro')">
+      <span class="material-icons">account_balance</span>
+      Financeiro
+    </button>
+  </div>
+
+  <!-- Filtros -->
+  <div class="filtros-container no-print">
+    @if (activeTab !== 'estoque') {
+      <div class="filtro-grupo">
+        <label>Data Início</label>
+        <input type="date" [(ngModel)]="dataInicio" />
+      </div>
+      <div class="filtro-grupo">
+        <label>Data Fim</label>
+        <input type="date" [(ngModel)]="dataFim" />
+      </div>
+    }
+    <div class="filtro-grupo">
+      <label>Loja</label>
+      <select [(ngModel)]="filtroLoja">
+        <option [ngValue]="null">Todas as lojas</option>
+        @for (loja of lojas; track loja.lojId) {
+          <option [ngValue]="loja.lojId">{{ loja.lojNome }}</option>
+        }
+      </select>
+    </div>
+    @if (activeTab === 'estoque') {
+      <div class="filtro-grupo">
+        <label>Categoria</label>
+        <select [(ngModel)]="filtroCategoria">
+          <option [ngValue]="null">Todas as categorias</option>
+          @for (categoria of categorias; track categoria.catId) {
+            <option [ngValue]="categoria.catId">{{ categoria.catNome }}</option>
+          }
+        </select>
+      </div>
+    }
+    <div class="filtro-acoes">
+      <button class="btn-primary" (click)="aplicarFiltros()">
+        <span class="material-icons">search</span>
+        Filtrar
+      </button>
+      <button class="btn-secondary" (click)="limparFiltros()">
+        <span class="material-icons">clear</span>
+        Limpar
+      </button>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="loading">Carregando...</div>
+  } @else {
+    <!-- Relatório de Vendas -->
+    @if (activeTab === 'vendas' && relatorioVendas) {
+      <div class="relatorio-content">
+        <div class="cards-grid">
+          <div class="card">
+            <div class="card-icon vendas">
+              <span class="material-icons">shopping_cart</span>
+            </div>
+            <div class="card-info">
+              <span class="card-label">Total de Vendas</span>
+              <span class="card-value">{{ relatorioVendas.totalVendas }}</span>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-icon receita">
+              <span class="material-icons">payments</span>
+            </div>
+            <div class="card-info">
+              <span class="card-label">Valor Total</span>
+              <span class="card-value">{{ formatarPreco(relatorioVendas.valorTotalVendas) }}</span>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-icon comissao">
+              <span class="material-icons">percent</span>
+            </div>
+            <div class="card-info">
+              <span class="card-label">Total Comissões</span>
+              <span class="card-value">{{ formatarPreco(relatorioVendas.totalComissoes) }}</span>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-icon estornos">
+              <span class="material-icons">undo</span>
+            </div>
+            <div class="card-info">
+              <span class="card-label">Estornadas</span>
+              <span class="card-value">{{ relatorioVendas.vendasEstornadas }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-row">
+          <div class="info-card">
+            <span class="info-label">Ticket Médio</span>
+            <span class="info-value">{{ relatorioVendas.totalVendas > 0 ? formatarPreco(relatorioVendas.valorTotalVendas / relatorioVendas.totalVendas) : formatarPreco(0) }}</span>
+          </div>
+          <div class="info-card">
+            <span class="info-label">Vendas Ativas</span>
+            <span class="info-value">{{ relatorioVendas.totalVendas - relatorioVendas.vendasEstornadas }}</span>
+          </div>
+          <div class="info-card">
+            <span class="info-label">Comissão Média</span>
+            <span class="info-value">{{ relatorioVendas.totalVendas > 0 ? formatarPreco(relatorioVendas.totalComissoes / relatorioVendas.totalVendas) : formatarPreco(0) }}</span>
+          </div>
+        </div>
+
+        <!-- Linha 1: Vendas por Mês + Vendas por Vendedor -->
+        <div class="tables-grid two-cols">
+          <div class="table-section">
+            <h3>Vendas por Mês</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Período</th>
+                  <th>Quantidade</th>
+                  <th>Valor Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of relatorioVendas.vendasPorMes; track item.periodo) {
+                  <tr>
+                    <td>{{ item.periodo }}</td>
+                    <td>{{ item.quantidade }}</td>
+                    <td>{{ formatarPreco(item.valorTotal) }}</td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="3" class="empty">Nenhum dado disponível</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <div class="table-section">
+            <h3>Vendas por Vendedor</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Vendedor</th>
+                  <th>Qtd.</th>
+                  <th>Valor Total</th>
+                  <th>Comissões</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of relatorioVendas.vendasPorVendedor; track item.vendedorId) {
+                  <tr>
+                    <td>{{ item.vendedorNome }}</td>
+                    <td>{{ item.quantidade }}</td>
+                    <td>{{ formatarPreco(item.valorTotal) }}</td>
+                    <td>{{ formatarPreco(item.totalComissoes) }}</td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="4" class="empty">Nenhum dado disponível</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Linha 2: Forma de Pagamento (largura total) -->
+        <div class="tables-grid one-col">
+          <div class="table-section">
+            <h3>Vendas por Forma de Pagamento</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Forma de Pagamento</th>
+                  <th>Quantidade</th>
+                  <th>Valor Total</th>
+                  <th>% do Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of relatorioVendas.vendasPorFormaPagamento; track item.formaPagamento) {
+                  <tr>
+                    <td>{{ item.formaPagamento }}</td>
+                    <td>{{ item.quantidade }}</td>
+                    <td>{{ formatarPreco(item.valorTotal) }}</td>
+                    <td>{{ relatorioVendas.valorTotalVendas > 0 ? formatarPorcentagem((item.valorTotal / relatorioVendas.valorTotalVendas) * 100) : '0,00%' }}</td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="4" class="empty">Nenhum dado disponível</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Relatorio de Estoque -->
+    @if (activeTab === 'estoque' && relatorioEstoque) {
+      <div class="relatorio-content">
+        <div class="cards-grid">
+          <div class="card">
+            <div class="card-icon total">
+              <span class="material-icons">directions_car</span>
+            </div>
+            <div class="card-info">
+              <span class="card-label">Total Veículos</span>
+              <span class="card-value">{{ relatorioEstoque.totalVeiculos }}</span>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-icon disponivel">
+              <span class="material-icons">check_circle</span>
+            </div>
+            <div class="card-info">
+              <span class="card-label">Disponíveis</span>
+              <span class="card-value">{{ relatorioEstoque.veiculosDisponiveis }}</span>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-icon receita">
+              <span class="material-icons">attach_money</span>
+            </div>
+            <div class="card-info">
+              <span class="card-label">Valor Total Estoque</span>
+              <span class="card-value">{{ formatarPreco(relatorioEstoque.valorTotalEstoque) }}</span>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-icon media">
+              <span class="material-icons">trending_up</span>
+            </div>
+            <div class="card-info">
+              <span class="card-label">Valor Médio</span>
+              <span class="card-value">{{ formatarPreco(relatorioEstoque.valorMedioVeiculo) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="tables-grid two-cols">
+          <!-- Estoque por Loja -->
+          <div class="table-section">
+            <h3>Estoque por Loja</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Loja</th>
+                  <th>Quantidade</th>
+                  <th>Valor Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of relatorioEstoque.estoquePorLoja; track item.lojaId) {
+                  <tr>
+                    <td>{{ item.lojaNome }}</td>
+                    <td>{{ item.quantidade }}</td>
+                    <td>{{ formatarPreco(item.valorTotal) }}</td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="3" class="empty">Nenhum dado disponível</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Estoque por Categoria -->
+          <div class="table-section">
+            <h3>Estoque por Categoria</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Categoria</th>
+                  <th>Quantidade</th>
+                  <th>Valor Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of relatorioEstoque.estoquePorCategoria; track item.categoriaId) {
+                  <tr>
+                    <td>{{ item.categoriaNome }}</td>
+                    <td>{{ item.quantidade }}</td>
+                    <td>{{ formatarPreco(item.valorTotal) }}</td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="3" class="empty">Nenhum dado disponível</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+
+        <div class="tables-grid one-col">
+          <!-- Estoque por Marca -->
+          <div class="table-section">
+            <h3>Top 10 Marcas</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Marca</th>
+                  <th>Quantidade</th>
+                  <th>Valor Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of relatorioEstoque.estoquePorMarca; track item.marca) {
+                  <tr>
+                    <td>{{ item.marca }}</td>
+                    <td>{{ item.quantidade }}</td>
+                    <td>{{ formatarPreco(item.valorTotal) }}</td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="3" class="empty">Nenhum dado disponível</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Relatorio Financeiro -->
+    @if (activeTab === 'financeiro' && relatorioFinanceiro) {
+      <div class="relatorio-content">
+        <div class="cards-grid">
+          <div class="card">
+            <div class="card-icon receita">
+              <span class="material-icons">trending_up</span>
+            </div>
+            <div class="card-info">
+              <span class="card-label">Receita Bruta</span>
+              <span class="card-value">{{ formatarPreco(relatorioFinanceiro.receitaBruta) }}</span>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-icon custo">
+              <span class="material-icons">trending_down</span>
+            </div>
+            <div class="card-info">
+              <span class="card-label">Custo Total</span>
+              <span class="card-value">{{ formatarPreco(relatorioFinanceiro.custoTotal) }}</span>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-icon lucro">
+              <span class="material-icons">savings</span>
+            </div>
+            <div class="card-info">
+              <span class="card-label">Lucro Líquido</span>
+              <span class="card-value">{{ formatarPreco(relatorioFinanceiro.lucroLiquido) }}</span>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-icon margem">
+              <span class="material-icons">percent</span>
+            </div>
+            <div class="card-info">
+              <span class="card-label">Margem de Lucro</span>
+              <span class="card-value">{{ formatarPorcentagem(relatorioFinanceiro.margemLucro) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-row">
+          <div class="info-card">
+            <span class="info-label">Ticket Médio</span>
+            <span class="info-value">{{ formatarPreco(relatorioFinanceiro.ticketMedio) }}</span>
+          </div>
+          <div class="info-card">
+            <span class="info-label">Total Comissões</span>
+            <span class="info-value">{{ formatarPreco(relatorioFinanceiro.totalComissoes) }}</span>
+          </div>
+          <div class="info-card">
+            <span class="info-label">Lucro Bruto</span>
+            <span class="info-value">{{ formatarPreco(relatorioFinanceiro.lucroBruto) }}</span>
+          </div>
+        </div>
+
+        <div class="tables-grid two-cols">
+          <!-- Financeiro por Mês -->
+          <div class="table-section">
+            <h3>Resultado por Mês</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Periodo</th>
+                  <th>Receita</th>
+                  <th>Custo</th>
+                  <th>Lucro</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of relatorioFinanceiro.financeiroPorMes; track item.periodo) {
+                  <tr>
+                    <td>{{ item.periodo }}</td>
+                    <td>{{ formatarPreco(item.receita) }}</td>
+                    <td>{{ formatarPreco(item.custo) }}</td>
+                    <td [class.positive]="item.lucro >= 0" [class.negative]="item.lucro < 0">
+                      {{ formatarPreco(item.lucro) }}
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="4" class="empty">Nenhum dado disponível</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Financeiro por Loja -->
+          <div class="table-section">
+            <h3>Resultado por Loja</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Loja</th>
+                  <th>Receita</th>
+                  <th>Custo</th>
+                  <th>Lucro</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of relatorioFinanceiro.financeiroPorLoja; track item.lojaId) {
+                  <tr>
+                    <td>{{ item.lojaNome }}</td>
+                    <td>{{ formatarPreco(item.receita) }}</td>
+                    <td>{{ formatarPreco(item.custo) }}</td>
+                    <td [class.positive]="item.lucro >= 0" [class.negative]="item.lucro < 0">
+                      {{ formatarPreco(item.lucro) }}
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="4" class="empty">Nenhum dado disponível</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    }
+  }
+</div>

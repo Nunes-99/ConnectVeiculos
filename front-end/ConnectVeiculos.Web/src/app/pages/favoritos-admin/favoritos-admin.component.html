@@ -1,0 +1,179 @@
+<div class="page-container">
+  <div class="page-header">
+    <div class="title-row">
+      <h1>Favoritos dos Visitantes</h1>
+      <button class="btn-info" (click)="showInfo = true" title="Sobre esta tela">
+        <span class="material-icons">info</span>
+      </button>
+    </div>
+  </div>
+
+  @if (showInfo) {
+    <div class="modal-overlay" (click)="showInfo = false">
+      <div class="modal info-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>
+            <span class="material-icons">favorite</span>
+            Favoritos dos Visitantes
+          </h2>
+          <button class="btn-close" (click)="showInfo = false">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p>
+            Esta tela mostra quais <strong>veículos despertam mais interesse</strong> dos visitantes do catálogo público.
+            Quando um visitante favorita um veículo, o sistema registra essa interação.
+          </p>
+          <h3 class="section-title">Abas disponíveis</h3>
+          <div class="info-flow">
+            <div class="info-step">
+              <div class="step-icon" style="background: #fff3e0;">
+                <span class="material-icons" style="color: #e65100;">directions_car</span>
+              </div>
+              <div class="step-text">
+                <strong>Veículos Mais Favoritados</strong>
+                <span>Ranking dos veículos com mais favoritos - foque suas vendas neles!</span>
+              </div>
+            </div>
+            <div class="info-step">
+              <div class="step-icon" style="background: #e3f2fd;">
+                <span class="material-icons" style="color: #1565c0;">people</span>
+              </div>
+              <div class="step-text">
+                <strong>Visitantes</strong>
+                <span>Lista de visitantes que favoritaram veículos, com contato para follow-up</span>
+              </div>
+            </div>
+          </div>
+          <div class="info-tip">
+            <span class="material-icons">tips_and_updates</span>
+            <span>Os favoritos aparecem conforme visitantes interagem com o catálogo público das suas lojas.</span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-primary" (click)="showInfo = false">Entendi</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab" [class.active]="activeTab === 'veiculos'" (click)="activeTab = 'veiculos'; loadRelatorio()">
+      <span class="material-icons">directions_car</span>
+      Veículos Mais Favoritados
+    </button>
+    <button class="tab" [class.active]="activeTab === 'visitantes'" (click)="loadVisitantes()">
+      <span class="material-icons">people</span>
+      Visitantes
+    </button>
+  </div>
+
+  <!-- Aba Veículos -->
+  @if (activeTab === 'veiculos') {
+    <div class="info-banner">
+      <span class="material-icons">insights</span>
+      <p>Veículos com mais favoritos indicam maior interesse dos visitantes. Foque suas vendas nesses veículos!</p>
+    </div>
+
+    @if (loading) {
+      <div class="loading">Carregando...</div>
+    } @else {
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Posição</th>
+              <th>Veículo</th>
+              <th>Ano</th>
+              <th>Preço</th>
+              <th>Status</th>
+              <th>Favoritos</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of relatorio; track item.veiculoId; let i = $index) {
+              <tr>
+                <td>
+                  <span class="ranking" [class.top1]="i === 0" [class.top2]="i === 1" [class.top3]="i === 2">
+                    {{ i + 1 }}
+                  </span>
+                </td>
+                <td><strong>{{ item.marca }} {{ item.modelo }}</strong></td>
+                <td>{{ item.ano }}</td>
+                <td>{{ formatarPreco(item.preco) }}</td>
+                <td>
+                  <span class="badge" [class.active]="item.status === 'D'" [class.inactive]="item.status === 'V'">
+                    {{ getStatusLabel(item.status) }}
+                  </span>
+                </td>
+                <td>
+                  <span class="fav-count">
+                    <span class="material-icons">favorite</span>
+                    {{ item.totalFavoritos }}
+                  </span>
+                </td>
+                <td class="actions">
+                  <button class="btn-icon" title="Ver visitantes" (click)="loadVisitantes(item.veiculoId)">
+                    <span class="material-icons">visibility</span>
+                  </button>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="7" class="empty">Nenhum favorito registrado ainda</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <!-- Aba Visitantes -->
+  @if (activeTab === 'visitantes') {
+    @if (loading) {
+      <div class="loading">Carregando...</div>
+    } @else {
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>E-mail</th>
+              <th>Telefone</th>
+              <th>Veículos Favoritados</th>
+              <th>Última Atividade</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (v of visitantes; track v.email) {
+              <tr>
+                <td><strong>{{ v.nome || 'Visitante' }}</strong></td>
+                <td>{{ v.email }}</td>
+                <td>{{ v.telefone || '-' }}</td>
+                <td>
+                  <span class="fav-count">
+                    <span class="material-icons">favorite</span>
+                    {{ v.totalFavoritos }}
+                  </span>
+                </td>
+                <td>{{ v.ultimaAtividade | date:'dd/MM/yyyy HH:mm' }}</td>
+                <td class="actions">
+                  @if (v.telefone) {
+                    <button class="btn-icon whatsapp" title="WhatsApp" (click)="abrirWhatsApp(v)">
+                      <span class="material-icons">chat</span>
+                    </button>
+                  }
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="6" class="empty">Nenhum visitante encontrado</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</div>

@@ -1,0 +1,220 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Usuários</h1>
+    <button class="btn-primary" (click)="openModal()">
+      <span class="material-icons">add</span>
+      Novo Usuário
+    </button>
+  </div>
+
+  <div class="search-bar">
+    <div class="search-input">
+      <span class="material-icons">search</span>
+      <input type="text"
+             [(ngModel)]="searchTerm"
+             placeholder="Buscar por nome ou email..."
+             (keyup.enter)="onSearch()" />
+    </div>
+    <button class="btn-secondary" (click)="onSearch()">Buscar</button>
+  </div>
+
+  @if (loading) {
+    <div class="loading">Carregando...</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>E-mail</th>
+            <th>Loja</th>
+            <th>Acesso</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (usuario of usuarios; track usuario.usuId) {
+            <tr>
+              <td>{{ usuario.usuNome }}</td>
+              <td>{{ usuario.usuEmail }}</td>
+              <td>{{ usuario.lojaNome }}</td>
+              <td>{{ usuario.acessoNome }}</td>
+              <td>
+                <span class="badge" [class.active]="usuario.usuSts" [class.inactive]="!usuario.usuSts">
+                  {{ usuario.usuSts ? 'Ativo' : 'Inativo' }}
+                </span>
+              </td>
+              <td class="actions">
+                <button class="btn-icon" (click)="openModal(usuario)" title="Editar">
+                  <span class="material-icons">edit</span>
+                </button>
+                <button class="btn-icon delete" (click)="remove(usuario.usuId)" title="Excluir">
+                  <span class="material-icons">delete</span>
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6" class="empty">Nenhum usuário encontrado</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <app-pagination
+      [page]="page"
+      [pageSize]="pageSize"
+      [totalItems]="totalItems"
+      [totalPages]="totalPages"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)">
+    </app-pagination>
+  }
+</div>
+
+@if (showModal) {
+  <div class="modal-overlay">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h2>{{ editMode ? 'Editar' : 'Novo' }} Usuário</h2>
+        <button class="btn-close" (click)="closeModal()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <form #usuarioForm="ngForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="required">Nome</label>
+            <input type="text"
+                   [(ngModel)]="formData.usuNome"
+                   name="usuNome"
+                   required
+                   minlength="3"
+                   maxlength="150"
+                   #usuNome="ngModel"
+                   [class.invalid]="isFieldInvalid('usuNome')"
+                   placeholder="Nome do usuário" />
+            @if (isFieldInvalid('usuNome')) {
+              <span class="field-error">Nome é obrigatório (mínimo 3 caracteres)</span>
+            }
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>CPF</label>
+              <input type="text"
+                     [(ngModel)]="formData.usuCPF"
+                     name="usuCPF"
+                     appMask="cpf"
+                     maxlength="14"
+                     (blur)="validarCpf()"
+                     [class.invalid]="cpfInvalido"
+                     placeholder="000.000.000-00" />
+              @if (cpfInvalido) {
+                <span class="field-error">CPF inválido</span>
+              }
+            </div>
+            <div class="form-group">
+              <label>RG</label>
+              <input type="text"
+                     [(ngModel)]="formData.usuRG"
+                     name="usuRG"
+                     maxlength="20"
+                     placeholder="RG" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="required">E-mail</label>
+              <input type="email"
+                     [(ngModel)]="formData.usuEmail"
+                     name="usuEmail"
+                     required
+                     email
+                     maxlength="150"
+                     #usuEmail="ngModel"
+                     [class.invalid]="isFieldInvalid('usuEmail')"
+                     [readonly]="editMode"
+                     [class.disabled]="editMode"
+                     placeholder="E-mail" />
+              @if (isFieldInvalid('usuEmail')) {
+                <span class="field-error">E-mail é obrigatório e deve ser válido</span>
+              }
+            </div>
+            <div class="form-group">
+              <label [class.required]="!editMode">Senha</label>
+              <input type="password"
+                     [(ngModel)]="formData.usuSenha"
+                     name="usuSenha"
+                     maxlength="100"
+                     [class.invalid]="isSenhaInvalid()"
+                     [readonly]="editMode"
+                     [class.disabled]="editMode"
+                     [placeholder]="editMode ? '••••••••' : 'Senha'" />
+              @if (isSenhaInvalid()) {
+                <span class="field-error">Senha deve ter no mínimo 6 caracteres</span>
+              }
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="required">Loja</label>
+              <select [(ngModel)]="formData.r_LojId"
+                      name="r_LojId"
+                      [class.invalid]="isSelectInvalid(formData.r_LojId)">
+                <option [ngValue]="0">Selecione...</option>
+                @for (loja of lojas; track loja.lojId) {
+                  <option [ngValue]="loja.lojId">{{ loja.lojNome }}</option>
+                }
+              </select>
+              @if (isSelectInvalid(formData.r_LojId)) {
+                <span class="field-error">Selecione uma loja</span>
+              }
+            </div>
+            <div class="form-group">
+              <label class="required">Acesso</label>
+              <select [(ngModel)]="formData.r_AcsId"
+                      name="r_AcsId"
+                      [class.invalid]="isSelectInvalid(formData.r_AcsId)">
+                <option [ngValue]="0">Selecione...</option>
+                @for (acesso of acessos; track acesso.acsId) {
+                  <option [ngValue]="acesso.acsId">{{ acesso.acsNome }}</option>
+                }
+              </select>
+              @if (isSelectInvalid(formData.r_AcsId)) {
+                <span class="field-error">Selecione um acesso</span>
+              }
+            </div>
+          </div>
+          @if (editMode) {
+            <div class="form-row">
+              <div class="form-group">
+                <label class="required">Status</label>
+                <select [(ngModel)]="formData.usuSts" name="usuSts">
+                  <option [ngValue]="true">Ativo</option>
+                  <option [ngValue]="false">Inativo</option>
+                </select>
+              </div>
+              <div class="form-group"></div>
+            </div>
+          }
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" (click)="closeModal()">Cancelar</button>
+          <button type="submit" class="btn-primary" (click)="save()" [disabled]="formSubmitted && !isFormValid()">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<app-confirm-modal
+  [show]="showConfirmModal"
+  titulo="Excluir Usuário"
+  mensagem="Deseja realmente excluir este usuário? Esta ação não pode ser desfeita."
+  textoBotaoConfirmar="Excluir"
+  tipo="danger"
+  (confirmar)="confirmarExclusao()"
+  (cancelar)="cancelarExclusao()">
+</app-confirm-modal>

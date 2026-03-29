@@ -1,0 +1,538 @@
+@import '../../../styles/shared';
+
+// Cabecalho de impressao (oculto na tela)
+.print-header {
+  display: none;
+}
+
+// Botoes de acoes
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+
+  h1 {
+    margin: 0;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-export {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    background: #d32f2f;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s;
+
+    .material-icons {
+      font-size: 18px;
+    }
+
+    &:hover:not(:disabled) {
+      background: #b71c1c;
+    }
+
+    &:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    &.excel {
+      background: #2e7d32;
+
+      &:hover:not(:disabled) {
+        background: #1b5e20;
+      }
+    }
+  }
+
+  .btn-print {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: #1a237e;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+
+    .material-icons {
+      font-size: 20px;
+    }
+
+    &:hover:not(:disabled) {
+      background: #303f9f;
+    }
+
+    &:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #e0e0e0;
+  padding-bottom: 0;
+
+  .tab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: #666;
+    transition: all 0.2s;
+    margin-bottom: -2px;
+
+    .material-icons {
+      font-size: 20px;
+    }
+
+    &:hover {
+      color: #1a237e;
+      background: rgba(26, 35, 126, 0.05);
+    }
+
+    &.active {
+      color: #1a237e;
+      border-bottom-color: #1a237e;
+    }
+  }
+}
+
+.filtros-container {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  background: #f5f5f5;
+  padding: 16px;
+  border-radius: 8px;
+
+  .filtro-grupo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    label {
+      font-size: 12px;
+      font-weight: 500;
+      color: #666;
+    }
+
+    input, select {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      min-width: 160px;
+
+      &:focus {
+        outline: none;
+        border-color: #1a237e;
+      }
+    }
+  }
+
+  .filtro-acoes {
+    display: flex;
+    gap: 8px;
+
+    button {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+
+      .material-icons {
+        font-size: 18px;
+      }
+    }
+
+    .btn-primary {
+      background: #1a237e;
+      color: #fff;
+      border: none;
+
+      &:hover {
+        background: #303f9f;
+      }
+    }
+
+    .btn-secondary {
+      background: #fff;
+      color: #666;
+      border: 1px solid #ddd;
+
+      &:hover {
+        background: #f5f5f5;
+        border-color: #999;
+      }
+    }
+  }
+}
+
+.relatorio-content {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  .card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .material-icons {
+      font-size: 24px;
+      color: #fff;
+    }
+
+    &.vendas { background: #1a237e; }
+    &.receita { background: #2e7d32; }
+    &.comissao { background: #f57c00; }
+    &.estornos { background: #c62828; }
+    &.total { background: #1565c0; }
+    &.disponivel { background: #43a047; }
+    &.media { background: #7b1fa2; }
+    &.custo { background: #d32f2f; }
+    &.lucro { background: #388e3c; }
+    &.margem { background: #1976d2; }
+  }
+
+  .card-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .card-label {
+      font-size: 12px;
+      color: #666;
+      text-transform: uppercase;
+    }
+
+    .card-value {
+      font-size: 20px;
+      font-weight: 600;
+      color: #333;
+    }
+  }
+}
+
+.info-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+
+  .info-card {
+    background: #f5f5f5;
+    border-radius: 8px;
+    padding: 16px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 200px;
+
+    .info-label {
+      font-size: 12px;
+      color: #666;
+      text-transform: uppercase;
+    }
+
+    .info-value {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+    }
+  }
+}
+
+.tables-grid {
+  display: grid;
+  gap: 24px;
+  margin-bottom: 24px;
+
+  &.two-cols {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  &.one-col {
+    grid-template-columns: 1fr;
+  }
+
+  // Fallback para grids sem classe específica
+  &:not(.two-cols):not(.one-col) {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  @media (max-width: 900px) {
+    &.two-cols,
+    &:not(.two-cols):not(.one-col) {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
+.table-section {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 16px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eee;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+
+    th, td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+
+    th {
+      font-size: 12px;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+      background: #fafafa;
+    }
+
+    td {
+      font-size: 14px;
+      color: #333;
+
+      &.empty {
+        text-align: center;
+        color: #999;
+        padding: 24px;
+      }
+    }
+
+    .positive {
+      color: #2e7d32;
+      font-weight: 500;
+    }
+
+    .negative {
+      color: #c62828;
+      font-weight: 500;
+    }
+  }
+}
+
+// ==========================================
+// Estilos de Impressao
+// ==========================================
+@media print {
+  // Ocultar elementos que nao devem ser impressos
+  .no-print,
+  .loading {
+    display: none !important;
+  }
+
+  // Mostrar cabecalho de impressao
+  .print-header {
+    display: block !important;
+    text-align: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #333;
+
+    .print-logo h1 {
+      font-size: 24px;
+      color: #1a237e;
+      margin: 0 0 10px 0;
+    }
+
+    .print-title {
+      h2 {
+        font-size: 20px;
+        color: #333;
+        margin: 0 0 8px 0;
+      }
+
+      p {
+        font-size: 12px;
+        color: #666;
+        margin: 4px 0;
+      }
+    }
+  }
+
+  // Ajustes gerais de impressao
+  .page-container {
+    padding: 0;
+    margin: 0;
+    background: #fff;
+  }
+
+  // Cards de estatisticas
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .card {
+    box-shadow: none;
+    border: 1px solid #ddd;
+    padding: 12px;
+    page-break-inside: avoid;
+
+    .card-icon {
+      width: 36px;
+      height: 36px;
+
+      .material-icons {
+        font-size: 18px;
+      }
+    }
+
+    .card-info {
+      .card-label {
+        font-size: 10px;
+      }
+
+      .card-value {
+        font-size: 16px;
+      }
+    }
+  }
+
+  // Info row (financeiro)
+  .info-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+
+    .info-card {
+      border: 1px solid #ddd;
+      padding: 12px;
+      border-radius: 4px;
+      background: #f9f9f9;
+
+      .info-label {
+        font-size: 10px;
+      }
+
+      .info-value {
+        font-size: 14px;
+      }
+    }
+  }
+
+  // Tabelas
+  .tables-grid {
+    display: block;
+  }
+
+  .table-section {
+    box-shadow: none;
+    border: 1px solid #ddd;
+    margin-bottom: 20px;
+    padding: 15px;
+    page-break-inside: avoid;
+
+    h3 {
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+
+    table {
+      th {
+        background: #f0f0f0;
+        font-size: 10px;
+        padding: 8px;
+      }
+
+      td {
+        font-size: 11px;
+        padding: 8px;
+      }
+    }
+  }
+
+  // Cores para impressao
+  .positive {
+    color: #000 !important;
+  }
+
+  .negative {
+    color: #000 !important;
+    font-style: italic;
+  }
+
+  // Ajuste de margens da pagina
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
+
+  // Animacoes desativadas
+  .relatorio-content {
+    animation: none;
+  }
+}

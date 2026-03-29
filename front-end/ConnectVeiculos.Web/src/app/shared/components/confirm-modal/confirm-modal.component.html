@@ -1,0 +1,25 @@
+@if (show) {
+  <div class="modal-overlay" (click)="onOverlayClick($event)">
+    <div class="confirm-modal">
+      <div class="modal-icon" [class]="tipo">
+        @switch (tipo) {
+          @case ('danger') {
+            <span class="material-icons">warning</span>
+          }
+          @case ('warning') {
+            <span class="material-icons">error_outline</span>
+          }
+          @case ('info') {
+            <span class="material-icons">help_outline</span>
+          }
+        }
+      </div>
+      <h3>{{ titulo }}</h3>
+      <p>{{ mensagem }}</p>
+      <div class="modal-actions">
+        <button class="btn-secondary" (click)="onCancelar()">{{ textoBotaoCancelar }}</button>
+        <button class="btn-confirm" [class]="tipo" (click)="onConfirmar()">{{ textoBotaoConfirmar }}</button>
+      </div>
+    </div>
+  </div>
+}

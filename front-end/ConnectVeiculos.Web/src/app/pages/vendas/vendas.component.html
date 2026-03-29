@@ -1,0 +1,229 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Vendas</h1>
+    <button class="btn-primary" (click)="openModal()">
+      <span class="material-icons">add</span>
+      Nova Venda
+    </button>
+  </div>
+
+  @if (loading) {
+    <div class="loading">Carregando...</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Veículo</th>
+            <th>Comprador</th>
+            <th>Pagamento</th>
+            <th>Valor</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (venda of vendasPaginadas; track venda.venId) {
+            <tr [class.estornada]="venda.venStatus === 'E'">
+              <td>{{ formatarData(venda.venDtVenda) }}</td>
+              <td>
+                <strong>{{ venda.venMarca }} {{ venda.venModelo }}</strong><br/>
+                <span class="text-muted">{{ venda.venAno }}</span>
+              </td>
+              <td>
+                <strong>{{ venda.venCompradorNome }}</strong><br/>
+                @if (venda.venCompradorCpf) {
+                  <span class="text-muted">{{ venda.venCompradorCpf }}</span>
+                }
+              </td>
+              <td>{{ getFormaPagamentoLabel(venda.venFormaPagamento) }}</td>
+              <td>{{ formatarPreco(venda.venValor) }}</td>
+              <td>
+                <span class="badge" [class.active]="venda.venStatus === 'A'" [class.inactive]="venda.venStatus === 'E'">
+                  {{ getStatusLabel(venda.venStatus) }}
+                </span>
+              </td>
+              <td class="actions">
+                @if (venda.venStatus === 'A') {
+                  <button class="btn-icon delete" (click)="estornar(venda)" title="Estornar Venda">
+                    <span class="material-icons">undo</span>
+                  </button>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="7" class="empty">Nenhuma venda registrada</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      <app-pagination
+        [currentPage]="currentPage"
+        [totalItems]="totalItems"
+        [pageSize]="pageSize"
+        (pageChange)="onPageChange($event)">
+      </app-pagination>
+    </div>
+  }
+</div>
+
+@if (showModal) {
+  <div class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Registrar Venda</h2>
+        <button class="btn-close" (click)="closeModal()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="required">Veículo</label>
+            <select formControlName="r_VeiId" (change)="onVeiculoChange()"
+                    [class.invalid]="hasError('r_VeiId', 'min')">
+              <option [value]="0">Selecione um veículo...</option>
+              @for (veiculo of veiculos; track veiculo.veiId) {
+                <option [value]="veiculo.veiId">
+                  {{ veiculo.veiMarca }} {{ veiculo.veiModelo }} {{ veiculo.veiAno }} - {{ formatarPreco(veiculo.veiPreco) }}
+                </option>
+              }
+            </select>
+            @if (hasError('r_VeiId', 'min')) {
+              <span class="error-message">Selecione um veículo</span>
+            }
+          </div>
+          <div class="form-group">
+            <label class="required">Vendedor</label>
+            <select formControlName="r_UsuId" [class.invalid]="hasError('r_UsuId', 'min')">
+              <option [value]="0">Selecione um vendedor...</option>
+              @for (usuario of usuarios; track usuario.usuId) {
+                <option [value]="usuario.usuId">{{ usuario.usuNome }}</option>
+              }
+            </select>
+            @if (hasError('r_UsuId', 'min')) {
+              <span class="error-message">Selecione um vendedor</span>
+            }
+          </div>
+          <div class="form-group">
+            <label class="required">Data da Venda</label>
+            <input type="date" formControlName="venDtVenda" [class.invalid]="hasError('venDtVenda', 'required')" />
+            @if (hasError('venDtVenda', 'required')) {
+              <span class="error-message">Data é obrigatória</span>
+            }
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="required">Valor da Venda</label>
+              <input formControlName="venValor" appCurrencyMask [class.invalid]="hasError('venValor', 'required')" />
+              @if (hasError('venValor', 'required')) {
+                <span class="error-message">Valor é obrigatório</span>
+              }
+            </div>
+            <div class="form-group">
+              <label class="required">Comissão (%)</label>
+              <input type="tel" formControlName="venComissaoPorc"
+                     [class.invalid]="hasError('venComissaoPorc', 'required')" />
+              @if (hasError('venComissaoPorc', 'required')) {
+                <span class="error-message">Comissão é obrigatória</span>
+              }
+            </div>
+          </div>
+          <div class="comissao-preview">
+            <span>Valor da Comissão:</span>
+            <strong>{{ formatarPreco(calcularComissao()) }}</strong>
+          </div>
+
+          <h3 class="section-title">Dados do Comprador</h3>
+          <div class="form-group">
+            <label class="required">Nome do Comprador</label>
+            <input type="text" formControlName="venCompradorNome" placeholder="Nome completo"
+                   [class.invalid]="hasError('venCompradorNome', 'required') || hasError('venCompradorNome', 'minlength')" />
+            @if (hasError('venCompradorNome', 'required')) {
+              <span class="error-message">Nome do comprador é obrigatório</span>
+            }
+            @if (hasError('venCompradorNome', 'minlength')) {
+              <span class="error-message">Nome deve ter no mínimo 3 caracteres</span>
+            }
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>CPF</label>
+              <input type="text" formControlName="venCompradorCpf" appMask="cpf" placeholder="000.000.000-00" />
+            </div>
+            <div class="form-group">
+              <label>Telefone</label>
+              <input type="text" formControlName="venCompradorTelefone" appMask="celular" placeholder="(00) 00000-0000" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>E-mail</label>
+            <input type="email" formControlName="venCompradorEmail" placeholder="email@exemplo.com"
+                   [class.invalid]="hasError('venCompradorEmail', 'email')" />
+            @if (hasError('venCompradorEmail', 'email')) {
+              <span class="error-message">E-mail inválido</span>
+            }
+          </div>
+          <h3 class="section-title">Endereço</h3>
+          <div class="form-row">
+            <div class="form-group" style="flex: 0 0 180px;">
+              <label>CEP</label>
+              <input type="text" formControlName="cep" placeholder="00000-000" appMask="cep" (blur)="buscarCep()" />
+            </div>
+            <div class="form-group" style="flex: 1; display: flex; align-items: flex-end;">
+              <button type="button" class="btn-secondary" (click)="buscarCep()" [disabled]="loadingCep" style="white-space: nowrap;">
+                {{ loadingCep ? 'Buscando...' : 'Buscar CEP' }}
+              </button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Logradouro</label>
+            <input type="text" formControlName="logradouro" placeholder="Rua, Avenida..." readonly />
+          </div>
+          <div class="form-row">
+            <div class="form-group" style="flex: 0 0 120px;">
+              <label>Número</label>
+              <input type="text" formControlName="numero" placeholder="Nº" />
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label>Bairro</label>
+              <input type="text" formControlName="bairro" placeholder="Bairro" readonly />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group" style="flex: 1;">
+              <label>Cidade</label>
+              <input type="text" formControlName="cidade" placeholder="Cidade" readonly />
+            </div>
+            <div class="form-group" style="flex: 0 0 80px;">
+              <label>UF</label>
+              <input type="text" formControlName="uf" placeholder="UF" readonly />
+            </div>
+          </div>
+
+          <h3 class="section-title">Pagamento</h3>
+          <div class="form-group">
+            <label>Forma de Pagamento</label>
+            <select formControlName="venFormaPagamento">
+              <option value="">Selecione...</option>
+              @for (forma of formasPagamento; track forma.value) {
+                <option [value]="forma.value">{{ forma.label }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Observações</label>
+            <textarea formControlName="venObservacao" rows="3" placeholder="Observações sobre a venda..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" (click)="closeModal()">Cancelar</button>
+          <button type="submit" class="btn-primary" [disabled]="form.invalid">Registrar Venda</button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

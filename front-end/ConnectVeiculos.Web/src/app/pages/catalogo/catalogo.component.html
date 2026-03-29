@@ -1,0 +1,615 @@
+<div class="catalogo-container">
+  <!-- Navbar -->
+  <nav class="cat-navbar" [style.background]="loja?.lojCorPrimaria || '#1a237e'">
+    <div class="cat-navbar-inner">
+      <div class="cat-navbar-brand">
+        @if (loja?.lojImg) {
+          <img [src]="loja!.lojImg" [alt]="loja!.lojNome" class="cat-navbar-logo" (error)="onImageError($event, 'default')" />
+        } @else {
+          <div class="cat-navbar-logo-icon"><span class="material-icons">directions_car</span></div>
+        }
+        <div class="cat-navbar-title">
+          <strong>{{ loja?.lojNome || 'Catálogo de Veículos' }}</strong>
+          @if (loja?.lojEndereco) {
+            <small>{{ loja!.lojCidade }}/{{ loja!.lojEstado }}</small>
+          }
+        </div>
+      </div>
+      <div class="cat-navbar-actions">
+        @if (loja?.lojWhatsApp) {
+          <a [href]="getWhatsAppUrl()" target="_blank" class="cat-nav-btn whatsapp">
+            <span class="material-icons">chat</span> WhatsApp
+          </a>
+        }
+        @if (loja?.lojTel1) {
+          <a [href]="'tel:' + loja!.lojTel1" class="cat-nav-btn">
+            <span class="material-icons">phone</span>
+            <span class="cat-nav-btn-text">{{ loja!.lojTel1 }}</span>
+          </a>
+        }
+        @if (loja?.lojInstagram) {
+          <a [href]="'https://instagram.com/' + loja!.lojInstagram" target="_blank" class="cat-nav-icon" title="Instagram">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+          </a>
+        }
+        @if (loja?.lojFacebook) {
+          <a [href]="'https://facebook.com/' + loja!.lojFacebook" target="_blank" class="cat-nav-icon" title="Facebook">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          </a>
+        }
+      </div>
+    </div>
+  </nav>
+
+  <!-- Search bar -->
+  <div class="cat-searchbar">
+    <div class="cat-searchbar-inner">
+      <div class="cat-search-box">
+        <span class="material-icons">search</span>
+        <input type="text" [(ngModel)]="buscaTexto" (input)="filtrarPorTexto()"
+               placeholder="O que você está procurando? Ex: Toyota Corolla, SUV, Sedan..." />
+        @if (buscaTexto) {
+          <button class="cat-search-clear" (click)="buscaTexto = ''; filtrarPorTexto()">
+            <span class="material-icons">close</span>
+          </button>
+        }
+      </div>
+      <div class="cat-search-meta">
+        <span><strong>{{ veiculosFiltrados.length }}</strong> {{ veiculosFiltrados.length === 1 ? 'veículo disponível' : 'veículos disponíveis' }}</span>
+        <span class="cat-search-dot"></span>
+        <span class="status-indicator" [class.online]="conectado">
+          <span class="status-dot"></span>
+          {{ conectado ? 'Em tempo real' : 'Conectando...' }}
+        </span>
+      </div>
+    </div>
+    @if (atualizacaoRecente) {
+      <span class="atualizado-badge">
+        <span class="material-icons">refresh</span>
+        Catálogo atualizado!
+      </span>
+    }
+  </div>
+
+  <!-- Toolbar -->
+  <div class="catalogo-toolbar">
+    <div class="toolbar-left">
+      @if (favoritos.size > 0) {
+        <button class="toolbar-btn" (click)="showFavoritosOnly = !showFavoritosOnly" [class.active]="showFavoritosOnly">
+          <span class="material-icons">{{ showFavoritosOnly ? 'favorite' : 'favorite_border' }}</span>
+          Favoritos ({{ favoritos.size }})
+        </button>
+      }
+      @if (comparando.length >= 2) {
+        <button class="toolbar-btn accent" (click)="abrirComparador()">
+          <span class="material-icons">compare_arrows</span>
+          Comparar ({{ comparando.length }})
+        </button>
+      }
+    </div>
+    <div class="toolbar-right">
+      <select class="cat-sort-select" [(ngModel)]="ordenacao" (change)="filtrarPorTexto()">
+        <option value="">Mais recentes</option>
+        <option value="preco_asc">Menor preço</option>
+        <option value="preco_desc">Maior preço</option>
+        <option value="ano_desc">Mais novos</option>
+        <option value="ano_asc">Mais antigos</option>
+        <option value="km_asc">Menor km</option>
+      </select>
+      <button class="toolbar-btn" [class.active]="viewMode === 'grid'" (click)="viewMode = 'grid'">
+        <span class="material-icons">grid_view</span>
+      </button>
+      <button class="toolbar-btn" [class.active]="viewMode === 'list'" (click)="viewMode = 'list'">
+        <span class="material-icons">view_list</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="catalogo-content">
+    <aside class="filtros-sidebar">
+      <h3>Filtros</h3>
+      <div class="filtro-grupo">
+        <label>Marca</label>
+        <select [(ngModel)]="marcaSelecionada" (change)="loadCatalogo()">
+          <option value="">Todas as marcas</option>
+          @for (marca of filtros.marcas; track marca) {
+            <option [value]="marca">{{ marca }}</option>
+          }
+        </select>
+      </div>
+      <div class="filtro-grupo">
+        <label>Ano</label>
+        <div class="filtro-range">
+          <input type="tel" [(ngModel)]="anoMinSelecionado" [placeholder]="'Min: ' + filtros.anoMin" />
+          <span>ate</span>
+          <input type="tel" [(ngModel)]="anoMaxSelecionado" [placeholder]="'Max: ' + filtros.anoMax" />
+        </div>
+      </div>
+      <div class="filtro-grupo">
+        <label>Categoria</label>
+        <select [(ngModel)]="categoriaSelecionada" (change)="filtrarPorTexto()">
+          <option value="">Todas as categorias</option>
+          @for (cat of categorias; track cat) {
+            <option [value]="cat">{{ cat }}</option>
+          }
+        </select>
+      </div>
+      <div class="filtro-grupo">
+        <label>Preço (R$)</label>
+        <div class="filtro-range">
+          <input [(ngModel)]="precoMinSelecionado" appCurrencyMask placeholder="Min" />
+          <span>ate</span>
+          <input [(ngModel)]="precoMaxSelecionado" appCurrencyMask placeholder="Max" />
+        </div>
+      </div>
+      <div class="filtro-acoes">
+        <button class="btn-filtrar" (click)="loadCatalogo()">Filtrar</button>
+        <button class="btn-limpar" (click)="limparFiltros()">Limpar</button>
+      </div>
+    </aside>
+
+    <main class="veiculos-grid">
+      @if (loading) {
+        <div class="loading">
+          <div class="loading-spinner"></div>
+          <p>Carregando veículos...</p>
+        </div>
+      } @else {
+        <div class="resultados-info">
+          <span>{{ veiculosFiltrados.length }} {{ veiculosFiltrados.length === 1 ? 'veículo disponível' : 'veículos disponíveis' }}</span>
+          @if (buscaTexto) {
+            <span class="busca-resultado"> para "{{ buscaTexto }}"</span>
+          }
+        </div>
+
+        <div class="cards-container" [class.list-view]="viewMode === 'list'">
+          @for (veiculo of veiculosExibidos; track veiculo.veiId) {
+            <div class="veiculo-card" (click)="abrirDetalhes(veiculo)">
+              <div class="card-imagem">
+                <img [src]="getImagemPrincipal(veiculo)" [alt]="veiculo.veiMarca + ' ' + veiculo.veiModelo"
+                     (error)="onImageError($event, veiculo.veiMarca)" />
+                @if (veiculo.imagens && veiculo.imagens.length > 1) {
+                  <span class="imagens-count">
+                    <span class="material-icons">photo_library</span>
+                    {{ veiculo.imagens.length }}
+                  </span>
+                }
+                @if (veiculo.categoriaNome) {
+                  <span class="badge-categoria">{{ veiculo.categoriaNome }}</span>
+                }
+                <div class="card-actions" (click)="$event.stopPropagation()">
+                  <button class="card-action-btn" (click)="toggleFavorito(veiculo.veiId)" [class.active]="isFavorito(veiculo.veiId)" title="Favoritar">
+                    <span class="material-icons">{{ isFavorito(veiculo.veiId) ? 'favorite' : 'favorite_border' }}</span>
+                  </button>
+                  <button class="card-action-btn" (click)="toggleComparar(veiculo, $event)" [class.active]="isComparando(veiculo.veiId)" title="Comparar">
+                    <span class="material-icons">compare_arrows</span>
+                  </button>
+                  <button class="card-action-btn" (click)="abrirShare(veiculo); $event.stopPropagation()" title="Compartilhar">
+                    <span class="material-icons">share</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="card-info">
+                <h3>{{ veiculo.veiMarca }} {{ veiculo.veiModelo }}</h3>
+                <p class="preco">{{ formatarPreco(veiculo.veiPreco) }}</p>
+
+                <div class="detalhes">
+                  <div class="detalhe-item">
+                    <span class="material-icons">calendar_today</span>
+                    <span>{{ veiculo.veiAno }}</span>
+                  </div>
+                  <div class="detalhe-item">
+                    <span class="material-icons">speed</span>
+                    <span>{{ formatarKm(veiculo.veiKm) }}</span>
+                  </div>
+                  @if (veiculo.veiCor) {
+                    <div class="detalhe-item">
+                      <span class="material-icons">palette</span>
+                      <span>{{ veiculo.veiCor }}</span>
+                    </div>
+                  }
+                </div>
+
+                @if (!lojaId) {
+                  <div class="loja-info">
+                    <span class="material-icons">store</span>
+                    <span>{{ veiculo.lojaNome }}</span>
+                  </div>
+                }
+
+                <span class="ver-detalhes">Ver detalhes <span class="material-icons">arrow_forward</span></span>
+              </div>
+            </div>
+          } @empty {
+            <div class="sem-veiculos">
+              <span class="material-icons">search_off</span>
+              <p>Nenhum veiculo disponivel no momento</p>
+              <p class="sub-text">Novos veiculos aparecerao automaticamente aqui</p>
+            </div>
+          }
+        </div>
+      }
+    </main>
+  </div>
+</div>
+
+<!-- Footer -->
+@if (loja) {
+  <footer class="catalogo-footer">
+    <div class="footer-content">
+      <div class="footer-info">
+        <h3>{{ loja.lojNome }}</h3>
+        <p>{{ loja.lojEndereco }}</p>
+        @if (loja.lojEmail) {
+          <p class="footer-email">
+            <span class="material-icons">email</span>
+            {{ loja.lojEmail }}
+          </p>
+        }
+      </div>
+      <div class="footer-contato">
+        @if (loja.lojTel1) {
+          <a [href]="'tel:' + loja.lojTel1" class="footer-link">
+            <span class="material-icons">phone</span>
+            {{ loja.lojTel1 }}
+          </a>
+        }
+        @if (loja.lojWhatsApp) {
+          <a [href]="getWhatsAppUrl()" target="_blank" class="footer-link whatsapp">
+            <span class="material-icons">chat</span>
+            WhatsApp
+          </a>
+        }
+      </div>
+      <div class="footer-social">
+        @if (loja.lojInstagram) {
+          <a [href]="'https://instagram.com/' + loja.lojInstagram" target="_blank" class="footer-social-link" title="Instagram">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+          </a>
+        }
+        @if (loja.lojFacebook) {
+          <a [href]="'https://facebook.com/' + loja.lojFacebook" target="_blank" class="footer-social-link" title="Facebook">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          </a>
+        }
+      </div>
+    </div>
+    <div class="footer-copyright">
+      <p>Powered by ConnectVeiculos</p>
+    </div>
+  </footer>
+}
+
+<!-- Botao flutuante WhatsApp -->
+<button class="fab-whatsapp" (click)="abrirWhatsAppGeral()" title="Falar com vendedor">
+  <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+  </svg>
+</button>
+
+<!-- Modal Detalhes do Veiculo -->
+@if (showDetalhes && veiculoSelecionado) {
+  <div class="detalhes-overlay" (click)="fecharDetalhes()">
+    <div class="detalhes-modal" (click)="$event.stopPropagation()">
+      <button class="detalhes-close" (click)="fecharDetalhes()">
+        <span class="material-icons">close</span>
+      </button>
+
+      <div class="detalhes-content">
+        <!-- Galeria de imagens -->
+        <div class="detalhes-galeria">
+          @if (getImagensVeiculo(veiculoSelecionado).length > 0) {
+            <div class="detalhes-img-principal" (click)="abrirGaleria(veiculoSelecionado, detalhesImagemIndex)">
+              <img [src]="getImageUrl(getImagensVeiculo(veiculoSelecionado)[detalhesImagemIndex])"
+                   [alt]="veiculoSelecionado.veiMarca + ' ' + veiculoSelecionado.veiModelo" />
+              @if (getImagensVeiculo(veiculoSelecionado).length > 1) {
+                <button class="img-nav prev" (click)="detalhesAnterior(); $event.stopPropagation()">
+                  <span class="material-icons">chevron_left</span>
+                </button>
+                <button class="img-nav next" (click)="detalhesProxima(); $event.stopPropagation()">
+                  <span class="material-icons">chevron_right</span>
+                </button>
+                <span class="img-counter">{{ detalhesImagemIndex + 1 }}/{{ getImagensVeiculo(veiculoSelecionado).length }}</span>
+              }
+              <span class="img-expand"><span class="material-icons">fullscreen</span></span>
+            </div>
+            @if (getImagensVeiculo(veiculoSelecionado).length > 1) {
+              <div class="detalhes-thumbs">
+                @for (img of getImagensVeiculo(veiculoSelecionado); track $index) {
+                  <img [src]="getImageUrl(img)" [class.active]="$index === detalhesImagemIndex"
+                       (click)="detalhesImagemIndex = $index" [alt]="'Foto ' + ($index + 1)" />
+                }
+              </div>
+            }
+          } @else {
+            <div class="detalhes-img-principal placeholder">
+              <img [src]="getPlaceholderImage(veiculoSelecionado.veiMarca)" [alt]="veiculoSelecionado.veiMarca" />
+            </div>
+          }
+        </div>
+
+        <!-- Informacoes do veiculo -->
+        <div class="detalhes-info">
+          @if (veiculoSelecionado.categoriaNome) {
+            <span class="det-categoria">{{ veiculoSelecionado.categoriaNome }}</span>
+          }
+          <h2>{{ veiculoSelecionado.veiMarca }} {{ veiculoSelecionado.veiModelo }}</h2>
+          <p class="det-preco">{{ formatarPreco(veiculoSelecionado.veiPreco) }}</p>
+
+          <div class="det-specs">
+            <div class="spec-item">
+              <span class="material-icons">calendar_today</span>
+              <div>
+                <small>Ano</small>
+                <strong>{{ veiculoSelecionado.veiAno }}</strong>
+              </div>
+            </div>
+            <div class="spec-item">
+              <span class="material-icons">speed</span>
+              <div>
+                <small>Quilometragem</small>
+                <strong>{{ formatarKm(veiculoSelecionado.veiKm) }}</strong>
+              </div>
+            </div>
+            @if (veiculoSelecionado.veiCor) {
+              <div class="spec-item">
+                <span class="material-icons">palette</span>
+                <div>
+                  <small>Cor</small>
+                  <strong>{{ veiculoSelecionado.veiCor }}</strong>
+                </div>
+              </div>
+            }
+            @if (veiculoSelecionado.veiPlaca) {
+              <div class="spec-item">
+                <span class="material-icons">pin</span>
+                <div>
+                  <small>Placa</small>
+                  <strong>{{ veiculoSelecionado.veiPlaca }}</strong>
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- Observacoes -->
+          <div class="det-observacao">
+            <h4><span class="material-icons">description</span> Observacoes</h4>
+            @if (veiculoSelecionado.veiObservacao) {
+              <p>{{ veiculoSelecionado.veiObservacao }}</p>
+            } @else {
+              <p class="sem-obs">Nenhuma observacao registrada para este veiculo.</p>
+            }
+          </div>
+
+          <div class="det-loja">
+            <span class="material-icons">store</span>
+            <div>
+              <strong>{{ veiculoSelecionado.lojaNome }}</strong>
+              <span>{{ veiculoSelecionado.lojaCidade }}/{{ veiculoSelecionado.lojaEstado }}</span>
+            </div>
+          </div>
+
+          <!-- Action buttons -->
+          <div class="det-actions">
+            <button class="det-action-btn" (click)="abrirFinanciamento(veiculoSelecionado)">
+              <span class="material-icons">calculate</span>
+              Simular Financiamento
+            </button>
+            <button class="det-action-btn" (click)="abrirTestDrive(veiculoSelecionado)">
+              <span class="material-icons">event</span>
+              Agendar Test Drive
+            </button>
+            <button class="det-action-btn" (click)="abrirShare(veiculoSelecionado)">
+              <span class="material-icons">share</span>
+              Compartilhar
+            </button>
+          </div>
+
+          <button class="btn-whatsapp-det" (click)="abrirWhatsApp()">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+            </svg>
+            Tenho interesse neste veiculo
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Modal Comparador -->
+@if (showComparador && comparando.length >= 2) {
+  <div class="detalhes-overlay" (click)="fecharComparador()">
+    <div class="comparador-modal" (click)="$event.stopPropagation()">
+      <div class="comparador-header">
+        <h2>Comparar Veiculos</h2>
+        <button class="detalhes-close" style="position:static" (click)="fecharComparador()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="comparador-grid" [style.gridTemplateColumns]="'200px repeat(' + comparando.length + ', 1fr)'">
+        <div class="comp-label"></div>
+        @for (v of comparando; track v.veiId) {
+          <div class="comp-header">
+            <img [src]="getImagemPrincipal(v)" [alt]="v.veiMarca" />
+            <strong>{{ v.veiMarca }} {{ v.veiModelo }}</strong>
+            <button class="comp-remove" (click)="removerComparacao(v.veiId)"><span class="material-icons">close</span></button>
+          </div>
+        }
+        <div class="comp-label">Preco</div>
+        @for (v of comparando; track v.veiId) { <div class="comp-value highlight">{{ formatarPreco(v.veiPreco) }}</div> }
+        <div class="comp-label">Ano</div>
+        @for (v of comparando; track v.veiId) { <div class="comp-value">{{ v.veiAno }}</div> }
+        <div class="comp-label">KM</div>
+        @for (v of comparando; track v.veiId) { <div class="comp-value">{{ formatarKm(v.veiKm) }}</div> }
+        <div class="comp-label">Cor</div>
+        @for (v of comparando; track v.veiId) { <div class="comp-value">{{ v.veiCor || '-' }}</div> }
+        <div class="comp-label">Categoria</div>
+        @for (v of comparando; track v.veiId) { <div class="comp-value">{{ v.categoriaNome || '-' }}</div> }
+        <div class="comp-label">Loja</div>
+        @for (v of comparando; track v.veiId) { <div class="comp-value">{{ v.lojaNome }}</div> }
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Modal Financiamento -->
+@if (showFinanciamento && finVeiculo) {
+  <div class="detalhes-overlay" (click)="fecharFinanciamento()">
+    <div class="finance-modal" (click)="$event.stopPropagation()">
+      <button class="detalhes-close" style="position:static;float:right" (click)="fecharFinanciamento()"><span class="material-icons">close</span></button>
+      <h2><span class="material-icons">calculate</span> Simulacao de Financiamento</h2>
+      <p class="finance-veiculo">{{ finVeiculo.veiMarca }} {{ finVeiculo.veiModelo }} - {{ formatarPreco(finVeiculo.veiPreco) }}</p>
+      <div class="finance-form">
+        <div class="finance-field">
+          <label>Entrada (R$)</label>
+          <input type="number" [(ngModel)]="finEntrada" (ngModelChange)="calcularFinanciamento()" />
+        </div>
+        <div class="finance-field">
+          <label>Taxa mensal (%)</label>
+          <input type="number" [(ngModel)]="finTaxa" (ngModelChange)="calcularFinanciamento()" step="0.01" />
+        </div>
+        <div class="finance-field">
+          <label>Parcelas</label>
+          <select [(ngModel)]="finParcelas" (ngModelChange)="calcularFinanciamento()">
+            <option [value]="12">12x</option>
+            <option [value]="24">24x</option>
+            <option [value]="36">36x</option>
+            <option [value]="48">48x</option>
+            <option [value]="60">60x</option>
+          </select>
+        </div>
+      </div>
+      <div class="finance-result">
+        <div class="finance-item"><small>Valor financiado</small><strong>{{ formatarPreco(finVeiculo.veiPreco - finEntrada) }}</strong></div>
+        <div class="finance-item destaque"><small>Parcela estimada</small><strong>{{ formatarPreco(finValorParcela) }}</strong></div>
+        <div class="finance-item"><small>Total a pagar</small><strong>{{ formatarPreco(finEntrada + (finValorParcela * finParcelas)) }}</strong></div>
+      </div>
+      <p class="finance-disclaimer">* Simulacao meramente ilustrativa. Consulte as condicoes reais com a loja.</p>
+    </div>
+  </div>
+}
+
+<!-- Modal Test Drive -->
+@if (showTestDrive && testDriveVeiculo) {
+  <div class="detalhes-overlay" (click)="fecharTestDrive()">
+    <div class="testdrive-modal" (click)="$event.stopPropagation()">
+      <button class="detalhes-close" style="position:static;float:right" (click)="fecharTestDrive()"><span class="material-icons">close</span></button>
+      @if (!tdEnviado) {
+        <h2><span class="material-icons">event</span> Agendar Test Drive</h2>
+        <p class="td-veiculo">{{ testDriveVeiculo.veiMarca }} {{ testDriveVeiculo.veiModelo }} {{ testDriveVeiculo.veiAno }}</p>
+        <div class="td-form">
+          <input type="text" [(ngModel)]="tdNome" placeholder="Seu nome *" />
+          <input type="tel" [(ngModel)]="tdTelefone" placeholder="(00) 00000-0000 *" (input)="formatarTdTelefone()" maxlength="15" />
+          <input type="email" [(ngModel)]="tdEmail" placeholder="E-mail" />
+          <div class="td-row">
+            <input type="date" [(ngModel)]="tdData" (change)="onTdDataChange()" />
+            <select [(ngModel)]="tdHorario">
+              <option value="">Horário</option>
+              @for (h of horariosDisponiveis; track h) {
+                <option [value]="h">{{ h }}</option>
+              }
+            </select>
+          </div>
+          @if (tdData && horariosDisponiveis.length === 0) {
+            <p class="td-aviso">Todos os horários estão ocupados nesta data. Escolha outra data.</p>
+          }
+          <textarea [(ngModel)]="tdObs" placeholder="Observações (opcional)" rows="2"></textarea>
+          <button class="btn-agendar" (click)="enviarTestDrive()" [disabled]="!tdNome || !tdTelefone || !tdData">
+            <span class="material-icons">check</span> Confirmar Agendamento
+          </button>
+        </div>
+      } @else {
+        <div class="td-sucesso">
+          <span class="material-icons">check_circle</span>
+          <h3>Test Drive Agendado!</h3>
+          <p>Entraremos em contato para confirmar.</p>
+          <button class="btn-agendar" (click)="fecharTestDrive()">Fechar</button>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<!-- Modal Compartilhar -->
+@if (showShare && shareVeiculo) {
+  <div class="detalhes-overlay" (click)="fecharShare()">
+    <div class="share-modal" (click)="$event.stopPropagation()">
+      <button class="detalhes-close" style="position:static;float:right" (click)="fecharShare()"><span class="material-icons">close</span></button>
+      <h2><span class="material-icons">share</span> Compartilhar</h2>
+      <p>{{ shareVeiculo.veiMarca }} {{ shareVeiculo.veiModelo }} {{ shareVeiculo.veiAno }}</p>
+      <div class="share-link">
+        <input type="text" [value]="getShareUrl(shareVeiculo)" readonly />
+        <button (click)="copiarLink()">{{ linkCopiado ? 'Copiado!' : 'Copiar' }}</button>
+      </div>
+      <div class="share-buttons">
+        <button class="share-btn whatsapp" (click)="compartilharWhatsApp()">
+          <span>WhatsApp</span>
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Modal Cadastro de Favorito -->
+@if (showFavoritoCadastro) {
+  <div class="detalhes-overlay" (click)="fecharFavoritoCadastro()">
+    <div class="favorito-modal" (click)="$event.stopPropagation()">
+      <button class="detalhes-close" style="position:static;float:right" (click)="fecharFavoritoCadastro()">
+        <span class="material-icons">close</span>
+      </button>
+      <div class="fav-header">
+        <span class="material-icons fav-icon">favorite</span>
+        <h2>Salvar nos Favoritos</h2>
+      </div>
+      <p class="fav-desc">Para favoritar veiculos e nao perder suas escolhas, informe seu e-mail. Assim voce pode acessar seus favoritos de qualquer dispositivo!</p>
+      <div class="fav-form">
+        <div class="fav-field">
+          <label>E-mail *</label>
+          <input type="email" [(ngModel)]="favoritoEmail" placeholder="seu@email.com" />
+        </div>
+        <div class="fav-field">
+          <label>Nome</label>
+          <input type="text" [(ngModel)]="favoritoNome" placeholder="Seu nome (opcional)" />
+        </div>
+        <div class="fav-field">
+          <label>Telefone</label>
+          <input type="tel" [(ngModel)]="favoritoTelefone" placeholder="(00) 00000-0000 (opcional)" />
+        </div>
+        <button class="btn-fav-confirmar" (click)="confirmarFavoritoCadastro()" [disabled]="!favoritoEmail">
+          <span class="material-icons">favorite</span>
+          Confirmar e Favoritar
+        </button>
+        <p class="fav-privacy">Seus dados estao seguros e nao serao compartilhados.</p>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Modal Galeria Fullscreen -->
+@if (showGaleria && galeriaVeiculo) {
+  <div class="galeria-overlay" (click)="fecharGaleria()">
+    <div class="galeria-modal" (click)="$event.stopPropagation()">
+      <button class="galeria-close" (click)="fecharGaleria()">
+        <span class="material-icons">close</span>
+      </button>
+      <div class="galeria-content">
+        @if (getImagensVeiculo(galeriaVeiculo).length > 1) {
+          <button class="galeria-nav prev" (click)="galeriaAnterior()">
+            <span class="material-icons">chevron_left</span>
+          </button>
+        }
+        <img [src]="getImageUrl(getImagensVeiculo(galeriaVeiculo)[galeriaIndex])"
+             [alt]="galeriaVeiculo.veiMarca" class="galeria-img" />
+        @if (getImagensVeiculo(galeriaVeiculo).length > 1) {
+          <button class="galeria-nav next" (click)="galeriaProxima()">
+            <span class="material-icons">chevron_right</span>
+          </button>
+        }
+      </div>
+      <div class="galeria-info">
+        <h3>{{ galeriaVeiculo.veiMarca }} {{ galeriaVeiculo.veiModelo }} {{ galeriaVeiculo.veiAno }}</h3>
+        <span>{{ galeriaIndex + 1 }} / {{ getImagensVeiculo(galeriaVeiculo).length }}</span>
+      </div>
+    </div>
+  </div>
+}

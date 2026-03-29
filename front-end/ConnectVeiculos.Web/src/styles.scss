@@ -1,0 +1,102 @@
+// Importar temas
+@import 'styles/themes';
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button {
+  font-family: inherit;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+}
+
+// Labels de campos obrigatorios em negrito
+label.required {
+  font-weight: bold !important;
+}
+
+// Remove setas (spinners) de todos os inputs numericos
+input[type="number"] {
+  -moz-appearance: textfield !important;
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    -webkit-appearance: none !important;
+    margin: 0;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+// ==========================================
+// Estilos Globais de Impressao
+// ==========================================
+@media print {
+  // Ocultar sidebar e header do layout
+  .sidebar,
+  .header,
+  app-sidebar,
+  .main-header {
+    display: none !important;
+  }
+
+  // Ajustar o conteudo principal para ocupar toda a pagina
+  .main-content,
+  .content-area {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  // Remover background e sombras
+  body {
+    background: #fff !important;
+  }
+
+  // Classes utilitarias de impressao
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+}

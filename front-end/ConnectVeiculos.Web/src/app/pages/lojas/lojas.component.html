@@ -1,0 +1,277 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Lojas</h1>
+    <button class="btn-primary" (click)="openModal()">
+      <span class="material-icons">add</span>
+      Nova Loja
+    </button>
+  </div>
+
+  <div class="search-bar">
+    <div class="search-input">
+      <span class="material-icons">search</span>
+      <input type="text"
+             [(ngModel)]="searchTerm"
+             placeholder="Buscar por nome ou cidade..."
+             (keyup.enter)="onSearch()" />
+    </div>
+    <button class="btn-secondary" (click)="onSearch()">Buscar</button>
+  </div>
+
+  @if (loading) {
+    <div class="loading">Carregando...</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Cidade/Estado</th>
+            <th>Telefone</th>
+            <th>E-mail</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (loja of lojas; track loja.lojId) {
+            <tr>
+              <td>{{ loja.lojNome }}</td>
+              <td>{{ loja.lojCidade }} / {{ loja.lojEstado }}</td>
+              <td>{{ loja.lojTel1 || '-' }}</td>
+              <td>{{ loja.lojEmail || '-' }}</td>
+              <td>
+                <span class="badge" [class.active]="loja.lojSts" [class.inactive]="!loja.lojSts">
+                  {{ loja.lojSts ? 'Ativa' : 'Inativa' }}
+                </span>
+              </td>
+              <td class="actions">
+                <button class="btn-icon" (click)="openModal(loja)" title="Editar">
+                  <span class="material-icons">edit</span>
+                </button>
+                <button class="btn-icon delete" (click)="remove(loja.lojId)" title="Excluir">
+                  <span class="material-icons">delete</span>
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6" class="empty">Nenhuma loja encontrada</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <app-pagination
+      [page]="page"
+      [pageSize]="pageSize"
+      [totalItems]="totalItems"
+      [totalPages]="totalPages"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)">
+    </app-pagination>
+  }
+</div>
+
+@if (showModal) {
+  <div class="modal-overlay">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h2>{{ editMode ? 'Editar' : 'Nova' }} Loja</h2>
+        <button class="btn-close" (click)="closeModal()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="required">Nome</label>
+            <input type="text" formControlName="lojNome" placeholder="Nome da loja" maxlength="150"
+                   [class.invalid]="hasError('lojNome', 'required') || hasError('lojNome', 'minlength')" />
+            @if (hasError('lojNome', 'required')) {
+              <span class="error-message">Nome é obrigatório</span>
+            }
+            @if (hasError('lojNome', 'minlength')) {
+              <span class="error-message">Nome deve ter no mínimo 3 caracteres</span>
+            }
+          </div>
+          <div class="form-group">
+            <label>Slug (URL do catalogo)</label>
+            <input type="text" formControlName="lojSlug" placeholder="auto-center-sp" maxlength="100" />
+            <small class="slug-hint">URL: connectveiculos.com.br/catalogo/{{ form.get('lojSlug')?.value || 'slug-da-loja' }}</small>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>CNPJ</label>
+              <input type="text" formControlName="lojCNPJ" appMask="cnpj" placeholder="00.000.000/0000-00" maxlength="18"
+                     (blur)="validarCnpj()" [class.invalid]="cnpjInvalido" />
+              @if (cnpjInvalido) {
+                <span class="error-message">CNPJ inválido</span>
+              }
+            </div>
+            <div class="form-group">
+              <label>Inscrição Estadual</label>
+              <input type="text" formControlName="lojIE" maxlength="14" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>CEP</label>
+              <input type="text" formControlName="lojCEP" appMask="cep" placeholder="00000-000" maxlength="9"
+                     (blur)="buscarCep()" />
+            </div>
+            <div class="form-group flex-2">
+              <label>Logradouro</label>
+              <input type="text" formControlName="lojLogradouro" maxlength="200" />
+            </div>
+            <div class="form-group">
+              <label>Número</label>
+              <input type="text" formControlName="lojNumero" maxlength="10" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Bairro</label>
+              <input type="text" formControlName="lojBairro" maxlength="100" />
+            </div>
+            <div class="form-group">
+              <label>Complemento</label>
+              <input type="text" formControlName="lojComplemento" maxlength="100" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="required">Cidade</label>
+              <input type="text" formControlName="lojCidade" maxlength="100"
+                     [class.invalid]="hasError('lojCidade', 'required')" />
+              @if (hasError('lojCidade', 'required')) {
+                <span class="error-message">Cidade é obrigatória</span>
+              }
+            </div>
+            <div class="form-group">
+              <label class="required">Estado</label>
+              <input type="text" formControlName="lojEstado" maxlength="2"
+                     [class.invalid]="hasError('lojEstado', 'required')" />
+              @if (hasError('lojEstado', 'required')) {
+                <span class="error-message">Estado é obrigatório</span>
+              }
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Telefone 1</label>
+              <input type="text" formControlName="lojTel1" appMask="telefone" placeholder="(00) 0000-0000" maxlength="14" />
+            </div>
+            <div class="form-group">
+              <label>Telefone 2</label>
+              <input type="text" formControlName="lojTel2" appMask="celular" placeholder="(00) 00000-0000" maxlength="15" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>WhatsApp (para catálogo)</label>
+              <input type="text" formControlName="lojWhatsApp" appMask="celular" placeholder="(00) 00000-0000" maxlength="15" />
+            </div>
+            <div class="form-group">
+              <label>E-mail</label>
+              <input type="email" formControlName="lojEmail" maxlength="150"
+                     [class.invalid]="hasError('lojEmail', 'email')" />
+              @if (hasError('lojEmail', 'email')) {
+                <span class="error-message">E-mail inválido</span>
+              }
+            </div>
+          </div>
+          @if (editMode) {
+            <div class="form-row">
+              <div class="form-group">
+                <label class="required">Status</label>
+                <select formControlName="lojSts">
+                  <option [ngValue]="true">Ativo</option>
+                  <option [ngValue]="false">Inativo</option>
+                </select>
+              </div>
+              <div class="form-group"></div>
+            </div>
+          }
+          <div class="form-section-title">Personalização do Catálogo</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Logo da Empresa</label>
+              <div class="logo-upload-area">
+                @if (logoPreview) {
+                  <div class="logo-preview">
+                    <img [src]="logoPreview" alt="Logo" />
+                    <button type="button" class="btn-remove-logo" (click)="removerLogo()">
+                      <span class="material-icons">close</span>
+                    </button>
+                  </div>
+                } @else {
+                  <label class="logo-upload-btn">
+                    <span class="material-icons">add_photo_alternate</span>
+                    <span>Selecionar Logo</span>
+                    <input type="file" accept="image/*" (change)="onLogoSelected($event)" hidden />
+                  </label>
+                }
+              </div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Cor Primária</label>
+              <div class="color-picker-wrapper">
+                <input type="color" formControlName="lojCorPrimaria" />
+                <input type="text" formControlName="lojCorPrimaria" placeholder="#1a237e" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Cor Secundária</label>
+              <div class="color-picker-wrapper">
+                <input type="color" formControlName="lojCorSecundaria" />
+                <input type="text" formControlName="lojCorSecundaria" placeholder="#25d366" />
+              </div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Instagram</label>
+              <div class="social-input">
+                <span class="social-prefix">&#64;</span>
+                <input type="text" formControlName="lojInstagram" placeholder="sualoja" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Facebook</label>
+              <div class="social-input">
+                <span class="social-prefix">fb.com/</span>
+                <input type="text" formControlName="lojFacebook" placeholder="sualoja" />
+              </div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group" style="grid-column: 1/-1;">
+              <label>Pré-visualização</label>
+              <div class="color-preview" [style.background]="'linear-gradient(135deg, ' + form.get('lojCorPrimaria')?.value + ' 0%, ' + form.get('lojCorSecundaria')?.value + ' 100%)'">
+                <span style="color: white; font-weight: 600; font-size: 14px;">{{ form.get('lojNome')?.value || 'Nome da Loja' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" (click)="closeModal()">Cancelar</button>
+          <button type="submit" class="btn-primary" [disabled]="form.invalid">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<app-confirm-modal
+  [show]="showConfirmModal"
+  titulo="Excluir Loja"
+  mensagem="Deseja realmente excluir esta loja? Esta ação não pode ser desfeita."
+  textoBotaoConfirmar="Excluir"
+  tipo="danger"
+  (confirmar)="confirmarExclusao()"
+  (cancelar)="cancelarExclusao()">
+</app-confirm-modal>

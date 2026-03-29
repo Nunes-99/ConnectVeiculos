@@ -1,0 +1,441 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Veículos</h1>
+    <div class="header-actions">
+      <button class="btn-success" (click)="exportarExcel()">
+        <span class="material-icons">download</span>
+        Exportar Excel
+      </button>
+      <label class="btn-info" [class.disabled]="importando">
+        <span class="material-icons">upload</span>
+        {{ importando ? 'Importando...' : 'Importar Excel' }}
+        <input type="file" accept=".xlsx,.xls" (change)="onImportarExcel($event)" [disabled]="importando" hidden />
+      </label>
+      <button class="btn-primary" (click)="openModal()">
+        <span class="material-icons">add</span>
+        Novo Veículo
+      </button>
+    </div>
+  </div>
+
+  <div class="filtros-container">
+    <div class="filtro-grupo">
+      <input type="text" placeholder="Buscar por marca, modelo, placa..."
+             [(ngModel)]="filtroTexto" (keyup.enter)="aplicarFiltros()" />
+    </div>
+    <div class="filtro-grupo">
+      <select [(ngModel)]="filtroLoja" (change)="aplicarFiltros()">
+        <option [ngValue]="null">Todas as lojas</option>
+        @for (loja of lojas; track loja.lojId) {
+          <option [ngValue]="loja.lojId">{{ loja.lojNome }}</option>
+        }
+      </select>
+    </div>
+    <div class="filtro-grupo">
+      <select [(ngModel)]="filtroCategoria" (change)="aplicarFiltros()">
+        <option [ngValue]="null">Todas as categorias</option>
+        @for (categoria of categorias; track categoria.catId) {
+          <option [ngValue]="categoria.catId">{{ categoria.catNome }}</option>
+        }
+      </select>
+    </div>
+    <div class="filtro-grupo">
+      <select [(ngModel)]="filtroStatus" (change)="aplicarFiltros()">
+        <option value="">Todos os status</option>
+        <option value="D">Disponível</option>
+        <option value="V">Vendido</option>
+        <option value="R">Reservado</option>
+      </select>
+    </div>
+    <div class="filtro-acoes">
+      <button class="btn-secondary" (click)="limparFiltros()">
+        <span class="material-icons">clear</span>
+        Limpar
+      </button>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="loading">Carregando...</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Marca/Modelo</th>
+            <th>Ano</th>
+            <th>Placa</th>
+            <th>Cor</th>
+            <th>Preço</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (veiculo of veiculosPaginados; track veiculo.veiId) {
+            <tr>
+              <td>
+                <strong>{{ veiculo.veiMarca }}</strong><br/>
+                <span class="text-muted">{{ veiculo.veiModelo }}</span>
+              </td>
+              <td>{{ veiculo.veiAno }}</td>
+              <td>{{ veiculo.veiPlaca || '-' }}</td>
+              <td>{{ veiculo.veiCor || '-' }}</td>
+              <td>{{ veiculo.veiPreco | currency:'BRL' }}</td>
+              <td>
+                <span class="badge" [class.active]="veiculo.veiSts === 'D'" [class.inactive]="veiculo.veiSts === 'V'">
+                  {{ getStatusLabel(veiculo.veiSts) }}
+                </span>
+              </td>
+              <td class="actions">
+                <button class="btn-icon" (click)="toggleSocialStatus(veiculo.veiId, 'instagram', veiculo.veiPostadoInsta || false)" [title]="veiculo.veiPostadoInsta ? 'Postado no Instagram' : 'Marcar como postado no Instagram'">
+                  <span class="material-icons" [style.color]="veiculo.veiPostadoInsta ? '#E1306C' : '#ccc'">photo_camera</span>
+                </button>
+                <button class="btn-icon" (click)="toggleSocialStatus(veiculo.veiId, 'facebook', veiculo.veiPostadoFace || false)" [title]="veiculo.veiPostadoFace ? 'Postado no Facebook' : 'Marcar como postado no Facebook'">
+                  <span class="material-icons" [style.color]="veiculo.veiPostadoFace ? '#1877F2' : '#ccc'">thumb_up</span>
+                </button>
+                <button class="btn-icon" (click)="openImagensModal(veiculo)" title="Imagens">
+                  <span class="material-icons">photo_library</span>
+                </button>
+                <button class="btn-icon" (click)="openModal(veiculo)" title="Editar">
+                  <span class="material-icons">edit</span>
+                </button>
+                <button class="btn-icon delete" (click)="remove(veiculo.veiId)" title="Excluir">
+                  <span class="material-icons">delete</span>
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="7" class="empty">Nenhum veículo encontrado</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      <app-pagination
+        [currentPage]="currentPage"
+        [totalItems]="totalItems"
+        [pageSize]="pageSize"
+        (pageChange)="onPageChange($event)">
+      </app-pagination>
+    </div>
+  }
+</div>
+
+@if (showModal) {
+  <div class="modal-overlay">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h2>{{ editMode ? 'Editar' : 'Novo' }} Veículo</h2>
+        <button class="btn-close" (click)="closeModal()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="required">Loja</label>
+              <select formControlName="r_LojId" [class.invalid]="hasError('r_LojId', 'min')">
+                <option [ngValue]="0">Selecione...</option>
+                @for (loja of lojas; track loja.lojId) {
+                  <option [ngValue]="loja.lojId">{{ loja.lojNome }}</option>
+                }
+              </select>
+              @if (hasError('r_LojId', 'min')) {
+                <span class="field-error">Selecione uma loja</span>
+              }
+            </div>
+            <div class="form-group">
+              <label class="required">Categoria</label>
+              <select formControlName="r_CatId" [class.invalid]="hasError('r_CatId', 'min')">
+                <option [ngValue]="0">Selecione...</option>
+                @for (categoria of categorias; track categoria.catId) {
+                  <option [ngValue]="categoria.catId">{{ categoria.catNome }}</option>
+                }
+              </select>
+              @if (hasError('r_CatId', 'min')) {
+                <span class="field-error">Selecione uma categoria</span>
+              }
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="required">Marca</label>
+              <input type="text" formControlName="veiMarca" placeholder="Ex: Toyota"
+                     [class.invalid]="hasError('veiMarca', 'required') || hasError('veiMarca', 'minlength')" />
+              @if (hasError('veiMarca', 'required')) {
+                <span class="field-error">Marca é obrigatória</span>
+              }
+              @if (hasError('veiMarca', 'minlength')) {
+                <span class="field-error">Marca deve ter no mínimo 2 caracteres</span>
+              }
+            </div>
+            <div class="form-group">
+              <label class="required">Modelo</label>
+              <input type="text" formControlName="veiModelo" placeholder="Ex: Corolla"
+                     [class.invalid]="hasError('veiModelo', 'required') || hasError('veiModelo', 'minlength')" />
+              @if (hasError('veiModelo', 'required')) {
+                <span class="field-error">Modelo é obrigatório</span>
+              }
+              @if (hasError('veiModelo', 'minlength')) {
+                <span class="field-error">Modelo deve ter no mínimo 2 caracteres</span>
+              }
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="required">Ano</label>
+              <input type="tel" formControlName="veiAno"
+                     [class.invalid]="hasError('veiAno', 'required') || hasError('veiAno', 'min') || hasError('veiAno', 'max')" />
+              @if (hasError('veiAno', 'required')) {
+                <span class="field-error">Ano é obrigatório</span>
+              }
+              @if (hasError('veiAno', 'min') || hasError('veiAno', 'max')) {
+                <span class="field-error">Ano inválido</span>
+              }
+            </div>
+            <div class="form-group">
+              <label>Cor</label>
+              <input type="text" formControlName="veiCor" placeholder="Ex: Prata" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="required">Placa</label>
+              <input type="text" formControlName="veiPlaca" appMask="placa" placeholder="ABC-1234"
+                     [class.invalid]="hasError('veiPlaca', 'required')" />
+              @if (hasError('veiPlaca', 'required')) {
+                <span class="field-error">Placa é obrigatória</span>
+              }
+            </div>
+            <div class="form-group">
+              <label>Chassi</label>
+              <input type="text" formControlName="veiChassi" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>KM</label>
+              <input type="tel" formControlName="veiKm" />
+            </div>
+            <div class="form-group">
+              <label class="required">Status</label>
+              <select formControlName="veiSts">
+                <option value="D">Disponível</option>
+                <option value="V">Vendido</option>
+                <option value="R">Reservado</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Preço de Compra</label>
+              <input formControlName="veiPrecoCompra" appCurrencyMask />
+            </div>
+            <div class="form-group">
+              <label class="required">Preço de Venda</label>
+              <input formControlName="veiPreco" appCurrencyMask
+                     [class.invalid]="hasError('veiPreco', 'required')" />
+              @if (hasError('veiPreco', 'required')) {
+                <span class="field-error">Preço é obrigatório</span>
+              }
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group full-width">
+              <label>Observação</label>
+              <textarea formControlName="veiObservacao" rows="3" placeholder="Observações sobre o veículo..."></textarea>
+            </div>
+          </div>
+
+          <!-- Imagens do veículo -->
+          <div class="form-row">
+            <div class="form-group full-width">
+              <label>Imagens do Veículo</label>
+              <div class="upload-section">
+                <label class="upload-btn" [class.disabled]="uploadingImage">
+                  <span class="material-icons">cloud_upload</span>
+                  Selecionar Imagens
+                  <input type="file" accept="image/*" multiple (change)="onFilesSelected($event)" [disabled]="uploadingImage" />
+                </label>
+                <span class="upload-hint">JPG, PNG, GIF ou WEBP (max 5MB cada) - Sem limite de fotos</span>
+              </div>
+
+              @if (imagensPreview.length > 0) {
+                <div class="preview-section">
+                  <h4>Novas imagens para upload ({{ imagensPreview.length }})</h4>
+                  <div class="preview-grid">
+                    @for (item of imagensPreview; track $index) {
+                      <div class="preview-item">
+                        <img [src]="item.preview" [alt]="item.file.name" />
+                        <button type="button" class="btn-remove-preview" (click)="removerPreview($index)" title="Remover" [disabled]="uploadingImage">
+                          <span class="material-icons">close</span>
+                        </button>
+                        <span class="preview-name">{{ item.file.name }}</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+
+              @if (editMode && imagens.length > 0) {
+                <div class="images-section">
+                  <h4>Imagens cadastradas ({{ imagens.length }})</h4>
+                  <div class="images-grid">
+                    @for (imagem of imagens; track imagem.imgId) {
+                      <div class="image-item">
+                        <img [src]="getImageUrl(imagem.imgCaminho)" [alt]="'Imagem ' + imagem.imgOrdem" />
+                        <button type="button" class="btn-remove" (click)="removeImagem(imagem)" title="Remover">
+                          <span class="material-icons">delete</span>
+                        </button>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" (click)="closeModal()">Cancelar</button>
+          <button type="submit" class="btn-primary" [disabled]="form.invalid">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+@if (showImagensModal && selectedVeiculo) {
+  <div class="modal-overlay">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h2>Imagens - {{ selectedVeiculo.veiMarca }} {{ selectedVeiculo.veiModelo }}</h2>
+        <button class="btn-close" (click)="closeImagensModal()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="upload-section">
+          <label class="upload-btn" [class.disabled]="uploadingImage">
+            <span class="material-icons">cloud_upload</span>
+            Selecionar Imagens
+            <input type="file" accept="image/*" multiple (change)="onFilesSelected($event)" [disabled]="uploadingImage" />
+          </label>
+          <span class="upload-hint">JPG, PNG, GIF ou WEBP (max 5MB cada) - Selecione múltiplas imagens</span>
+        </div>
+
+        @if (imagensPreview.length > 0) {
+          <div class="preview-section">
+            <h4>Imagens para upload ({{ imagensPreview.length }})</h4>
+            <div class="preview-grid">
+              @for (item of imagensPreview; track $index) {
+                <div class="preview-item">
+                  <img [src]="item.preview" [alt]="item.file.name" />
+                  <button class="btn-remove-preview" (click)="removerPreview($index)" title="Remover" [disabled]="uploadingImage">
+                    <span class="material-icons">close</span>
+                  </button>
+                  <span class="preview-name">{{ item.file.name }}</span>
+                </div>
+              }
+            </div>
+            @if (uploadingImage) {
+              <div class="progress-container">
+                <div class="progress-bar">
+                  <div class="progress-fill" [style.width.%]="uploadProgress"></div>
+                </div>
+                <span class="progress-text">{{ uploadCurrent }} de {{ uploadTotal }} ({{ uploadProgress }}%)</span>
+              </div>
+            }
+            <button class="btn-primary upload-all-btn" (click)="uploadAllImages()" [disabled]="uploadingImage || imagensPreview.length === 0">
+              <span class="material-icons">cloud_upload</span>
+              {{ uploadingImage ? 'Enviando...' : 'Enviar Todas' }}
+            </button>
+          </div>
+        }
+
+        <div class="images-section">
+          <h4>Imagens cadastradas ({{ imagens.length }})</h4>
+          <div class="images-grid">
+            @for (imagem of imagens; track imagem.imgId) {
+              <div class="image-item">
+                <img [src]="getImageUrl(imagem.imgCaminho)" [alt]="'Imagem ' + imagem.imgOrdem" />
+                <button class="btn-remove" (click)="removeImagem(imagem)" title="Remover">
+                  <span class="material-icons">delete</span>
+                </button>
+              </div>
+            } @empty {
+              <p class="no-images">Nenhuma imagem cadastrada</p>
+            }
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" (click)="closeImagensModal()">Fechar</button>
+      </div>
+    </div>
+  </div>
+}
+
+<app-confirm-modal
+  [show]="showConfirmModal"
+  titulo="Excluir Veículo"
+  mensagem="Deseja realmente excluir este veículo? Esta ação não pode ser desfeita."
+  textoBotaoConfirmar="Excluir"
+  tipo="danger"
+  (confirmar)="confirmarExclusao()"
+  (cancelar)="cancelarExclusao()">
+</app-confirm-modal>
+
+<app-confirm-modal
+  [show]="showConfirmImagemModal"
+  titulo="Excluir Imagem"
+  mensagem="Deseja realmente excluir esta imagem?"
+  textoBotaoConfirmar="Excluir"
+  tipo="warning"
+  (confirmar)="confirmarExclusaoImagem()"
+  (cancelar)="cancelarExclusaoImagem()">
+</app-confirm-modal>
+
+@if (showImportResult && importResult) {
+  <div class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Resultado da Importação</h2>
+        <button class="btn-close" (click)="fecharResultadoImportacao()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="import-result">
+          <div class="result-summary">
+            <div class="result-item success">
+              <span class="material-icons">check_circle</span>
+              <strong>{{ importResult.sucesso }}</strong> importados com sucesso
+            </div>
+            @if (importResult.erros > 0) {
+              <div class="result-item error">
+                <span class="material-icons">error</span>
+                <strong>{{ importResult.erros }}</strong> erros
+              </div>
+            }
+          </div>
+          @if (importResult.detalhes.length > 0) {
+            <div class="result-details">
+              <h4>Detalhes dos erros:</h4>
+              <ul>
+                @for (detalhe of importResult.detalhes; track $index) {
+                  <li>{{ detalhe }}</li>
+                }
+              </ul>
+            </div>
+          }
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary" (click)="fecharResultadoImportacao()">Fechar</button>
+      </div>
+    </div>
+  </div>
+}

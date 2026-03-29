@@ -1,0 +1,46 @@
+{
+  "name": "ConnectVeiculos",
+  "short_name": "ConnectVeiculos",
+  "description": "Sistema de gerenciamento de veiculos e vendas",
+  "theme_color": "#1976d2",
+  "background_color": "#fafafa",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Acessar o dashboard",
+      "url": "/dashboard"
+    },
+    {
+      "name": "Veiculos",
+      "short_name": "Veiculos",
+      "description": "Gerenciar veiculos",
+      "url": "/veiculos"
+    },
+    {
+      "name": "Vendas",
+      "short_name": "Vendas",
+      "description": "Gerenciar vendas",
+      "url": "/vendas"
+    }
+  ]
+}

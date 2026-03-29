@@ -1,0 +1,77 @@
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <div class="logo-area">
+      <span class="material-icons logo-icon">directions_car</span>
+      <h2>Connect<span>Veículos</span></h2>
+    </div>
+    <app-notifications></app-notifications>
+  </div>
+
+  <nav class="sidebar-nav">
+    @for (group of menuGroups; track group.title) {
+      <div class="nav-group">
+        <span class="nav-group-title">{{ group.title }}</span>
+        @for (item of group.items; track item.route) {
+          <a [routerLink]="item.route" routerLinkActive="active" class="nav-item">
+            <span class="material-icons">{{ item.icon }}</span>
+            <span class="nav-label">{{ item.label }}</span>
+          </a>
+        }
+      </div>
+    }
+  </nav>
+
+  <div class="catalogo-section">
+    <h4>
+      <span class="material-icons">storefront</span>
+      Catálogo Público
+    </h4>
+    @if (lojas.length > 1) {
+      @for (loja of lojas; track loja.lojId) {
+        <div class="catalogo-loja-item">
+          <button class="btn-catalogo" (click)="abrirCatalogo(loja)" title="Abrir catálogo de {{ loja.lojNome }}">
+            <span class="material-icons">open_in_new</span>
+            <span>{{ loja.lojNome }}</span>
+          </button>
+          <button class="btn-copiar" (click)="copiarLinkCatalogo(loja)" title="Copiar link">
+            <span class="material-icons">{{ linkCopiado ? 'check' : 'content_copy' }}</span>
+          </button>
+        </div>
+      }
+    } @else {
+      <div class="catalogo-loja-item">
+        <button class="btn-catalogo" (click)="abrirCatalogo(lojas.length === 1 ? lojas[0] : undefined)" title="Abrir catálogo">
+          <span class="material-icons">open_in_new</span>
+          <span>Abrir Vitrine</span>
+        </button>
+        <button class="btn-copiar" (click)="copiarLinkCatalogo(lojas.length === 1 ? lojas[0] : undefined)" title="Copiar link do catálogo">
+          <span class="material-icons">{{ linkCopiado ? 'check' : 'content_copy' }}</span>
+        </button>
+      </div>
+    }
+    @if (linkCopiado) {
+      <span class="link-copiado-msg">Link copiado!</span>
+    }
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="user-card">
+      <div class="user-avatar">{{ getInitials() }}</div>
+      <div class="user-info">
+        @if (authService.currentUser(); as user) {
+          <span class="user-name">{{ user.usuNome }}</span>
+          <span class="user-email">{{ user.usuEmail }}</span>
+        }
+      </div>
+    </div>
+
+    <div class="footer-actions">
+      <button class="btn-footer" (click)="toggleTheme()" title="Alternar tema">
+        <span class="material-icons">{{ themeService.isDarkMode() ? 'light_mode' : 'dark_mode' }}</span>
+      </button>
+      <button class="btn-footer btn-logout" (click)="logout()" title="Sair">
+        <span class="material-icons">logout</span>
+      </button>
+    </div>
+  </div>
+</aside>

@@ -1,0 +1,458 @@
+<div class="dashboard">
+  <h1>Dashboard</h1>
+
+  @if (loading) {
+    <div class="loading">Carregando estatísticas...</div>
+  } @else if (dashboard) {
+    <!-- Cards Principais -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon veiculos">
+          <span class="material-icons">directions_car</span>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ dashboard.totalVeiculos }}</span>
+          <span class="stat-label">Total Veículos</span>
+        </div>
+      </div>
+
+      <div class="stat-card highlight-green">
+        <div class="stat-icon disponivel">
+          <span class="material-icons">check_circle</span>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ dashboard.veiculosDisponiveis }}</span>
+          <span class="stat-label">Disponíveis</span>
+        </div>
+      </div>
+
+      <div class="stat-card highlight-blue">
+        <div class="stat-icon vendido">
+          <span class="material-icons">sell</span>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ dashboard.veiculosVendidos }}</span>
+          <span class="stat-label">Vendidos</span>
+        </div>
+      </div>
+
+      <div class="stat-card highlight-orange">
+        <div class="stat-icon reservado">
+          <span class="material-icons">bookmark</span>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ dashboard.veiculosReservados }}</span>
+          <span class="stat-label">Reservados</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cards Financeiros -->
+    <div class="stats-grid financial">
+      <div class="stat-card large">
+        <div class="stat-icon money">
+          <span class="material-icons">account_balance_wallet</span>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ formatarPreco(dashboard.valorTotalEstoque) }}</span>
+          <span class="stat-label">Valor Total em Estoque</span>
+        </div>
+      </div>
+
+      <div class="stat-card large">
+        <div class="stat-icon money">
+          <span class="material-icons">trending_up</span>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ formatarPreco(dashboard.valorMedioVeiculo) }}</span>
+          <span class="stat-label">Valor Médio por Veículo</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cards Novos - Leads, Test Drives, Estoque -->
+    <div class="stats-grid new-stats">
+      <div class="stat-card highlight-purple">
+        <div class="stat-icon leads">
+          <span class="material-icons">person_add</span>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ leadsEsteMes }}</span>
+          <span class="stat-label">Leads este mês</span>
+        </div>
+      </div>
+
+      <div class="stat-card highlight-cyan">
+        <div class="stat-icon testdrive">
+          <span class="material-icons">speed</span>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ testDrivesPendentes }}</span>
+          <span class="stat-label">Test Drives pendentes</span>
+        </div>
+      </div>
+
+      <div class="stat-card highlight-red">
+        <div class="stat-icon estoque-alerta">
+          <span class="material-icons">warning</span>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ veiculosParados30Dias }}</span>
+          <span class="stat-label">Veículos parados há +30 dias</span>
+        </div>
+      </div>
+
+      <div class="stat-card highlight-teal">
+        <div class="stat-icon tempo-venda">
+          <span class="material-icons">schedule</span>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ tempoMedioVendaDias }} dias</span>
+          <span class="stat-label">Tempo médio de venda</span>
+        </div>
+      </div>
+
+      <div class="stat-card highlight-indigo">
+        <div class="stat-icon margem">
+          <span class="material-icons">percent</span>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ margemLucroMedia }}%</span>
+          <span class="stat-label">Margem de lucro média</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cards Secundários -->
+    <div class="stats-grid secondary">
+      <div class="stat-card small">
+        <div class="stat-icon lojas">
+          <span class="material-icons">store</span>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ dashboard.totalLojas }}</span>
+          <span class="stat-label">Lojas</span>
+        </div>
+      </div>
+
+      <div class="stat-card small">
+        <div class="stat-icon categorias">
+          <span class="material-icons">category</span>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ dashboard.totalCategorias }}</span>
+          <span class="stat-label">Categorias</span>
+        </div>
+      </div>
+
+      <div class="stat-card small">
+        <div class="stat-icon usuarios">
+          <span class="material-icons">people</span>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ dashboard.totalUsuarios }}</span>
+          <span class="stat-label">Usuários</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alerta de Estoque -->
+    @if (alertasEstoque.length > 0) {
+      <div class="section-title">
+        <h2>
+          <span class="material-icons section-icon alerta-icon">notification_important</span>
+          Alerta de Estoque
+        </h2>
+        <span class="alerta-badge">{{ alertasEstoque.length }} veículos</span>
+      </div>
+      <div class="alertas-estoque">
+        <div class="alertas-list">
+          <table>
+            <thead>
+              <tr>
+                <th>Veículo</th>
+                <th>Ano</th>
+                <th>Loja</th>
+                <th>Preço</th>
+                <th>Entrada</th>
+                <th>Dias em Estoque</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (veiculo of alertasEstoque; track veiculo.veiId) {
+                <tr>
+                  <td>
+                    <strong>{{ veiculo.marca }}</strong>
+                    <span class="text-muted">{{ veiculo.modelo }}</span>
+                  </td>
+                  <td>{{ veiculo.ano }}</td>
+                  <td>{{ veiculo.loja }}</td>
+                  <td>{{ formatarPreco(veiculo.preco) }}</td>
+                  <td>{{ veiculo.dtEntrada | date:'dd/MM/yyyy' }}</td>
+                  <td>
+                    <span class="dias-estoque-badge" [class]="getDiasEstoqueClass(veiculo.diasEmEstoque)">
+                      {{ veiculo.diasEmEstoque }} dias
+                    </span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    <!-- Comparativo Mensal -->
+    @if (comparativoMensal) {
+      <div class="section-title">
+        <h2>Comparativo Mensal</h2>
+      </div>
+      <div class="comparativo-grid">
+        <div class="comparativo-card">
+          <div class="comparativo-header">
+            <span class="comparativo-label">Faturamento</span>
+            <span class="comparativo-variacao" [class]="getVariacaoClass(comparativoMensal.variacaoFaturamento)">
+              <span class="material-icons">{{ getVariacaoIcon(comparativoMensal.variacaoFaturamento) }}</span>
+              {{ comparativoMensal.variacaoFaturamento | number:'1.1-1' }}%
+            </span>
+          </div>
+          <div class="comparativo-valores">
+            <div class="comparativo-atual">
+              <span class="valor">{{ formatarPreco(comparativoMensal.mesAtual.faturamento) }}</span>
+              <span class="periodo">{{ comparativoMensal.mesAtual.periodo }}</span>
+            </div>
+            <div class="comparativo-anterior">
+              <span class="valor">{{ formatarPreco(comparativoMensal.mesAnterior.faturamento) }}</span>
+              <span class="periodo">{{ comparativoMensal.mesAnterior.periodo }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="comparativo-card">
+          <div class="comparativo-header">
+            <span class="comparativo-label">Vendas</span>
+            <span class="comparativo-variacao" [class]="getVariacaoClass(comparativoMensal.variacaoQuantidade)">
+              <span class="material-icons">{{ getVariacaoIcon(comparativoMensal.variacaoQuantidade) }}</span>
+              {{ comparativoMensal.variacaoQuantidade | number:'1.1-1' }}%
+            </span>
+          </div>
+          <div class="comparativo-valores">
+            <div class="comparativo-atual">
+              <span class="valor">{{ comparativoMensal.mesAtual.quantidadeVendas }}</span>
+              <span class="periodo">{{ comparativoMensal.mesAtual.periodo }}</span>
+            </div>
+            <div class="comparativo-anterior">
+              <span class="valor">{{ comparativoMensal.mesAnterior.quantidadeVendas }}</span>
+              <span class="periodo">{{ comparativoMensal.mesAnterior.periodo }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="comparativo-card">
+          <div class="comparativo-header">
+            <span class="comparativo-label">Ticket Médio</span>
+            <span class="comparativo-variacao" [class]="getVariacaoClass(comparativoMensal.variacaoTicketMedio)">
+              <span class="material-icons">{{ getVariacaoIcon(comparativoMensal.variacaoTicketMedio) }}</span>
+              {{ comparativoMensal.variacaoTicketMedio | number:'1.1-1' }}%
+            </span>
+          </div>
+          <div class="comparativo-valores">
+            <div class="comparativo-atual">
+              <span class="valor">{{ formatarPreco(comparativoMensal.mesAtual.ticketMedio) }}</span>
+              <span class="periodo">{{ comparativoMensal.mesAtual.periodo }}</span>
+            </div>
+            <div class="comparativo-anterior">
+              <span class="valor">{{ formatarPreco(comparativoMensal.mesAnterior.ticketMedio) }}</span>
+              <span class="periodo">{{ comparativoMensal.mesAnterior.periodo }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="comparativo-card">
+          <div class="comparativo-header">
+            <span class="comparativo-label">Lucro</span>
+            <span class="comparativo-variacao" [class]="getVariacaoClass(comparativoMensal.mesAtual.lucro - comparativoMensal.mesAnterior.lucro > 0 ? 1 : -1)">
+              <span class="material-icons">{{ getVariacaoIcon(comparativoMensal.mesAtual.lucro - comparativoMensal.mesAnterior.lucro) }}</span>
+              @if (comparativoMensal.mesAnterior.lucro !== 0) {
+                {{ ((comparativoMensal.mesAtual.lucro - comparativoMensal.mesAnterior.lucro) / comparativoMensal.mesAnterior.lucro * 100) | number:'1.1-1' }}%
+              } @else {
+                --
+              }
+            </span>
+          </div>
+          <div class="comparativo-valores">
+            <div class="comparativo-atual">
+              <span class="valor">{{ formatarPreco(comparativoMensal.mesAtual.lucro) }}</span>
+              <span class="periodo">{{ comparativoMensal.mesAtual.periodo }}</span>
+            </div>
+            <div class="comparativo-anterior">
+              <span class="valor">{{ formatarPreco(comparativoMensal.mesAnterior.lucro) }}</span>
+              <span class="periodo">{{ comparativoMensal.mesAnterior.periodo }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Gráficos Chart.js -->
+    <div class="charts-grid">
+      <!-- Gráfico Vendas por Período (Linha) -->
+      <div class="chart-card full-width">
+        <div class="chart-header">
+          <h3>Vendas por Período</h3>
+          <div class="chart-filter">
+            <label>Período:</label>
+            <select [(ngModel)]="periodoVendas" (change)="onPeriodoChange()">
+              <option [value]="7">7 dias</option>
+              <option [value]="15">15 dias</option>
+              <option [value]="30">30 dias</option>
+              <option [value]="60">60 dias</option>
+              <option [value]="90">90 dias</option>
+            </select>
+          </div>
+        </div>
+        @if (vendasPorPeriodo && vendasPorPeriodo.vendas.length > 0) {
+          <div class="vendas-resumo">
+            <span class="vendas-total">Total: {{ formatarPreco(vendasPorPeriodo.totalPeriodo) }}</span>
+            <span class="vendas-qtd">{{ vendasPorPeriodo.quantidadeVendas }} vendas</span>
+          </div>
+          <div class="chart-container-wide">
+            <canvas #chartVendasPeriodo></canvas>
+          </div>
+        } @else {
+          <p class="empty-message">Nenhuma venda no período</p>
+        }
+      </div>
+
+      <!-- Gráfico Faturamento Mensal (Barras) -->
+      <div class="chart-card full-width">
+        <div class="chart-header">
+          <h3>Faturamento Mensal</h3>
+          <div class="chart-filter">
+            <label>Ano:</label>
+            <select [(ngModel)]="anoFaturamento" (change)="onAnoChange()">
+              @for (ano of anosDisponiveis; track ano) {
+                <option [value]="ano">{{ ano }}</option>
+              }
+            </select>
+          </div>
+        </div>
+        @if (faturamentoMensal && faturamentoMensal.meses.length > 0) {
+          <div class="faturamento-resumo">
+            <span class="faturamento-total">Total Anual: {{ formatarPreco(faturamentoMensal.totalAnual) }}</span>
+            <span class="faturamento-media">Média Mensal: {{ formatarPreco(faturamentoMensal.mediaMensal) }}</span>
+          </div>
+          <div class="chart-container-wide">
+            <canvas #chartFaturamento></canvas>
+          </div>
+        } @else {
+          <p class="empty-message">Nenhum dado de faturamento</p>
+        }
+      </div>
+
+      <!-- Gráfico Status (Pizza) -->
+      <div class="chart-card">
+        <h3>Status dos Veículos</h3>
+        <div class="chart-container">
+          <canvas #chartStatus></canvas>
+        </div>
+      </div>
+
+      <!-- Gráfico Categorias (Donut) -->
+      <div class="chart-card">
+        <h3>Veículos por Categoria</h3>
+        @if (dashboard.veiculosPorCategoria.length > 0) {
+          <div class="chart-container">
+            <canvas #chartCategorias></canvas>
+          </div>
+        } @else {
+          <p class="empty-message">Nenhum veículo cadastrado</p>
+        }
+      </div>
+
+      <!-- Gráfico Lojas (Barras) -->
+      <div class="chart-card full-width">
+        <h3>Veículos por Loja</h3>
+        @if (dashboard.veiculosPorLoja.length > 0) {
+          <div class="chart-container-wide">
+            <canvas #chartLojas></canvas>
+          </div>
+        } @else {
+          <p class="empty-message">Nenhuma loja cadastrada</p>
+        }
+      </div>
+
+      <!-- Top Veículos Vendidos -->
+      @if (topVeiculos && topVeiculos.veiculos.length > 0) {
+        <div class="chart-card full-width">
+          <h3>Top 10 Veículos Mais Vendidos</h3>
+          <div class="recent-list">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Veículo</th>
+                  <th>Qtd Vendida</th>
+                  <th>Valor Total</th>
+                  <th>Ticket Médio</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (veiculo of topVeiculos.veiculos; track veiculo.marca + veiculo.modelo; let i = $index) {
+                  <tr>
+                    <td class="rank">{{ i + 1 }}</td>
+                    <td>
+                      <strong>{{ veiculo.marca }}</strong>
+                      <span class="text-muted">{{ veiculo.modelo }}</span>
+                    </td>
+                    <td>{{ veiculo.quantidadeVendida }}</td>
+                    <td>{{ formatarPreco(veiculo.valorTotalVendas) }}</td>
+                    <td>{{ formatarPreco(veiculo.ticketMedio) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+
+      <!-- Veículos Recentes -->
+      <div class="chart-card full-width">
+        <h3>Veículos Recentes</h3>
+        @if (dashboard.veiculosRecentes.length > 0) {
+          <div class="recent-list">
+            <table>
+              <thead>
+                <tr>
+                  <th>Veículo</th>
+                  <th>Ano</th>
+                  <th>Preço</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (veiculo of dashboard.veiculosRecentes; track veiculo.veiId) {
+                  <tr>
+                    <td>
+                      <strong>{{ veiculo.marca }}</strong>
+                      <span class="text-muted">{{ veiculo.modelo }}</span>
+                    </td>
+                    <td>{{ veiculo.ano }}</td>
+                    <td>{{ formatarPreco(veiculo.preco) }}</td>
+                    <td>
+                      <span class="badge" [class]="getStatusClass(veiculo.status)">
+                        {{ getStatusLabel(veiculo.status) }}
+                      </span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="empty-message">Nenhum veículo cadastrado</p>
+        }
+      </div>
+    </div>
+  }
+</div>
