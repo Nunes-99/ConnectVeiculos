@@ -1,25 +1,49 @@
 version: '3.8'
 
 services:
-  backend:
+  # ============================
+  # BACKEND - Ambiente DEV (seu teste)
+  # ============================
+  backend-dev:
     build:
       context: ./back-end
       dockerfile: Dockerfile
-    ports:
-      - "5219:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:8080
-      - ConnectionStrings__DefaultConnection=Data Source=/app/data/ConnectVeiculos.db
-      - JwtSettings__SecretKey=${JWT_SECRET_KEY:-ChaveSecretaConnectVeiculos2024MuitoSeguraProducao!@#$%}
+      - ConnectionStrings__DefaultConnection=Data Source=/app/data/dev.db
+      - JwtSettings__SecretKey=${JWT_SECRET_KEY:-ChaveSecretaDev2024MuitoSegura!@#$%}
       - JwtSettings__Issuer=ConnectVeiculos
       - JwtSettings__Audience=ConnectVeiculosApp
       - JwtSettings__ExpirationInHours=8
     volumes:
       - ./data:/app/data
-      - ./uploads:/app/wwwroot/uploads
+      - ./uploads/dev:/app/wwwroot/uploads
     restart: unless-stopped
 
+  # ============================
+  # BACKEND - Ambiente CLIENTE (teste do cliente)
+  # ============================
+  backend-cliente:
+    build:
+      context: ./back-end
+      dockerfile: Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Data Source=/app/data/cliente.db
+      - JwtSettings__SecretKey=${JWT_SECRET_KEY_CLIENTE:-ChaveSecretaCliente2024MuitoSegura!@#$%}
+      - JwtSettings__Issuer=ConnectVeiculos
+      - JwtSettings__Audience=ConnectVeiculosApp
+      - JwtSettings__ExpirationInHours=8
+    volumes:
+      - ./data:/app/data
+      - ./uploads/cliente:/app/wwwroot/uploads
+    restart: unless-stopped
+
+  # ============================
+  # FRONTEND + NGINX (roteia para o backend correto)
+  # ============================
   frontend:
     build:
       context: ./front-end/ConnectVeiculos.Web
@@ -28,7 +52,8 @@ services:
       - "80:80"
       - "443:443"
     depends_on:
-      - backend
+      - backend-dev
+      - backend-cliente
     restart: unless-stopped
 
 networks:

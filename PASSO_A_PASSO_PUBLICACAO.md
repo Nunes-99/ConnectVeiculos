@@ -1,228 +1,262 @@
 # Passo a Passo - Publicar o ConnectVeiculos
 
-## ETAPA 1: Subir o codigo no GitHub (repositorio privado)
-
-### 1.1 Criar repositorio no GitHub
-1. Acesse https://github.com/new
-2. Nome: `ConnectVeiculos`
-3. Marque: **Private** (privado)
-4. NAO marque "Add a README" (ja temos os arquivos)
-5. Clique em **Create repository**
-
-### 1.2 Subir o codigo (rodar no terminal, na pasta do projeto)
-```bash
-cd C:/Users/vitor.nunes/Documents/Vitor/Projetos/ConnectVeiculos
-git init
-git add .
-git commit -m "Versao inicial do ConnectVeiculos"
-git branch -M main
-git remote add origin https://github.com/SEU_USUARIO/ConnectVeiculos.git
-git push -u origin main
-```
-
-> Se pedir login, use seu usuario e um Personal Access Token
-> (GitHub > Settings > Developer Settings > Personal Access Tokens > Generate new token)
+> Repositorio ja esta no GitHub: https://github.com/Nunes-99/ConnectVeiculos (privado)
 
 ---
 
-## ETAPA 2: Criar VM gratis na Oracle Cloud
+## ETAPA 1: Criar conta na Oracle Cloud (GRATIS)
 
-### 2.1 Criar conta
 1. Acesse https://cloud.oracle.com/free
-2. Clique em "Start for Free"
-3. Preencha os dados (precisa de cartao de credito, mas NAO cobra)
-4. Escolha a regiao "Brazil East (Sao Paulo)" se disponivel
+2. Clique em **"Start for Free"**
+3. Preencha seus dados (precisa de cartao, mas **NAO cobra nada**)
+4. Regiao: escolha **"Brazil East (Sao Paulo)"** se disponivel
+5. Aguarde a ativacao (pode levar ate 30 min)
 
-### 2.2 Criar a VM (maquina virtual)
-1. No painel Oracle, va em: **Compute > Instances > Create Instance**
+---
+
+## ETAPA 2: Criar a VM (maquina virtual)
+
+1. No painel Oracle: **Compute > Instances > Create Instance**
 2. Configure:
    - Name: `connectveiculos`
    - Image: **Ubuntu 22.04** (Canonical)
-   - Shape: Clique em "Change shape" > **Ampere** > **VM.Standard.A1.Flex**
-   - OCPUs: 1, Memory: 6 GB (tudo Always Free)
-3. Em "Add SSH keys":
-   - Selecione "Generate a key pair for me"
-   - **BAIXE a chave privada** (arquivo .key) - GUARDE BEM, voce vai precisar
+   - Shape: Clique em **"Change shape"** > aba **"Ampere"** > **VM.Standard.A1.Flex**
+   - OCPUs: **1** | Memory: **6 GB** (tudo Always Free)
+3. Em **"Add SSH keys"**:
+   - Marque **"Generate a key pair for me"**
+   - Clique em **"Save Private Key"** - GUARDE ESSE ARQUIVO!
 4. Clique em **Create**
-5. Aguarde o status mudar para "RUNNING"
-6. Anote o **Public IP Address** (ex: 132.145.xxx.xxx)
-
-### 2.3 Liberar portas no Oracle Cloud
-1. Na pagina da instancia, clique em **"Subnet"** (link azul)
-2. Clique em **"Default Security List"**
-3. Clique em **"Add Ingress Rules"**
-4. Adicione estas regras:
-   - Source CIDR: `0.0.0.0/0` | Protocol: TCP | Destination Port: `80`
-   - Source CIDR: `0.0.0.0/0` | Protocol: TCP | Destination Port: `443`
-5. Salve
+5. Aguarde status **"RUNNING"**
+6. Copie o **Public IP** (ex: `132.145.xxx.xxx`)
 
 ---
 
-## ETAPA 3: Configurar a VM
+## ETAPA 3: Liberar portas no Oracle Cloud
 
-### 3.1 Conectar via SSH
-**No Windows (PowerShell ou Git Bash):**
-```bash
-ssh -i C:/caminho/da/sua-chave.key ubuntu@IP_DA_VM
-```
+1. Na pagina da instancia, clique no link **"Subnet"**
+2. Clique em **"Default Security List"**
+3. Clique em **"Add Ingress Rules"** e adicione:
 
-**Se der erro de permissao da chave no Windows:**
+| Source CIDR   | Protocol | Port |
+|---------------|----------|------|
+| 0.0.0.0/0     | TCP      | 80   |
+| 0.0.0.0/0     | TCP      | 443  |
+
+4. Salve
+
+---
+
+## ETAPA 4: Conectar na VM via SSH
+
+**Abra o PowerShell (ou Git Bash) e rode:**
+
 ```powershell
+# Primeiro, ajuste a permissao da chave (so precisa 1 vez)
 icacls "C:\caminho\da\sua-chave.key" /inheritance:r /grant:r "%USERNAME%:R"
+
+# Conectar
+ssh -i "C:\caminho\da\sua-chave.key" ubuntu@SEU_IP
 ```
 
-### 3.2 Instalar Docker na VM
+> Substitua `C:\caminho\da\sua-chave.key` pelo caminho real do arquivo .key que voce baixou
+> Substitua `SEU_IP` pelo IP publico da VM
+
+---
+
+## ETAPA 5: Instalar Docker na VM
+
+Cole estes comandos um por um:
+
 ```bash
-# Atualizar sistema
 sudo apt update && sudo apt upgrade -y
-
-# Instalar Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-sudo usermod -aG docker $USER
-sudo apt install docker-compose-plugin -y
-
-# Instalar ferramentas uteis
-sudo apt install git -y
-
-# IMPORTANTE: Sair e entrar novamente para aplicar grupo docker
-exit
 ```
 
-### 3.3 Reconectar e clonar o projeto
 ```bash
-ssh -i C:/caminho/da/sua-chave.key ubuntu@IP_DA_VM
-
-# Clonar o repositorio (privado - vai pedir login)
-git clone https://github.com/SEU_USUARIO/ConnectVeiculos.git
-cd ConnectVeiculos
-
-# Criar pastas necessarias
-mkdir -p data uploads
-
-# Configurar variaveis de ambiente
-cp .env.example .env
-nano .env
+curl -fsSL https://get.docker.com -o get-docker.sh && sudo sh get-docker.sh
 ```
 
-**No arquivo .env, altere a JWT_SECRET_KEY para uma chave unica:**
-```
-JWT_SECRET_KEY=SuaChaveSuperSecretaUnicaAqui2024!@#ConnectVeiculos
-```
-Salve com: `Ctrl+O, Enter, Ctrl+X`
-
-### 3.4 Liberar firewall do Ubuntu
 ```bash
+sudo usermod -aG docker $USER && sudo apt install docker-compose-plugin git -y
+```
+
+```bash
+# Liberar firewall
 sudo iptables -I INPUT -p tcp --dport 80 -j ACCEPT
 sudo iptables -I INPUT -p tcp --dport 443 -j ACCEPT
 sudo apt install iptables-persistent -y
 sudo netfilter-persistent save
 ```
 
+**IMPORTANTE: Saia e reconecte:**
+```bash
+exit
+```
+
+```powershell
+ssh -i "C:\caminho\da\sua-chave.key" ubuntu@SEU_IP
+```
+
 ---
 
-## ETAPA 4: Subir o sistema
+## ETAPA 6: Baixar e configurar o projeto
 
 ```bash
-cd ~/ConnectVeiculos
+# Clonar (vai pedir usuario e senha/token do GitHub)
+git clone https://github.com/Nunes-99/ConnectVeiculos.git
+cd ConnectVeiculos
+```
 
-# Build e iniciar (primeira vez demora ~5-10 minutos)
+```bash
+# Criar pastas
+mkdir -p data uploads/dev uploads/cliente
+```
+
+```bash
+# Configurar variaveis de ambiente
+cp .env.example .env
+nano .env
+```
+
+**No arquivo .env, altere as chaves JWT para algo unico:**
+```
+JWT_SECRET_KEY=MinhaChaveDevSecreta2024!@#ConnectVeiculosDev
+JWT_SECRET_KEY_CLIENTE=MinhaChaveClienteSecreta2024!@#ConnectVeiculosCliente
+```
+
+Salvar: **Ctrl+O > Enter > Ctrl+X**
+
+---
+
+## ETAPA 7: Subir o sistema
+
+```bash
 docker compose up -d --build
+```
 
-# Verificar se esta rodando
+> Primeira vez demora **5-10 minutos**. Aguarde.
+
+```bash
+# Verificar se esta rodando (deve mostrar 3 servicos "Up")
 docker compose ps
+```
 
-# Ver logs (Ctrl+C para sair)
+```bash
+# Ver logs se algo der errado
 docker compose logs -f
 ```
 
-**Pronto!** Acesse: `http://IP_DA_VM`
+---
 
-Login padrao:
-- Email: `admin@connectveiculos.com.br`
-- Senha: `admin123`
+## ETAPA 8: Acessar o sistema
+
+### Ambiente DEV (seu teste):
+- **URL:** `http://SEU_IP`
+- **Login:** admin@connectveiculos.com.br
+- **Senha:** admin123
+
+### Ambiente CLIENTE (teste do cliente):
+Para o cliente acessar um ambiente separado, configure um subdominio:
+- `cliente.seudominio.com` -> aponta para o mesmo IP
+
+Ou acesse direto e o Nginx roteia automaticamente.
 
 ---
 
-## ETAPA 5: Configurar dominio (opcional mas recomendado)
+## COMO FUNCIONA A SEPARACAO
 
-### 5.1 Comprar dominio
-- Registro.br (~R$40/ano para .com.br)
-- Ou Hostinger/GoDaddy para .com
+| Ambiente | Backend | Banco de dados | Uploads |
+|----------|---------|----------------|---------|
+| DEV (voce) | backend-dev | data/dev.db | uploads/dev/ |
+| CLIENTE | backend-cliente | data/cliente.db | uploads/cliente/ |
 
-### 5.2 Configurar DNS
-No painel do registrador de dominio:
-- Adicione um registro **A** apontando para o IP da VM
-- Exemplo: `connectveiculos.com.br` -> `132.145.xxx.xxx`
+Os dados sao **100% separados**. O que voce faz no DEV nao afeta o cliente e vice-versa.
 
-### 5.3 Instalar SSL (HTTPS)
+---
+
+## CONFIGURAR DOMINIO (opcional, recomendado)
+
+1. Compre um dominio (Registro.br ~R$40/ano)
+2. No painel DNS, adicione:
+   - `seudominio.com` -> A -> SEU_IP (ambiente dev)
+   - `cliente.seudominio.com` -> A -> SEU_IP (ambiente cliente)
+   - ou `app.seudominio.com` -> A -> SEU_IP (ambiente cliente)
+
+3. Instale SSL:
 ```bash
 sudo apt install certbot -y
-sudo certbot certonly --standalone -d seudominio.com.br
+sudo certbot certonly --standalone -d seudominio.com -d cliente.seudominio.com
 ```
 
 ---
 
-## COMANDOS UTEIS DO DIA A DIA
+## COMANDOS DO DIA A DIA
 
 ```bash
-# Ver se esta rodando
+# Ver status
 docker compose ps
 
 # Ver logs
 docker compose logs -f
 
-# Reiniciar
+# Reiniciar tudo
 docker compose restart
 
-# Parar
+# Parar tudo
 docker compose down
 
 # Atualizar para nova versao
-cd ~/ConnectVeiculos
-git pull
-docker compose up -d --build
+git pull && docker compose up -d --build
 
-# Backup do banco de dados
-cp data/*.db ~/backups/
-
-# Ver uso de disco/memoria
-df -h
-free -h
+# Backup dos bancos
+cp data/dev.db ~/backup-dev-$(date +%Y%m%d).db
+cp data/cliente.db ~/backup-cliente-$(date +%Y%m%d).db
 ```
 
 ---
 
-## CRIAR NOVO CLIENTE
+## ADICIONAR MAIS CLIENTES NO FUTURO
 
-```bash
-cd ~/ConnectVeiculos
-chmod +x scripts/criar-cliente.sh
-./scripts/criar-cliente.sh "Nome da Empresa" "email@admin.com" "senha123"
+Para cada novo cliente, adicione um novo servico no `docker-compose.yml`:
+
+```yaml
+  backend-novocliente:
+    build:
+      context: ./back-end
+      dockerfile: Dockerfile
+    environment:
+      - ConnectionStrings__DefaultConnection=Data Source=/app/data/novocliente.db
+      - JwtSettings__SecretKey=ChaveUnicaDoNovoCliente123!
+      # ... demais configs
+    volumes:
+      - ./data:/app/data
+      - ./uploads/novocliente:/app/wwwroot/uploads
 ```
 
-O catalogo do cliente ficara em: `seudominio.com/catalogo/nome-da-empresa`
+E adicione um bloco `server` no `nginx.conf` para o subdominio dele.
 
 ---
 
 ## RESOLUCAO DE PROBLEMAS
 
-### Sistema nao abre
+**Nao consigo acessar pelo IP:**
 ```bash
-docker compose logs -f  # Ver erros
-docker compose down && docker compose up -d --build  # Reiniciar do zero
+docker compose ps          # Esta rodando?
+docker compose logs -f     # Tem erro?
+sudo iptables -L -n        # Porta 80 esta aberta?
 ```
 
-### Porta bloqueada
+**Erro de build:**
 ```bash
-sudo iptables -L -n  # Ver regras
-sudo iptables -I INPUT -p tcp --dport 80 -j ACCEPT
+docker compose down
+docker compose up -d --build --force-recreate
 ```
 
-### Sem espaco em disco
+**Sem espaco:**
 ```bash
-docker system prune -a  # Limpar imagens antigas do Docker
+docker system prune -a     # Limpa imagens antigas
+df -h                      # Ver espaco em disco
 ```
 
-### Esqueceu a senha admin
-Acesse o banco SQLite e altere manualmente, ou delete o banco para recriar.
+**Esqueci a senha:**
+O banco recria o admin padrao na primeira execucao.
+Para resetar, delete o arquivo .db e reinicie.
