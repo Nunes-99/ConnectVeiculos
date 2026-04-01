@@ -1,56 +1,93 @@
-<div class="login-container">
-  <div class="login-card">
-    <div class="login-header">
-      <h1>Connect Veículos</h1>
-      <p>Sistema de Gestão de Veículos</p>
-    </div>
+<div class="login-page">
+  <!-- Lado esquerdo - Formulário -->
+  <div class="login-left">
+    <div class="login-card">
+      <div class="login-logo">
+        <img src="car-icon.png" alt="ConnectVeiculos" class="logo-icon" />
+      </div>
+      <div class="login-header">
+        <h1><span class="brand-connect">Connect</span><span class="brand-veiculos">Veículos</span></h1>
+        <p>Sistema de Gestão de Veículos</p>
+      </div>
 
-    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
-      @if (errorMessage) {
-        <div class="error-message">
-          {{ errorMessage }}
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+        @if (errorMessage) {
+          <div class="error-message">
+            {{ errorMessage }}
+          </div>
+        }
+
+        <div class="form-group">
+          <label for="email">E-mail</label>
+          <input
+            type="email"
+            id="email"
+            formControlName="email"
+            placeholder="Digite seu e-mail"
+            [class.invalid]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
+          />
+          @if (loginForm.get('email')?.invalid && loginForm.get('email')?.touched) {
+            <span class="field-error">E-mail inválido</span>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="senha">Senha</label>
+          <input
+            type="password"
+            id="senha"
+            formControlName="senha"
+            placeholder="Digite sua senha"
+            [class.invalid]="loginForm.get('senha')?.invalid && loginForm.get('senha')?.touched"
+          />
+          @if (loginForm.get('senha')?.invalid && loginForm.get('senha')?.touched) {
+            <span class="field-error">Senha deve ter no mínimo 4 caracteres</span>
+          }
+        </div>
+
+        <button type="submit" [disabled]="loginForm.invalid || loading" class="btn-login">
+          @if (loading) {
+            <span>Entrando...</span>
+          } @else {
+            <span class="material-icons">login</span>
+            <span>Entrar</span>
+          }
+        </button>
+
+        <!-- <div class="login-footer">
+          <a routerLink="/recuperar-senha">Esqueci minha senha</a>
+        </div> -->
+      </form>
+
+      <div class="login-copyright">
+        <p>Versão 1.0.0</p>
+        <p>&copy; 2025-2026 ConnectVeículos</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lado direito - Slideshow -->
+  <div class="login-right">
+    <div class="slideshow">
+      @for (slide of slides; track slide.img; let i = $index) {
+        <div class="slide" [class.active]="i === currentSlide">
+          <img [src]="slide.img" [alt]="slide.title" />
+          <div class="slide-overlay"></div>
+          <div class="slide-content">
+            <h2>{{ slide.title }}</h2>
+            <p>{{ slide.desc }}</p>
+          </div>
         </div>
       }
-
-      <div class="form-group">
-        <label for="email">E-mail</label>
-        <input
-          type="email"
-          id="email"
-          formControlName="email"
-          placeholder="Digite seu e-mail"
-          [class.invalid]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
-        />
-        @if (loginForm.get('email')?.invalid && loginForm.get('email')?.touched) {
-          <span class="field-error">E-mail inválido</span>
-        }
-      </div>
-
-      <div class="form-group">
-        <label for="senha">Senha</label>
-        <input
-          type="password"
-          id="senha"
-          formControlName="senha"
-          placeholder="Digite sua senha"
-          [class.invalid]="loginForm.get('senha')?.invalid && loginForm.get('senha')?.touched"
-        />
-        @if (loginForm.get('senha')?.invalid && loginForm.get('senha')?.touched) {
-          <span class="field-error">Senha deve ter no mínimo 4 caracteres</span>
-        }
-      </div>
-
-      <button type="submit" [disabled]="loginForm.invalid || loading" class="btn-login">
-        @if (loading) {
-          <span>Entrando...</span>
-        } @else {
-          <span>Entrar</span>
-        }
-      </button>
-
-      <!-- <div class="login-footer">
-        <a routerLink="/recuperar-senha">Esqueci minha senha</a>
-      </div> -->
-    </form>
+    </div>
+    <div class="slide-dots">
+      @for (slide of slides; track slide.img; let i = $index) {
+        <button class="dot" [class.active]="i === currentSlide" (click)="goToSlide(i)"></button>
+      }
+    </div>
+    <div class="slide-nav">
+      <button (click)="prevSlide()"><span class="material-icons">chevron_left</span></button>
+      <button (click)="nextSlide()"><span class="material-icons">chevron_right</span></button>
+    </div>
   </div>
 </div>
