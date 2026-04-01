@@ -56,17 +56,17 @@
         <tbody>
           @for (log of logs; track log.logId) {
             <tr>
-              <td>{{ formatarData(log.logDataHora) }}</td>
-              <td>{{ log.logTabela }}</td>
-              <td>
+              <td data-label="Data/Hora">{{ formatarData(log.logDataHora) }}</td>
+              <td data-label="Tabela">{{ log.logTabela }}</td>
+              <td data-label="Ação">
                 <span class="badge" [class]="getAcaoClass(log.logAcao)">
                   {{ log.logAcao }}
                 </span>
               </td>
-              <td>{{ log.logRegistroId || '-' }}</td>
-              <td>{{ log.logUsuarioNome || '-' }}</td>
-              <td>{{ log.logIP || '-' }}</td>
-              <td class="actions">
+              <td data-label="Registro">{{ log.logRegistroId || '-' }}</td>
+              <td data-label="Usuário">{{ log.logUsuarioNome || '-' }}</td>
+              <td data-label="IP">{{ log.logIP || '-' }}</td>
+              <td data-label="Ações" class="actions">
                 <button class="btn-icon" (click)="verDetalhes(log)" title="Ver detalhes">
                   <span class="material-icons">visibility</span>
                 </button>

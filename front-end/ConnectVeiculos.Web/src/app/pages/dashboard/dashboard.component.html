@@ -179,17 +179,17 @@
               </tr>
             </thead>
             <tbody>
-              @for (veiculo of alertasEstoque; track veiculo.veiId) {
+              @for (veiculo of alertasPaginados; track veiculo.veiId) {
                 <tr>
-                  <td>
+                  <td data-label="Veículo">
                     <strong>{{ veiculo.marca }}</strong>
                     <span class="text-muted">{{ veiculo.modelo }}</span>
                   </td>
-                  <td>{{ veiculo.ano }}</td>
-                  <td>{{ veiculo.loja }}</td>
-                  <td>{{ formatarPreco(veiculo.preco) }}</td>
-                  <td>{{ veiculo.dtEntrada | date:'dd/MM/yyyy' }}</td>
-                  <td>
+                  <td data-label="Ano">{{ veiculo.ano }}</td>
+                  <td data-label="Loja">{{ veiculo.loja }}</td>
+                  <td data-label="Preço">{{ formatarPreco(veiculo.preco) }}</td>
+                  <td data-label="Entrada">{{ veiculo.dtEntrada | date:'dd/MM/yyyy' }}</td>
+                  <td data-label="Dias em Estoque">
                     <span class="dias-estoque-badge" [class]="getDiasEstoqueClass(veiculo.diasEmEstoque)">
                       {{ veiculo.diasEmEstoque }} dias
                     </span>
@@ -198,6 +198,17 @@
               }
             </tbody>
           </table>
+          @if (alertasTotalPages > 1) {
+            <div class="table-pagination">
+              <button [disabled]="alertasPage === 1" (click)="alertasPage = alertasPage - 1">
+                <span class="material-icons">chevron_left</span>
+              </button>
+              <span class="page-info">{{ alertasPage }} / {{ alertasTotalPages }}</span>
+              <button [disabled]="alertasPage === alertasTotalPages" (click)="alertasPage = alertasPage + 1">
+                <span class="material-icons">chevron_right</span>
+              </button>
+            </div>
+          }
         </div>
       </div>
     }
@@ -398,20 +409,31 @@
                 </tr>
               </thead>
               <tbody>
-                @for (veiculo of topVeiculos.veiculos; track veiculo.marca + veiculo.modelo; let i = $index) {
+                @for (veiculo of topVeiculosPaginados; track veiculo.marca + veiculo.modelo; let i = $index) {
                   <tr>
-                    <td class="rank">{{ i + 1 }}</td>
-                    <td>
+                    <td class="rank" data-label="#">{{ (topVeiculosPage - 1) * pageSize + i + 1 }}</td>
+                    <td data-label="Veículo">
                       <strong>{{ veiculo.marca }}</strong>
                       <span class="text-muted">{{ veiculo.modelo }}</span>
                     </td>
-                    <td>{{ veiculo.quantidadeVendida }}</td>
-                    <td>{{ formatarPreco(veiculo.valorTotalVendas) }}</td>
-                    <td>{{ formatarPreco(veiculo.ticketMedio) }}</td>
+                    <td data-label="Qtd Vendida">{{ veiculo.quantidadeVendida }}</td>
+                    <td data-label="Valor Total">{{ formatarPreco(veiculo.valorTotalVendas) }}</td>
+                    <td data-label="Ticket Médio">{{ formatarPreco(veiculo.ticketMedio) }}</td>
                   </tr>
                 }
               </tbody>
             </table>
+            @if (topVeiculosTotalPages > 1) {
+              <div class="table-pagination">
+                <button [disabled]="topVeiculosPage === 1" (click)="topVeiculosPage = topVeiculosPage - 1">
+                  <span class="material-icons">chevron_left</span>
+                </button>
+                <span class="page-info">{{ topVeiculosPage }} / {{ topVeiculosTotalPages }}</span>
+                <button [disabled]="topVeiculosPage === topVeiculosTotalPages" (click)="topVeiculosPage = topVeiculosPage + 1">
+                  <span class="material-icons">chevron_right</span>
+                </button>
+              </div>
+            }
           </div>
         </div>
       }
@@ -431,15 +453,15 @@
                 </tr>
               </thead>
               <tbody>
-                @for (veiculo of dashboard.veiculosRecentes; track veiculo.veiId) {
+                @for (veiculo of recentesPaginados; track veiculo.veiId) {
                   <tr>
-                    <td>
+                    <td data-label="Veículo">
                       <strong>{{ veiculo.marca }}</strong>
                       <span class="text-muted">{{ veiculo.modelo }}</span>
                     </td>
-                    <td>{{ veiculo.ano }}</td>
-                    <td>{{ formatarPreco(veiculo.preco) }}</td>
-                    <td>
+                    <td data-label="Ano">{{ veiculo.ano }}</td>
+                    <td data-label="Preço">{{ formatarPreco(veiculo.preco) }}</td>
+                    <td data-label="Status">
                       <span class="badge" [class]="getStatusClass(veiculo.status)">
                         {{ getStatusLabel(veiculo.status) }}
                       </span>
@@ -448,6 +470,17 @@
                 }
               </tbody>
             </table>
+            @if (recentesTotalPages > 1) {
+              <div class="table-pagination">
+                <button [disabled]="recentesPage === 1" (click)="recentesPage = recentesPage - 1">
+                  <span class="material-icons">chevron_left</span>
+                </button>
+                <span class="page-info">{{ recentesPage }} / {{ recentesTotalPages }}</span>
+                <button [disabled]="recentesPage === recentesTotalPages" (click)="recentesPage = recentesPage + 1">
+                  <span class="material-icons">chevron_right</span>
+                </button>
+              </div>
+            }
           </div>
         } @else {
           <p class="empty-message">Nenhum veículo cadastrado</p>

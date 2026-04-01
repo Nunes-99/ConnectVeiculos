@@ -19,39 +19,48 @@
   </div>
 
   <div class="filtros-container">
-    <div class="filtro-grupo">
-      <input type="text" placeholder="Buscar por marca, modelo, placa..."
-             [(ngModel)]="filtroTexto" (keyup.enter)="aplicarFiltros()" />
-    </div>
-    <div class="filtro-grupo">
-      <select [(ngModel)]="filtroLoja" (change)="aplicarFiltros()">
-        <option [ngValue]="null">Todas as lojas</option>
-        @for (loja of lojas; track loja.lojId) {
-          <option [ngValue]="loja.lojId">{{ loja.lojNome }}</option>
+    <div class="filtro-busca">
+      <div class="filtro-grupo filtro-texto">
+        <input type="text" placeholder="Buscar por marca, modelo, placa..."
+               [(ngModel)]="filtroTexto" (keyup.enter)="aplicarFiltros()" />
+        @if (filtroTexto) {
+          <button class="btn-limpar-busca" (click)="filtroTexto = ''; aplicarFiltros()">
+            <span class="material-icons">close</span>
+          </button>
         }
-      </select>
+      </div>
+      <div class="filtro-acoes">
+        <button class="btn-secondary" (click)="limparFiltros()">
+          <span class="material-icons">clear</span>
+          <span>Limpar</span>
+        </button>
+      </div>
     </div>
-    <div class="filtro-grupo">
-      <select [(ngModel)]="filtroCategoria" (change)="aplicarFiltros()">
-        <option [ngValue]="null">Todas as categorias</option>
-        @for (categoria of categorias; track categoria.catId) {
-          <option [ngValue]="categoria.catId">{{ categoria.catNome }}</option>
-        }
-      </select>
-    </div>
-    <div class="filtro-grupo">
-      <select [(ngModel)]="filtroStatus" (change)="aplicarFiltros()">
-        <option value="">Todos os status</option>
-        <option value="D">Disponível</option>
-        <option value="V">Vendido</option>
-        <option value="R">Reservado</option>
-      </select>
-    </div>
-    <div class="filtro-acoes">
-      <button class="btn-secondary" (click)="limparFiltros()">
-        <span class="material-icons">clear</span>
-        Limpar
-      </button>
+    <div class="filtro-selects">
+      <div class="filtro-grupo">
+        <select [(ngModel)]="filtroLoja" (change)="aplicarFiltros()">
+          <option [ngValue]="null">Todas as lojas</option>
+          @for (loja of lojas; track loja.lojId) {
+            <option [ngValue]="loja.lojId">{{ loja.lojNome }}</option>
+          }
+        </select>
+      </div>
+      <div class="filtro-grupo">
+        <select [(ngModel)]="filtroCategoria" (change)="aplicarFiltros()">
+          <option [ngValue]="null">Todas as categorias</option>
+          @for (categoria of categorias; track categoria.catId) {
+            <option [ngValue]="categoria.catId">{{ categoria.catNome }}</option>
+          }
+        </select>
+      </div>
+      <div class="filtro-grupo">
+        <select [(ngModel)]="filtroStatus" (change)="aplicarFiltros()">
+          <option value="">Todos os status</option>
+          <option value="D">Disponível</option>
+          <option value="V">Vendido</option>
+          <option value="R">Reservado</option>
+        </select>
+      </div>
     </div>
   </div>
 
@@ -74,25 +83,29 @@
         <tbody>
           @for (veiculo of veiculosPaginados; track veiculo.veiId) {
             <tr>
-              <td>
+              <td data-label="Veículo">
                 <strong>{{ veiculo.veiMarca }}</strong><br/>
                 <span class="text-muted">{{ veiculo.veiModelo }}</span>
               </td>
-              <td>{{ veiculo.veiAno }}</td>
-              <td>{{ veiculo.veiPlaca || '-' }}</td>
-              <td>{{ veiculo.veiCor || '-' }}</td>
-              <td>{{ veiculo.veiPreco | currency:'BRL' }}</td>
-              <td>
+              <td data-label="Ano">{{ veiculo.veiAno }}</td>
+              <td data-label="Placa">{{ veiculo.veiPlaca || '-' }}</td>
+              <td data-label="Cor">{{ veiculo.veiCor || '-' }}</td>
+              <td data-label="Preço">{{ veiculo.veiPreco | currency:'BRL' }}</td>
+              <td data-label="Status">
                 <span class="badge" [class.active]="veiculo.veiSts === 'D'" [class.inactive]="veiculo.veiSts === 'V'">
                   {{ getStatusLabel(veiculo.veiSts) }}
                 </span>
               </td>
-              <td class="actions">
-                <button class="btn-icon" (click)="toggleSocialStatus(veiculo.veiId, 'instagram', veiculo.veiPostadoInsta || false)" [title]="veiculo.veiPostadoInsta ? 'Postado no Instagram' : 'Marcar como postado no Instagram'">
-                  <span class="material-icons" [style.color]="veiculo.veiPostadoInsta ? '#E1306C' : '#ccc'">photo_camera</span>
+              <td class="actions" data-label="Ações">
+                <button class="btn-icon btn-social" (click)="toggleSocialStatus(veiculo.veiId, 'instagram', veiculo.veiPostadoInsta || false)" [title]="veiculo.veiPostadoInsta ? 'Postado no Instagram' : 'Marcar como postado no Instagram'">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" [attr.fill]="veiculo.veiPostadoInsta ? '#E1306C' : '#ccc'">
+                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
+                  </svg>
                 </button>
-                <button class="btn-icon" (click)="toggleSocialStatus(veiculo.veiId, 'facebook', veiculo.veiPostadoFace || false)" [title]="veiculo.veiPostadoFace ? 'Postado no Facebook' : 'Marcar como postado no Facebook'">
-                  <span class="material-icons" [style.color]="veiculo.veiPostadoFace ? '#1877F2' : '#ccc'">thumb_up</span>
+                <button class="btn-icon btn-social" (click)="toggleSocialStatus(veiculo.veiId, 'facebook', veiculo.veiPostadoFace || false)" [title]="veiculo.veiPostadoFace ? 'Postado no Facebook' : 'Marcar como postado no Facebook'">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" [attr.fill]="veiculo.veiPostadoFace ? '#1877F2' : '#ccc'">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                  </svg>
                 </button>
                 <button class="btn-icon" (click)="openImagensModal(veiculo)" title="Imagens">
                   <span class="material-icons">photo_library</span>

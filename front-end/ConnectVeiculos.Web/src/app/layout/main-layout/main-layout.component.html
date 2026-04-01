@@ -1,5 +1,22 @@
+<!-- Mobile Header -->
+<header class="mobile-header">
+  <button class="mobile-header-btn" (click)="toggleSidebar()">
+    <span class="material-icons">menu</span>
+  </button>
+  <div class="mobile-header-logo">
+    <span class="material-icons logo-icon">directions_car</span>
+    <span class="logo-text">Connect<span>Veículos</span></span>
+  </div>
+  <div class="mobile-header-actions">
+    <app-notifications></app-notifications>
+  </div>
+</header>
+
+<!-- Overlay -->
+<div class="sidebar-overlay" [class.active]="sidebarOpen()" (click)="closeSidebar()"></div>
+
 <div class="app-layout">
-  <app-sidebar></app-sidebar>
+  <app-sidebar [mobileOpen]="sidebarOpen()" (closeSidebar)="closeSidebar()"></app-sidebar>
   <main class="main-content">
     <router-outlet></router-outlet>
   </main>

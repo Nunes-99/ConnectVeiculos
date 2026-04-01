@@ -86,7 +86,7 @@
       </button>
       <button class="btn-secondary" (click)="limparFiltros()">
         <span class="material-icons">clear</span>
-        Limpar
+        <span>Limpar</span>
       </button>
     </div>
   </div>
@@ -166,9 +166,9 @@
               <tbody>
                 @for (item of relatorioVendas.vendasPorMes; track item.periodo) {
                   <tr>
-                    <td>{{ item.periodo }}</td>
-                    <td>{{ item.quantidade }}</td>
-                    <td>{{ formatarPreco(item.valorTotal) }}</td>
+                    <td data-label="Período">{{ item.periodo }}</td>
+                    <td data-label="Quantidade">{{ item.quantidade }}</td>
+                    <td data-label="Valor Total">{{ formatarPreco(item.valorTotal) }}</td>
                   </tr>
                 } @empty {
                   <tr>
@@ -193,10 +193,10 @@
               <tbody>
                 @for (item of relatorioVendas.vendasPorVendedor; track item.vendedorId) {
                   <tr>
-                    <td>{{ item.vendedorNome }}</td>
-                    <td>{{ item.quantidade }}</td>
-                    <td>{{ formatarPreco(item.valorTotal) }}</td>
-                    <td>{{ formatarPreco(item.totalComissoes) }}</td>
+                    <td data-label="Vendedor">{{ item.vendedorNome }}</td>
+                    <td data-label="Qtd.">{{ item.quantidade }}</td>
+                    <td data-label="Valor Total">{{ formatarPreco(item.valorTotal) }}</td>
+                    <td data-label="Comissões">{{ formatarPreco(item.totalComissoes) }}</td>
                   </tr>
                 } @empty {
                   <tr>
@@ -224,10 +224,10 @@
               <tbody>
                 @for (item of relatorioVendas.vendasPorFormaPagamento; track item.formaPagamento) {
                   <tr>
-                    <td>{{ item.formaPagamento }}</td>
-                    <td>{{ item.quantidade }}</td>
-                    <td>{{ formatarPreco(item.valorTotal) }}</td>
-                    <td>{{ relatorioVendas.valorTotalVendas > 0 ? formatarPorcentagem((item.valorTotal / relatorioVendas.valorTotalVendas) * 100) : '0,00%' }}</td>
+                    <td data-label="Forma de Pagamento">{{ item.formaPagamento }}</td>
+                    <td data-label="Quantidade">{{ item.quantidade }}</td>
+                    <td data-label="Valor Total">{{ formatarPreco(item.valorTotal) }}</td>
+                    <td data-label="% do Total">{{ relatorioVendas.valorTotalVendas > 0 ? formatarPorcentagem((item.valorTotal / relatorioVendas.valorTotalVendas) * 100) : '0,00%' }}</td>
                   </tr>
                 } @empty {
                   <tr>
@@ -298,9 +298,9 @@
               <tbody>
                 @for (item of relatorioEstoque.estoquePorLoja; track item.lojaId) {
                   <tr>
-                    <td>{{ item.lojaNome }}</td>
-                    <td>{{ item.quantidade }}</td>
-                    <td>{{ formatarPreco(item.valorTotal) }}</td>
+                    <td data-label="Loja">{{ item.lojaNome }}</td>
+                    <td data-label="Quantidade">{{ item.quantidade }}</td>
+                    <td data-label="Valor Total">{{ formatarPreco(item.valorTotal) }}</td>
                   </tr>
                 } @empty {
                   <tr>
@@ -325,9 +325,9 @@
               <tbody>
                 @for (item of relatorioEstoque.estoquePorCategoria; track item.categoriaId) {
                   <tr>
-                    <td>{{ item.categoriaNome }}</td>
-                    <td>{{ item.quantidade }}</td>
-                    <td>{{ formatarPreco(item.valorTotal) }}</td>
+                    <td data-label="Categoria">{{ item.categoriaNome }}</td>
+                    <td data-label="Quantidade">{{ item.quantidade }}</td>
+                    <td data-label="Valor Total">{{ formatarPreco(item.valorTotal) }}</td>
                   </tr>
                 } @empty {
                   <tr>
@@ -355,9 +355,9 @@
               <tbody>
                 @for (item of relatorioEstoque.estoquePorMarca; track item.marca) {
                   <tr>
-                    <td>{{ item.marca }}</td>
-                    <td>{{ item.quantidade }}</td>
-                    <td>{{ formatarPreco(item.valorTotal) }}</td>
+                    <td data-label="Marca">{{ item.marca }}</td>
+                    <td data-label="Quantidade">{{ item.quantidade }}</td>
+                    <td data-label="Valor Total">{{ formatarPreco(item.valorTotal) }}</td>
                   </tr>
                 } @empty {
                   <tr>
@@ -444,10 +444,10 @@
               <tbody>
                 @for (item of relatorioFinanceiro.financeiroPorMes; track item.periodo) {
                   <tr>
-                    <td>{{ item.periodo }}</td>
-                    <td>{{ formatarPreco(item.receita) }}</td>
-                    <td>{{ formatarPreco(item.custo) }}</td>
-                    <td [class.positive]="item.lucro >= 0" [class.negative]="item.lucro < 0">
+                    <td data-label="Período">{{ item.periodo }}</td>
+                    <td data-label="Receita">{{ formatarPreco(item.receita) }}</td>
+                    <td data-label="Custo">{{ formatarPreco(item.custo) }}</td>
+                    <td data-label="Lucro" [class.positive]="item.lucro >= 0" [class.negative]="item.lucro < 0">
                       {{ formatarPreco(item.lucro) }}
                     </td>
                   </tr>
@@ -475,10 +475,10 @@
               <tbody>
                 @for (item of relatorioFinanceiro.financeiroPorLoja; track item.lojaId) {
                   <tr>
-                    <td>{{ item.lojaNome }}</td>
-                    <td>{{ formatarPreco(item.receita) }}</td>
-                    <td>{{ formatarPreco(item.custo) }}</td>
-                    <td [class.positive]="item.lucro >= 0" [class.negative]="item.lucro < 0">
+                    <td data-label="Loja">{{ item.lojaNome }}</td>
+                    <td data-label="Receita">{{ formatarPreco(item.receita) }}</td>
+                    <td data-label="Custo">{{ formatarPreco(item.custo) }}</td>
+                    <td data-label="Lucro" [class.positive]="item.lucro >= 0" [class.negative]="item.lucro < 0">
                       {{ formatarPreco(item.lucro) }}
                     </td>
                   </tr>

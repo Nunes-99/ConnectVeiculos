@@ -180,15 +180,15 @@
         <tbody>
           @for (lead of leads; track lead.leaId) {
             <tr>
-              <td>
+              <td data-label="Cliente">
                 <strong>{{ lead.leaNomeCliente || 'Visitante' }}</strong>
                 @if (lead.leaEmail) {
                   <br><span class="text-muted">{{ lead.leaEmail }}</span>
                 }
               </td>
-              <td>{{ lead.leaTelefone || '-' }}</td>
-              <td><span class="badge-origem">{{ getOrigemLabel(lead.leaOrigem) }}</span></td>
-              <td>
+              <td data-label="Telefone">{{ lead.leaTelefone || '-' }}</td>
+              <td data-label="Origem"><span class="badge-origem">{{ getOrigemLabel(lead.leaOrigem) }}</span></td>
+              <td data-label="Status">
                 <select [ngModel]="lead.leaStatus" (ngModelChange)="atualizarStatus(lead.leaId, $event)"
                         class="status-select" [class]="'sel-' + lead.leaStatus">
                   <option value="NOVO">Novo</option>
@@ -198,8 +198,8 @@
                   <option value="PERDIDO">Perdido</option>
                 </select>
               </td>
-              <td>{{ lead.leaDtCriacao | date:'dd/MM/yyyy HH:mm' }}</td>
-              <td class="actions">
+              <td data-label="Data">{{ lead.leaDtCriacao | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td data-label="Ações" class="actions">
                 @if (lead.leaTelefone) {
                   <button class="btn-icon" title="Ligar" (click)="ligar(lead)">
                     <span class="material-icons">phone</span>

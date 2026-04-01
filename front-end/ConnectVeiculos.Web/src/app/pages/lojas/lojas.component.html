@@ -15,7 +15,10 @@
              placeholder="Buscar por nome ou cidade..."
              (keyup.enter)="onSearch()" />
     </div>
-    <button class="btn-secondary" (click)="onSearch()">Buscar</button>
+    <button class="btn-secondary btn-buscar" (click)="onSearch()">
+      <span class="material-icons">search</span>
+      <span class="btn-text">Buscar</span>
+    </button>
   </div>
 
   @if (loading) {
@@ -36,16 +39,16 @@
         <tbody>
           @for (loja of lojas; track loja.lojId) {
             <tr>
-              <td>{{ loja.lojNome }}</td>
-              <td>{{ loja.lojCidade }} / {{ loja.lojEstado }}</td>
-              <td>{{ loja.lojTel1 || '-' }}</td>
-              <td>{{ loja.lojEmail || '-' }}</td>
-              <td>
+              <td data-label="Nome">{{ loja.lojNome }}</td>
+              <td data-label="Cidade/Estado">{{ loja.lojCidade }} / {{ loja.lojEstado }}</td>
+              <td data-label="Telefone">{{ loja.lojTel1 || '-' }}</td>
+              <td data-label="E-mail">{{ loja.lojEmail || '-' }}</td>
+              <td data-label="Status">
                 <span class="badge" [class.active]="loja.lojSts" [class.inactive]="!loja.lojSts">
                   {{ loja.lojSts ? 'Ativa' : 'Inativa' }}
                 </span>
               </td>
-              <td class="actions">
+              <td data-label="Ações" class="actions">
                 <button class="btn-icon" (click)="openModal(loja)" title="Editar">
                   <span class="material-icons">edit</span>
                 </button>

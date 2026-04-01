@@ -101,6 +101,9 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   // View mode
   viewMode: 'grid' | 'list' = 'grid';
 
+  // Mobile filters toggle
+  showFiltros = false;
+
   // Ordering
   ordenacao = '';
 

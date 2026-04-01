@@ -74,6 +74,13 @@ namespace ConnectVeiculos.Infrastructure.Email
             return await SendEmailAsync(to, subject, body);
         }
 
+        public async Task<bool> SendRecuperacaoSenhaAsync(string to, string usuarioNome, string token)
+        {
+            var subject = "ConnectVeiculos - Recuperacao de Senha";
+            var body = GetRecuperacaoSenhaTemplate(usuarioNome, token);
+            return await SendEmailAsync(to, subject, body);
+        }
+
         private static string GetVendaConfirmadaTemplate(string compradorNome, string veiculoDescricao, decimal valorVenda)
         {
             return $@"
@@ -183,6 +190,49 @@ namespace ConnectVeiculos.Infrastructure.Email
             </div>
             <div class='warning'>
                 <strong>Importante:</strong> Por seguranca, recomendamos que altere sua senha no primeiro acesso.
+            </div>
+        </div>
+        <div class='footer'>
+            <p>Este e-mail foi enviado automaticamente pelo sistema ConnectVeiculos.</p>
+            <p>Por favor, nao responda a este e-mail.</p>
+        </div>
+    </div>
+</body>
+</html>";
+        }
+        private static string GetRecuperacaoSenhaTemplate(string usuarioNome, string token)
+        {
+            var resetUrl = $"https://connectveiculos.com.br/redefinir-senha?token={token}";
+            return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background: #1a237e; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }}
+        .content {{ padding: 20px; background: #f9f9f9; }}
+        .btn {{ display: inline-block; background: #1a237e; color: white !important; padding: 14px 30px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px; margin: 15px 0; }}
+        .warning {{ background: #fff3e0; padding: 12px; border-radius: 5px; margin: 15px 0; color: #e65100; font-size: 13px; }}
+        .token-box {{ background: #e3f2fd; padding: 12px; border-radius: 5px; margin: 15px 0; font-family: monospace; word-break: break-all; font-size: 13px; }}
+        .footer {{ padding: 15px; text-align: center; font-size: 12px; color: #666; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1>ConnectVeiculos</h1>
+        </div>
+        <div class='content'>
+            <h2>Recuperacao de Senha</h2>
+            <p>Ola <strong>{usuarioNome}</strong>,</p>
+            <p>Recebemos uma solicitacao para redefinir a senha da sua conta.</p>
+            <p>Utilize o codigo abaixo para redefinir sua senha:</p>
+            <div class='token-box'>
+                <strong>Codigo:</strong> {token}
+            </div>
+            <div class='warning'>
+                <strong>Importante:</strong> Este codigo e valido por 2 horas. Se voce nao solicitou a recuperacao de senha, ignore este e-mail.
             </div>
         </div>
         <div class='footer'>

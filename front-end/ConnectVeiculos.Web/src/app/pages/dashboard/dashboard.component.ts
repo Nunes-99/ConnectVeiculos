@@ -69,6 +69,41 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   margemLucroMedia: number = 0;
   alertasEstoque: VeiculoAlertaEstoque[] = [];
 
+  // Paginação das tabelas (mobile)
+  readonly pageSize = 7;
+  alertasPage = 1;
+  topVeiculosPage = 1;
+  recentesPage = 1;
+
+  get alertasPaginados(): VeiculoAlertaEstoque[] {
+    const start = (this.alertasPage - 1) * this.pageSize;
+    return this.alertasEstoque.slice(start, start + this.pageSize);
+  }
+
+  get alertasTotalPages(): number {
+    return Math.ceil(this.alertasEstoque.length / this.pageSize);
+  }
+
+  get topVeiculosPaginados() {
+    if (!this.topVeiculos) return [];
+    const start = (this.topVeiculosPage - 1) * this.pageSize;
+    return this.topVeiculos.veiculos.slice(start, start + this.pageSize);
+  }
+
+  get topVeiculosTotalPages(): number {
+    return Math.ceil((this.topVeiculos?.veiculos.length || 0) / this.pageSize);
+  }
+
+  get recentesPaginados() {
+    if (!this.dashboard) return [];
+    const start = (this.recentesPage - 1) * this.pageSize;
+    return this.dashboard.veiculosRecentes.slice(start, start + this.pageSize);
+  }
+
+  get recentesTotalPages(): number {
+    return Math.ceil((this.dashboard?.veiculosRecentes.length || 0) / this.pageSize);
+  }
+
   // Filtros
   anoFaturamento: number = new Date().getFullYear();
   anosDisponiveis: number[] = [];

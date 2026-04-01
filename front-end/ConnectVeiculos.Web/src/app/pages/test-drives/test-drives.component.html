@@ -158,22 +158,22 @@
         <tbody>
           @for (td of testDrives; track td.tdrId) {
             <tr>
-              <td>
+              <td data-label="Cliente">
                 <strong>{{ td.tdrNomeCliente }}</strong>
                 @if (td.tdrEmail) {
                   <br><span class="text-muted">{{ td.tdrEmail }}</span>
                 }
               </td>
-              <td><strong>{{ td.veiculoNome || '-' }}</strong></td>
-              <td>{{ td.tdrTelefone || '-' }}</td>
-              <td>{{ td.tdrDataAgendamento | date:'dd/MM/yyyy' }}</td>
-              <td>{{ td.tdrHorario || '-' }}</td>
-              <td>
+              <td data-label="Veículo"><strong>{{ td.veiculoNome || '-' }}</strong></td>
+              <td data-label="Telefone">{{ td.tdrTelefone || '-' }}</td>
+              <td data-label="Data">{{ td.tdrDataAgendamento | date:'dd/MM/yyyy' }}</td>
+              <td data-label="Horário">{{ td.tdrHorario || '-' }}</td>
+              <td data-label="Status">
                 <span class="badge" [class]="'status-' + td.tdrStatus">
                   {{ getStatusLabel(td.tdrStatus) }}
                 </span>
               </td>
-              <td class="actions">
+              <td data-label="Ações" class="actions">
                 @if (td.tdrStatus === 'P') {
                   <button class="btn-icon confirmar" title="Confirmar" (click)="atualizarStatus(td.tdrId, 'C')">
                     <span class="material-icons">check_circle</span>

@@ -66,6 +66,27 @@ input[type="number"] {
 }
 
 // ==========================================
+// Mobile - prevent horizontal scroll
+// ==========================================
+@media (max-width: 768px) {
+  html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
+  // Prevent any element from causing horizontal scroll
+  * {
+    max-width: 100%;
+  }
+
+  // Allow flex/grid children to shrink
+  td, th, .badge, .actions {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+}
+
+// ==========================================
 // Estilos Globais de Impressao
 // ==========================================
 @media print {

@@ -96,26 +96,26 @@
           <tbody>
             @for (item of relatorio; track item.veiculoId; let i = $index) {
               <tr>
-                <td>
+                <td data-label="#">
                   <span class="ranking" [class.top1]="i === 0" [class.top2]="i === 1" [class.top3]="i === 2">
                     {{ i + 1 }}
                   </span>
                 </td>
-                <td><strong>{{ item.marca }} {{ item.modelo }}</strong></td>
-                <td>{{ item.ano }}</td>
-                <td>{{ formatarPreco(item.preco) }}</td>
-                <td>
+                <td data-label="Veículo"><strong>{{ item.marca }} {{ item.modelo }}</strong></td>
+                <td data-label="Ano">{{ item.ano }}</td>
+                <td data-label="Preço">{{ formatarPreco(item.preco) }}</td>
+                <td data-label="Status">
                   <span class="badge" [class.active]="item.status === 'D'" [class.inactive]="item.status === 'V'">
                     {{ getStatusLabel(item.status) }}
                   </span>
                 </td>
-                <td>
+                <td data-label="Favoritos">
                   <span class="fav-count">
                     <span class="material-icons">favorite</span>
                     {{ item.totalFavoritos }}
                   </span>
                 </td>
-                <td class="actions">
+                <td data-label="Ações" class="actions">
                   <button class="btn-icon" title="Ver visitantes" (click)="loadVisitantes(item.veiculoId)">
                     <span class="material-icons">visibility</span>
                   </button>
@@ -150,17 +150,17 @@
           <tbody>
             @for (v of visitantes; track v.email) {
               <tr>
-                <td><strong>{{ v.nome || 'Visitante' }}</strong></td>
-                <td>{{ v.email }}</td>
-                <td>{{ v.telefone || '-' }}</td>
-                <td>
+                <td data-label="Nome"><strong>{{ v.nome || 'Visitante' }}</strong></td>
+                <td data-label="E-mail">{{ v.email }}</td>
+                <td data-label="Telefone">{{ v.telefone || '-' }}</td>
+                <td data-label="Favoritos">
                   <span class="fav-count">
                     <span class="material-icons">favorite</span>
                     {{ v.totalFavoritos }}
                   </span>
                 </td>
-                <td>{{ v.ultimaAtividade | date:'dd/MM/yyyy HH:mm' }}</td>
-                <td class="actions">
+                <td data-label="Última Atividade">{{ v.ultimaAtividade | date:'dd/MM/yyyy HH:mm' }}</td>
+                <td data-label="Ações" class="actions">
                   @if (v.telefone) {
                     <button class="btn-icon whatsapp" title="WhatsApp" (click)="abrirWhatsApp(v)">
                       <span class="material-icons">chat</span>

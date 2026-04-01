@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, EventEmitter, inject, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { AuthService, ThemeService, LojaService } from '../../core/services';
@@ -23,8 +23,12 @@ export class SidebarComponent {
   themeService = inject(ThemeService);
   private lojaService = inject(LojaService);
 
+  @Input() mobileOpen = false;
+  @Output() closeSidebar = new EventEmitter<void>();
+
   lojas: Loja[] = [];
   linkCopiado = false;
+  catalogoExpanded = false;
 
   menuGroups = [
     {

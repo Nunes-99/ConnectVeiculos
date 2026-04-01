@@ -1,8 +1,8 @@
-using ConnectVeiculos.Application.Exceptions;
 using ConnectVeiculos.Application.InputModels.RecuperacaoSenha;
 using ConnectVeiculos.Application.Interfaces.RecuperacaoSenha;
 using ConnectVeiculos.Core.Interfaces.Database.Operations.RecuperacaoSenha;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Usuarios;
+using ConnectVeiculos.Core.Interfaces.Email;
 
 namespace ConnectVeiculos.Application.UseCases.RecuperacaoSenha
 {
@@ -10,29 +10,26 @@ namespace ConnectVeiculos.Application.UseCases.RecuperacaoSenha
     {
         private readonly IUsuarioRepository _usuarioRepository;
         private readonly IRecuperacaoSenhaOperations _recuperacaoOperations;
+        private readonly IEmailService _emailService;
 
         public SolicitarRecuperacaoSenhaUseCase(
             IUsuarioRepository usuarioRepository,
-            IRecuperacaoSenhaOperations recuperacaoOperations)
+            IRecuperacaoSenhaOperations recuperacaoOperations,
+            IEmailService emailService)
         {
             _usuarioRepository = usuarioRepository;
             _recuperacaoOperations = recuperacaoOperations;
+            _emailService = emailService;
         }
 
-        public async Task<string> ExecutarAsync(SolicitarRecuperacaoInputModel input)
+        public async Task<string?> ExecutarAsync(SolicitarRecuperacaoInputModel input)
         {
             var usuario = await _usuarioRepository.GetByEmailAsync(input.Email);
 
-            if (usuario == null)
+            // Por seguranca, nao informamos se o email existe ou nao
+            if (usuario == null || !usuario.UsuSts)
             {
-                // Por seguranca, nao informamos se o email existe ou nao
-                // Retornamos uma mensagem generica
-                throw new InputModelException("Se o e-mail estiver cadastrado, voce recebera as instrucoes para recuperacao.");
-            }
-
-            if (!usuario.UsuSts)
-            {
-                throw new InputModelException("Usuario inativo. Entre em contato com o administrador.");
+                return null;
             }
 
             // Invalidar tokens anteriores
@@ -50,8 +47,13 @@ namespace ConnectVeiculos.Application.UseCases.RecuperacaoSenha
 
             await _recuperacaoOperations.InserirAsync(recuperacao);
 
-            // Em um sistema real, aqui enviariamos o email com o link de recuperacao
-            // Por hora, retornamos o token para fins de teste/demonstracao
+            // Enviar email com o token de recuperacao
+            await _emailService.SendRecuperacaoSenhaAsync(
+                usuario.UsuEmail,
+                usuario.UsuNome,
+                token
+            );
+
             return token;
         }
     }

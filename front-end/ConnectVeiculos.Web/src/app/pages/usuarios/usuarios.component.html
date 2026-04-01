@@ -15,7 +15,10 @@
              placeholder="Buscar por nome ou email..."
              (keyup.enter)="onSearch()" />
     </div>
-    <button class="btn-secondary" (click)="onSearch()">Buscar</button>
+    <button class="btn-secondary btn-buscar" (click)="onSearch()">
+      <span class="material-icons">search</span>
+      <span class="btn-text">Buscar</span>
+    </button>
   </div>
 
   @if (loading) {
@@ -36,16 +39,16 @@
         <tbody>
           @for (usuario of usuarios; track usuario.usuId) {
             <tr>
-              <td>{{ usuario.usuNome }}</td>
-              <td>{{ usuario.usuEmail }}</td>
-              <td>{{ usuario.lojaNome }}</td>
-              <td>{{ usuario.acessoNome }}</td>
-              <td>
+              <td data-label="Nome">{{ usuario.usuNome }}</td>
+              <td data-label="E-mail">{{ usuario.usuEmail }}</td>
+              <td data-label="Loja">{{ usuario.lojaNome }}</td>
+              <td data-label="Acesso">{{ usuario.acessoNome }}</td>
+              <td data-label="Status">
                 <span class="badge" [class.active]="usuario.usuSts" [class.inactive]="!usuario.usuSts">
                   {{ usuario.usuSts ? 'Ativo' : 'Inativo' }}
                 </span>
               </td>
-              <td class="actions">
+              <td data-label="Ações" class="actions">
                 <button class="btn-icon" (click)="openModal(usuario)" title="Editar">
                   <span class="material-icons">edit</span>
                 </button>

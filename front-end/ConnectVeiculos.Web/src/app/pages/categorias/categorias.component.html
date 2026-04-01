@@ -15,7 +15,10 @@
              placeholder="Buscar por nome..."
              (keyup.enter)="onSearch()" />
     </div>
-    <button class="btn-secondary" (click)="onSearch()">Buscar</button>
+    <button class="btn-secondary btn-buscar" (click)="onSearch()">
+      <span class="material-icons">search</span>
+      <span class="btn-text">Buscar</span>
+    </button>
   </div>
 
   @if (loading) {
@@ -34,14 +37,14 @@
         <tbody>
           @for (categoria of categorias; track categoria.catId) {
             <tr>
-              <td>{{ categoria.catNome }}</td>
-              <td>{{ categoria.catDesc || '-' }}</td>
-              <td>
+              <td data-label="Nome">{{ categoria.catNome }}</td>
+              <td data-label="Descrição">{{ categoria.catDesc || '-' }}</td>
+              <td data-label="Status">
                 <span class="badge" [class.active]="categoria.catSts" [class.inactive]="!categoria.catSts">
                   {{ categoria.catSts ? 'Ativa' : 'Inativa' }}
                 </span>
               </td>
-              <td class="actions">
+              <td data-label="Ações" class="actions">
                 <button class="btn-icon" (click)="openModal(categoria)" title="Editar">
                   <span class="material-icons">edit</span>
                 </button>

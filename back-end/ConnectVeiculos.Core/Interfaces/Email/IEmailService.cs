@@ -6,5 +6,6 @@ namespace ConnectVeiculos.Core.Interfaces.Email
         Task<bool> SendVendaConfirmadaAsync(string to, string compradorNome, string veiculoDescricao, decimal valorVenda);
         Task<bool> SendVendaEstornadaAsync(string to, string compradorNome, string veiculoDescricao);
         Task<bool> SendNovoUsuarioAsync(string to, string usuarioNome, string senhaTemporaria);
+        Task<bool> SendRecuperacaoSenhaAsync(string to, string usuarioNome, string token);
     }
 }

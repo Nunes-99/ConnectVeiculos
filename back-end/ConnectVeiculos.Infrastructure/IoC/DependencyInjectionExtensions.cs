@@ -309,6 +309,14 @@ namespace ConnectVeiculos.Infrastructure.IoC
                       DesValor REAL,
                       DesDtCriacao TEXT NOT NULL DEFAULT (datetime('now'))");
 
+                CreateTableIfNotExists(connection, "RecuperacaoSenha",
+                    @"RecId INTEGER PRIMARY KEY AUTOINCREMENT,
+                      RecUsuId INTEGER NOT NULL,
+                      RecToken TEXT NOT NULL,
+                      RecDataCriacao TEXT,
+                      RecDataExpiracao TEXT,
+                      RecUtilizado INTEGER DEFAULT 0");
+
                 CreateTableIfNotExists(connection, "Favorito",
                     @"FavId INTEGER PRIMARY KEY AUTOINCREMENT,
                       R_VeiId INTEGER NOT NULL,

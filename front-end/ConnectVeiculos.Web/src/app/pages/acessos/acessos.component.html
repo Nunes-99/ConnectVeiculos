@@ -15,7 +15,10 @@
              placeholder="Buscar por nome..."
              (keyup.enter)="onSearch()" />
     </div>
-    <button class="btn-secondary" (click)="onSearch()">Buscar</button>
+    <button class="btn-secondary btn-buscar" (click)="onSearch()">
+      <span class="material-icons">search</span>
+      <span class="btn-text">Buscar</span>
+    </button>
   </div>
 
   @if (loading) {
@@ -34,14 +37,14 @@
         <tbody>
           @for (acesso of acessos; track acesso.acsId) {
             <tr>
-              <td>{{ acesso.acsNome }}</td>
-              <td>{{ acesso.acsDesc || '-' }}</td>
-              <td>
+              <td data-label="Nome">{{ acesso.acsNome }}</td>
+              <td data-label="Descrição">{{ acesso.acsDesc || '-' }}</td>
+              <td data-label="Status">
                 <span class="badge" [class.active]="acesso.acsSts" [class.inactive]="!acesso.acsSts">
                   {{ acesso.acsSts ? 'Ativo' : 'Inativo' }}
                 </span>
               </td>
-              <td class="actions">
+              <td data-label="Ações" class="actions">
                 <button class="btn-icon" (click)="openModal(acesso)" title="Editar">
                   <span class="material-icons">edit</span>
                 </button>

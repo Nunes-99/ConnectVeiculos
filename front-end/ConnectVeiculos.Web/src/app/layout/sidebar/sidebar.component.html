@@ -1,10 +1,15 @@
-<aside class="sidebar">
+<aside class="sidebar" [class.mobile-open]="mobileOpen">
   <div class="sidebar-header">
     <div class="logo-area">
       <span class="material-icons logo-icon">directions_car</span>
       <h2>Connect<span>Veículos</span></h2>
     </div>
-    <app-notifications></app-notifications>
+    <div class="header-actions">
+      <app-notifications></app-notifications>
+      <button class="btn-close-sidebar" (click)="closeSidebar.emit()" title="Fechar menu">
+        <span class="material-icons">arrow_back</span>
+      </button>
+    </div>
   </div>
 
   <nav class="sidebar-nav">
@@ -22,36 +27,41 @@
   </nav>
 
   <div class="catalogo-section">
-    <h4>
-      <span class="material-icons">storefront</span>
-      Catálogo Público
+    <h4 class="catalogo-header" (click)="catalogoExpanded = !catalogoExpanded">
+      <span class="catalogo-title">
+        <span class="material-icons">storefront</span>
+        Catálogo Público
+      </span>
+      <span class="material-icons catalogo-toggle" [class.expanded]="catalogoExpanded">expand_more</span>
     </h4>
-    @if (lojas.length > 1) {
-      @for (loja of lojas; track loja.lojId) {
+    <div class="catalogo-list" [class.collapsed]="!catalogoExpanded">
+      @if (lojas.length > 1) {
+        @for (loja of lojas; track loja.lojId) {
+          <div class="catalogo-loja-item">
+            <button class="btn-catalogo" (click)="abrirCatalogo(loja)" title="Abrir catálogo de {{ loja.lojNome }}">
+              <span class="material-icons">open_in_new</span>
+              <span>{{ loja.lojNome }}</span>
+            </button>
+            <button class="btn-copiar" (click)="copiarLinkCatalogo(loja)" title="Copiar link">
+              <span class="material-icons">{{ linkCopiado ? 'check' : 'content_copy' }}</span>
+            </button>
+          </div>
+        }
+      } @else {
         <div class="catalogo-loja-item">
-          <button class="btn-catalogo" (click)="abrirCatalogo(loja)" title="Abrir catálogo de {{ loja.lojNome }}">
+          <button class="btn-catalogo" (click)="abrirCatalogo(lojas.length === 1 ? lojas[0] : undefined)" title="Abrir catálogo">
             <span class="material-icons">open_in_new</span>
-            <span>{{ loja.lojNome }}</span>
+            <span>Abrir Vitrine</span>
           </button>
-          <button class="btn-copiar" (click)="copiarLinkCatalogo(loja)" title="Copiar link">
+          <button class="btn-copiar" (click)="copiarLinkCatalogo(lojas.length === 1 ? lojas[0] : undefined)" title="Copiar link do catálogo">
             <span class="material-icons">{{ linkCopiado ? 'check' : 'content_copy' }}</span>
           </button>
         </div>
       }
-    } @else {
-      <div class="catalogo-loja-item">
-        <button class="btn-catalogo" (click)="abrirCatalogo(lojas.length === 1 ? lojas[0] : undefined)" title="Abrir catálogo">
-          <span class="material-icons">open_in_new</span>
-          <span>Abrir Vitrine</span>
-        </button>
-        <button class="btn-copiar" (click)="copiarLinkCatalogo(lojas.length === 1 ? lojas[0] : undefined)" title="Copiar link do catálogo">
-          <span class="material-icons">{{ linkCopiado ? 'check' : 'content_copy' }}</span>
-        </button>
-      </div>
-    }
-    @if (linkCopiado) {
-      <span class="link-copiado-msg">Link copiado!</span>
-    }
+      @if (linkCopiado) {
+        <span class="link-copiado-msg">Link copiado!</span>
+      }
+    </div>
   </div>
 
   <div class="sidebar-footer">

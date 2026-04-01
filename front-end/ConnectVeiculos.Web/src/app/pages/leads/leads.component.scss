@@ -259,6 +259,23 @@
 }
 
 // Actions
+@media (max-width: 768px) {
+  .filtros-bar {
+    flex-wrap: nowrap;
+    gap: 8px;
+
+    .filtro-grupo {
+      flex: 1;
+      min-width: 0;
+
+      select {
+        min-width: 0;
+        width: 100%;
+      }
+    }
+  }
+}
+
 .actions {
   .btn-icon {
     background: none;

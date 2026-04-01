@@ -60,9 +60,15 @@
   overflow: hidden;
   margin-top: 8px;
 
-  @media (max-width: 480px) {
-    width: calc(100vw - 32px);
-    left: -8px;
+  @media (max-width: 768px) {
+    position: fixed;
+    top: 3.5rem;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-height: calc(100vh - 3.5rem);
+    border-radius: 0 0 0.75rem 0.75rem;
+    margin-top: 0;
   }
 }
 

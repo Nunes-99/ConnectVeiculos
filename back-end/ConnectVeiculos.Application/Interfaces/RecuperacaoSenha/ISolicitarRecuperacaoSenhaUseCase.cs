@@ -4,6 +4,6 @@ namespace ConnectVeiculos.Application.Interfaces.RecuperacaoSenha
 {
     public interface ISolicitarRecuperacaoSenhaUseCase
     {
-        Task<string> ExecutarAsync(SolicitarRecuperacaoInputModel input);
+        Task<string?> ExecutarAsync(SolicitarRecuperacaoInputModel input);
     }
 }

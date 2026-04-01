@@ -64,13 +64,12 @@ namespace ConnectVeiculos.API.Controllers
             [FromBody] SolicitarRecuperacaoInputModel input)
         {
             if (input == null || string.IsNullOrEmpty(input.Email))
-                return BadRequest("E-mail e obrigatorio.");
+                return BadRequest(new { message = "E-mail e obrigatorio." });
 
             try
             {
                 var token = await useCase.ExecutarAsync(input);
-                // Em producao, o token seria enviado por email
-                // Aqui retornamos para fins de teste
+                // Sempre retorna sucesso por seguranca (nao revela se e-mail existe)
                 return Ok(new {
                     mensagem = "Se o e-mail estiver cadastrado, voce recebera as instrucoes para recuperacao.",
                     token // Remover em producao
@@ -78,7 +77,7 @@ namespace ConnectVeiculos.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                return BadRequest(new { message = ex.Message });
             }
         }
 

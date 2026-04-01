@@ -163,6 +163,19 @@ CREATE TABLE IF NOT EXISTS Lead (LeaId INTEGER PRIMARY KEY AUTOINCREMENT, R_VeiI
 CREATE TABLE IF NOT EXISTS Favorito (FavId INTEGER PRIMARY KEY AUTOINCREMENT, R_VeiId INTEGER NOT NULL, FavEmail TEXT NOT NULL, FavNome TEXT, FavTelefone TEXT, FavDtCriacao TEXT, FOREIGN KEY (R_VeiId) REFERENCES Veiculo(VeiId));
 CREATE UNIQUE INDEX IF NOT EXISTS idx_favorito_email_veiculo ON Favorito(FavEmail, R_VeiId);
 
+-- Tabela de Recuperacao de Senha
+CREATE TABLE IF NOT EXISTS RecuperacaoSenha (
+    RecId INTEGER PRIMARY KEY AUTOINCREMENT,
+    RecUsuId INTEGER NOT NULL,
+    RecToken TEXT NOT NULL,
+    RecDataCriacao TEXT,
+    RecDataExpiracao TEXT,
+    RecUtilizado INTEGER DEFAULT 0,
+    FOREIGN KEY (RecUsuId) REFERENCES Usuario(UsuId)
+);
+CREATE INDEX IF NOT EXISTS idx_recuperacao_token ON RecuperacaoSenha(RecToken);
+CREATE INDEX IF NOT EXISTS idx_recuperacao_usuario ON RecuperacaoSenha(RecUsuId);
+
 -- =============================================================
 -- Indices para melhor performance
 -- =============================================================

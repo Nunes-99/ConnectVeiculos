@@ -26,28 +26,29 @@
         <tbody>
           @for (venda of vendasPaginadas; track venda.venId) {
             <tr [class.estornada]="venda.venStatus === 'E'">
-              <td>{{ formatarData(venda.venDtVenda) }}</td>
-              <td>
+              <td data-label="Data">{{ formatarData(venda.venDtVenda) }}</td>
+              <td data-label="Veículo">
                 <strong>{{ venda.venMarca }} {{ venda.venModelo }}</strong><br/>
                 <span class="text-muted">{{ venda.venAno }}</span>
               </td>
-              <td>
+              <td data-label="Comprador">
                 <strong>{{ venda.venCompradorNome }}</strong><br/>
                 @if (venda.venCompradorCpf) {
                   <span class="text-muted">{{ venda.venCompradorCpf }}</span>
                 }
               </td>
-              <td>{{ getFormaPagamentoLabel(venda.venFormaPagamento) }}</td>
-              <td>{{ formatarPreco(venda.venValor) }}</td>
-              <td>
+              <td data-label="Pagamento">{{ getFormaPagamentoLabel(venda.venFormaPagamento) }}</td>
+              <td data-label="Valor">{{ formatarPreco(venda.venValor) }}</td>
+              <td data-label="Status">
                 <span class="badge" [class.active]="venda.venStatus === 'A'" [class.inactive]="venda.venStatus === 'E'">
                   {{ getStatusLabel(venda.venStatus) }}
                 </span>
               </td>
-              <td class="actions">
+              <td class="actions" data-label="Ações">
                 @if (venda.venStatus === 'A') {
-                  <button class="btn-icon delete" (click)="estornar(venda)" title="Estornar Venda">
+                  <button class="btn-icon-text delete" (click)="estornar(venda)" title="Estornar Venda">
                     <span class="material-icons">undo</span>
+                    <span>Estornar</span>
                   </button>
                 }
               </td>
