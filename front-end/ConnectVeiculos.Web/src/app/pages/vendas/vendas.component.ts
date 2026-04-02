@@ -5,12 +5,12 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { VendaService, VeiculoService, UsuarioService, ToastService } from '../../core/services';
 import { Venda, Veiculo, Usuario } from '../../core/models';
 import { MaskDirective, CurrencyMaskDirective } from '../../shared/directives';
-import { PaginationComponent } from '../../shared/components';
+import { PaginationComponent, ConfirmModalComponent } from '../../shared/components';
 
 @Component({
   selector: 'app-vendas',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MaskDirective, CurrencyMaskDirective, PaginationComponent],
+  imports: [CommonModule, ReactiveFormsModule, MaskDirective, CurrencyMaskDirective, PaginationComponent, ConfirmModalComponent],
   templateUrl: './vendas.component.html',
   styleUrl: './vendas.component.scss'
 })
@@ -29,6 +29,8 @@ export class VendasComponent implements OnInit {
   loading = false;
   loadingCep = false;
   showModal = false;
+  showConfirmEstorno = false;
+  vendaParaEstornar: Venda | null = null;
 
   // Paginacao
   currentPage = 1;
@@ -40,7 +42,7 @@ export class VendasComponent implements OnInit {
     r_UsuId: [0, [Validators.required, Validators.min(1)]],
     venDtVenda: [new Date().toISOString().split('T')[0], Validators.required],
     venValor: [0, [Validators.required, Validators.min(0)]],
-    venComissaoPorc: [5, [Validators.required, Validators.min(0), Validators.max(100)]],
+    venComissaoPorc: [3, [Validators.required, Validators.min(0), Validators.max(100)]],
     // Dados do Comprador
     venCompradorNome: ['', [Validators.required, Validators.minLength(3)]],
     venCompradorCpf: [''],
@@ -216,17 +218,28 @@ export class VendasComponent implements OnInit {
       return;
     }
 
-    if (confirm(`Deseja estornar a venda de ${venda.venMarca} ${venda.venModelo}?\nO veiculo voltara para o status Disponivel.`)) {
-      this.vendaService.estornar(venda.venId).subscribe({
-        next: () => {
-          this.loadData();
-          this.toast.success('Venda estornada com sucesso!');
-        },
-        error: (err) => {
-          this.toast.error(err.error?.message || 'Erro ao estornar venda');
-        }
-      });
-    }
+    this.vendaParaEstornar = venda;
+    this.showConfirmEstorno = true;
+  }
+
+  confirmarEstorno(): void {
+    if (!this.vendaParaEstornar) return;
+    this.vendaService.estornar(this.vendaParaEstornar.venId).subscribe({
+      next: () => {
+        this.loadData();
+        this.toast.success('Venda estornada com sucesso!');
+      },
+      error: (err) => {
+        this.toast.error(err.error?.message || 'Erro ao estornar venda');
+      }
+    });
+    this.showConfirmEstorno = false;
+    this.vendaParaEstornar = null;
+  }
+
+  cancelarEstorno(): void {
+    this.showConfirmEstorno = false;
+    this.vendaParaEstornar = null;
   }
 
   getStatusLabel(status: string): string {

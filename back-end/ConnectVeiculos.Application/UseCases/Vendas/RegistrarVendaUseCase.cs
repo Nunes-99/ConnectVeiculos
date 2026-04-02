@@ -41,6 +41,14 @@ namespace ConnectVeiculos.Application.UseCases.Vendas
             if (veiculo.VeiSts == "V")
                 throw new DomainException("Este veiculo ja foi vendido.");
 
+            // Marcar veículo como vendido ANTES de criar a venda (evita venda duplicada)
+            veiculo.AlterarStatus("V");
+            await _veiculoRepository.UpdateAsync(veiculo);
+
+            // Validar comissão
+            if (inputModel.VenComissaoPorc < 0) inputModel.VenComissaoPorc = 0;
+            if (inputModel.VenComissaoPorc > 100) inputModel.VenComissaoPorc = 100;
+
             // Calcular valor da comissao
             var comissaoValor = inputModel.VenValor * (inputModel.VenComissaoPorc / 100);
 
@@ -66,10 +74,6 @@ namespace ConnectVeiculos.Application.UseCases.Vendas
             );
 
             var vendaId = await _vendaRepository.CreateAsync(venda);
-
-            // Atualizar status do veiculo para Vendido
-            veiculo.AlterarStatus("V");
-            await _veiculoRepository.UpdateAsync(veiculo);
 
             // Enviar email de confirmacao ao comprador
             if (!string.IsNullOrEmpty(inputModel.VenCompradorEmail))

@@ -1,7 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { VeiculoService, LojaService, CategoriaService, ImagemService, VeiculoImagem, ToastService } from '../../core/services';
+import { VeiculoService, LojaService, CategoriaService, ImagemService, VeiculoImagem, ToastService, FipeService, FipeMarca, FipeModelo } from '../../core/services';
 import { Veiculo, Loja, Categoria } from '../../core/models';
 import { MaskDirective, CurrencyMaskDirective } from '../../shared/directives';
 import { PaginationComponent, ConfirmModalComponent } from '../../shared/components';
@@ -21,6 +21,7 @@ export class VeiculosComponent implements OnInit {
   private imagemService = inject(ImagemService);
   private fb = inject(FormBuilder);
   private toast = inject(ToastService);
+  private fipeService = inject(FipeService);
 
   veiculos: Veiculo[] = [];
   veiculosPaginados: Veiculo[] = [];
@@ -55,6 +56,17 @@ export class VeiculosComponent implements OnInit {
   pageSize = 10;
   totalItems = 0;
 
+  showModeloImport = false;
+
+  // Marcas e Modelos (FIPE)
+  marcasFipe: FipeMarca[] = [];
+  modelosFipe: FipeModelo[] = [];
+  marcaSelecionada = '';
+  marcaCodigoSelecionado = '';
+  carregandoModelos = false;
+  outroMarca = false;
+  outroModelo = false;
+
   // Filtros
   filtroTexto = '';
   filtroLoja: number | null = null;
@@ -81,6 +93,9 @@ export class VeiculosComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadData();
+    this.fipeService.getMarcas().subscribe({
+      next: (marcas) => this.marcasFipe = marcas
+    });
   }
 
   private loadData(): void {
@@ -128,8 +143,36 @@ export class VeiculosComponent implements OnInit {
         veiDonoCelular: veiculo.veiDonoCelular || ''
       });
       this.loadImagens(veiculo.veiId);
+      // Verificar se a marca está na FIPE
+      const marcaFipe = this.marcasFipe.find(m => m.nome.toLowerCase() === veiculo.veiMarca.toLowerCase());
+      if (marcaFipe) {
+        this.marcaSelecionada = marcaFipe.nome;
+        this.marcaCodigoSelecionado = marcaFipe.codigo;
+        this.outroMarca = false;
+        this.carregandoModelos = true;
+        this.fipeService.getModelos(marcaFipe.codigo).subscribe({
+          next: (modelos) => {
+            this.modelosFipe = modelos;
+            this.carregandoModelos = false;
+            this.outroModelo = !modelos.some(m => m.nome.toLowerCase() === veiculo.veiModelo.toLowerCase());
+          },
+          error: () => { this.carregandoModelos = false; this.outroModelo = true; }
+        });
+      } else {
+        this.marcaSelecionada = '';
+        this.marcaCodigoSelecionado = '';
+        this.modelosFipe = [];
+        this.outroMarca = true;
+        this.outroModelo = true;
+      }
     } else {
       this.editId = null;
+      this.marcaSelecionada = '';
+      this.marcaCodigoSelecionado = '';
+      this.modelosFipe = [];
+      this.outroMarca = false;
+      this.outroModelo = false;
+      this.carregandoModelos = false;
       this.form.reset({
         r_LojId: 0,
         r_CatId: 0,
@@ -467,6 +510,63 @@ export class VeiculosComponent implements OnInit {
 
     const dataAtual = new Date().toISOString().split('T')[0];
     XLSX.writeFile(wb, `veiculos_${dataAtual}.xlsx`);
+  }
+
+  baixarModeloImport(): void {
+    const wb = XLSX.utils.book_new();
+    const data = [
+      ['Marca', 'Modelo', 'Ano', 'Placa', 'Chassi', 'Cor', 'KM', 'Preco Compra', 'Preco Venda', 'Status', 'Loja', 'Categoria'],
+      ['Honda', 'Civic', 2023, 'ABC-1D23', '9BWHE21JX24052050', 'Preto', 15000, 95000, 115000, 'Disponivel', 'Minha Loja', 'Sedan'],
+      ['Toyota', 'Corolla', 2024, 'XYZ-9A87', '93HGGV63PNZ123456', 'Branco', 8000, 120000, 145000, 'Disponivel', 'Minha Loja', 'Sedan'],
+      ['Hyundai', 'HB20', 2022, 'DEF-5B67', '9BWSU19F08B234567', 'Prata', 32000, 55000, 68000, 'Disponivel', 'Minha Loja', 'Hatch'],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!cols'] = [
+      { wch: 12 }, { wch: 15 }, { wch: 6 }, { wch: 10 }, { wch: 22 },
+      { wch: 10 }, { wch: 8 }, { wch: 14 }, { wch: 14 }, { wch: 12 },
+      { wch: 15 }, { wch: 12 }
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, 'Modelo');
+    XLSX.writeFile(wb, 'modelo_importacao_veiculos.xlsx');
+  }
+
+  // Marcas e Modelos (FIPE)
+  onMarcaChange(valor: string): void {
+    if (valor === 'Outros') {
+      this.outroMarca = true;
+      this.outroModelo = true;
+      this.modelosFipe = [];
+      this.marcaSelecionada = '';
+      this.marcaCodigoSelecionado = '';
+      this.form.patchValue({ veiMarca: '', veiModelo: '' });
+    } else {
+      this.outroMarca = false;
+      this.outroModelo = false;
+      const marca = this.marcasFipe.find(m => m.codigo === valor);
+      this.marcaSelecionada = marca?.nome || '';
+      this.marcaCodigoSelecionado = valor;
+      this.form.patchValue({ veiMarca: marca?.nome || '', veiModelo: '' });
+      this.carregandoModelos = true;
+      this.modelosFipe = [];
+      this.fipeService.getModelos(valor).subscribe({
+        next: (modelos) => {
+          this.modelosFipe = modelos;
+          this.carregandoModelos = false;
+        },
+        error: () => this.carregandoModelos = false
+      });
+    }
+  }
+
+  onModeloChange(valor: string): void {
+    if (valor === 'Outros') {
+      this.outroModelo = true;
+      this.form.patchValue({ veiModelo: '' });
+    } else {
+      this.outroModelo = false;
+      const modelo = this.modelosFipe.find(m => String(m.codigo) === valor);
+      this.form.patchValue({ veiModelo: modelo?.nome || '' });
+    }
   }
 
   // Excel - Importar

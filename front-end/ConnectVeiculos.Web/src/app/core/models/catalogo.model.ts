@@ -42,9 +42,16 @@ export interface CatalogoLoja {
   lojFacebook?: string;
 }
 
+export interface CatalogoLojaResumo {
+  lojId: number;
+  lojNome: string;
+  lojSlug: string;
+}
+
 export interface CatalogoResultado {
   veiculos: CatalogoVeiculo[];
   filtros: CatalogoFiltro;
   loja?: CatalogoLoja;
+  lojas: CatalogoLojaResumo[];
   total: number;
 }

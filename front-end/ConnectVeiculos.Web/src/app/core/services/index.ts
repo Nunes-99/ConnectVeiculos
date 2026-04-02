@@ -20,3 +20,4 @@ export * from './favorito.service';
 export * from './toast.service';
 export * from './negociacao.service';
 export * from './notificacao.service';
+export * from './fipe.service';

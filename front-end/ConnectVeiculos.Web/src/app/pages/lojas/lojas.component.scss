@@ -4,6 +4,13 @@
   max-width: 700px;
 }
 
+input.cep-auto:disabled {
+  background-color: #e0e0e0;
+  color: #333;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
 .flex-2 {
   flex: 2;
 }

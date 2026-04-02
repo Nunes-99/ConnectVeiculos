@@ -57,17 +57,26 @@ namespace ConnectVeiculos.Application.ViewModels.Catalogo
         public string LojSlug { get; set; }
     }
 
+    public class CatalogoLojaResumoViewModel
+    {
+        public int LojId { get; set; }
+        public string LojNome { get; set; }
+        public string LojSlug { get; set; }
+    }
+
     public class CatalogoResultadoViewModel
     {
         public List<CatalogoVeiculoViewModel> Veiculos { get; set; }
         public CatalogoFiltroViewModel Filtros { get; set; }
         public CatalogoLojaViewModel Loja { get; set; }
+        public List<CatalogoLojaResumoViewModel> Lojas { get; set; }
         public int Total { get; set; }
 
         public CatalogoResultadoViewModel()
         {
             Veiculos = new List<CatalogoVeiculoViewModel>();
             Filtros = new CatalogoFiltroViewModel();
+            Lojas = new List<CatalogoLojaResumoViewModel>();
         }
     }
 }

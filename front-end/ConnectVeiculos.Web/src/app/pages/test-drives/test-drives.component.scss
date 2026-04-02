@@ -275,8 +275,10 @@
       }
     }
 
-    &:hover .tooltip {
-      display: block;
+    @media (min-width: 769px) {
+      &:hover .tooltip {
+        display: block;
+      }
     }
 
     &.confirmar:hover {

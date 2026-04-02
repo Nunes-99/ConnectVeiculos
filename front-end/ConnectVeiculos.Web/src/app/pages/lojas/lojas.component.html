@@ -126,7 +126,7 @@
             </div>
             <div class="form-group flex-2">
               <label>Logradouro</label>
-              <input type="text" formControlName="lojLogradouro" maxlength="200" />
+              <input type="text" formControlName="lojLogradouro" maxlength="200" [class.cep-auto]="cepPreenchido" />
             </div>
             <div class="form-group">
               <label>Número</label>
@@ -136,7 +136,7 @@
           <div class="form-row">
             <div class="form-group">
               <label>Bairro</label>
-              <input type="text" formControlName="lojBairro" maxlength="100" />
+              <input type="text" formControlName="lojBairro" maxlength="100" [class.cep-auto]="cepPreenchido" />
             </div>
             <div class="form-group">
               <label>Complemento</label>
@@ -147,7 +147,7 @@
             <div class="form-group">
               <label class="required">Cidade</label>
               <input type="text" formControlName="lojCidade" maxlength="100"
-                     [class.invalid]="hasError('lojCidade', 'required')" />
+                     [class.invalid]="hasError('lojCidade', 'required')" [class.cep-auto]="cepPreenchido" />
               @if (hasError('lojCidade', 'required')) {
                 <span class="error-message">Cidade é obrigatória</span>
               }
@@ -155,7 +155,7 @@
             <div class="form-group">
               <label class="required">Estado</label>
               <input type="text" formControlName="lojEstado" maxlength="2"
-                     [class.invalid]="hasError('lojEstado', 'required')" />
+                     [class.invalid]="hasError('lojEstado', 'required')" [class.cep-auto]="cepPreenchido" />
               @if (hasError('lojEstado', 'required')) {
                 <span class="error-message">Estado é obrigatório</span>
               }
@@ -256,7 +256,7 @@
               <div class="color-preview" [style.background]="'linear-gradient(135deg, ' + form.get('lojCorPrimaria')?.value + ' 0%, ' + form.get('lojCorSecundaria')?.value + ' 100%)'">
               </div>
               @if (editMode) {
-                <button type="button" class="btn-preview-catalogo" (click)="showPreview = true">
+                <button type="button" class="btn-preview-catalogo" (click)="abrirPreview()">
                   <span class="material-icons">visibility</span>
                   Pré-visualizar
                 </button>

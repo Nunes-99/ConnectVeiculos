@@ -2,11 +2,12 @@ import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
-import { AuthService } from '../services';
+import { AuthService, ToastService } from '../services';
 
 export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
   const authService = inject(AuthService);
+  const toast = inject(ToastService);
 
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
@@ -21,7 +22,7 @@ export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
         errorMessage = error.error.message;
       } else if (error.error?.type === 'ValidationError' && error.error?.errors) {
         const messages = Object.values(error.error.errors).flat();
-        errorMessage = messages.join('\n');
+        errorMessage = messages.join('. ');
       } else if (error.error?.message) {
         errorMessage = error.error.message;
       } else if (error.error?.title) {
@@ -32,11 +33,8 @@ export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
         errorMessage = 'Erro interno do servidor';
       }
 
-      console.error('HTTP Error:', errorMessage, error);
-
-      // Mostrar feedback para o usuario (exceto 401 que ja faz logout)
       if (error.status !== 401) {
-        alert(errorMessage);
+        toast.error(errorMessage);
       }
 
       return throwError(() => new Error(errorMessage));

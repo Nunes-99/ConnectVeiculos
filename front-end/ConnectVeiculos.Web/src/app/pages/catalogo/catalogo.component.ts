@@ -3,9 +3,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Title } from '@angular/platform-browser';
-import { CatalogoService, ImagemService, TestDriveService, LeadService, FavoritoService } from '../../core/services';
+import { CatalogoService, ImagemService, TestDriveService, LeadService, FavoritoService, ToastService } from '../../core/services';
 import { CurrencyMaskDirective } from '../../shared/directives';
-import { CatalogoVeiculo, CatalogoFiltro, CatalogoLoja } from '../../core/models';
+import { CatalogoVeiculo, CatalogoFiltro, CatalogoLoja, CatalogoLojaResumo } from '../../core/models';
 import * as signalR from '@microsoft/signalr';
 import { environment } from '../../../environments/environment';
 
@@ -40,6 +40,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private titleService = inject(Title);
+  private toast = inject(ToastService);
 
   veiculos: CatalogoVeiculo[] = [];
   filtros: CatalogoFiltro = {
@@ -50,6 +51,8 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     precoMax: 500000
   };
   loja: CatalogoLoja | null = null;
+  lojas: CatalogoLojaResumo[] = [];
+  filtroLojaId: number | null = null;
   loading = false;
   total = 0;
   lojaId: number | null = null;
@@ -210,7 +213,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
           this.anoMaxSelecionado || undefined,
           this.precoMinSelecionado || undefined,
           this.precoMaxSelecionado || undefined,
-          this.lojaId || undefined
+          this.filtroLojaId || this.lojaId || undefined
         );
     request$.subscribe({
       next: (resultado) => {
@@ -218,6 +221,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
         this.filtros = resultado.filtros;
         this.total = resultado.total;
         this.loja = resultado.loja || null;
+        this.lojas = resultado.lojas || [];
         // Set lojaId from API response when accessed via slug
         if (this.loja && !this.lojaId) {
           this.lojaId = this.loja.lojId;
@@ -248,6 +252,12 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     this.anoMaxSelecionado = null;
     this.precoMinSelecionado = null;
     this.precoMaxSelecionado = null;
+    this.filtroLojaId = null;
+    this.loadCatalogo();
+  }
+
+  onLojaFiltroChange(lojaId: string): void {
+    this.filtroLojaId = lojaId ? Number(lojaId) : null;
     this.loadCatalogo();
   }
 
@@ -581,6 +591,14 @@ export class CatalogoComponent implements OnInit, OnDestroy {
       this.horariosDisponiveis = [...this.todosHorarios];
       return;
     }
+
+    // Validação para iOS que ignora o atributo min
+    const hoje = new Date();
+    const hojeStr = hoje.toISOString().split('T')[0];
+    if (this.tdData < hojeStr) {
+      this.tdData = hojeStr;
+    }
+
     this.testDriveService.listar(this.lojaId || undefined).subscribe({
       next: (tds) => {
         const ocupados = tds
@@ -651,7 +669,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
       observacao: this.tdObs
     }).subscribe({
       next: () => { this.tdEnviado = true; },
-      error: () => { alert('Erro ao agendar. Tente novamente.'); }
+      error: () => { this.toast.error('Erro ao agendar. Tente novamente.'); }
     });
   }
 

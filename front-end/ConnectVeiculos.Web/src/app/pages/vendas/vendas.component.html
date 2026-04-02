@@ -228,3 +228,12 @@
     </div>
   </div>
 }
+
+<app-confirm-modal
+  [show]="showConfirmEstorno"
+  titulo="Estornar Venda"
+  [mensagem]="'Deseja estornar a venda de ' + (vendaParaEstornar?.venMarca || '') + ' ' + (vendaParaEstornar?.venModelo || '') + '? O veículo voltará para o status Disponível.'"
+  textoBotaoConfirmar="Estornar"
+  (confirmar)="confirmarEstorno()"
+  (cancelar)="cancelarEstorno()">
+</app-confirm-modal>

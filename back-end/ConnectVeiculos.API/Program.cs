@@ -35,10 +35,10 @@ try
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configurar limites de upload de arquivos (sem limite para imagens de veiculos)
+// Configurar limites de upload de arquivos (max 50MB)
 builder.WebHost.ConfigureKestrel(options =>
 {
-    options.Limits.MaxRequestBodySize = null; // Sem limite
+    options.Limits.MaxRequestBodySize = 52428800; // 50MB
 });
 
 // Usar Serilog

@@ -125,6 +125,14 @@ namespace ConnectVeiculos.Application.UseCases.Catalogo
                 }
             }
 
+            // Lojas disponíveis para filtro
+            var lojasComVeiculos = veiculos.Where(v => v.VeiSts == "D").Select(v => v.R_LojId).Distinct();
+            resultado.Lojas = lojas
+                .Where(l => l.LojSts && lojasComVeiculos.Contains(l.LojId))
+                .Select(l => new CatalogoLojaResumoViewModel { LojId = l.LojId, LojNome = l.LojNome, LojSlug = l.LojSlug })
+                .OrderBy(l => l.LojNome)
+                .ToList();
+
             // Montar filtros disponiveis (baseado em veiculos da loja, se filtrado)
             var baseParaFiltros = lojaId.HasValue && lojaId.Value > 0
                 ? veiculos.Where(v => v.VeiSts == "D" && v.R_LojId == lojaId.Value).ToList()

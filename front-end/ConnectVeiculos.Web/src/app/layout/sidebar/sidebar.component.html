@@ -27,37 +27,16 @@
   </nav>
 
   <div class="catalogo-section">
-    <h4 class="catalogo-header" (click)="catalogoExpanded = !catalogoExpanded">
-      <span class="catalogo-title">
-        <span class="material-icons">storefront</span>
-        Catálogo Público
-      </span>
-      <span class="material-icons catalogo-toggle" [class.expanded]="catalogoExpanded">expand_more</span>
-    </h4>
-    <div class="catalogo-list" [class.collapsed]="!catalogoExpanded">
-      @if (lojas.length > 1) {
-        @for (loja of lojas; track loja.lojId) {
-          <div class="catalogo-loja-item">
-            <button class="btn-catalogo" (click)="abrirCatalogo(loja)" title="Abrir catálogo de {{ loja.lojNome }}">
-              <span class="material-icons">open_in_new</span>
-              <span>{{ loja.lojNome }}</span>
-            </button>
-            <button class="btn-copiar" (click)="copiarLinkCatalogo(loja)" title="Copiar link">
-              <span class="material-icons">{{ linkCopiado ? 'check' : 'content_copy' }}</span>
-            </button>
-          </div>
-        }
-      } @else {
-        <div class="catalogo-loja-item">
-          <button class="btn-catalogo" (click)="abrirCatalogo(lojas.length === 1 ? lojas[0] : undefined)" title="Abrir catálogo">
-            <span class="material-icons">open_in_new</span>
-            <span>Abrir Vitrine</span>
-          </button>
-          <button class="btn-copiar" (click)="copiarLinkCatalogo(lojas.length === 1 ? lojas[0] : undefined)" title="Copiar link do catálogo">
-            <span class="material-icons">{{ linkCopiado ? 'check' : 'content_copy' }}</span>
-          </button>
-        </div>
-      }
+    <div class="catalogo-list">
+      <div class="catalogo-loja-item">
+        <button class="btn-catalogo" (click)="abrirCatalogo()" title="Abrir catálogo">
+          <span class="material-icons">storefront</span>
+          <span>Catálogo Público</span>
+        </button>
+        <button class="btn-copiar" (click)="copiarLinkCatalogo()" title="Copiar link do catálogo">
+          <span class="material-icons">{{ linkCopiado ? 'check' : 'content_copy' }}</span>
+        </button>
+      </div>
       @if (linkCopiado) {
         <span class="link-copiado-msg">Link copiado!</span>
       }

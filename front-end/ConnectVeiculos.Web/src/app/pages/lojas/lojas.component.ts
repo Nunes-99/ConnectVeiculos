@@ -46,6 +46,7 @@ export class LojasComponent implements OnInit {
   totalItems = 0;
   totalPages = 0;
   searchTerm = '';
+  cepPreenchido = false;
 
   form: FormGroup = this.fb.group({
     lojNome: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(150)]],
@@ -126,6 +127,8 @@ export class LojasComponent implements OnInit {
       this.logoPreview = null;
       this.logoFile = null;
     }
+    this.cepPreenchido = false;
+    this.toggleCamposEndereco(false);
     this.showModal = true;
   }
 
@@ -161,6 +164,10 @@ export class LojasComponent implements OnInit {
     this.form.patchValue({ lojImg: '' });
   }
 
+  abrirPreview(): void {
+    this.showPreview = true;
+  }
+
   abrirPreVisualizacao(): void {
     const slug = this.form.get('lojSlug')?.value;
     const id = this.editId;
@@ -188,7 +195,7 @@ export class LojasComponent implements OnInit {
     if (this.logoPreview && this.logoFile) {
       this.form.patchValue({ lojImg: this.logoPreview });
     }
-    const data = this.form.value;
+    const data = this.form.getRawValue();
 
     if (this.editMode && this.editId) {
       this.lojaService.update(this.editId, data).subscribe({
@@ -234,7 +241,11 @@ export class LojasComponent implements OnInit {
 
     this.http.get<any>(`https://viacep.com.br/ws/${cep}/json/`).subscribe({
       next: (data) => {
-        if (data.erro) return;
+        if (data.erro) {
+          this.cepPreenchido = false;
+          this.toggleCamposEndereco(false);
+          return;
+        }
         this.form.patchValue({
           lojLogradouro: data.logradouro || '',
           lojBairro: data.bairro || '',
@@ -242,6 +253,23 @@ export class LojasComponent implements OnInit {
           lojEstado: data.uf || '',
           lojComplemento: data.complemento || ''
         });
+        this.cepPreenchido = true;
+        this.toggleCamposEndereco(true);
+      },
+      error: () => {
+        this.cepPreenchido = false;
+        this.toggleCamposEndereco(false);
+      }
+    });
+  }
+
+  private toggleCamposEndereco(desabilitar: boolean): void {
+    const campos = ['lojLogradouro', 'lojBairro', 'lojCidade', 'lojEstado'];
+    campos.forEach(campo => {
+      if (desabilitar) {
+        this.form.get(campo)?.disable();
+      } else {
+        this.form.get(campo)?.enable();
       }
     });
   }

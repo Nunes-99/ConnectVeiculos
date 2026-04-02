@@ -11,6 +11,10 @@
         {{ importando ? 'Importando...' : 'Importar Dados' }}
         <input type="file" accept=".xlsx,.xls,.csv,.ods" (change)="onImportarExcel($event)" [disabled]="importando" hidden />
       </label>
+      <button class="btn-secondary" (click)="showModeloImport = true">
+        <span class="material-icons">help_outline</span>
+        Modelo de Importação
+      </button>
       <button class="btn-primary" (click)="openModal()">
         <span class="material-icons">add</span>
         Novo Veículo
@@ -176,24 +180,53 @@
           <div class="form-row">
             <div class="form-group">
               <label class="required">Marca</label>
-              <input type="text" formControlName="veiMarca"
-                     [class.invalid]="hasError('veiMarca', 'required') || hasError('veiMarca', 'minlength')" />
+              @if (!outroMarca) {
+                <select [value]="marcaCodigoSelecionado" (change)="onMarcaChange($any($event.target).value)"
+                        [class.invalid]="hasError('veiMarca', 'required')">
+                  <option value="">Selecione a marca</option>
+                  @for (marca of marcasFipe; track marca.codigo) {
+                    <option [value]="marca.codigo">{{ marca.nome }}</option>
+                  }
+                  <option value="Outros">Outros</option>
+                </select>
+              } @else {
+                <div class="input-com-acao">
+                  <input type="text" formControlName="veiMarca" placeholder="Digite a marca"
+                         [class.invalid]="hasError('veiMarca', 'required')" />
+                  <button type="button" class="btn-voltar-select" (click)="outroMarca = false; outroModelo = false; marcaSelecionada = ''; marcaCodigoSelecionado = ''; form.patchValue({veiMarca: '', veiModelo: ''}); modelosFipe = []" title="Voltar para lista">
+                    <span class="material-icons">list</span>
+                  </button>
+                </div>
+              }
               @if (hasError('veiMarca', 'required')) {
                 <span class="field-error">Marca é obrigatória</span>
-              }
-              @if (hasError('veiMarca', 'minlength')) {
-                <span class="field-error">Marca deve ter no mínimo 2 caracteres</span>
               }
             </div>
             <div class="form-group">
               <label class="required">Modelo</label>
-              <input type="text" formControlName="veiModelo"
-                     [class.invalid]="hasError('veiModelo', 'required') || hasError('veiModelo', 'minlength')" />
+              @if (!outroModelo) {
+                <select (change)="onModeloChange($any($event.target).value)"
+                        [class.invalid]="hasError('veiModelo', 'required')"
+                        [disabled]="!marcaCodigoSelecionado || carregandoModelos">
+                  <option value="">{{ carregandoModelos ? 'Carregando modelos...' : (!marcaCodigoSelecionado ? 'Selecione a marca primeiro' : 'Selecione o modelo') }}</option>
+                  @for (modelo of modelosFipe; track modelo.codigo) {
+                    <option [value]="modelo.codigo" [selected]="form.get('veiModelo')?.value === modelo.nome">{{ modelo.nome }}</option>
+                  }
+                  <option value="Outros">Outros</option>
+                </select>
+              } @else {
+                <div class="input-com-acao">
+                  <input type="text" formControlName="veiModelo" placeholder="Digite o modelo"
+                         [class.invalid]="hasError('veiModelo', 'required')" />
+                  @if (marcaCodigoSelecionado && modelosFipe.length > 0) {
+                    <button type="button" class="btn-voltar-select" (click)="outroModelo = false; form.patchValue({veiModelo: ''})" title="Voltar para lista">
+                      <span class="material-icons">list</span>
+                    </button>
+                  }
+                </div>
+              }
               @if (hasError('veiModelo', 'required')) {
                 <span class="field-error">Modelo é obrigatório</span>
-              }
-              @if (hasError('veiModelo', 'minlength')) {
-                <span class="field-error">Modelo deve ter no mínimo 2 caracteres</span>
               }
             </div>
           </div>
@@ -458,6 +491,103 @@
       </div>
       <div class="modal-footer">
         <button class="btn-primary" (click)="fecharResultadoImportacao()">Fechar</button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showModeloImport) {
+  <div class="modal-overlay" (click)="showModeloImport = false">
+    <div class="modal modal-lg" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2><span class="material-icons">table_chart</span> Modelo de Importação</h2>
+        <button class="btn-close" (click)="showModeloImport = false">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom: 12px; color: #555;">
+          O arquivo Excel (.xlsx) deve conter as seguintes colunas na primeira linha. Abaixo está um exemplo com 3 registros:
+        </p>
+        <div style="overflow-x: auto;">
+          <table class="modelo-table">
+            <thead>
+              <tr>
+                <th>Marca</th>
+                <th>Modelo</th>
+                <th>Ano</th>
+                <th>Placa</th>
+                <th>Chassi</th>
+                <th>Cor</th>
+                <th>KM</th>
+                <th>Preco Compra</th>
+                <th>Preco Venda</th>
+                <th>Status</th>
+                <th>Loja</th>
+                <th>Categoria</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Honda</td>
+                <td>Civic</td>
+                <td>2023</td>
+                <td>ABC-1D23</td>
+                <td>9BWHE21JX24052050</td>
+                <td>Preto</td>
+                <td>15000</td>
+                <td>95000</td>
+                <td>115000</td>
+                <td>Disponivel</td>
+                <td>Minha Loja</td>
+                <td>Sedan</td>
+              </tr>
+              <tr>
+                <td>Toyota</td>
+                <td>Corolla</td>
+                <td>2024</td>
+                <td>XYZ-9A87</td>
+                <td>93HGGV63PNZ123456</td>
+                <td>Branco</td>
+                <td>8000</td>
+                <td>120000</td>
+                <td>145000</td>
+                <td>Disponivel</td>
+                <td>Minha Loja</td>
+                <td>Sedan</td>
+              </tr>
+              <tr>
+                <td>Hyundai</td>
+                <td>HB20</td>
+                <td>2022</td>
+                <td>DEF-5B67</td>
+                <td>9BWSU19F08B234567</td>
+                <td>Prata</td>
+                <td>32000</td>
+                <td>55000</td>
+                <td>68000</td>
+                <td>Disponivel</td>
+                <td>Minha Loja</td>
+                <td>Hatch</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top: 16px; padding: 12px; background: #f5f5f5; border-radius: 8px; font-size: 13px; color: #555;">
+          <strong>Observações:</strong>
+          <ul style="margin: 8px 0 0 16px; padding: 0;">
+            <li><strong>Marca</strong> e <strong>Modelo</strong> são obrigatórios</li>
+            <li><strong>Status</strong>: Disponivel, Vendido ou Reservado</li>
+            <li><strong>Loja</strong> e <strong>Categoria</strong>: use o nome exato cadastrado no sistema</li>
+            <li>Preços devem ser numéricos, sem "R$" ou pontos de milhar</li>
+          </ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="showModeloImport = false">Fechar</button>
+        <button class="btn-primary" (click)="baixarModeloImport()">
+          <span class="material-icons">download</span> Baixar Modelo Excel
+        </button>
       </div>
     </div>
   </div>

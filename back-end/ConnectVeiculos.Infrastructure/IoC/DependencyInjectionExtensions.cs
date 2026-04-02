@@ -420,6 +420,26 @@ namespace ConnectVeiculos.Infrastructure.IoC
                 dbContext.SaveChanges();
             }
 
+            // Seed de categorias
+            if (!dbContext.Categorias.Any())
+            {
+                var categorias = new[]
+                {
+                    new Core.Entities.Categorias.Categoria(0, "Sedan", "Veículos sedan de 4 portas", true),
+                    new Core.Entities.Categorias.Categoria(0, "Hatch", "Veículos hatchback compactos", true),
+                    new Core.Entities.Categorias.Categoria(0, "SUV", "Utilitários esportivos", true),
+                    new Core.Entities.Categorias.Categoria(0, "Picape", "Veículos de caçamba", true),
+                    new Core.Entities.Categorias.Categoria(0, "Conversível", "Veículos com teto retrátil", true),
+                    new Core.Entities.Categorias.Categoria(0, "Minivan", "Veículos para família com maior espaço", true),
+                    new Core.Entities.Categorias.Categoria(0, "Coupé", "Veículos esportivos de 2 portas", true),
+                    new Core.Entities.Categorias.Categoria(0, "Utilitário", "Veículos utilitários e comerciais", true),
+                    new Core.Entities.Categorias.Categoria(0, "Elétrico", "Veículos 100% elétricos", true),
+                    new Core.Entities.Categorias.Categoria(0, "Híbrido", "Veículos com motor híbrido", true),
+                };
+                dbContext.Categorias.AddRange(categorias);
+                dbContext.SaveChanges();
+            }
+
             // Verificar se já existe usuario admin
             if (!dbContext.Usuarios.Any(u => u.UsuEmail == "admin@connectveiculos.com.br"))
             {
