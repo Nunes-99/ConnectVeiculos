@@ -251,14 +251,17 @@ export class VeiculosComponent implements OnInit {
     }
 
     const raw = this.form.value;
+    const kmLimpo = String(raw.veiKm || '0').replace(/\./g, '').replace(/,/g, '');
     const data = {
       ...raw,
       r_LojId: Number(raw.r_LojId),
       r_CatId: Number(raw.r_CatId),
       veiAno: Number(raw.veiAno),
-      veiKm: Number(raw.veiKm) || 0,
+      veiKm: Number(kmLimpo) || 0,
       veiPreco: Number(raw.veiPreco) || 0,
       veiPrecoCompra: Number(raw.veiPrecoCompra) || 0,
+      veiOpcionais: raw.veiOpcionais || '',
+      veiSitSts: raw.veiSitSts || '',
       veiObservacao: raw.veiObservacao || '',
       veiDonoAtual: raw.veiDonoAtual || '',
       veiDonoCelular: raw.veiDonoCelular || ''
