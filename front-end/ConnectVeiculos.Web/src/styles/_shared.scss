@@ -408,13 +408,13 @@ table {
   }
 
   .modal-overlay {
-    align-items: center;
+    align-items: flex-end;
   }
 
   .modal {
     max-width: 100%;
     max-height: 90vh;
-    border-radius: 0.75rem;
+    border-radius: 0.75rem 0.75rem 0 0;
 
     &.modal-lg {
       max-width: 100%;

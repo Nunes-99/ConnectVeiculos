@@ -960,9 +960,10 @@
   // Detalhes - bottom sheet
   .detalhes-overlay { padding: 0; align-items: flex-end; }
   .detalhes-modal {
-    max-height: 95vh;
+    max-height: 90vh;
     border-radius: 0.75rem 0.75rem 0 0;
     animation: slideUpMobile 0.3s ease;
+    padding-bottom: 1rem;
   }
   .detalhes-img-principal { height: 220px; }
   .detalhes-info {
