@@ -282,6 +282,9 @@ namespace ConnectVeiculos.Infrastructure.IoC
                 AddColumnIfNotExists(connection, "Veiculo", "VeiDonoAtual", "TEXT");
                 AddColumnIfNotExists(connection, "Veiculo", "VeiDonoCelular", "TEXT");
 
+                // Adicionar coluna de opcionais do veiculo
+                AddColumnIfNotExists(connection, "Veiculo", "VeiOpcionais", "TEXT");
+
                 // Criar tabelas que podem nao existir em bancos antigos
                 CreateTableIfNotExists(connection, "Lead",
                     @"LeaId INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -9,20 +9,21 @@ import { CatalogoVeiculo, CatalogoFiltro, CatalogoLoja, CatalogoLojaResumo } fro
 import * as signalR from '@microsoft/signalr';
 import { environment } from '../../../environments/environment';
 
-// Imagens placeholder por marca (URLs publicas gratuitas)
-const PLACEHOLDER_IMAGES: Record<string, string> = {
-  'toyota': 'https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?w=600&h=400&fit=crop',
-  'volkswagen': 'https://images.unsplash.com/photo-1622653902334-23c8e tried&w=600&h=400&fit=crop',
-  'jeep': 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=600&h=400&fit=crop',
-  'chevrolet': 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=600&h=400&fit=crop',
-  'honda': 'https://images.unsplash.com/photo-1606611013016-969c19ba27b5?w=600&h=400&fit=crop',
-  'hyundai': 'https://images.unsplash.com/photo-1629897048514-3dd7414fe72a?w=600&h=400&fit=crop',
-  'fiat': 'https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=600&h=400&fit=crop',
-  'bmw': 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600&h=400&fit=crop',
-  'mercedes': 'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=600&h=400&fit=crop',
-  'ford': 'https://images.unsplash.com/photo-1551830820-330a71b99659?w=600&h=400&fit=crop',
-  'default': 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&h=400&fit=crop'
-};
+// Imagem placeholder SVG "sem foto" em base64
+const NO_IMAGE_PLACEHOLDER = `data:image/svg+xml;base64,${btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400">
+  <rect width="600" height="400" fill="#e8e8e8"/>
+  <g transform="translate(300,175)" fill="#bbb">
+    <rect x="-60" y="-30" width="120" height="70" rx="8" fill="none" stroke="#bbb" stroke-width="3"/>
+    <circle cx="0" cy="5" r="18" fill="none" stroke="#bbb" stroke-width="3"/>
+    <circle cx="0" cy="5" r="7"/>
+    <rect x="-18" y="-30" width="16" height="8" rx="2"/>
+    <line x1="-45" y1="20" x2="-20" y2="-5" stroke="#bbb" stroke-width="2.5"/>
+    <line x1="-20" y1="-5" x2="0" y2="10" stroke="#bbb" stroke-width="2.5"/>
+    <line x1="0" y1="10" x2="20" y2="-2" stroke="#bbb" stroke-width="2.5"/>
+    <line x1="20" y1="-2" x2="45" y2="20" stroke="#bbb" stroke-width="2.5"/>
+  </g>
+  <text x="300" y="260" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#999">Sem foto disponivel</text>
+</svg>`)}`;
 
 @Component({
   selector: 'app-catalogo',
@@ -130,6 +131,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   tdObs = '';
   tdEnviado = false;
   tdMinData = '';
+  datasDisponiveis: { valor: string; label: string }[] = [];
   todosHorarios = ['08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
   horariosDisponiveis: string[] = [...this.todosHorarios];
 
@@ -372,17 +374,16 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     if (veiculo.imagens && veiculo.imagens.length > 0) {
       return this.imagemService.getImageUrl(veiculo.imagens[0]);
     }
-    return this.getPlaceholderImage(veiculo.veiMarca);
+    return NO_IMAGE_PLACEHOLDER;
   }
 
-  getPlaceholderImage(marca: string): string {
-    const key = marca?.toLowerCase() || 'default';
-    return PLACEHOLDER_IMAGES[key] || PLACEHOLDER_IMAGES['default'];
+  getPlaceholderImage(): string {
+    return NO_IMAGE_PLACEHOLDER;
   }
 
-  onImageError(event: Event, marca: string): void {
+  onImageError(event: Event): void {
     const img = event.target as HTMLImageElement;
-    if (img) img.src = this.getPlaceholderImage(marca);
+    if (img) img.src = NO_IMAGE_PLACEHOLDER;
   }
 
   getImageUrl(caminho: string): string {
@@ -578,25 +579,36 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   // ==========================================
   abrirTestDrive(veiculo: CatalogoVeiculo): void {
     this.testDriveVeiculo = veiculo;
-    this.tdNome = ''; this.tdTelefone = ''; this.tdWhatsApp = ''; this.tdEmail = ''; this.tdData = ''; this.tdHorario = ''; this.tdObs = '';
-    this.tdEnviado = false;
     const hoje = new Date();
     this.tdMinData = hoje.toISOString().split('T')[0];
+    this.tdNome = ''; this.tdTelefone = ''; this.tdWhatsApp = ''; this.tdEmail = ''; this.tdData = this.tdMinData; this.tdHorario = ''; this.tdObs = '';
+    this.tdEnviado = false;
+    this.datasDisponiveis = this.gerarProximasDatas(30);
     this.horariosDisponiveis = [...this.todosHorarios];
+    this.onTdDataChange();
     this.showTestDrive = true;
+  }
+
+  private gerarProximasDatas(dias: number): { valor: string; label: string }[] {
+    const datas: { valor: string; label: string }[] = [];
+    const hoje = new Date();
+    const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    for (let i = 0; i < dias; i++) {
+      const d = new Date(hoje);
+      d.setDate(d.getDate() + i);
+      const valor = d.toISOString().split('T')[0];
+      const dia = String(d.getDate()).padStart(2, '0');
+      const mes = String(d.getMonth() + 1).padStart(2, '0');
+      const label = i === 0 ? `Hoje (${dia}/${mes})` : i === 1 ? `Amanhã (${dia}/${mes})` : `${diasSemana[d.getDay()]} ${dia}/${mes}`;
+      datas.push({ valor, label });
+    }
+    return datas;
   }
 
   onTdDataChange(): void {
     if (!this.tdData) {
       this.horariosDisponiveis = [...this.todosHorarios];
       return;
-    }
-
-    // Validação para iOS que ignora o atributo min
-    const hoje = new Date();
-    const hojeStr = hoje.toISOString().split('T')[0];
-    if (this.tdData < hojeStr) {
-      this.tdData = hojeStr;
     }
 
     this.testDriveService.listar(this.lojaId || undefined).subscribe({

@@ -20,6 +20,7 @@ namespace ConnectVeiculos.Application.ViewModels.Veiculos
         public string VeiSitSts { get; set; }
         public decimal VeiPrecoCompra { get; set; }
         public string VeiObservacao { get; set; }
+        public string VeiOpcionais { get; set; }
         public string VeiDonoAtual { get; set; }
         public string VeiDonoCelular { get; set; }
         public bool VeiPostadoInsta { get; set; }

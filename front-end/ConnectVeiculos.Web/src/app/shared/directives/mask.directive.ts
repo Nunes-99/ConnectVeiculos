@@ -5,7 +5,7 @@ import { Directive, ElementRef, HostListener, Input } from '@angular/core';
   standalone: true
 })
 export class MaskDirective {
-  @Input('appMask') maskType: 'cpf' | 'cnpj' | 'telefone' | 'celular' | 'cep' | 'placa' | 'dinheiro' = 'cpf';
+  @Input('appMask') maskType: 'cpf' | 'cnpj' | 'telefone' | 'celular' | 'cep' | 'placa' | 'dinheiro' | 'km' = 'cpf';
 
   constructor(private el: ElementRef<HTMLInputElement>) {}
 
@@ -35,6 +35,9 @@ export class MaskDirective {
         break;
       case 'dinheiro':
         value = this.applyDinheiroMask(value);
+        break;
+      case 'km':
+        value = this.applyKmMask(value);
         break;
     }
 
@@ -118,6 +121,12 @@ export class MaskDirective {
       return letras + '-' + resto; // Formato antigo com hifen
     }
     return value;
+  }
+
+  private applyKmMask(value: string): string {
+    if (!value) return '';
+    const numero = parseInt(value, 10);
+    return numero.toLocaleString('pt-BR');
   }
 
   private applyDinheiroMask(value: string): string {

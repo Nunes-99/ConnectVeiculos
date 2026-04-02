@@ -17,6 +17,7 @@ export interface Veiculo {
   veiSitSts: string;
   veiPrecoCompra: number;
   veiObservacao?: string;
+  veiOpcionais?: string;
   veiDonoAtual?: string;
   veiDonoCelular?: string;
   caracteristicas?: CaracteristicaVeiculo[];
@@ -43,6 +44,7 @@ export interface VeiculoInput {
   veiSitSts?: string;
   veiPrecoCompra?: number;
   veiObservacao?: string;
+  veiOpcionais?: string;
   veiDonoAtual?: string;
   veiDonoCelular?: string;
   caracteristicasIds?: number[];

@@ -66,6 +66,22 @@ export class VeiculosComponent implements OnInit {
   carregandoModelos = false;
   outroMarca = false;
   outroModelo = false;
+  buscaMarca = '';
+  buscaModelo = '';
+  showDropdownMarca = false;
+  showDropdownModelo = false;
+
+  get marcasFiltradas(): FipeMarca[] {
+    if (!this.buscaMarca) return this.marcasFipe;
+    const termo = this.buscaMarca.toLowerCase();
+    return this.marcasFipe.filter(m => m.nome.toLowerCase().includes(termo));
+  }
+
+  get modelosFiltrados(): FipeModelo[] {
+    if (!this.buscaModelo) return this.modelosFipe;
+    const termo = this.buscaModelo.toLowerCase();
+    return this.modelosFipe.filter(m => m.nome.toLowerCase().includes(termo));
+  }
 
   // Filtros
   filtroTexto = '';
@@ -81,15 +97,35 @@ export class VeiculosComponent implements OnInit {
     veiAno: [null, [Validators.required, Validators.min(1900), Validators.max(2100)]],
     veiPlaca: ['', Validators.required],
     veiChassi: [''],
-    veiCor: [''],
+    veiCor: ['', Validators.required],
     veiKm: [null, Validators.min(0)],
     veiPreco: [0, [Validators.required, Validators.min(0)]],
     veiSts: ['D', Validators.required],
     veiPrecoCompra: [0, Validators.min(0)],
+    veiOpcionais: [''],
     veiObservacao: [''],
     veiDonoAtual: [''],
     veiDonoCelular: ['']
   });
+
+  opcionaisDisponiveis = [
+    'Ar-condicionado', 'Direção hidráulica', 'Direção elétrica', 'Vidros elétricos',
+    'Travas elétricas', 'Alarme', 'Airbag', 'ABS', 'Câmbio automático', 'Câmbio CVT',
+    'Bancos de couro', 'Sensor de estacionamento', 'Câmera de ré', 'Central multimídia',
+    'Bluetooth', 'GPS', 'Teto solar', 'Rodas de liga leve', 'Farol de milha',
+    'Piloto automático', 'Controle de tração', 'Start/Stop', 'Chave presencial',
+    'Retrovisor elétrico', 'Sensor de chuva', 'Farol de LED'
+  ];
+  opcionaisSelecionados: Set<string> = new Set();
+
+  toggleOpcional(opcional: string): void {
+    if (this.opcionaisSelecionados.has(opcional)) {
+      this.opcionaisSelecionados.delete(opcional);
+    } else {
+      this.opcionaisSelecionados.add(opcional);
+    }
+    this.form.patchValue({ veiOpcionais: Array.from(this.opcionaisSelecionados).join(',') });
+  }
 
   ngOnInit(): void {
     this.loadData();
@@ -138,16 +174,21 @@ export class VeiculosComponent implements OnInit {
         veiPreco: veiculo.veiPreco,
         veiSts: veiculo.veiSts,
         veiPrecoCompra: veiculo.veiPrecoCompra,
+        veiOpcionais: veiculo.veiOpcionais || '',
         veiObservacao: veiculo.veiObservacao || '',
         veiDonoAtual: veiculo.veiDonoAtual || '',
         veiDonoCelular: veiculo.veiDonoCelular || ''
       });
+      this.opcionaisSelecionados = new Set(
+        veiculo.veiOpcionais ? veiculo.veiOpcionais.split(',').filter(o => o) : []
+      );
       this.loadImagens(veiculo.veiId);
       // Verificar se a marca está na FIPE
       const marcaFipe = this.marcasFipe.find(m => m.nome.toLowerCase() === veiculo.veiMarca.toLowerCase());
       if (marcaFipe) {
         this.marcaSelecionada = marcaFipe.nome;
         this.marcaCodigoSelecionado = marcaFipe.codigo;
+        this.buscaMarca = marcaFipe.nome;
         this.outroMarca = false;
         this.carregandoModelos = true;
         this.fipeService.getModelos(marcaFipe.codigo).subscribe({
@@ -155,12 +196,15 @@ export class VeiculosComponent implements OnInit {
             this.modelosFipe = modelos;
             this.carregandoModelos = false;
             this.outroModelo = !modelos.some(m => m.nome.toLowerCase() === veiculo.veiModelo.toLowerCase());
+            this.buscaModelo = veiculo.veiModelo;
           },
-          error: () => { this.carregandoModelos = false; this.outroModelo = true; }
+          error: () => { this.carregandoModelos = false; this.outroModelo = true; this.buscaModelo = veiculo.veiModelo; }
         });
       } else {
         this.marcaSelecionada = '';
         this.marcaCodigoSelecionado = '';
+        this.buscaMarca = veiculo.veiMarca;
+        this.buscaModelo = veiculo.veiModelo;
         this.modelosFipe = [];
         this.outroMarca = true;
         this.outroModelo = true;
@@ -173,6 +217,9 @@ export class VeiculosComponent implements OnInit {
       this.outroMarca = false;
       this.outroModelo = false;
       this.carregandoModelos = false;
+      this.buscaMarca = '';
+      this.buscaModelo = '';
+      this.opcionaisSelecionados = new Set();
       this.form.reset({
         r_LojId: 0,
         r_CatId: 0,
@@ -531,42 +578,57 @@ export class VeiculosComponent implements OnInit {
   }
 
   // Marcas e Modelos (FIPE)
-  onMarcaChange(valor: string): void {
-    if (valor === 'Outros') {
-      this.outroMarca = true;
-      this.outroModelo = true;
-      this.modelosFipe = [];
-      this.marcaSelecionada = '';
-      this.marcaCodigoSelecionado = '';
-      this.form.patchValue({ veiMarca: '', veiModelo: '' });
-    } else {
-      this.outroMarca = false;
-      this.outroModelo = false;
-      const marca = this.marcasFipe.find(m => m.codigo === valor);
-      this.marcaSelecionada = marca?.nome || '';
-      this.marcaCodigoSelecionado = valor;
-      this.form.patchValue({ veiMarca: marca?.nome || '', veiModelo: '' });
-      this.carregandoModelos = true;
-      this.modelosFipe = [];
-      this.fipeService.getModelos(valor).subscribe({
-        next: (modelos) => {
-          this.modelosFipe = modelos;
-          this.carregandoModelos = false;
-        },
-        error: () => this.carregandoModelos = false
-      });
-    }
+  selecionarMarca(marca: FipeMarca): void {
+    this.outroMarca = false;
+    this.outroModelo = false;
+    this.marcaSelecionada = marca.nome;
+    this.marcaCodigoSelecionado = marca.codigo;
+    this.buscaMarca = marca.nome;
+    this.buscaModelo = '';
+    this.showDropdownMarca = false;
+    this.form.patchValue({ veiMarca: marca.nome, veiModelo: '' });
+    this.carregandoModelos = true;
+    this.modelosFipe = [];
+    this.fipeService.getModelos(marca.codigo).subscribe({
+      next: (modelos) => {
+        this.modelosFipe = modelos;
+        this.carregandoModelos = false;
+      },
+      error: () => this.carregandoModelos = false
+    });
   }
 
-  onModeloChange(valor: string): void {
-    if (valor === 'Outros') {
-      this.outroModelo = true;
-      this.form.patchValue({ veiModelo: '' });
-    } else {
-      this.outroModelo = false;
-      const modelo = this.modelosFipe.find(m => String(m.codigo) === valor);
-      this.form.patchValue({ veiModelo: modelo?.nome || '' });
-    }
+  selecionarOutroMarca(): void {
+    this.outroMarca = true;
+    this.outroModelo = true;
+    this.modelosFipe = [];
+    this.marcaSelecionada = '';
+    this.marcaCodigoSelecionado = '';
+    this.buscaMarca = '';
+    this.buscaModelo = '';
+    this.showDropdownMarca = false;
+    this.form.patchValue({ veiMarca: '', veiModelo: '' });
+  }
+
+  selecionarModelo(modelo: FipeModelo): void {
+    this.outroModelo = false;
+    this.buscaModelo = modelo.nome;
+    this.showDropdownModelo = false;
+    this.form.patchValue({ veiModelo: modelo.nome });
+  }
+
+  selecionarOutroModelo(): void {
+    this.outroModelo = true;
+    this.buscaModelo = '';
+    this.showDropdownModelo = false;
+    this.form.patchValue({ veiModelo: '' });
+  }
+
+  fecharDropdowns(): void {
+    setTimeout(() => {
+      this.showDropdownMarca = false;
+      this.showDropdownModelo = false;
+    }, 200);
   }
 
   // Excel - Importar

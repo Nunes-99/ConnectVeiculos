@@ -181,19 +181,29 @@
             <div class="form-group">
               <label class="required">Marca</label>
               @if (!outroMarca) {
-                <select [value]="marcaCodigoSelecionado" (change)="onMarcaChange($any($event.target).value)"
-                        [class.invalid]="hasError('veiMarca', 'required')">
-                  <option value="">Selecione a marca</option>
-                  @for (marca of marcasFipe; track marca.codigo) {
-                    <option [value]="marca.codigo">{{ marca.nome }}</option>
+                <div class="autocomplete-wrapper">
+                  <input type="text" [(ngModel)]="buscaMarca" [ngModelOptions]="{standalone: true}"
+                         placeholder="Buscar marca..." autocomplete="off"
+                         (focus)="showDropdownMarca = true" (blur)="fecharDropdowns()"
+                         [class.invalid]="hasError('veiMarca', 'required')" />
+                  @if (showDropdownMarca) {
+                    <div class="autocomplete-dropdown">
+                      @for (marca of marcasFiltradas; track marca.codigo) {
+                        <div class="autocomplete-item" [class.selected]="marcaCodigoSelecionado === marca.codigo" (mousedown)="selecionarMarca(marca)">
+                          {{ marca.nome }}
+                        </div>
+                      }
+                      <div class="autocomplete-item outros" (mousedown)="selecionarOutroMarca()">
+                        <span class="material-icons">edit</span> Outros (digitar manualmente)
+                      </div>
+                    </div>
                   }
-                  <option value="Outros">Outros</option>
-                </select>
+                </div>
               } @else {
                 <div class="input-com-acao">
                   <input type="text" formControlName="veiMarca" placeholder="Digite a marca"
                          [class.invalid]="hasError('veiMarca', 'required')" />
-                  <button type="button" class="btn-voltar-select" (click)="outroMarca = false; outroModelo = false; marcaSelecionada = ''; marcaCodigoSelecionado = ''; form.patchValue({veiMarca: '', veiModelo: ''}); modelosFipe = []" title="Voltar para lista">
+                  <button type="button" class="btn-voltar-select" (click)="outroMarca = false; outroModelo = false; buscaMarca = ''; buscaModelo = ''; marcaSelecionada = ''; marcaCodigoSelecionado = ''; form.patchValue({veiMarca: '', veiModelo: ''}); modelosFipe = []" title="Voltar para lista">
                     <span class="material-icons">list</span>
                   </button>
                 </div>
@@ -205,21 +215,32 @@
             <div class="form-group">
               <label class="required">Modelo</label>
               @if (!outroModelo) {
-                <select (change)="onModeloChange($any($event.target).value)"
-                        [class.invalid]="hasError('veiModelo', 'required')"
-                        [disabled]="!marcaCodigoSelecionado || carregandoModelos">
-                  <option value="">{{ carregandoModelos ? 'Carregando modelos...' : (!marcaCodigoSelecionado ? 'Selecione a marca primeiro' : 'Selecione o modelo') }}</option>
-                  @for (modelo of modelosFipe; track modelo.codigo) {
-                    <option [value]="modelo.codigo" [selected]="form.get('veiModelo')?.value === modelo.nome">{{ modelo.nome }}</option>
+                <div class="autocomplete-wrapper">
+                  <input type="text" [(ngModel)]="buscaModelo" [ngModelOptions]="{standalone: true}"
+                         [placeholder]="carregandoModelos ? 'Carregando...' : (!marcaCodigoSelecionado ? 'Selecione a marca primeiro' : 'Buscar modelo...')"
+                         autocomplete="off"
+                         (focus)="showDropdownModelo = true" (blur)="fecharDropdowns()"
+                         [disabled]="!marcaCodigoSelecionado || carregandoModelos"
+                         [class.invalid]="hasError('veiModelo', 'required')" />
+                  @if (showDropdownModelo && marcaCodigoSelecionado) {
+                    <div class="autocomplete-dropdown">
+                      @for (modelo of modelosFiltrados; track modelo.codigo) {
+                        <div class="autocomplete-item" [class.selected]="form.get('veiModelo')?.value === modelo.nome" (mousedown)="selecionarModelo(modelo)">
+                          {{ modelo.nome }}
+                        </div>
+                      }
+                      <div class="autocomplete-item outros" (mousedown)="selecionarOutroModelo()">
+                        <span class="material-icons">edit</span> Outros (digitar manualmente)
+                      </div>
+                    </div>
                   }
-                  <option value="Outros">Outros</option>
-                </select>
+                </div>
               } @else {
                 <div class="input-com-acao">
                   <input type="text" formControlName="veiModelo" placeholder="Digite o modelo"
                          [class.invalid]="hasError('veiModelo', 'required')" />
                   @if (marcaCodigoSelecionado && modelosFipe.length > 0) {
-                    <button type="button" class="btn-voltar-select" (click)="outroModelo = false; form.patchValue({veiModelo: ''})" title="Voltar para lista">
+                    <button type="button" class="btn-voltar-select" (click)="outroModelo = false; buscaModelo = ''; form.patchValue({veiModelo: ''})" title="Voltar para lista">
                       <span class="material-icons">list</span>
                     </button>
                   }
@@ -243,8 +264,12 @@
               }
             </div>
             <div class="form-group">
-              <label>Cor</label>
-              <input type="text" formControlName="veiCor" />
+              <label class="required">Cor</label>
+              <input type="text" formControlName="veiCor"
+                     [class.invalid]="hasError('veiCor', 'required')" />
+              @if (hasError('veiCor', 'required')) {
+                <span class="field-error">Cor é obrigatória</span>
+              }
             </div>
           </div>
           <div class="form-row">
@@ -264,7 +289,7 @@
           <div class="form-row">
             <div class="form-group">
               <label>Quilometragem</label>
-              <input type="tel" formControlName="veiKm" />
+              <input type="tel" formControlName="veiKm" appMask="km" />
             </div>
             <div class="form-group">
               <label class="required">Status</label>
@@ -297,6 +322,19 @@
             <div class="form-group">
               <label>Celular do Dono</label>
               <input type="text" formControlName="veiDonoCelular" appMask="celular" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group full-width">
+              <label>Informações Adicionais</label>
+              <div class="opcionais-grid">
+                @for (opcional of opcionaisDisponiveis; track opcional) {
+                  <label class="opcional-item" [class.selecionado]="opcionaisSelecionados.has(opcional)" (click)="toggleOpcional(opcional)">
+                    <span class="material-icons opcional-check">{{ opcionaisSelecionados.has(opcional) ? 'check_box' : 'check_box_outline_blank' }}</span>
+                    {{ opcional }}
+                  </label>
+                }
+              </div>
             </div>
           </div>
           <div class="form-row">

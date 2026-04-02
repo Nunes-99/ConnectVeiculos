@@ -40,6 +40,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                 VeiSitSts = veiculo.VeiSitSts,
                 VeiPrecoCompra = veiculo.VeiPrecoCompra,
                 VeiObservacao = veiculo.VeiObservacao,
+                VeiOpcionais = veiculo.VeiOpcionais,
                 VeiPostadoInsta = veiculo.VeiPostadoInsta,
                 VeiPostadoFace = veiculo.VeiPostadoFace,
                 VeiDtPostagemInsta = veiculo.VeiDtPostagemInsta,

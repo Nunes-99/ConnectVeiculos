@@ -4,7 +4,7 @@
     <div class="cat-navbar-inner">
       <div class="cat-navbar-brand">
         @if (loja?.lojImg) {
-          <img [src]="loja!.lojImg" [alt]="loja!.lojNome" class="cat-navbar-logo" (error)="onImageError($event, 'default')" />
+          <img [src]="loja!.lojImg" [alt]="loja!.lojNome" class="cat-navbar-logo" (error)="onImageError($event)" />
         } @else {
           <div class="cat-navbar-logo-icon"><span class="material-icons">directions_car</span></div>
         }
@@ -178,7 +178,7 @@
             <div class="veiculo-card" (click)="abrirDetalhes(veiculo)">
               <div class="card-imagem">
                 <img [src]="getImagemPrincipal(veiculo)" [alt]="veiculo.veiMarca + ' ' + veiculo.veiModelo"
-                     (error)="onImageError($event, veiculo.veiMarca)" />
+                     (error)="onImageError($event)" />
                 @if (veiculo.imagens && veiculo.imagens.length > 1) {
                   <span class="imagens-count">
                     <span class="material-icons">photo_library</span>
@@ -337,7 +337,7 @@
             }
           } @else {
             <div class="detalhes-img-principal placeholder">
-              <img [src]="getPlaceholderImage(veiculoSelecionado.veiMarca)" [alt]="veiculoSelecionado.veiMarca" />
+              <img [src]="getPlaceholderImage()" alt="Sem foto" />
             </div>
           }
         </div>
@@ -515,9 +515,12 @@
           <input type="tel" [(ngModel)]="tdTelefone" placeholder="Telefone / WhatsApp" class="required-input" (input)="formatarTdTelefone()" maxlength="15" />
           <input type="email" [(ngModel)]="tdEmail" placeholder="E-mail" />
           <div class="td-row">
-            <div class="td-date-wrapper">
-              <input type="date" [(ngModel)]="tdData" [min]="tdMinData" (change)="onTdDataChange(); $any($event.target).blur()" />
-            </div>
+            <select [(ngModel)]="tdData" (change)="onTdDataChange()">
+              <option value="">Data</option>
+              @for (d of datasDisponiveis; track d.valor) {
+                <option [value]="d.valor">{{ d.label }}</option>
+              }
+            </select>
             <select [(ngModel)]="tdHorario">
               <option value="">Horário</option>
               @for (h of horariosDisponiveis; track h) {
