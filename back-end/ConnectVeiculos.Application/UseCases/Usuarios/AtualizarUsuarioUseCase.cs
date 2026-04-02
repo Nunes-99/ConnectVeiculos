@@ -2,6 +2,7 @@ using ConnectVeiculos.Application.InputModels.Usuarios;
 using ConnectVeiculos.Application.Interfaces.Usuarios;
 using ConnectVeiculos.Core.Entities.LojasUsuarios;
 using ConnectVeiculos.Core.Entities.Permissoes;
+using ConnectVeiculos.Core.Exceptions;
 using ConnectVeiculos.Core.Interfaces.Database.Common;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.LojasUsuarios;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Permissoes;
@@ -33,7 +34,15 @@ namespace ConnectVeiculos.Application.UseCases.Usuarios
             var usuario = await _usuarioRepository.GetByIdAsync(inputModel.UsuId);
 
             if (usuario == null)
-                throw new Exception("Usuario nao encontrado.");
+                throw new DomainException("Usuario nao encontrado.");
+
+            // Verificar se email mudou e já existe em outro usuário
+            if (usuario.UsuEmail != inputModel.UsuEmail)
+            {
+                var existente = await _usuarioRepository.GetByEmailAsync(inputModel.UsuEmail);
+                if (existente != null && existente.UsuId != inputModel.UsuId)
+                    throw new DomainException("Já existe um usuário cadastrado com este e-mail.");
+            }
 
             // Se a senha foi alterada, faz o hash
             var senhaHash = string.IsNullOrEmpty(inputModel.UsuSenha)

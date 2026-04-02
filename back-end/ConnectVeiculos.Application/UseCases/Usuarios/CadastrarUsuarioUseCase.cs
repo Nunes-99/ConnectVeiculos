@@ -6,6 +6,7 @@ using ConnectVeiculos.Core.Entities.Usuarios;
 using ConnectVeiculos.Core.Interfaces.Database.Common;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.LojasUsuarios;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Permissoes;
+using ConnectVeiculos.Core.Exceptions;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Usuarios;
 
 namespace ConnectVeiculos.Application.UseCases.Usuarios
@@ -31,6 +32,11 @@ namespace ConnectVeiculos.Application.UseCases.Usuarios
 
         public async Task<int> Execute(UsuarioInputModel inputModel)
         {
+            // Verificar se email já existe
+            var existente = await _usuarioRepository.GetByEmailAsync(inputModel.UsuEmail);
+            if (existente != null)
+                throw new DomainException("Já existe um usuário cadastrado com este e-mail.");
+
             // Hash da senha com BCrypt
             var senhaHash = BCrypt.Net.BCrypt.HashPassword(inputModel.UsuSenha);
 

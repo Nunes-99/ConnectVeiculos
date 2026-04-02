@@ -83,7 +83,7 @@ namespace ConnectVeiculos.Infrastructure.Hubs
             var notificacaoRepo = scope.ServiceProvider.GetRequiredService<INotificacaoRepository>();
 
             var (titulo, mensagem) = GerarTituloMensagem(tipo, dados);
-            var notificacao = Notificacao.Criar(usuarioId, titulo, mensagem, NotificacaoTipo.Sistema);
+            var notificacao = CriarNotificacaoComTipo(usuarioId, titulo, mensagem, tipo);
             await notificacaoRepo.AddAsync(notificacao);
 
             await _hubContext.Clients.Group($"user_{usuarioId}")
@@ -108,12 +108,19 @@ namespace ConnectVeiculos.Infrastructure.Hubs
 
             foreach (var usuario in usuarios)
             {
-                var notificacao = Notificacao.Criar(usuario.UsuId, titulo, mensagem, NotificacaoTipo.Sistema);
+                var notificacao = CriarNotificacaoComTipo(usuario.UsuId, titulo, mensagem, tipo);
                 await notificacaoRepo.AddAsync(notificacao);
             }
 
             await _hubContext.Clients.All
                 .SendAsync("ReceberNotificacao", new { tipo, dados, timestamp });
+        }
+
+        private static Notificacao CriarNotificacaoComTipo(int usuarioId, string titulo, string mensagem, string tipo)
+        {
+            return new Notificacao(
+                0, usuarioId, titulo, mensagem, tipo, null, false, DateTime.UtcNow, null
+            );
         }
 
         private static (string titulo, string mensagem) GerarTituloMensagem(string tipo, object dados)
