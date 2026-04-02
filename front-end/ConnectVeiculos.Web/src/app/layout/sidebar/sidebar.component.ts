@@ -52,7 +52,7 @@ export class SidebarComponent {
       title: 'Comercial',
       items: [
         { label: 'Captação de Clientes', icon: 'people_outline', route: '/leads' },
-        { label: 'Negociações', icon: 'handshake', route: '/negociacoes' },
+        // { label: 'Negociações', icon: 'handshake', route: '/negociacoes' }, // TODO: implementar futuramente
         { label: 'Test Drives', icon: 'event', route: '/test-drives' },
         { label: 'Favoritos', icon: 'favorite', route: '/favoritos' },
       ]

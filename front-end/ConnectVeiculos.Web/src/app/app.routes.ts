@@ -84,6 +84,11 @@ export const routes: Routes = [
         path: 'leads',
         loadComponent: () => import('./pages/leads/leads.component').then(m => m.LeadsComponent)
       },
+      // TODO: implementar futuramente
+      // {
+      //   path: 'negociacoes',
+      //   loadComponent: () => import('./pages/negociacoes/negociacoes.component').then(m => m.NegociacoesComponent)
+      // },
       {
         path: 'favoritos',
         loadComponent: () => import('./pages/favoritos-admin/favoritos-admin.component').then(m => m.FavoritosAdminComponent),
