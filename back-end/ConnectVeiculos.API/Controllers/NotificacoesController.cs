@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Notificacoes;
 using ConnectVeiculos.Infrastructure.Hubs;
 using Microsoft.AspNetCore.Authorization;
@@ -76,7 +77,8 @@ namespace ConnectVeiculos.API.Controllers
 
         private int GetUserId()
         {
-            var userIdClaim = User.FindFirst("UserId")?.Value;
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                           ?? User.FindFirst("UserId")?.Value;
             return int.TryParse(userIdClaim, out int userId) ? userId : 0;
         }
     }

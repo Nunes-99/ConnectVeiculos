@@ -66,8 +66,8 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework.Repositories
             var usuario = await GetByIdAsync(id);
             if (usuario != null)
             {
-                usuario.AlterarStatus(false);
-                await UpdateAsync(usuario);
+                _context.Usuarios.Remove(usuario);
+                await _context.SaveChangesAsync();
             }
         }
     }

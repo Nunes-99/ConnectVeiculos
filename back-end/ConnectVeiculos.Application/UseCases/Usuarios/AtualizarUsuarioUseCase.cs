@@ -66,21 +66,22 @@ namespace ConnectVeiculos.Application.UseCases.Usuarios
             {
                 await _usuarioRepository.UpdateAsync(usuario);
 
-                // Atualizar associacao com Loja
-                if (inputModel.R_LojId > 0)
+                // Atualizar associacoes com Lojas
+                var lojasParaAssociar = inputModel.LojasIds?.Where(l => l > 0).ToList();
+                if (lojasParaAssociar != null && lojasParaAssociar.Any())
                 {
-                    var lojaUsuarioExistente = await _lojaUsuarioRepository.GetByUsuarioIdAsync(inputModel.UsuId);
-
-                    if (lojaUsuarioExistente != null)
+                    await _lojaUsuarioRepository.DeleteByUsuarioIdAsync(inputModel.UsuId);
+                    foreach (var lojaId in lojasParaAssociar)
                     {
-                        lojaUsuarioExistente.SetProperties(lojaUsuarioExistente.LojUsuId, inputModel.UsuId, inputModel.R_LojId, lojaUsuarioExistente.UsuAcs);
-                        await _lojaUsuarioRepository.UpdateAsync(lojaUsuarioExistente);
-                    }
-                    else
-                    {
-                        var lojaUsuario = new LojaUsuario(0, inputModel.UsuId, inputModel.R_LojId, "S");
+                        var lojaUsuario = new LojaUsuario(0, inputModel.UsuId, lojaId, "S");
                         await _lojaUsuarioRepository.CreateAsync(lojaUsuario);
                     }
+                }
+                else if (inputModel.R_LojId > 0)
+                {
+                    await _lojaUsuarioRepository.DeleteByUsuarioIdAsync(inputModel.UsuId);
+                    var lojaUsuario = new LojaUsuario(0, inputModel.UsuId, inputModel.R_LojId, "S");
+                    await _lojaUsuarioRepository.CreateAsync(lojaUsuario);
                 }
 
                 // Atualizar associacao com Acesso

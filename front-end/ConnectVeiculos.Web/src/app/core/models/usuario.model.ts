@@ -25,6 +25,7 @@ export interface LoginResponse {
 export interface UsuarioInput {
   usuId?: number;
   r_LojId: number;
+  lojasIds?: number[];
   r_AcsId: number;
   usuNome: string;
   usuCPF?: string;

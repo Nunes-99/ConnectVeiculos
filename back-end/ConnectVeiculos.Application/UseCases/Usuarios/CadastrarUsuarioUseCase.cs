@@ -57,8 +57,17 @@ namespace ConnectVeiculos.Application.UseCases.Usuarios
             {
                 var id = await _usuarioRepository.CreateAsync(usuario);
 
-                // Criar associacao com Loja
-                if (inputModel.R_LojId > 0)
+                // Criar associacoes com Lojas
+                var lojasParaAssociar = inputModel.LojasIds?.Where(l => l > 0).ToList();
+                if (lojasParaAssociar != null && lojasParaAssociar.Any())
+                {
+                    foreach (var lojaId in lojasParaAssociar)
+                    {
+                        var lojaUsuario = new LojaUsuario(0, id, lojaId, "S");
+                        await _lojaUsuarioRepository.CreateAsync(lojaUsuario);
+                    }
+                }
+                else if (inputModel.R_LojId > 0)
                 {
                     var lojaUsuario = new LojaUsuario(0, id, inputModel.R_LojId, "S");
                     await _lojaUsuarioRepository.CreateAsync(lojaUsuario);

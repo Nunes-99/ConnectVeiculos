@@ -161,18 +161,22 @@
             </div>
           </div>
           <div class="form-row">
-            <div class="form-group">
-              <label class="required">Loja</label>
-              <select [(ngModel)]="formData.r_LojId"
-                      name="r_LojId"
-                      [class.invalid]="isSelectInvalid(formData.r_LojId)">
-                <option [ngValue]="0">Selecione...</option>
+            <div class="form-group full-width">
+              <label class="required">Lojas</label>
+              <div class="lojas-checkboxes">
+                <label class="loja-check-item" [class.selecionado]="lojasSelecionadas.size === lojas.length" (click)="selecionarTodasLojas()">
+                  <span class="material-icons">{{ lojasSelecionadas.size === lojas.length ? 'check_box' : 'check_box_outline_blank' }}</span>
+                  Todas as lojas
+                </label>
                 @for (loja of lojas; track loja.lojId) {
-                  <option [ngValue]="loja.lojId">{{ loja.lojNome }}</option>
+                  <label class="loja-check-item" [class.selecionado]="lojasSelecionadas.has(loja.lojId)" (click)="toggleLoja(loja.lojId)">
+                    <span class="material-icons">{{ lojasSelecionadas.has(loja.lojId) ? 'check_box' : 'check_box_outline_blank' }}</span>
+                    {{ loja.lojNome }}
+                  </label>
                 }
-              </select>
-              @if (isSelectInvalid(formData.r_LojId)) {
-                <span class="field-error">Selecione uma loja</span>
+              </div>
+              @if (formSubmitted && lojasSelecionadas.size === 0) {
+                <span class="field-error">Selecione ao menos uma loja</span>
               }
             </div>
             <div class="form-group">

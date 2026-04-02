@@ -23,10 +23,14 @@ export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
       } else if (error.error?.type === 'ValidationError' && error.error?.errors) {
         const messages = Object.values(error.error.errors).flat();
         errorMessage = messages.join('. ');
+      } else if (error.error?.error) {
+        errorMessage = error.error.error;
       } else if (error.error?.message) {
         errorMessage = error.error.message;
       } else if (error.error?.title) {
         errorMessage = error.error.title;
+      } else if (typeof error.error === 'string') {
+        errorMessage = error.error;
       } else if (error.status === 404) {
         errorMessage = 'Recurso não encontrado';
       } else if (error.status === 500) {

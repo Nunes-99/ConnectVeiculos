@@ -56,7 +56,7 @@ export class VendasComponent implements OnInit {
     uf: [''],
     numero: [''],
     // Forma de Pagamento
-    venFormaPagamento: [''],
+    venFormaPagamento: ['', Validators.required],
     venObservacao: ['']
   });
 

@@ -43,8 +43,11 @@ export class UsuariosComponent implements OnInit {
   totalPages = 0;
   searchTerm = '';
 
+  lojasSelecionadas: Set<number> = new Set();
+
   formData: UsuarioInput = {
     r_LojId: 0,
+    lojasIds: [],
     r_AcsId: 0,
     usuNome: '',
     usuCPF: '',
@@ -54,6 +57,26 @@ export class UsuariosComponent implements OnInit {
     usuFuncao: '',
     usuSts: true
   };
+
+  toggleLoja(lojaId: number): void {
+    if (this.lojasSelecionadas.has(lojaId)) {
+      this.lojasSelecionadas.delete(lojaId);
+    } else {
+      this.lojasSelecionadas.add(lojaId);
+    }
+    this.formData.lojasIds = Array.from(this.lojasSelecionadas);
+    this.formData.r_LojId = this.lojasSelecionadas.size > 0 ? Array.from(this.lojasSelecionadas)[0] : 0;
+  }
+
+  selecionarTodasLojas(): void {
+    if (this.lojasSelecionadas.size === this.lojas.length) {
+      this.lojasSelecionadas.clear();
+    } else {
+      this.lojas.forEach(l => this.lojasSelecionadas.add(l.lojId));
+    }
+    this.formData.lojasIds = Array.from(this.lojasSelecionadas);
+    this.formData.r_LojId = this.lojasSelecionadas.size > 0 ? Array.from(this.lojasSelecionadas)[0] : 0;
+  }
 
   ngOnInit(): void {
     this.loadData();
@@ -104,6 +127,7 @@ export class UsuariosComponent implements OnInit {
       this.formData = {
         usuId: usuario.usuId,
         r_LojId: usuario.r_LojId,
+        lojasIds: [],
         r_AcsId: usuario.r_AcsId,
         usuNome: usuario.usuNome,
         usuCPF: usuario.usuCPF || '',
@@ -113,7 +137,11 @@ export class UsuariosComponent implements OnInit {
         usuFuncao: usuario.usuFuncao || '',
         usuSts: usuario.usuSts
       };
+      // Carregar lojas associadas (por enquanto usa r_LojId existente)
+      this.lojasSelecionadas = new Set(usuario.r_LojId ? [usuario.r_LojId] : []);
+      this.formData.lojasIds = Array.from(this.lojasSelecionadas);
     } else {
+      this.lojasSelecionadas = new Set();
       this.resetForm();
     }
     this.showModal = true;
@@ -126,8 +154,10 @@ export class UsuariosComponent implements OnInit {
   }
 
   private resetForm(): void {
+    this.lojasSelecionadas = new Set();
     this.formData = {
       r_LojId: 0,
+      lojasIds: [],
       r_AcsId: 0,
       usuNome: '',
       usuCPF: '',
@@ -162,8 +192,8 @@ export class UsuariosComponent implements OnInit {
       return;
     }
 
-    // Validacao de selects
-    if (!this.formData.r_LojId || this.formData.r_LojId === 0) {
+    // Validacao de lojas
+    if (this.lojasSelecionadas.size === 0) {
       return;
     }
 

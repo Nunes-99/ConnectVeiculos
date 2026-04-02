@@ -20,15 +20,13 @@ namespace ConnectVeiculos.Application.UseCases.Usuarios
             var usuario = await _usuarioRepository.GetByIdAsync(id);
 
             if (usuario == null)
-                throw new Exception("Usuario nao encontrado.");
-
-            usuario.AlterarStatus(false);
+                throw new Exception("Usuário não encontrado.");
 
             _unitOfWork.BeginTransaction();
 
             try
             {
-                await _usuarioRepository.UpdateAsync(usuario);
+                await _usuarioRepository.DeleteAsync(id);
                 _unitOfWork.Commit();
             }
             catch

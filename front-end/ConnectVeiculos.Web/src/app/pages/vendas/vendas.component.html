@@ -207,8 +207,8 @@
 
           <h3 class="section-title">Pagamento</h3>
           <div class="form-group">
-            <label>Forma de Pagamento</label>
-            <select formControlName="venFormaPagamento">
+            <label class="required">Forma de Pagamento</label>
+            <select formControlName="venFormaPagamento" [class.invalid]="hasError('venFormaPagamento', 'required')">
               <option value="">Selecione...</option>
               @for (forma of formasPagamento; track forma.value) {
                 <option [value]="forma.value">{{ forma.label }}</option>

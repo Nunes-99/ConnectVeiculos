@@ -6,6 +6,7 @@ namespace ConnectVeiculos.Application.InputModels.Usuarios
     {
         public int UsuId { get; set; }
         public int R_LojId { get; set; }
+        public List<int> LojasIds { get; set; } = new List<int>();
         public int R_AcsId { get; set; }
         public string UsuNome { get; set; }
         public string UsuCPF { get; set; }
