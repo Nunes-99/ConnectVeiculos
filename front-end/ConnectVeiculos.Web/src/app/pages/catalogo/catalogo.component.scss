@@ -577,6 +577,14 @@
 .td-row { display: flex; gap: 0.75rem;
   input, select { flex: 1; }
 }
+.td-date-wrapper {
+  position: relative; flex: 1;
+  input[type="date"] { width: 100%; }
+  .td-date-placeholder {
+    position: absolute; left: 0.65rem; top: 50%; transform: translateY(-50%);
+    color: #999; font-size: 0.9rem; pointer-events: none;
+  }
+}
 .btn-agendar {
   display: flex; align-items: center; justify-content: center; gap: 0.5rem;
   padding: 0.8rem; background: #1a237e; color: white; border: none; border-radius: 8px;

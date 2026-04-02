@@ -21,6 +21,7 @@ using ConnectVeiculos.Core.Entities.Despesas;
 using ConnectVeiculos.Core.Entities.Leads;
 using ConnectVeiculos.Core.Entities.Favoritos;
 using ConnectVeiculos.Core.Entities.Webhooks;
+using ConnectVeiculos.Core.Entities.Negociacoes;
 using Microsoft.EntityFrameworkCore;
 
 namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
@@ -52,6 +53,7 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
         public DbSet<VeiculoDespesa> VeiculosDespesas { get; set; }
         public DbSet<Lead> Leads { get; set; }
         public DbSet<Favorito> Favoritos { get; set; }
+        public DbSet<Negociacao> Negociacoes { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -137,6 +139,8 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
                 entity.Property(e => e.VeiSts).HasMaxLength(1);
                 entity.Property(e => e.VeiSitSts).HasMaxLength(50);
                 entity.Property(e => e.VeiObservacao).HasMaxLength(2000);
+                entity.Property(e => e.VeiDonoAtual).HasMaxLength(150);
+                entity.Property(e => e.VeiDonoCelular).HasMaxLength(20);
                 entity.HasOne(e => e.Loja).WithMany().HasForeignKey(e => e.R_LojId);
                 entity.HasOne(e => e.Categoria).WithMany().HasForeignKey(e => e.R_CatId);
             });
@@ -311,13 +315,16 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
             });
 
             // TestDrive
-            modelBuilder.Entity<TestDrive>(entity => { entity.ToTable("TestDrive"); entity.HasKey(e => e.TdrId); entity.Property(e => e.TdrId).ValueGeneratedOnAdd(); entity.Property(e => e.TdrNomeCliente).HasMaxLength(200).IsRequired(); entity.Property(e => e.TdrTelefone).HasMaxLength(20); entity.Property(e => e.TdrEmail).HasMaxLength(255); entity.Property(e => e.TdrHorario).HasMaxLength(10); entity.Property(e => e.TdrObservacao).HasMaxLength(1000); entity.Property(e => e.TdrStatus).HasMaxLength(1); });
+            modelBuilder.Entity<TestDrive>(entity => { entity.ToTable("TestDrive"); entity.HasKey(e => e.TdrId); entity.Property(e => e.TdrId).ValueGeneratedOnAdd(); entity.Property(e => e.TdrNomeCliente).HasMaxLength(200).IsRequired(); entity.Property(e => e.TdrTelefone).HasMaxLength(20); entity.Property(e => e.TdrWhatsApp).HasMaxLength(20); entity.Property(e => e.TdrEmail).HasMaxLength(255); entity.Property(e => e.TdrHorario).HasMaxLength(10); entity.Property(e => e.TdrObservacao).HasMaxLength(1000); entity.Property(e => e.TdrStatus).HasMaxLength(1); });
 
             // VeiculoDespesa
             modelBuilder.Entity<VeiculoDespesa>(entity => { entity.ToTable("VeiculoDespesa"); entity.HasKey(e => e.DesId); entity.Property(e => e.DesId).ValueGeneratedOnAdd(); entity.Property(e => e.DesTipo).HasMaxLength(50).IsRequired(); entity.Property(e => e.DesDescricao).HasMaxLength(500); entity.Property(e => e.DesValor).HasPrecision(10, 2); });
 
             // Lead
             modelBuilder.Entity<Lead>(entity => { entity.ToTable("Lead"); entity.HasKey(e => e.LeaId); entity.Property(e => e.LeaId).ValueGeneratedOnAdd(); entity.Property(e => e.LeaNomeCliente).HasMaxLength(200); entity.Property(e => e.LeaTelefone).HasMaxLength(20); entity.Property(e => e.LeaEmail).HasMaxLength(255); entity.Property(e => e.LeaOrigem).HasMaxLength(30); entity.Property(e => e.LeaStatus).HasMaxLength(20); entity.Property(e => e.LeaObservacao).HasMaxLength(1000); });
+
+            // Negociacao
+            modelBuilder.Entity<Negociacao>(entity => { entity.ToTable("Negociacao"); entity.HasKey(e => e.NegId); entity.Property(e => e.NegId).ValueGeneratedOnAdd(); entity.Property(e => e.NegNomeCliente).HasMaxLength(200); entity.Property(e => e.NegTelefone).HasMaxLength(20); entity.Property(e => e.NegEmail).HasMaxLength(255); entity.Property(e => e.NegValorProposta).HasPrecision(10, 2); entity.Property(e => e.NegStatus).HasMaxLength(20); entity.Property(e => e.NegObservacao).HasMaxLength(1000); });
 
             // Favorito
             modelBuilder.Entity<Favorito>(entity => { entity.ToTable("Favorito"); entity.HasKey(e => e.FavId); entity.Property(e => e.FavId).ValueGeneratedOnAdd(); entity.Property(e => e.FavEmail).HasMaxLength(255).IsRequired(); entity.Property(e => e.FavNome).HasMaxLength(200); entity.Property(e => e.FavTelefone).HasMaxLength(20); entity.HasIndex(e => new { e.FavEmail, e.R_VeiId }).IsUnique(); });

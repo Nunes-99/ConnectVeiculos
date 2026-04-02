@@ -7,6 +7,7 @@ namespace ConnectVeiculos.Core.Entities.TestDrives
         public int? R_LojId { get; private set; }
         public string TdrNomeCliente { get; private set; }
         public string TdrTelefone { get; private set; }
+        public string TdrWhatsApp { get; private set; }
         public string TdrEmail { get; private set; }
         public DateTime TdrDataAgendamento { get; private set; }
         public string TdrHorario { get; private set; }
@@ -17,13 +18,14 @@ namespace ConnectVeiculos.Core.Entities.TestDrives
         public TestDrive() { }
 
         public TestDrive(int tdrId, int rVeiId, int? rLojId, string tdrNomeCliente, string tdrTelefone,
-            string tdrEmail, DateTime tdrDataAgendamento, string tdrHorario, string tdrObservacao, string tdrStatus)
+            string tdrWhatsApp, string tdrEmail, DateTime tdrDataAgendamento, string tdrHorario, string tdrObservacao, string tdrStatus)
         {
             TdrId = tdrId;
             R_VeiId = rVeiId;
             R_LojId = rLojId;
             TdrNomeCliente = tdrNomeCliente;
             TdrTelefone = tdrTelefone;
+            TdrWhatsApp = tdrWhatsApp;
             TdrEmail = tdrEmail;
             TdrDataAgendamento = tdrDataAgendamento;
             TdrHorario = tdrHorario;

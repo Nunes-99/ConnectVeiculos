@@ -1,0 +1,170 @@
+@import '../../../styles/shared';
+
+// Filtros
+.filtros-bar {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+
+  .filtro-grupo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    label {
+      font-size: 12px;
+      font-weight: 500;
+      color: #666;
+    }
+
+    select {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      min-width: 180px;
+      background: var(--bg-primary, #fff);
+      color: var(--text-primary, #333);
+      cursor: pointer;
+
+      &:focus {
+        outline: none;
+        border-color: #1a237e;
+      }
+    }
+  }
+}
+
+// Stats
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-primary, #fff);
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+
+  .stat-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    .material-icons {
+      font-size: 22px;
+      color: #fff;
+    }
+
+    &.total { background: #1a237e; }
+    &.proposta { background: #e65100; }
+    &.contraproposta { background: #6a1b9a; }
+    &.aceita { background: #2e7d32; }
+    &.recusada { background: #c62828; }
+  }
+
+  .stat-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    .stat-label {
+      font-size: 12px;
+      color: #888;
+      font-weight: 500;
+    }
+
+    .stat-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-primary, #333);
+    }
+  }
+}
+
+// Table extras
+.text-muted {
+  color: #999;
+  font-size: 12px;
+}
+
+.status-select {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  font-size: 13px;
+  cursor: pointer;
+  background: var(--bg-primary, #fff);
+  font-weight: 500;
+
+  &:focus {
+    outline: none;
+    border-color: #1a237e;
+  }
+
+  &.sel-PROPOSTA { color: #e65100; border-color: #ffcc80; background: #fff3e0; }
+  &.sel-CONTRAPROPOSTA { color: #6a1b9a; border-color: #ce93d8; background: #f3e5f5; }
+  &.sel-ACEITA { color: #2e7d32; border-color: #a5d6a7; background: #e8f5e9; }
+  &.sel-RECUSADA { color: #c62828; border-color: #ef9a9a; background: #ffebee; }
+  &.sel-CANCELADA { color: #757575; border-color: #bdbdbd; background: #f5f5f5; }
+}
+
+// Actions
+.actions {
+  .btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    transition: all 0.15s;
+
+    .material-icons {
+      font-size: 20px;
+      color: #666;
+    }
+
+    &:hover {
+      background: #e3f2fd;
+      .material-icons { color: #1565c0; }
+    }
+
+    &.whatsapp:hover {
+      background: #e8f5e9;
+      .material-icons { color: #2e7d32; }
+    }
+
+    &.delete:hover {
+      background: #ffebee;
+      .material-icons { color: #c62828; }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .filtros-bar {
+    flex-wrap: nowrap;
+    gap: 8px;
+
+    .filtro-grupo {
+      flex: 1;
+      min-width: 0;
+
+      select {
+        min-width: 0;
+        width: 100%;
+      }
+    }
+  }
+}

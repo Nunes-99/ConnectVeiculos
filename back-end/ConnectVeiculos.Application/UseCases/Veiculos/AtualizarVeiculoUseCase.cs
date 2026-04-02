@@ -50,7 +50,9 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                 inputModel.VeiSts,
                 inputModel.VeiSitSts,
                 inputModel.VeiPrecoCompra,
-                inputModel.VeiObservacao
+                inputModel.VeiObservacao,
+                inputModel.VeiDonoAtual,
+                inputModel.VeiDonoCelular
             );
 
             _unitOfWork.BeginTransaction();

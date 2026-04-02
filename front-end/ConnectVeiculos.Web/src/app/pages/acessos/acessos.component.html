@@ -1,10 +1,6 @@
 <div class="page-container">
   <div class="page-header">
     <h1>Níveis de Acesso</h1>
-    <button class="btn-primary" (click)="openModal()">
-      <span class="material-icons">add</span>
-      Novo Acesso
-    </button>
   </div>
 
   <div class="search-bar">
@@ -47,9 +43,6 @@
               <td data-label="Ações" class="actions">
                 <button class="btn-icon" (click)="openModal(acesso)" title="Editar">
                   <span class="material-icons">edit</span>
-                </button>
-                <button class="btn-icon delete" (click)="remove(acesso.acsId)" title="Excluir">
-                  <span class="material-icons">delete</span>
                 </button>
               </td>
             </tr>

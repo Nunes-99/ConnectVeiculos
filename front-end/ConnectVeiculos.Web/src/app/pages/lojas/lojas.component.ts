@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { LojaService, ImagemService } from '../../core/services';
 import { Loja } from '../../core/models';
 import { MaskDirective } from '../../shared/directives';
@@ -22,6 +23,7 @@ export class LojasComponent implements OnInit {
   private fb = inject(FormBuilder);
   private http = inject(HttpClient);
   private imagemService = inject(ImagemService);
+  private sanitizer = inject(DomSanitizer);
 
   lojas: Loja[] = [];
   loading = false;
@@ -32,6 +34,7 @@ export class LojasComponent implements OnInit {
   cnpjInvalido = false;
   logoPreview: string | null = null;
   logoFile: File | null = null;
+  showPreview = false;
 
   // Modal de confirmacao
   showConfirmModal = false;
@@ -132,6 +135,7 @@ export class LojasComponent implements OnInit {
     this.editId = null;
     this.logoPreview = null;
     this.logoFile = null;
+    this.showPreview = false;
   }
 
   validarCnpj(): void {
@@ -155,6 +159,22 @@ export class LojasComponent implements OnInit {
     this.logoPreview = null;
     this.logoFile = null;
     this.form.patchValue({ lojImg: '' });
+  }
+
+  abrirPreVisualizacao(): void {
+    const slug = this.form.get('lojSlug')?.value;
+    const id = this.editId;
+    const param = slug || id;
+    if (param) {
+      window.open(`/catalogo/${param}`, '_blank');
+    }
+  }
+
+  getPreviewUrl(): SafeResourceUrl {
+    const slug = this.form.get('lojSlug')?.value;
+    const id = this.editId;
+    const param = slug || id;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(`/catalogo/${param}`);
   }
 
   save(): void {

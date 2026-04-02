@@ -221,22 +221,6 @@
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label>Cor Primária</label>
-              <div class="color-picker-wrapper">
-                <input type="color" formControlName="lojCorPrimaria" />
-                <input type="text" formControlName="lojCorPrimaria" placeholder="#1a237e" />
-              </div>
-            </div>
-            <div class="form-group">
-              <label>Cor Secundária</label>
-              <div class="color-picker-wrapper">
-                <input type="color" formControlName="lojCorSecundaria" />
-                <input type="text" formControlName="lojCorSecundaria" placeholder="#25d366" />
-              </div>
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
               <label>Instagram</label>
               <div class="social-input">
                 <span class="social-prefix">&#64;</span>
@@ -252,11 +236,31 @@
             </div>
           </div>
           <div class="form-row">
-            <div class="form-group" style="grid-column: 1/-1;">
-              <label>Pré-visualização</label>
-              <div class="color-preview" [style.background]="'linear-gradient(135deg, ' + form.get('lojCorPrimaria')?.value + ' 0%, ' + form.get('lojCorSecundaria')?.value + ' 100%)'">
-                <span style="color: white; font-weight: 600; font-size: 14px;">{{ form.get('lojNome')?.value || 'Nome da Loja' }}</span>
+            <div class="form-group">
+              <label>Cor Primária</label>
+              <div class="color-picker-wrapper">
+                <input type="color" formControlName="lojCorPrimaria" />
+                <input type="text" formControlName="lojCorPrimaria" placeholder="#1a237e" />
               </div>
+            </div>
+            <div class="form-group">
+              <label>Cor Secundária</label>
+              <div class="color-picker-wrapper">
+                <input type="color" formControlName="lojCorSecundaria" />
+                <input type="text" formControlName="lojCorSecundaria" placeholder="#25d366" />
+              </div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group" style="grid-column: 1/-1;">
+              <div class="color-preview" [style.background]="'linear-gradient(135deg, ' + form.get('lojCorPrimaria')?.value + ' 0%, ' + form.get('lojCorSecundaria')?.value + ' 100%)'">
+              </div>
+              @if (editMode) {
+                <button type="button" class="btn-preview-catalogo" (click)="showPreview = true">
+                  <span class="material-icons">visibility</span>
+                  Pré-visualizar
+                </button>
+              }
             </div>
           </div>
         </div>
@@ -265,6 +269,28 @@
           <button type="submit" class="btn-primary" [disabled]="form.invalid">Salvar</button>
         </div>
       </form>
+    </div>
+  </div>
+}
+
+@if (showPreview) {
+  <div class="modal-overlay preview-overlay" (click)="showPreview = false">
+    <div class="preview-modal" (click)="$event.stopPropagation()">
+      <div class="preview-modal-header">
+        <span class="preview-title">
+          <span class="material-icons">devices</span>
+          Pré-visualização do Catálogo
+        </span>
+        <div class="preview-header-actions">
+          <button type="button" class="btn-icon" (click)="abrirPreVisualizacao()" title="Abrir em nova aba">
+            <span class="material-icons">open_in_new</span>
+          </button>
+          <button type="button" class="btn-icon" (click)="showPreview = false" title="Fechar">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+      </div>
+      <iframe [src]="getPreviewUrl()" class="preview-iframe"></iframe>
     </div>
   </div>
 }

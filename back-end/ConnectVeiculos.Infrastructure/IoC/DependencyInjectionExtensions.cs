@@ -275,6 +275,13 @@ namespace ConnectVeiculos.Infrastructure.IoC
                 AddColumnIfNotExists(connection, "Veiculo", "VeiDtPostagemInsta", "TEXT");
                 AddColumnIfNotExists(connection, "Veiculo", "VeiDtPostagemFace", "TEXT");
 
+                // Adicionar coluna WhatsApp no TestDrive
+                AddColumnIfNotExists(connection, "TestDrive", "TdrWhatsApp", "TEXT");
+
+                // Adicionar colunas de dono atual do veiculo
+                AddColumnIfNotExists(connection, "Veiculo", "VeiDonoAtual", "TEXT");
+                AddColumnIfNotExists(connection, "Veiculo", "VeiDonoCelular", "TEXT");
+
                 // Criar tabelas que podem nao existir em bancos antigos
                 CreateTableIfNotExists(connection, "Lead",
                     @"LeaId INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -324,6 +331,18 @@ namespace ConnectVeiculos.Infrastructure.IoC
                       FavNome TEXT,
                       FavTelefone TEXT,
                       FavDtCriacao TEXT NOT NULL DEFAULT (datetime('now'))");
+
+                CreateTableIfNotExists(connection, "Negociacao",
+                    @"NegId INTEGER PRIMARY KEY AUTOINCREMENT,
+                      R_VeiId INTEGER NOT NULL,
+                      R_LojId INTEGER,
+                      NegNomeCliente TEXT,
+                      NegTelefone TEXT,
+                      NegEmail TEXT,
+                      NegValorProposta REAL,
+                      NegStatus TEXT,
+                      NegObservacao TEXT,
+                      NegDtCriacao TEXT NOT NULL DEFAULT (datetime('now'))");
 
                 // Populate slugs for existing lojas
                 using var slugCmd = connection.CreateCommand();
@@ -387,6 +406,20 @@ namespace ConnectVeiculos.Infrastructure.IoC
 
         private static void SeedInitialData(ConnectVeiculosDbContext dbContext)
         {
+            // Seed de niveis de acesso
+            if (!dbContext.Acessos.Any())
+            {
+                var acessos = new[]
+                {
+                    new Core.Entities.Acessos.Acesso(0, "Administrador", "Acesso total ao sistema, gerencia usuarios, lojas e configuracoes", true),
+                    new Core.Entities.Acessos.Acesso(0, "Gerente", "Gerencia veiculos, vendas, relatorios e equipe da loja", true),
+                    new Core.Entities.Acessos.Acesso(0, "Vendedor", "Cadastra e edita veiculos, registra vendas e atende leads", true),
+                    new Core.Entities.Acessos.Acesso(0, "Visualizador", "Acesso somente leitura, consulta veiculos, vendas e relatorios", true)
+                };
+                dbContext.Acessos.AddRange(acessos);
+                dbContext.SaveChanges();
+            }
+
             // Verificar se já existe usuario admin
             if (!dbContext.Usuarios.Any(u => u.UsuEmail == "admin@connectveiculos.com.br"))
             {

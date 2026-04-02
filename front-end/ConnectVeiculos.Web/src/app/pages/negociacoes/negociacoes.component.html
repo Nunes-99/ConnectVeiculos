@@ -1,0 +1,260 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Negociações</h1>
+    <div class="header-actions">
+      <button class="btn-primary" (click)="openModal()">
+        <span class="material-icons">add</span>
+        Nova Negociação
+      </button>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="filtros-bar">
+    <div class="filtro-grupo">
+      <label>Status</label>
+      <select [(ngModel)]="filtroStatus" (change)="loadData()">
+        <option value="">Todos</option>
+        <option value="PROPOSTA">Proposta</option>
+        <option value="CONTRAPROPOSTA">Contraproposta</option>
+        <option value="ACEITA">Aceita</option>
+        <option value="RECUSADA">Recusada</option>
+        <option value="CANCELADA">Cancelada</option>
+      </select>
+    </div>
+    <div class="filtro-grupo">
+      <label>Veículo</label>
+      <select [(ngModel)]="filtroVeiculo" (change)="loadData()">
+        <option [ngValue]="null">Todos</option>
+        @for (v of veiculos; track v.veiId) {
+          <option [ngValue]="v.veiId">{{ v.veiMarca }} {{ v.veiModelo }} {{ v.veiAno }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  <!-- Cards de resumo -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon total">
+        <span class="material-icons">handshake</span>
+      </div>
+      <div class="stat-info">
+        <span class="stat-label">Total</span>
+        <span class="stat-value">{{ negociacoes.length }}</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon proposta">
+        <span class="material-icons">description</span>
+      </div>
+      <div class="stat-info">
+        <span class="stat-label">Propostas</span>
+        <span class="stat-value">{{ getCountByStatus('PROPOSTA') }}</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon contraproposta">
+        <span class="material-icons">swap_horiz</span>
+      </div>
+      <div class="stat-info">
+        <span class="stat-label">Contrapropostas</span>
+        <span class="stat-value">{{ getCountByStatus('CONTRAPROPOSTA') }}</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon aceita">
+        <span class="material-icons">check_circle</span>
+      </div>
+      <div class="stat-info">
+        <span class="stat-label">Aceitas</span>
+        <span class="stat-value">{{ getCountByStatus('ACEITA') }}</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon recusada">
+        <span class="material-icons">cancel</span>
+      </div>
+      <div class="stat-info">
+        <span class="stat-label">Recusadas</span>
+        <span class="stat-value">{{ getCountByStatus('RECUSADA') }}</span>
+      </div>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="loading">Carregando...</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Veículo</th>
+            <th>Cliente</th>
+            <th>Valor Proposta</th>
+            <th>Status</th>
+            <th>Data</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (neg of negociacoesPaginadas; track neg.negId) {
+            <tr>
+              <td data-label="Veículo">
+                <strong>{{ getVeiculoNome(neg.r_VeiId) }}</strong>
+                <br><span class="text-muted">Preço: {{ getVeiculoPreco(neg.r_VeiId) | currency:'BRL' }}</span>
+              </td>
+              <td data-label="Cliente">
+                <strong>{{ neg.negNomeCliente }}</strong>
+                @if (neg.negEmail) {
+                  <br><span class="text-muted">{{ neg.negEmail }}</span>
+                }
+              </td>
+              <td data-label="Valor Proposta">
+                <strong>{{ neg.negValorProposta | currency:'BRL' }}</strong>
+              </td>
+              <td data-label="Status">
+                <select [ngModel]="neg.negStatus" (ngModelChange)="atualizarStatus(neg.negId, $event)"
+                        class="status-select" [class]="'sel-' + neg.negStatus">
+                  <option value="PROPOSTA">Proposta</option>
+                  <option value="CONTRAPROPOSTA">Contraproposta</option>
+                  <option value="ACEITA">Aceita</option>
+                  <option value="RECUSADA">Recusada</option>
+                  <option value="CANCELADA">Cancelada</option>
+                </select>
+              </td>
+              <td data-label="Data">{{ neg.negDtCriacao | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td data-label="Ações" class="actions">
+                @if (neg.negTelefone) {
+                  <button class="btn-icon" title="Ligar" (click)="ligar(neg)">
+                    <span class="material-icons">phone</span>
+                  </button>
+                  <button class="btn-icon whatsapp" title="WhatsApp" (click)="abrirWhatsApp(neg)">
+                    <span class="material-icons">chat</span>
+                  </button>
+                }
+                <button class="btn-icon" (click)="openModal(neg)" title="Editar">
+                  <span class="material-icons">edit</span>
+                </button>
+                <button class="btn-icon delete" (click)="remove(neg.negId)" title="Excluir">
+                  <span class="material-icons">delete</span>
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6" class="empty">Nenhuma negociação encontrada</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      <app-pagination
+        [currentPage]="currentPage"
+        [totalItems]="totalItems"
+        [pageSize]="pageSize"
+        (pageChange)="onPageChange($event)">
+      </app-pagination>
+    </div>
+  }
+</div>
+
+@if (showModal) {
+  <div class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>{{ editMode ? 'Editar' : 'Nova' }} Negociação</h2>
+        <button class="btn-close" (click)="closeModal()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group full-width">
+              <label class="required">Veículo</label>
+              <select formControlName="veiculoId" [class.invalid]="hasError('veiculoId', 'min')">
+                <option [ngValue]="0">Selecione...</option>
+                @for (v of veiculos; track v.veiId) {
+                  <option [ngValue]="v.veiId">{{ v.veiMarca }} {{ v.veiModelo }} {{ v.veiAno }} - {{ v.veiPreco | currency:'BRL' }}</option>
+                }
+              </select>
+              @if (hasError('veiculoId', 'min')) {
+                <span class="field-error">Selecione um veículo</span>
+              }
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="required">Nome do Cliente</label>
+              <input type="text" formControlName="nomeCliente" placeholder="Nome completo"
+                     [class.invalid]="hasError('nomeCliente', 'required')" />
+              @if (hasError('nomeCliente', 'required')) {
+                <span class="field-error">Nome é obrigatório</span>
+              }
+            </div>
+            <div class="form-group">
+              <label>Telefone</label>
+              <input type="text" formControlName="telefone" appMask="celular" placeholder="(99) 99999-9999" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>E-mail</label>
+              <input type="email" formControlName="email" placeholder="email@exemplo.com" />
+            </div>
+            <div class="form-group">
+              <label class="required">Valor da Proposta</label>
+              <input formControlName="valorProposta" appCurrencyMask
+                     [class.invalid]="hasError('valorProposta', 'required') || hasError('valorProposta', 'min')" />
+              @if (hasError('valorProposta', 'min')) {
+                <span class="field-error">Valor deve ser maior que zero</span>
+              }
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Status</label>
+              <select formControlName="status">
+                <option value="PROPOSTA">Proposta</option>
+                <option value="CONTRAPROPOSTA">Contraproposta</option>
+                <option value="ACEITA">Aceita</option>
+                <option value="RECUSADA">Recusada</option>
+                <option value="CANCELADA">Cancelada</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Loja</label>
+              <select formControlName="lojaId">
+                <option [ngValue]="null">Selecione...</option>
+                @for (loja of lojas; track loja.lojId) {
+                  <option [ngValue]="loja.lojId">{{ loja.lojNome }}</option>
+                }
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group full-width">
+              <label>Observação</label>
+              <textarea formControlName="observacao" rows="3" placeholder="Detalhes da negociação..."></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" (click)="closeModal()">Cancelar</button>
+          <button type="submit" class="btn-primary" [disabled]="form.invalid">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<app-confirm-modal
+  [show]="showConfirmModal"
+  titulo="Excluir Negociação"
+  mensagem="Deseja realmente excluir esta negociação? Esta ação não pode ser desfeita."
+  textoBotaoConfirmar="Excluir"
+  tipo="danger"
+  (confirmar)="confirmarExclusao()"
+  (cancelar)="cancelarExclusao()">
+</app-confirm-modal>

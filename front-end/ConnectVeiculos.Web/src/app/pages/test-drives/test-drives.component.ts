@@ -53,11 +53,26 @@ export class TestDrivesComponent implements OnInit {
     return this.testDrives.filter(td => td.tdrStatus === status).length;
   }
 
-  abrirWhatsApp(td: TestDrive): void {
+  isWhatsApp(telefone: string): boolean {
+    if (!telefone) return false;
+    const digits = telefone.replace(/\D/g, '');
+    return digits.length >= 11;
+  }
+
+  ligar(td: TestDrive): void {
     if (td.tdrTelefone) {
-      const phone = td.tdrTelefone.replace(/\D/g, '');
+      window.open(`tel:${td.tdrTelefone}`, '_self');
+    }
+  }
+
+  abrirWhatsApp(td: TestDrive): void {
+    const numero = td.tdrWhatsApp || td.tdrTelefone;
+    if (numero) {
+      const phone = numero.replace(/\D/g, '');
       const fullPhone = phone.startsWith('55') ? phone : '55' + phone;
-      window.open(`https://wa.me/${fullPhone}`, '_blank');
+      const veiculo = td.veiculoNome || 'veículo';
+      const msg = encodeURIComponent(`Olá ${td.tdrNomeCliente}! Sobre o test drive do ${veiculo} agendado para ${td.tdrHorario || ''}, gostaria de confirmar.`);
+      window.open(`https://wa.me/${fullPhone}?text=${msg}`, '_blank');
     }
   }
 }

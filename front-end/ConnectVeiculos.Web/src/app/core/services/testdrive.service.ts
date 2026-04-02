@@ -9,6 +9,7 @@ export interface TestDrive {
   r_LojId?: number;
   tdrNomeCliente: string;
   tdrTelefone: string;
+  tdrWhatsApp: string;
   tdrEmail: string;
   tdrDataAgendamento: string;
   tdrHorario: string;

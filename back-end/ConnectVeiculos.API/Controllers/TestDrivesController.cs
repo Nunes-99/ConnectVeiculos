@@ -25,7 +25,7 @@ namespace ConnectVeiculos.API.Controllers
                 return BadRequest("Nome e telefone sao obrigatorios.");
 
             var testDrive = new TestDrive(0, request.VeiculoId, request.LojaId, request.NomeCliente,
-                request.Telefone, request.Email, request.DataAgendamento, request.Horario, request.Observacao, "P");
+                request.Telefone, request.WhatsApp, request.Email, request.DataAgendamento, request.Horario, request.Observacao, "P");
 
             _context.TestDrives.Add(testDrive);
             await _context.SaveChangesAsync();
@@ -44,7 +44,7 @@ namespace ConnectVeiculos.API.Controllers
             var result = await query.OrderByDescending(t => t.TdrDataAgendamento)
                 .Select(t => new {
                     t.TdrId, t.R_VeiId, t.R_LojId,
-                    t.TdrNomeCliente, t.TdrTelefone, t.TdrEmail,
+                    t.TdrNomeCliente, t.TdrTelefone, t.TdrWhatsApp, t.TdrEmail,
                     t.TdrDataAgendamento, t.TdrHorario, t.TdrObservacao,
                     t.TdrStatus, t.TdrDtCriacao,
                     VeiculoNome = _context.Veiculos
@@ -74,6 +74,7 @@ namespace ConnectVeiculos.API.Controllers
         public int? LojaId { get; set; }
         public string NomeCliente { get; set; }
         public string Telefone { get; set; }
+        public string WhatsApp { get; set; }
         public string Email { get; set; }
         public DateTime DataAgendamento { get; set; }
         public string Horario { get; set; }

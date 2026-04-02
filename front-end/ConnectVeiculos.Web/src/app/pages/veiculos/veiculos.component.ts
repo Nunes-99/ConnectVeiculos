@@ -66,15 +66,17 @@ export class VeiculosComponent implements OnInit {
     r_CatId: [0, [Validators.required, Validators.min(1)]],
     veiMarca: ['', [Validators.required, Validators.minLength(2)]],
     veiModelo: ['', [Validators.required, Validators.minLength(2)]],
-    veiAno: [new Date().getFullYear(), [Validators.required, Validators.min(1900), Validators.max(2100)]],
+    veiAno: [null, [Validators.required, Validators.min(1900), Validators.max(2100)]],
     veiPlaca: ['', Validators.required],
     veiChassi: [''],
     veiCor: [''],
-    veiKm: [0, Validators.min(0)],
+    veiKm: [null, Validators.min(0)],
     veiPreco: [0, [Validators.required, Validators.min(0)]],
     veiSts: ['D', Validators.required],
     veiPrecoCompra: [0, Validators.min(0)],
-    veiObservacao: ['']
+    veiObservacao: [''],
+    veiDonoAtual: [''],
+    veiDonoCelular: ['']
   });
 
   ngOnInit(): void {
@@ -121,7 +123,9 @@ export class VeiculosComponent implements OnInit {
         veiPreco: veiculo.veiPreco,
         veiSts: veiculo.veiSts,
         veiPrecoCompra: veiculo.veiPrecoCompra,
-        veiObservacao: veiculo.veiObservacao || ''
+        veiObservacao: veiculo.veiObservacao || '',
+        veiDonoAtual: veiculo.veiDonoAtual || '',
+        veiDonoCelular: veiculo.veiDonoCelular || ''
       });
       this.loadImagens(veiculo.veiId);
     } else {
@@ -129,12 +133,14 @@ export class VeiculosComponent implements OnInit {
       this.form.reset({
         r_LojId: 0,
         r_CatId: 0,
-        veiAno: new Date().getFullYear(),
-        veiKm: 0,
+        veiAno: null,
+        veiKm: null,
         veiPreco: 0,
         veiSts: 'D',
         veiPrecoCompra: 0,
-        veiObservacao: ''
+        veiObservacao: '',
+        veiDonoAtual: '',
+        veiDonoCelular: ''
       });
     }
     this.showModal = true;
@@ -163,7 +169,9 @@ export class VeiculosComponent implements OnInit {
       veiKm: Number(raw.veiKm) || 0,
       veiPreco: Number(raw.veiPreco) || 0,
       veiPrecoCompra: Number(raw.veiPrecoCompra) || 0,
-      veiObservacao: raw.veiObservacao || ''
+      veiObservacao: raw.veiObservacao || '',
+      veiDonoAtual: raw.veiDonoAtual || '',
+      veiDonoCelular: raw.veiDonoCelular || ''
     };
 
     if (this.editMode && this.editId) {
