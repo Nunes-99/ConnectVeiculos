@@ -416,7 +416,7 @@ namespace ConnectVeiculos.Infrastructure.IoC
             };
             foreach (var (nome, desc) in acessosSeed)
             {
-                if (!dbContext.Acessos.Any(a => a.AceNome == nome))
+                if (!dbContext.Acessos.Any(a => a.AcsNome == nome))
                 {
                     dbContext.Acessos.Add(new Core.Entities.Acessos.Acesso(0, nome, desc, true));
                 }
