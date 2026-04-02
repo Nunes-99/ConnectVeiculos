@@ -406,39 +406,45 @@ namespace ConnectVeiculos.Infrastructure.IoC
 
         private static void SeedInitialData(ConnectVeiculosDbContext dbContext)
         {
-            // Seed de niveis de acesso
-            if (!dbContext.Acessos.Any())
+            // Seed de niveis de acesso (insere apenas os que não existem)
+            var acessosSeed = new[]
             {
-                var acessos = new[]
+                ("Administrador", "Acesso total ao sistema, gerencia usuarios, lojas e configuracoes"),
+                ("Gerente", "Gerencia veiculos, vendas, relatorios e equipe da loja"),
+                ("Vendedor", "Cadastra e edita veiculos, registra vendas e atende leads"),
+                ("Visualizador", "Acesso somente leitura, consulta veiculos, vendas e relatorios")
+            };
+            foreach (var (nome, desc) in acessosSeed)
+            {
+                if (!dbContext.Acessos.Any(a => a.AceNome == nome))
                 {
-                    new Core.Entities.Acessos.Acesso(0, "Administrador", "Acesso total ao sistema, gerencia usuarios, lojas e configuracoes", true),
-                    new Core.Entities.Acessos.Acesso(0, "Gerente", "Gerencia veiculos, vendas, relatorios e equipe da loja", true),
-                    new Core.Entities.Acessos.Acesso(0, "Vendedor", "Cadastra e edita veiculos, registra vendas e atende leads", true),
-                    new Core.Entities.Acessos.Acesso(0, "Visualizador", "Acesso somente leitura, consulta veiculos, vendas e relatorios", true)
-                };
-                dbContext.Acessos.AddRange(acessos);
-                dbContext.SaveChanges();
+                    dbContext.Acessos.Add(new Core.Entities.Acessos.Acesso(0, nome, desc, true));
+                }
             }
+            dbContext.SaveChanges();
 
-            // Seed de categorias
-            if (!dbContext.Categorias.Any())
+            // Seed de categorias (insere apenas as que não existem)
+            var categoriasSeed = new[]
             {
-                var categorias = new[]
+                ("Sedan", "Veículos sedan de 4 portas"),
+                ("Hatch", "Veículos hatchback compactos"),
+                ("SUV", "Utilitários esportivos"),
+                ("Picape", "Veículos de caçamba"),
+                ("Conversível", "Veículos com teto retrátil"),
+                ("Minivan", "Veículos para família com maior espaço"),
+                ("Coupé", "Veículos esportivos de 2 portas"),
+                ("Utilitário", "Veículos utilitários e comerciais"),
+                ("Elétrico", "Veículos 100% elétricos"),
+                ("Híbrido", "Veículos com motor híbrido"),
+            };
+            foreach (var (nome, desc) in categoriasSeed)
+            {
+                if (!dbContext.Categorias.Any(c => c.CatNome == nome))
                 {
-                    new Core.Entities.Categorias.Categoria(0, "Sedan", "Veículos sedan de 4 portas", true),
-                    new Core.Entities.Categorias.Categoria(0, "Hatch", "Veículos hatchback compactos", true),
-                    new Core.Entities.Categorias.Categoria(0, "SUV", "Utilitários esportivos", true),
-                    new Core.Entities.Categorias.Categoria(0, "Picape", "Veículos de caçamba", true),
-                    new Core.Entities.Categorias.Categoria(0, "Conversível", "Veículos com teto retrátil", true),
-                    new Core.Entities.Categorias.Categoria(0, "Minivan", "Veículos para família com maior espaço", true),
-                    new Core.Entities.Categorias.Categoria(0, "Coupé", "Veículos esportivos de 2 portas", true),
-                    new Core.Entities.Categorias.Categoria(0, "Utilitário", "Veículos utilitários e comerciais", true),
-                    new Core.Entities.Categorias.Categoria(0, "Elétrico", "Veículos 100% elétricos", true),
-                    new Core.Entities.Categorias.Categoria(0, "Híbrido", "Veículos com motor híbrido", true),
-                };
-                dbContext.Categorias.AddRange(categorias);
-                dbContext.SaveChanges();
+                    dbContext.Categorias.Add(new Core.Entities.Categorias.Categoria(0, nome, desc, true));
+                }
             }
+            dbContext.SaveChanges();
 
             // Verificar se já existe usuario admin
             if (!dbContext.Usuarios.Any(u => u.UsuEmail == "admin@connectveiculos.com.br"))
