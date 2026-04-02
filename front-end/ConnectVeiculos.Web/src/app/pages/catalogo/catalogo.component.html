@@ -500,11 +500,13 @@
         <h2><span class="material-icons">event</span> Agendar Test Drive</h2>
         <p class="td-veiculo">{{ testDriveVeiculo.veiMarca }} {{ testDriveVeiculo.veiModelo }} {{ testDriveVeiculo.veiAno }}</p>
         <div class="td-form">
-          <input type="text" [(ngModel)]="tdNome" placeholder="Seu nome *" />
-          <input type="tel" [(ngModel)]="tdTelefone" placeholder="(00) 00000-0000 *" (input)="formatarTdTelefone()" maxlength="15" />
+          <input type="text" [(ngModel)]="tdNome" placeholder="Seu nome" class="required-input" />
+          <input type="tel" [(ngModel)]="tdTelefone" placeholder="Telefone / WhatsApp" class="required-input" (input)="formatarTdTelefone()" maxlength="15" />
           <input type="email" [(ngModel)]="tdEmail" placeholder="E-mail" />
           <div class="td-row">
-            <input type="date" [(ngModel)]="tdData" (change)="onTdDataChange()" />
+            <div class="td-date-wrapper">
+              <input type="date" [(ngModel)]="tdData" [min]="tdMinData" (change)="onTdDataChange(); $any($event.target).blur()" />
+            </div>
             <select [(ngModel)]="tdHorario">
               <option value="">Horário</option>
               @for (h of horariosDisponiveis; track h) {
@@ -566,7 +568,7 @@
       <p class="fav-desc">Para favoritar veiculos e nao perder suas escolhas, informe seu e-mail. Assim voce pode acessar seus favoritos de qualquer dispositivo!</p>
       <div class="fav-form">
         <div class="fav-field">
-          <label>E-mail *</label>
+          <label class="required">E-mail</label>
           <input type="email" [(ngModel)]="favoritoEmail" placeholder="seu@email.com" />
         </div>
         <div class="fav-field">

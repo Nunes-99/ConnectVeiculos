@@ -18,3 +18,5 @@ export * from './despesa.service';
 export * from './lead.service';
 export * from './favorito.service';
 export * from './toast.service';
+export * from './negociacao.service';
+export * from './notificacao.service';

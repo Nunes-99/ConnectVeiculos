@@ -35,6 +35,21 @@ export class LogsComponent implements OnInit {
   tabelas: string[] = [];
   acoes: string[] = [];
 
+  acaoLabels: Record<string, string> = {
+    'INSERT': 'Cadastro',
+    'UPDATE': 'Alteração',
+    'DELETE': 'Exclusão'
+  };
+
+  tabelaLabels: Record<string, string> = {
+    'Usuario': 'Usuário',
+    'Veiculo': 'Veículo',
+    'Loja': 'Loja',
+    'Categoria': 'Categoria',
+    'Acesso': 'Acesso',
+    'Venda': 'Venda'
+  };
+
   ngOnInit(): void {
     this.loadFiltros();
     this.loadData();

@@ -120,11 +120,13 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   testDriveVeiculo: CatalogoVeiculo | null = null;
   tdNome = '';
   tdTelefone = '';
+  tdWhatsApp = '';
   tdEmail = '';
   tdData = '';
   tdHorario = '';
   tdObs = '';
   tdEnviado = false;
+  tdMinData = '';
   todosHorarios = ['08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
   horariosDisponiveis: string[] = [...this.todosHorarios];
 
@@ -566,8 +568,10 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   // ==========================================
   abrirTestDrive(veiculo: CatalogoVeiculo): void {
     this.testDriveVeiculo = veiculo;
-    this.tdNome = ''; this.tdTelefone = ''; this.tdEmail = ''; this.tdData = ''; this.tdHorario = ''; this.tdObs = '';
+    this.tdNome = ''; this.tdTelefone = ''; this.tdWhatsApp = ''; this.tdEmail = ''; this.tdData = ''; this.tdHorario = ''; this.tdObs = '';
     this.tdEnviado = false;
+    const hoje = new Date();
+    this.tdMinData = hoje.toISOString().split('T')[0];
     this.horariosDisponiveis = [...this.todosHorarios];
     this.showTestDrive = true;
   }
@@ -582,8 +586,22 @@ export class CatalogoComponent implements OnInit, OnDestroy {
         const ocupados = tds
           .filter(td => td.tdrStatus !== 'X' && td.tdrDataAgendamento?.split('T')[0] === this.tdData)
           .map(td => td.tdrHorario);
-        this.horariosDisponiveis = this.todosHorarios.filter(h => !ocupados.includes(h));
-        if (ocupados.includes(this.tdHorario)) {
+        let disponiveis = this.todosHorarios.filter(h => !ocupados.includes(h));
+
+        // Filtra horários já passados quando a data selecionada é hoje
+        const hoje = new Date();
+        const hojeStr = hoje.toISOString().split('T')[0];
+        if (this.tdData === hojeStr) {
+          const horaAtual = hoje.getHours();
+          const minutoAtual = hoje.getMinutes();
+          disponiveis = disponiveis.filter(h => {
+            const [hora, minuto] = h.split(':').map(Number);
+            return hora > horaAtual || (hora === horaAtual && minuto > minutoAtual);
+          });
+        }
+
+        this.horariosDisponiveis = disponiveis;
+        if (!this.horariosDisponiveis.includes(this.tdHorario)) {
           this.tdHorario = '';
         }
       }
@@ -602,6 +620,18 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     }
   }
 
+  formatarTdWhatsApp(): void {
+    let v = this.tdWhatsApp.replace(/\D/g, '');
+    if (v.length > 11) v = v.substring(0, 11);
+    if (v.length > 6) {
+      this.tdWhatsApp = `(${v.substring(0, 2)}) ${v.substring(2, 7)}-${v.substring(7)}`;
+    } else if (v.length > 2) {
+      this.tdWhatsApp = `(${v.substring(0, 2)}) ${v.substring(2)}`;
+    } else if (v.length > 0) {
+      this.tdWhatsApp = `(${v}`;
+    }
+  }
+
   fecharTestDrive(): void {
     this.showTestDrive = false;
     this.testDriveVeiculo = null;
@@ -614,6 +644,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
       lojaId: this.lojaId,
       nomeCliente: this.tdNome,
       telefone: this.tdTelefone,
+      whatsApp: this.tdWhatsApp || this.tdTelefone,
       email: this.tdEmail,
       dataAgendamento: this.tdData,
       horario: this.tdHorario,

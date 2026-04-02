@@ -1,13 +1,16 @@
 import { Component, OnInit, OnDestroy, inject, HostListener, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
-import { SignalRService, Notificacao, AuthService } from '../../../core/services';
+import { SignalRService, Notificacao, AuthService, NotificacaoService, NotificacaoDB } from '../../../core/services';
 
-interface NotificacaoUI extends Notificacao {
+interface NotificacaoUI {
   id: number;
+  dbId: number | null;
   lida: boolean;
   titulo: string;
   mensagem: string;
+  tipo: string;
+  timestamp: Date;
 }
 
 @Component({
@@ -20,6 +23,7 @@ interface NotificacaoUI extends Notificacao {
 export class NotificationsComponent implements OnInit, OnDestroy {
   private signalRService = inject(SignalRService);
   private authService = inject(AuthService);
+  private notificacaoService = inject(NotificacaoService);
   private elementRef = inject(ElementRef);
   private subscription: Subscription | null = null;
   private statusSubscription: Subscription | null = null;
@@ -35,10 +39,14 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     if (this.authService.isAuthenticated()) {
+      this.carregarNotificacoes();
+
       this.signalRService.iniciarConexao();
 
       this.subscription = this.signalRService.notificacoes$.subscribe(notificacao => {
         this.adicionarNotificacao(notificacao);
+        // Recarrega do backend para ter o ID persistido
+        setTimeout(() => this.carregarNotificacoes(), 1000);
       });
 
       this.statusSubscription = this.signalRService.connectionStatus$.subscribe(status => {
@@ -65,36 +73,65 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
   marcarComoLida(notificacao: NotificacaoUI): void {
     notificacao.lida = true;
+    if (notificacao.dbId) {
+      this.notificacaoService.marcarComoLida(notificacao.dbId).subscribe();
+    }
   }
 
   marcarTodasComoLidas(): void {
     this.notificacoes.forEach(n => n.lida = true);
+    this.notificacaoService.marcarTodasComoLidas().subscribe();
   }
 
   limparNotificacoes(): void {
+    this.marcarTodasComoLidas();
     this.notificacoes = [];
     this.showDropdown = false;
   }
 
   removerNotificacao(id: number): void {
+    const notificacao = this.notificacoes.find(n => n.id === id);
+    if (notificacao && !notificacao.lida && notificacao.dbId) {
+      this.notificacaoService.marcarComoLida(notificacao.dbId).subscribe();
+    }
     this.notificacoes = this.notificacoes.filter(n => n.id !== id);
+  }
+
+  private carregarNotificacoes(): void {
+    this.notificacaoService.listar().subscribe({
+      next: (notificacoes) => {
+        this.notificacoes = notificacoes.map(n => this.mapearNotificacaoDB(n));
+      }
+    });
+  }
+
+  private mapearNotificacaoDB(n: NotificacaoDB): NotificacaoUI {
+    return {
+      id: ++this.idCounter,
+      dbId: n.notId,
+      lida: n.notLida,
+      titulo: n.notTitulo,
+      mensagem: n.notMensagem,
+      tipo: n.notTipo || 'Sistema',
+      timestamp: new Date(n.notCriadaEm)
+    };
   }
 
   private adicionarNotificacao(notificacao: Notificacao): void {
     const { titulo, mensagem } = this.processarNotificacao(notificacao);
 
     const notificacaoUI: NotificacaoUI = {
-      ...notificacao,
       id: ++this.idCounter,
+      dbId: notificacao.dados?.notificacaoId || null,
       lida: false,
       titulo,
       mensagem,
+      tipo: notificacao.tipo,
       timestamp: new Date(notificacao.timestamp)
     };
 
     this.notificacoes.unshift(notificacaoUI);
 
-    // Limitar a 50 notificacoes
     if (this.notificacoes.length > 50) {
       this.notificacoes = this.notificacoes.slice(0, 50);
     }
@@ -105,27 +142,27 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       case 'NOVA_VENDA':
         return {
           titulo: 'Nova Venda',
-          mensagem: `Venda registrada: ${notificacao.dados.veiculoNome || 'Veiculo'}`
+          mensagem: `Venda registrada: ${notificacao.dados.veiculoNome || 'Veículo'}`
         };
       case 'NOVO_VEICULO':
         return {
-          titulo: 'Novo Veiculo',
-          mensagem: `Veiculo cadastrado: ${notificacao.dados.marca || ''} ${notificacao.dados.modelo || ''}`
+          titulo: 'Novo Veículo',
+          mensagem: `Veículo cadastrado: ${notificacao.dados.marca || ''} ${notificacao.dados.modelo || ''}`
         };
       case 'VEICULO_RESERVADO':
         return {
-          titulo: 'Veiculo Reservado',
+          titulo: 'Veículo Reservado',
           mensagem: `${notificacao.dados.marca || ''} ${notificacao.dados.modelo || ''} foi reservado`
         };
       case 'ESTORNO_VENDA':
         return {
           titulo: 'Venda Estornada',
-          mensagem: `Venda estornada: ${notificacao.dados.veiculoNome || 'Veiculo'}`
+          mensagem: `Venda estornada: ${notificacao.dados.veiculoNome || 'Veículo'}`
         };
       default:
         return {
-          titulo: 'Notificacao',
-          mensagem: notificacao.dados?.mensagem || 'Nova notificacao recebida'
+          titulo: 'Notificação',
+          mensagem: notificacao.dados?.mensagem || 'Nova notificação recebida'
         };
     }
   }
@@ -138,9 +175,9 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     const dias = Math.floor(diff / 86400000);
 
     if (minutos < 1) return 'Agora';
-    if (minutos < 60) return `${minutos}m atras`;
-    if (horas < 24) return `${horas}h atras`;
-    return `${dias}d atras`;
+    if (minutos < 60) return `${minutos}m atrás`;
+    if (horas < 24) return `${horas}h atrás`;
+    return `${dias}d atrás`;
   }
 
   getIcone(tipo: string): string {

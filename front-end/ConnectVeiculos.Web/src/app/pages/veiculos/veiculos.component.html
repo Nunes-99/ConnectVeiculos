@@ -4,12 +4,12 @@
     <div class="header-actions">
       <button class="btn-success" (click)="exportarExcel()">
         <span class="material-icons">download</span>
-        Exportar Excel
+        Exportar Dados
       </button>
       <label class="btn-info" [class.disabled]="importando">
         <span class="material-icons">upload</span>
-        {{ importando ? 'Importando...' : 'Importar Excel' }}
-        <input type="file" accept=".xlsx,.xls" (change)="onImportarExcel($event)" [disabled]="importando" hidden />
+        {{ importando ? 'Importando...' : 'Importar Dados' }}
+        <input type="file" accept=".xlsx,.xls,.csv,.ods" (change)="onImportarExcel($event)" [disabled]="importando" hidden />
       </label>
       <button class="btn-primary" (click)="openModal()">
         <span class="material-icons">add</span>
@@ -71,7 +71,7 @@
       <table>
         <thead>
           <tr>
-            <th>Marca/Modelo</th>
+            <th>Modelo/Marca</th>
             <th>Ano</th>
             <th>Placa</th>
             <th>Cor</th>
@@ -84,8 +84,8 @@
           @for (veiculo of veiculosPaginados; track veiculo.veiId) {
             <tr>
               <td data-label="Veículo">
-                <strong>{{ veiculo.veiMarca }}</strong><br/>
-                <span class="text-muted">{{ veiculo.veiModelo }}</span>
+                <strong>{{ veiculo.veiModelo }}</strong><br/>
+                <span class="text-muted">{{ veiculo.veiMarca }}</span>
               </td>
               <td data-label="Ano">{{ veiculo.veiAno }}</td>
               <td data-label="Placa">{{ veiculo.veiPlaca || '-' }}</td>
@@ -176,7 +176,7 @@
           <div class="form-row">
             <div class="form-group">
               <label class="required">Marca</label>
-              <input type="text" formControlName="veiMarca" placeholder="Ex: Toyota"
+              <input type="text" formControlName="veiMarca"
                      [class.invalid]="hasError('veiMarca', 'required') || hasError('veiMarca', 'minlength')" />
               @if (hasError('veiMarca', 'required')) {
                 <span class="field-error">Marca é obrigatória</span>
@@ -187,7 +187,7 @@
             </div>
             <div class="form-group">
               <label class="required">Modelo</label>
-              <input type="text" formControlName="veiModelo" placeholder="Ex: Corolla"
+              <input type="text" formControlName="veiModelo"
                      [class.invalid]="hasError('veiModelo', 'required') || hasError('veiModelo', 'minlength')" />
               @if (hasError('veiModelo', 'required')) {
                 <span class="field-error">Modelo é obrigatório</span>
@@ -200,7 +200,7 @@
           <div class="form-row">
             <div class="form-group">
               <label class="required">Ano</label>
-              <input type="tel" formControlName="veiAno"
+              <input type="tel" formControlName="veiAno" maxlength="4"
                      [class.invalid]="hasError('veiAno', 'required') || hasError('veiAno', 'min') || hasError('veiAno', 'max')" />
               @if (hasError('veiAno', 'required')) {
                 <span class="field-error">Ano é obrigatório</span>
@@ -211,13 +211,13 @@
             </div>
             <div class="form-group">
               <label>Cor</label>
-              <input type="text" formControlName="veiCor" placeholder="Ex: Prata" />
+              <input type="text" formControlName="veiCor" />
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label class="required">Placa</label>
-              <input type="text" formControlName="veiPlaca" appMask="placa" placeholder="ABC-1234"
+              <input type="text" formControlName="veiPlaca" appMask="placa"
                      [class.invalid]="hasError('veiPlaca', 'required')" />
               @if (hasError('veiPlaca', 'required')) {
                 <span class="field-error">Placa é obrigatória</span>
@@ -230,7 +230,7 @@
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label>KM</label>
+              <label>Quilometragem</label>
               <input type="tel" formControlName="veiKm" />
             </div>
             <div class="form-group">
@@ -257,9 +257,19 @@
             </div>
           </div>
           <div class="form-row">
+            <div class="form-group">
+              <label>Dono Atual</label>
+              <input type="text" formControlName="veiDonoAtual" />
+            </div>
+            <div class="form-group">
+              <label>Celular do Dono</label>
+              <input type="text" formControlName="veiDonoCelular" appMask="celular" />
+            </div>
+          </div>
+          <div class="form-row">
             <div class="form-group full-width">
               <label>Observação</label>
-              <textarea formControlName="veiObservacao" rows="3" placeholder="Observações sobre o veículo..."></textarea>
+              <textarea formControlName="veiObservacao" rows="3"></textarea>
             </div>
           </div>
 

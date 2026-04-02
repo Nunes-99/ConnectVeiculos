@@ -1,6 +1,10 @@
+using ConnectVeiculos.Core.Entities.Notificacoes;
+using ConnectVeiculos.Core.Interfaces.Database.Repositories.Notificacoes;
+using ConnectVeiculos.Core.Interfaces.Database.Repositories.Usuarios;
 using ConnectVeiculos.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ConnectVeiculos.Infrastructure.Hubs
 {
@@ -63,14 +67,25 @@ namespace ConnectVeiculos.Infrastructure.Hubs
     public class NotificacaoHubService : INotificacaoHubService
     {
         private readonly IHubContext<NotificacaoHub> _hubContext;
+        private readonly IServiceScopeFactory _scopeFactory;
 
-        public NotificacaoHubService(IHubContext<NotificacaoHub> hubContext)
+        public NotificacaoHubService(
+            IHubContext<NotificacaoHub> hubContext,
+            IServiceScopeFactory scopeFactory)
         {
             _hubContext = hubContext;
+            _scopeFactory = scopeFactory;
         }
 
         public async Task EnviarParaUsuarioAsync(int usuarioId, string tipo, object dados)
         {
+            using var scope = _scopeFactory.CreateScope();
+            var notificacaoRepo = scope.ServiceProvider.GetRequiredService<INotificacaoRepository>();
+
+            var (titulo, mensagem) = GerarTituloMensagem(tipo, dados);
+            var notificacao = Notificacao.Criar(usuarioId, titulo, mensagem, NotificacaoTipo.Sistema);
+            await notificacaoRepo.AddAsync(notificacao);
+
             await _hubContext.Clients.Group($"user_{usuarioId}")
                 .SendAsync("ReceberNotificacao", new { tipo, dados, timestamp = DateTime.UtcNow });
         }
@@ -83,8 +98,36 @@ namespace ConnectVeiculos.Infrastructure.Hubs
 
         public async Task EnviarParaTodosAsync(string tipo, object dados)
         {
+            using var scope = _scopeFactory.CreateScope();
+            var notificacaoRepo = scope.ServiceProvider.GetRequiredService<INotificacaoRepository>();
+            var usuarioRepo = scope.ServiceProvider.GetRequiredService<IUsuarioRepository>();
+
+            var usuarios = await usuarioRepo.GetAllAsync();
+            var (titulo, mensagem) = GerarTituloMensagem(tipo, dados);
+            var timestamp = DateTime.UtcNow;
+
+            foreach (var usuario in usuarios)
+            {
+                var notificacao = Notificacao.Criar(usuario.UsuId, titulo, mensagem, NotificacaoTipo.Sistema);
+                await notificacaoRepo.AddAsync(notificacao);
+            }
+
             await _hubContext.Clients.All
-                .SendAsync("ReceberNotificacao", new { tipo, dados, timestamp = DateTime.UtcNow });
+                .SendAsync("ReceberNotificacao", new { tipo, dados, timestamp });
+        }
+
+        private static (string titulo, string mensagem) GerarTituloMensagem(string tipo, object dados)
+        {
+            var props = dados.GetType().GetProperties().ToDictionary(p => p.Name, p => p.GetValue(dados)?.ToString() ?? "");
+
+            return tipo switch
+            {
+                "NOVA_VENDA" => ("Nova Venda", $"Venda registrada: {props.GetValueOrDefault("veiculoNome", "Veículo")}"),
+                "NOVO_VEICULO" => ("Novo Veículo", $"Veículo cadastrado: {props.GetValueOrDefault("marca", "")} {props.GetValueOrDefault("modelo", "")}"),
+                "VEICULO_RESERVADO" => ("Veículo Reservado", $"{props.GetValueOrDefault("marca", "")} {props.GetValueOrDefault("modelo", "")} foi reservado"),
+                "ESTORNO_VENDA" => ("Venda Estornada", $"Venda estornada: {props.GetValueOrDefault("veiculoNome", "Veículo")}"),
+                _ => ("Notificação", "Nova notificação recebida")
+            };
         }
     }
 }

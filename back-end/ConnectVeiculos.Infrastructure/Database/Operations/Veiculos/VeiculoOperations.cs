@@ -42,7 +42,7 @@ namespace ConnectVeiculos.Infrastructure.Database.Operations.Veiculos
                 FROM Veiculo v
                 INNER JOIN Loja l ON v.R_LojId = l.LojId
                 INNER JOIN Categoria c ON v.R_CatId = c.CatId
-                WHERE (v.VeiSts = 'D' OR v.VeiSts = 'R')
+                WHERE (v.VeiSts = 'D' OR v.VeiSts = 'R' OR v.VeiSts = 'V')
                 AND (@LojaId IS NULL OR v.R_LojId = @LojaId)
                 AND (@Pesquisa IS NULL OR @Pesquisa = ''
                     OR v.VeiMarca LIKE '%' || @Pesquisa || '%'

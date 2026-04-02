@@ -1,5 +1,5 @@
 <div class="dashboard">
-  <h1>Dashboard</h1>
+  <h1>Painel Geral</h1>
 
   @if (loading) {
     <div class="loading">Carregando estatísticas...</div>
@@ -12,7 +12,7 @@
         </div>
         <div class="stat-info">
           <span class="stat-value">{{ dashboard.totalVeiculos }}</span>
-          <span class="stat-label">Total Veículos</span>
+          <span class="stat-label">Veículos cadastrados</span>
         </div>
       </div>
 
@@ -22,7 +22,7 @@
         </div>
         <div class="stat-info">
           <span class="stat-value">{{ dashboard.veiculosDisponiveis }}</span>
-          <span class="stat-label">Disponíveis</span>
+          <span class="stat-label">Em estoque</span>
         </div>
       </div>
 
@@ -43,6 +43,7 @@
         <div class="stat-info">
           <span class="stat-value">{{ dashboard.veiculosReservados }}</span>
           <span class="stat-label">Reservados</span>
+
         </div>
       </div>
     </div>
@@ -55,7 +56,7 @@
         </div>
         <div class="stat-info">
           <span class="stat-value">{{ formatarPreco(dashboard.valorTotalEstoque) }}</span>
-          <span class="stat-label">Valor Total em Estoque</span>
+          <span class="stat-label">Valor total em estoque</span>
         </div>
       </div>
 
@@ -65,7 +66,7 @@
         </div>
         <div class="stat-info">
           <span class="stat-value">{{ formatarPreco(dashboard.valorMedioVeiculo) }}</span>
-          <span class="stat-label">Valor Médio por Veículo</span>
+          <span class="stat-label">Valor médio por veículo</span>
         </div>
       </div>
     </div>
@@ -79,6 +80,7 @@
         <div class="stat-info">
           <span class="stat-value">{{ leadsEsteMes }}</span>
           <span class="stat-label">Leads este mês</span>
+
         </div>
       </div>
 
@@ -88,7 +90,7 @@
         </div>
         <div class="stat-info">
           <span class="stat-value">{{ testDrivesPendentes }}</span>
-          <span class="stat-label">Test Drives pendentes</span>
+          <span class="stat-label">Test drives pendentes</span>
         </div>
       </div>
 
@@ -99,6 +101,7 @@
         <div class="stat-info">
           <span class="stat-value">{{ veiculosParados30Dias }}</span>
           <span class="stat-label">Veículos parados há +30 dias</span>
+
         </div>
       </div>
 
@@ -109,6 +112,7 @@
         <div class="stat-info">
           <span class="stat-value">{{ tempoMedioVendaDias }} dias</span>
           <span class="stat-label">Tempo médio de venda</span>
+
         </div>
       </div>
 
@@ -119,6 +123,7 @@
         <div class="stat-info">
           <span class="stat-value">{{ margemLucroMedia }}%</span>
           <span class="stat-label">Margem de lucro média</span>
+
         </div>
       </div>
     </div>
@@ -182,8 +187,8 @@
               @for (veiculo of alertasPaginados; track veiculo.veiId) {
                 <tr>
                   <td data-label="Veículo">
-                    <strong>{{ veiculo.marca }}</strong>
-                    <span class="text-muted">{{ veiculo.modelo }}</span>
+                    <strong>{{ veiculo.modelo }}</strong>
+                    <span class="text-muted">{{ veiculo.marca }}</span>
                   </td>
                   <td data-label="Ano">{{ veiculo.ano }}</td>
                   <td data-label="Loja">{{ veiculo.loja }}</td>
@@ -413,8 +418,8 @@
                   <tr>
                     <td class="rank" data-label="#">{{ (topVeiculosPage - 1) * pageSize + i + 1 }}</td>
                     <td data-label="Veículo">
-                      <strong>{{ veiculo.marca }}</strong>
-                      <span class="text-muted">{{ veiculo.modelo }}</span>
+                      <strong>{{ veiculo.modelo }}</strong>
+                      <span class="text-muted">{{ veiculo.marca }}</span>
                     </td>
                     <td data-label="Qtd Vendida">{{ veiculo.quantidadeVendida }}</td>
                     <td data-label="Valor Total">{{ formatarPreco(veiculo.valorTotalVendas) }}</td>
@@ -456,8 +461,8 @@
                 @for (veiculo of recentesPaginados; track veiculo.veiId) {
                   <tr>
                     <td data-label="Veículo">
-                      <strong>{{ veiculo.marca }}</strong>
-                      <span class="text-muted">{{ veiculo.modelo }}</span>
+                      <strong>{{ veiculo.modelo }}</strong>
+                      <span class="text-muted">{{ veiculo.marca }}</span>
                     </td>
                     <td data-label="Ano">{{ veiculo.ano }}</td>
                     <td data-label="Preço">{{ formatarPreco(veiculo.preco) }}</td>

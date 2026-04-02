@@ -294,6 +294,12 @@ table {
 
     &.required {
       color: var(--text-primary);
+      font-weight: normal;
+
+      &::after {
+        content: ' *';
+        color: #e53935;
+      }
     }
   }
 

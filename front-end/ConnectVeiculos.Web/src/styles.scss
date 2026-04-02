@@ -32,9 +32,14 @@ input, select, textarea {
   background: var(--bg-primary);
 }
 
-// Labels de campos obrigatorios em negrito
+// Labels de campos obrigatorios com asterisco vermelho
 label.required {
-  font-weight: bold !important;
+  font-weight: normal !important;
+
+  &::after {
+    content: ' *';
+    color: #e53935;
+  }
 }
 
 // Remove setas (spinners) de todos os inputs numericos

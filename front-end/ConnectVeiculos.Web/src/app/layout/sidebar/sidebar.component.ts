@@ -34,7 +34,7 @@ export class SidebarComponent {
     {
       title: 'Principal',
       items: [
-        { label: 'Dashboard', icon: 'dashboard', route: '/dashboard' },
+        { label: 'Painel Geral', icon: 'dashboard', route: '/dashboard' },
         { label: 'Veículos', icon: 'directions_car', route: '/veiculos' },
         { label: 'Vendas', icon: 'point_of_sale', route: '/vendas' },
         { label: 'Relatórios', icon: 'assessment', route: '/relatorios' },
@@ -46,13 +46,13 @@ export class SidebarComponent {
         { label: 'Usuários', icon: 'people', route: '/usuarios' },
         { label: 'Lojas', icon: 'store', route: '/lojas' },
         { label: 'Categorias', icon: 'category', route: '/categorias' },
-        { label: 'Acessos', icon: 'security', route: '/acessos' },
       ]
     },
     {
-      title: 'CRM',
+      title: 'Comercial',
       items: [
-        { label: 'Leads', icon: 'people_outline', route: '/leads' },
+        { label: 'Captação de Clientes', icon: 'people_outline', route: '/leads' },
+        { label: 'Negociações', icon: 'handshake', route: '/negociacoes' },
         { label: 'Test Drives', icon: 'event', route: '/test-drives' },
         { label: 'Favoritos', icon: 'favorite', route: '/favoritos' },
       ]

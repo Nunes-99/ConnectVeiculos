@@ -9,7 +9,7 @@
       <select [(ngModel)]="filtroTabela" (change)="aplicarFiltros()">
         <option value="">Todas</option>
         @for (tabela of tabelas; track tabela) {
-          <option [value]="tabela">{{ tabela }}</option>
+          <option [value]="tabela">{{ tabelaLabels[tabela] || tabela }}</option>
         }
       </select>
     </div>
@@ -18,7 +18,7 @@
       <select [(ngModel)]="filtroAcao" (change)="aplicarFiltros()">
         <option value="">Todas</option>
         @for (acao of acoes; track acao) {
-          <option [value]="acao">{{ acao }}</option>
+          <option [value]="acao">{{ acaoLabels[acao] || acao }}</option>
         }
       </select>
     </div>
@@ -57,10 +57,10 @@
           @for (log of logs; track log.logId) {
             <tr>
               <td data-label="Data/Hora">{{ formatarData(log.logDataHora) }}</td>
-              <td data-label="Tabela">{{ log.logTabela }}</td>
+              <td data-label="Tabela">{{ tabelaLabels[log.logTabela] || log.logTabela }}</td>
               <td data-label="Ação">
                 <span class="badge" [class]="getAcaoClass(log.logAcao)">
-                  {{ log.logAcao }}
+                  {{ acaoLabels[log.logAcao] || log.logAcao }}
                 </span>
               </td>
               <td data-label="Registro">{{ log.logRegistroId || '-' }}</td>
@@ -109,11 +109,11 @@
           </div>
           <div class="detalhe-item">
             <label>Tabela</label>
-            <span>{{ logSelecionado.logTabela }}</span>
+            <span>{{ tabelaLabels[logSelecionado.logTabela] || logSelecionado.logTabela }}</span>
           </div>
           <div class="detalhe-item">
             <label>Ação</label>
-            <span class="badge" [class]="getAcaoClass(logSelecionado.logAcao)">{{ logSelecionado.logAcao }}</span>
+            <span class="badge" [class]="getAcaoClass(logSelecionado.logAcao)">{{ acaoLabels[logSelecionado.logAcao] || logSelecionado.logAcao }}</span>
           </div>
           <div class="detalhe-item">
             <label>ID do Registro</label>
