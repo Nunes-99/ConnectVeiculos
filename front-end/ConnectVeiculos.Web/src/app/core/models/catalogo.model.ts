@@ -8,6 +8,7 @@ export interface CatalogoVeiculo {
   veiPreco: number;
   veiPlaca: string;
   veiObservacao?: string;
+  veiOpcionais?: string;
   lojaNome: string;
   lojaCidade: string;
   lojaEstado: string;

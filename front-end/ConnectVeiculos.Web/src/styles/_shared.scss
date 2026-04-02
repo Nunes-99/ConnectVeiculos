@@ -408,13 +408,14 @@ table {
   }
 
   .modal-overlay {
-    align-items: flex-end;
+    align-items: stretch;
   }
 
   .modal {
     max-width: 100%;
-    max-height: 95vh;
-    border-radius: 0.75rem 0.75rem 0 0;
+    max-height: 100vh;
+    height: 100vh;
+    border-radius: 0;
 
     &.modal-lg {
       max-width: 100%;
@@ -423,6 +424,10 @@ table {
 
   .modal-header {
     padding: 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bg-primary);
 
     h2 {
       font-size: 1.125rem;
@@ -431,10 +436,15 @@ table {
 
   .modal-body {
     padding: 1rem;
+    flex: 1;
+    overflow-y: auto;
   }
 
   .modal-footer {
     padding: 0.75rem 1rem;
+    position: sticky;
+    bottom: 0;
+    background: var(--bg-primary);
   }
 
   .form-row {

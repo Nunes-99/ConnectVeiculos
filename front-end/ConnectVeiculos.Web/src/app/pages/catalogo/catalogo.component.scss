@@ -352,6 +352,24 @@
     }
   }
 
+  .det-opcionais {
+    margin-bottom: 1.5rem;
+    h4 {
+      margin: 0 0 0.75rem; font-size: 0.85rem; color: #1a237e;
+      display: flex; align-items: center; gap: 0.4rem; font-weight: 600;
+      .material-icons { font-size: 1.1rem; }
+    }
+    .opcionais-tags {
+      display: flex; flex-wrap: wrap; gap: 0.4rem;
+    }
+    .opcional-tag {
+      display: inline-flex; align-items: center; gap: 0.25rem;
+      padding: 0.3rem 0.6rem; background: #e8f5e9; color: #2e7d32;
+      border-radius: 1rem; font-size: 0.75rem; font-weight: 500;
+      .material-icons { font-size: 0.85rem; }
+    }
+  }
+
   .det-observacao {
     background: #f8f9fa; border: 1px solid #e0e0e0; border-left: 4px solid #1a237e;
     padding: 1rem 1.2rem; border-radius: 0 8px 8px 0; margin-bottom: 1.5rem;

@@ -11,6 +11,7 @@ namespace ConnectVeiculos.Application.ViewModels.Catalogo
         public decimal VeiPreco { get; set; }
         public string VeiPlaca { get; set; }
         public string VeiObservacao { get; set; }
+        public string VeiOpcionais { get; set; }
         public string LojaNome { get; set; }
         public string LojaCidade { get; set; }
         public string LojaEstado { get; set; }

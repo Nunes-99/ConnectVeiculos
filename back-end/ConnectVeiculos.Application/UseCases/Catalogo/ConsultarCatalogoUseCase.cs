@@ -87,6 +87,7 @@ namespace ConnectVeiculos.Application.UseCases.Catalogo
                         VeiPreco = v.VeiPreco,
                         VeiPlaca = v.VeiPlaca,
                         VeiObservacao = v.VeiObservacao,
+                        VeiOpcionais = v.VeiOpcionais,
                         CategoriaNome = v.Categoria?.CatNome ?? "",
                         LojaNome = loja?.LojNome ?? "",
                         LojaCidade = loja?.LojCidade ?? "",

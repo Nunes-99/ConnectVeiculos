@@ -385,15 +385,28 @@
             }
           </div>
 
+          <!-- Informações Adicionais -->
+          @if (veiculoSelecionado.veiOpcionais) {
+            <div class="det-opcionais">
+              <h4><span class="material-icons">checklist</span> Informações Adicionais</h4>
+              <div class="opcionais-tags">
+                @for (opcional of veiculoSelecionado.veiOpcionais.split(','); track opcional) {
+                  <span class="opcional-tag">
+                    <span class="material-icons">check_circle</span>
+                    {{ opcional }}
+                  </span>
+                }
+              </div>
+            </div>
+          }
+
           <!-- Observacoes -->
-          <div class="det-observacao">
-            <h4><span class="material-icons">description</span> Observacoes</h4>
-            @if (veiculoSelecionado.veiObservacao) {
+          @if (veiculoSelecionado.veiObservacao) {
+            <div class="det-observacao">
+              <h4><span class="material-icons">description</span> Observações</h4>
               <p>{{ veiculoSelecionado.veiObservacao }}</p>
-            } @else {
-              <p class="sem-obs">Nenhuma observacao registrada para este veiculo.</p>
-            }
-          </div>
+            </div>
+          }
 
           <div class="det-loja">
             <span class="material-icons">store</span>
