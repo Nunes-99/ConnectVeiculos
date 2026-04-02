@@ -170,38 +170,33 @@
           </div>
           <h3 class="section-title">Endereço</h3>
           <div class="form-row">
-            <div class="form-group" style="flex: 0 0 180px;">
+            <div class="form-group">
               <label>CEP</label>
               <input type="text" formControlName="cep" placeholder="00000-000" appMask="cep" (blur)="buscarCep()" />
             </div>
-            <div class="form-group" style="flex: 1; display: flex; align-items: flex-end;">
-              <button type="button" class="btn-secondary" (click)="buscarCep()" [disabled]="loadingCep" style="white-space: nowrap;">
-                {{ loadingCep ? 'Buscando...' : 'Buscar CEP' }}
-              </button>
+            <div class="form-group">
+              <label>Logradouro</label>
+              <input type="text" formControlName="logradouro" placeholder="Rua, Avenida..." readonly />
             </div>
           </div>
-          <div class="form-group">
-            <label>Logradouro</label>
-            <input type="text" formControlName="logradouro" placeholder="Rua, Avenida..." readonly />
-          </div>
           <div class="form-row">
-            <div class="form-group" style="flex: 0 0 120px;">
+            <div class="form-group">
               <label>Número</label>
               <input type="text" formControlName="numero" placeholder="Nº" />
             </div>
-            <div class="form-group" style="flex: 1;">
+            <div class="form-group">
               <label>Bairro</label>
               <input type="text" formControlName="bairro" placeholder="Bairro" readonly />
             </div>
           </div>
           <div class="form-row">
-            <div class="form-group" style="flex: 1;">
+            <div class="form-group">
               <label>Cidade</label>
               <input type="text" formControlName="cidade" placeholder="Cidade" readonly />
             </div>
-            <div class="form-group" style="flex: 0 0 80px;">
+            <div class="form-group">
               <label>UF</label>
-              <input type="text" formControlName="uf" placeholder="UF" readonly />
+              <input type="text" formControlName="uf" placeholder="UF" maxlength="2" readonly />
             </div>
           </div>
 
