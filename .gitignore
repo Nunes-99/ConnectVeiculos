@@ -37,6 +37,14 @@ back-end/ConnectVeiculos.API/appsettings.Development.json
 back-end/ConnectVeiculos.API/appsettings.*.local.json
 .env
 
+# Salvaguardas extras de credenciais (case insensitive)
+*[Cc]redenciais*
+*[Ss]ecrets*
+*-PRODUCAO.txt
+*.pem
+*.key
+ssh-key-*
+
 # Testes E2E (Playwright outputs)
 test-results/
 playwright-report/
