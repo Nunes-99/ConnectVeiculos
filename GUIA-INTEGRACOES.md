@@ -116,12 +116,20 @@ A partir de agora:
 **Custo:** Gratis (organico). Pago se quiser Ads.
 **Resultado:** Veiculos aparecem no Marketplace e Instagram Shopping
 
+> ## Importante: dois "personagens" diferentes
+>
+> 1. **DEV (quem mantem o ConnectVeiculos)** — pode ja ter criado uma app no portal de devs do Meta para usar a Marketing API. Nao precisa fazer nada para sua loja.
+>
+> 2. **DONO DA LOJA (cliente final)** — voce e o dono da Pagina do Facebook, do Catalogo e da conta Meta Business. **Os veiculos serao publicados no SEU Catalogo, sob a SUA Pagina, com a SUA marca.**
+>
+> A app do dev (se existir) e a sua conta Meta Business sao independentes. O dev nao ve seus dados — apenas pode habilitar a integracao tecnica via Marketing API.
+
 ## 2.1 Criar conta Meta Business
 
 1. Acesse: https://business.facebook.com
 2. Clique em **"Criar conta"** (se nao tem) ou faca login
 3. Preencha:
-   - Nome da empresa: `Diamante Veiculos`
+   - Nome da empresa: nome da sua loja
    - Seu nome
    - Email de trabalho
 4. Confirme o email
@@ -130,7 +138,7 @@ A partir de agora:
 
 1. No Meta Business, va em **"Configuracoes"** → **"Contas"** → **"Paginas"**
 2. Clique em **"Adicionar"** → **"Adicionar uma pagina"**
-3. Selecione a pagina da Diamante Veiculos (se nao tem, crie uma em facebook.com/pages/create)
+3. Selecione a pagina da sua loja no Facebook (se nao tem, crie uma em facebook.com/pages/create)
 4. Confirme
 
 ## 2.3 Criar o Catalogo de Veiculos
@@ -139,7 +147,7 @@ A partir de agora:
 2. Clique em **"Criar catalogo"**
 3. Tipo: selecione **"Veiculos"**
 4. Configure:
-   - Nome: `Diamante Veiculos - Catalogo`
+   - Nome: `<Nome da sua loja> - Catalogo`
    - Conta de negocios: selecione a conta criada
 5. Clique em **"Criar"**
 
@@ -157,26 +165,53 @@ A partir de agora:
 
 > **Para teste local:** o Facebook nao consegue acessar `localhost`. Voce precisa publicar o backend em uma URL acessivel da internet (Oracle Cloud, ngrok, etc.) antes de configurar o feed.
 
-## 2.5 Obter Access Token (para push instantaneo)
+## 2.5 Obter Access Token PERMANENTE (System User Token)
 
-> Esta etapa e **opcional** - se nao fizer, o feed XML ainda funciona (so demora ate 1h).
+> Esta etapa e **opcional** - sem ela, o feed XML ainda funciona (atualizacao a cada 1h em vez de instantanea). Mas se for fazer, **use System User Token** (nao expira) em vez do token temporario do Graph Explorer (expira em 1-2h e quebra a integracao).
 
-1. Acesse: https://developers.facebook.com
+### 2.5.1 Criar app Meta tipo Business
+
+1. Acesse: https://developers.facebook.com/apps
 2. Clique em **"Meus apps"** → **"Criar aplicativo"**
-3. Tipo: **"Empresa"**
+3. Tipo: **"Empresa"** → **Avancar**
 4. Configure:
-   - Nome: `ConnectVeiculos Push`
+   - Nome: `ConnectVeiculos Catalog` (so voce ve, qualquer nome serve)
    - Email de contato
-   - Selecione a conta business criada
+   - Selecione sua conta Meta Business criada na 2.1
 5. No painel do app, va em **"Adicionar produtos"** → **"Marketing API"** → **"Configurar"**
-6. Va em **"Ferramentas"** → **"Explorador de Graph API"**
-7. Selecione o app `ConnectVeiculos Push`
-8. Clique em **"Gerar Access Token"** com as permissoes:
-   - `catalog_management`
-   - `business_management`
-9. Copie o token gerado (e temporario - 1-2 horas)
 
-> Para token permanente: voce precisa **trocar por um token de longa duracao**. Na pagina do explorador, clique no `i` (info) ao lado do token e siga o link para gerar um token de 60 dias. Para token permanente (sistema), siga: https://developers.facebook.com/docs/marketing-api/system-users/
+### 2.5.2 Criar System User na sua conta Meta Business
+
+> System User e um "usuario do sistema" que serve so pra integracoes — token nao expira.
+
+1. Acesse https://business.facebook.com → **Configuracoes**
+2. **Usuarios** → **Usuarios do sistema** → **"Adicionar"**
+3. Nome: `ConnectVeiculos System User`
+4. Funcao: **Admin**
+5. Salve
+
+### 2.5.3 Conceder acesso ao System User aos ativos
+
+1. Ainda em **Usuarios do sistema**, clique no usuario criado
+2. Clique em **"Adicionar ativos"**
+3. Selecione 3 tipos:
+   - **Apps**: marque o app criado em 2.5.1
+   - **Catalogos**: marque o catalogo criado em 2.3
+   - **Paginas**: marque sua Pagina conectada em 2.2
+4. Em cada um, marque permissao **"Controle total"**
+5. Salve
+
+### 2.5.4 Gerar o token permanente
+
+1. Ainda no System User, clique em **"Gerar token"**
+2. Selecione o app criado em 2.5.1
+3. Validade: **Nunca** (System User Tokens nao expiram, e isso que queremos)
+4. Marque os escopos:
+   - `catalog_management` (obrigatorio)
+   - `business_management` (obrigatorio)
+   - `pages_manage_metadata` (opcional, para postagem na Pagina)
+5. Clique em **"Gerar token"**
+6. **Copie o token agora** (comeca com `EAA...`) — nao da pra ver depois. Guarde em local seguro.
 
 ## 2.6 Obter o Catalog ID
 
@@ -186,12 +221,38 @@ A partir de agora:
 
 ## 2.7 Configurar no sistema
 
-1. Abra: `back-end/ConnectVeiculos.API/appsettings.json`
-2. Localize `FacebookCatalogSettings` e preencha:
+> **Atencao:** ao contrario de Mercado Livre, WhatsApp e SMTP (que tem UI no admin), Facebook ainda exige editar arquivo no servidor. Isso vai mudar em uma proxima versao do produto. Se voce nao tem acesso SSH, peca para quem cuida do deploy.
+
+**Opcao A — via env vars no `.env` da VM (recomendado em producao):**
+
+```bash
+# SSH na VM
+ssh -i sua-chave.key ubuntu@SEU_IP
+
+# Editar .env
+cd ~/ConnectVeiculos
+nano .env
+```
+
+Adicione/edite as 2 linhas:
+```
+FB_ACCESS_TOKEN=EAAxxxxxxxxxxxxx (token permanente do passo 2.5.4)
+FB_CATALOG_ID=123456789012345 (ID do passo 2.6)
+```
+
+Reinicie:
+```bash
+sudo docker compose restart backend-cliente
+```
+
+**Opcao B — via `appsettings.json` (so em desenvolvimento local):**
+
+1. Abra: `back-end/ConnectVeiculos.API/appsettings.Development.json`
+2. Adicione:
 ```json
 "FacebookCatalogSettings": {
-    "AccessToken": "COLE_O_ACCESS_TOKEN_AQUI",
-    "CatalogId": "COLE_O_CATALOG_ID_AQUI",
+    "AccessToken": "EAAxxxxxxxxxxxxx",
+    "CatalogId": "123456789012345",
     "ApiVersion": "v18.0"
 }
 ```
@@ -220,6 +281,14 @@ Para criar anuncios pagos do veiculo:
 **Custo:** Gratis (listagem). Pago se quiser Vehicle Ads.
 **Resultado:** Veiculos no Google Shopping e Vehicle Ads
 
+> ## Importante: dois "personagens" diferentes
+>
+> 1. **DEV (quem mantem o ConnectVeiculos)** — pode plugar credenciais do Cloud Console em uma proxima versao via UI. Por enquanto so via SSH no servidor.
+>
+> 2. **DONO DA LOJA (cliente final)** — voce e o dono da conta Google, do Merchant Center, do projeto Cloud e do dominio verificado. Voce paga o Google Ads se ativar (anuncios pagos sao opcionais; listagem e gratis).
+>
+> Os custos do Google Ads (se ativados) sao cobrados no cartao da SUA conta Google, nunca do dev.
+
 ## 3.1 Criar Google Merchant Center
 
 1. Acesse: https://merchants.google.com
@@ -229,7 +298,7 @@ Para criar anuncios pagos do veiculo:
    - Pais: **Brasil**
    - Fuso horario: **America/Sao_Paulo**
    - Moeda: **BRL**
-   - Nome da empresa: `Diamante Veiculos`
+   - Nome da empresa: nome da sua loja
    - Site: `https://connectveiculos.dev.br`
 5. Aceite os termos
 
@@ -252,7 +321,7 @@ Para criar anuncios pagos do veiculo:
    - Pais: **Brasil**, Idioma: **Portugues**
    - Destino: **Anuncios do Shopping** + **Listagens gratis**
    - Tipo de feed: **Programacao de busca**
-   - Nome: `Diamante Veiculos`
+   - Nome: nome da sua loja
    - URL: `https://connectveiculos.dev.br/api/feed/google`
    - Frequencia: **Diaria** ou **a cada hora**
 4. Clique em **"Criar feed"**
@@ -310,15 +379,41 @@ Para criar anuncios pagos do veiculo:
 
 ## 3.5 Configurar no sistema
 
-1. Abra: `back-end/ConnectVeiculos.API/appsettings.json`
-2. Localize `GoogleMerchantSettings`:
+> **Atencao:** ao contrario de Mercado Livre, WhatsApp e SMTP, Google ainda exige editar arquivo no servidor. Isso vai mudar em uma proxima versao do produto. Se voce nao tem acesso SSH, peca para quem cuida do deploy.
+
+**Opcao A — via env vars no `.env` da VM (recomendado em producao):**
+
+```bash
+# SSH na VM
+ssh -i sua-chave.key ubuntu@SEU_IP
+cd ~/ConnectVeiculos
+nano .env
+```
+
+Adicione:
+```
+GOOGLE_MERCHANT_CLIENT_ID=xxx.apps.googleusercontent.com (passo 3.4.3)
+GOOGLE_MERCHANT_CLIENT_SECRET=GOCSPX-xxxxxxxxxxxxx (passo 3.4.3)
+GOOGLE_MERCHANT_REFRESH_TOKEN=1//xxxxxxxxxxxxx (passo 3.4.4)
+GOOGLE_MERCHANT_ID=123456789 (passo 3.4.5)
+```
+
+Reinicie:
+```bash
+sudo docker compose restart backend-cliente
+```
+
+**Opcao B — via `appsettings.json` (so em desenvolvimento local):**
+
+1. Abra: `back-end/ConnectVeiculos.API/appsettings.Development.json`
+2. Adicione:
 ```json
 "GoogleMerchantSettings": {
     "AccessToken": "",
-    "RefreshToken": "COLE_O_REFRESH_TOKEN_AQUI",
-    "MerchantId": "COLE_O_MERCHANT_ID_AQUI",
-    "ClientId": "COLE_O_CLIENT_ID_AQUI",
-    "ClientSecret": "COLE_O_CLIENT_SECRET_AQUI"
+    "RefreshToken": "1//xxxxxxxxxxxxx",
+    "MerchantId": "123456789",
+    "ClientId": "xxx.apps.googleusercontent.com",
+    "ClientSecret": "GOCSPX-xxxxxxxxxxxxx"
 }
 ```
 3. **Reinicie o backend**
