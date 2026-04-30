@@ -33,7 +33,29 @@ CREATE TABLE IF NOT EXISTS Loja (
     LojImg TEXT,
     LojCNPJ TEXT,
     LojIE TEXT,
-    LojSts INTEGER NOT NULL DEFAULT 1
+    LojSts INTEGER NOT NULL DEFAULT 1,
+    LojUrlCatalogo TEXT
+);
+
+-- Tabela de Configuracoes do Sistema
+CREATE TABLE IF NOT EXISTS ConfiguracaoSistema (
+    CfgId INTEGER PRIMARY KEY AUTOINCREMENT,
+    CfgChave TEXT NOT NULL UNIQUE,
+    CfgValor TEXT,
+    CfgDtAtualizacao TEXT
+);
+
+-- Tabela de Publicacoes em Plataformas Externas
+CREATE TABLE IF NOT EXISTS VeiculoPublicacao (
+    PubId INTEGER PRIMARY KEY AUTOINCREMENT,
+    R_VeiId INTEGER NOT NULL,
+    PubPlataforma TEXT NOT NULL,
+    PubExternoId TEXT,
+    PubStatus TEXT DEFAULT 'ATIVO',
+    PubUrl TEXT,
+    PubDtPublicacao TEXT,
+    PubDtRemocao TEXT,
+    FOREIGN KEY (R_VeiId) REFERENCES Veiculo(VeiId)
 );
 
 -- Tabela de Relacao Loja-Usuario
@@ -157,7 +179,7 @@ CREATE TABLE IF NOT EXISTS TestDrive (TdrId INTEGER PRIMARY KEY AUTOINCREMENT, R
 CREATE TABLE IF NOT EXISTS VeiculoDespesa (DesId INTEGER PRIMARY KEY AUTOINCREMENT, R_VeiId INTEGER NOT NULL, DesTipo TEXT NOT NULL, DesDescricao TEXT, DesValor REAL, DesDtDespesa TEXT, DesDtCriacao TEXT, FOREIGN KEY (R_VeiId) REFERENCES Veiculo(VeiId));
 
 -- Tabela de Leads
-CREATE TABLE IF NOT EXISTS Lead (LeaId INTEGER PRIMARY KEY AUTOINCREMENT, R_VeiId INTEGER, R_LojId INTEGER, LeaNomeCliente TEXT, LeaTelefone TEXT, LeaEmail TEXT, LeaOrigem TEXT, LeaStatus TEXT DEFAULT 'NOVO', LeaObservacao TEXT, LeaDtCriacao TEXT, FOREIGN KEY (R_VeiId) REFERENCES Veiculo(VeiId));
+CREATE TABLE IF NOT EXISTS Lead (LeaId INTEGER PRIMARY KEY AUTOINCREMENT, R_VeiId INTEGER, R_LojId INTEGER, LeaNomeCliente TEXT, LeaTelefone TEXT, LeaEmail TEXT, LeaOrigem TEXT, LeaStatus TEXT DEFAULT 'NOVO', LeaObservacao TEXT, LeaDtCriacao TEXT, LeaCpf TEXT, LeaRenda REAL, LeaEntrada REAL, LeaParcelas INTEGER, FOREIGN KEY (R_VeiId) REFERENCES Veiculo(VeiId));
 
 -- Tabela de Favoritos
 CREATE TABLE IF NOT EXISTS Favorito (FavId INTEGER PRIMARY KEY AUTOINCREMENT, R_VeiId INTEGER NOT NULL, FavEmail TEXT NOT NULL, FavNome TEXT, FavTelefone TEXT, FavDtCriacao TEXT, FOREIGN KEY (R_VeiId) REFERENCES Veiculo(VeiId));

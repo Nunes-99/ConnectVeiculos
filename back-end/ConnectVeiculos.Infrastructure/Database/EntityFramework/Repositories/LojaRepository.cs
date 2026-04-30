@@ -63,11 +63,11 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework.Repositories
 
         public async Task DeleteAsync(int id)
         {
-            var loja = await GetByIdAsync(id);
+            var loja = await _context.Lojas.FindAsync(id);
             if (loja != null)
             {
-                loja.AlterarStatus(false);
-                await UpdateAsync(loja);
+                _context.Lojas.Remove(loja);
+                await _context.SaveChangesAsync();
             }
         }
     }

@@ -41,7 +41,8 @@ namespace ConnectVeiculos.Application.UseCases.Lojas
                 LojCorSecundaria = l.LojCorSecundaria,
                 LojInstagram = l.LojInstagram,
                 LojFacebook = l.LojFacebook,
-                LojSlug = l.LojSlug
+                LojSlug = l.LojSlug,
+                LojUrlCatalogo = l.LojUrlCatalogo
             }).ToList();
 
             return new PagedResult<LojaViewModel>(viewModels, total, page, pageSize);

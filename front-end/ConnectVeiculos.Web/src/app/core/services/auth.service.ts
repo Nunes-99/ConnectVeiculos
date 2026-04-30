@@ -1,4 +1,5 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
@@ -11,6 +12,7 @@ import { Usuario, LoginResponse } from '../models';
 export class AuthService extends ApiService {
   private readonly USER_STORAGE_KEY = 'connectveiculos_user';
   private readonly TOKEN_STORAGE_KEY = 'connectveiculos_token';
+  private platformId = inject(PLATFORM_ID);
 
   currentUser = signal<Usuario | null>(null);
   isAuthenticated = signal<boolean>(false);
@@ -21,6 +23,8 @@ export class AuthService extends ApiService {
   }
 
   private loadUserFromStorage(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+
     const storedUser = localStorage.getItem(this.USER_STORAGE_KEY);
     const storedToken = localStorage.getItem(this.TOKEN_STORAGE_KEY);
 
@@ -50,8 +54,10 @@ export class AuthService extends ApiService {
 
         this.currentUser.set(user);
         this.isAuthenticated.set(true);
-        localStorage.setItem(this.USER_STORAGE_KEY, JSON.stringify(user));
-        localStorage.setItem(this.TOKEN_STORAGE_KEY, response.token);
+        if (isPlatformBrowser(this.platformId)) {
+          localStorage.setItem(this.USER_STORAGE_KEY, JSON.stringify(user));
+          localStorage.setItem(this.TOKEN_STORAGE_KEY, response.token);
+        }
       })
     );
   }
@@ -59,12 +65,15 @@ export class AuthService extends ApiService {
   logout(): void {
     this.currentUser.set(null);
     this.isAuthenticated.set(false);
-    localStorage.removeItem(this.USER_STORAGE_KEY);
-    localStorage.removeItem(this.TOKEN_STORAGE_KEY);
+    if (isPlatformBrowser(this.platformId)) {
+      localStorage.removeItem(this.USER_STORAGE_KEY);
+      localStorage.removeItem(this.TOKEN_STORAGE_KEY);
+    }
     this.router.navigate(['/login']);
   }
 
   getToken(): string | null {
+    if (!isPlatformBrowser(this.platformId)) return null;
     return localStorage.getItem(this.TOKEN_STORAGE_KEY);
   }
 

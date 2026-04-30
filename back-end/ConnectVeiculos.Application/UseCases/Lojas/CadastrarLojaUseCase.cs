@@ -41,7 +41,8 @@ namespace ConnectVeiculos.Application.UseCases.Lojas
                 inputModel.LojCorSecundaria,
                 inputModel.LojInstagram,
                 inputModel.LojFacebook,
-                inputModel.LojSlug
+                inputModel.LojSlug,
+                inputModel.LojUrlCatalogo
             );
 
             _unitOfWork.BeginTransaction();
@@ -49,6 +50,18 @@ namespace ConnectVeiculos.Application.UseCases.Lojas
             try
             {
                 var id = await _lojaRepository.CreateAsync(loja);
+
+                // Replicar URL do catálogo para todas as lojas
+                if (!string.IsNullOrWhiteSpace(inputModel.LojUrlCatalogo))
+                {
+                    var todasLojas = await _lojaRepository.GetAllAsync();
+                    foreach (var outraLoja in todasLojas.Where(l => l.LojId != id))
+                    {
+                        outraLoja.SetUrlCatalogo(inputModel.LojUrlCatalogo);
+                        await _lojaRepository.UpdateAsync(outraLoja);
+                    }
+                }
+
                 _unitOfWork.Commit();
                 return id;
             }

@@ -21,3 +21,8 @@ export * from './toast.service';
 export * from './negociacao.service';
 export * from './notificacao.service';
 export * from './fipe.service';
+export * from './seo.service';
+export * from './integracao.service';
+export * from './financiamento-banco.service';
+export * from './veiculo-documento.service';
+export * from './push.service';

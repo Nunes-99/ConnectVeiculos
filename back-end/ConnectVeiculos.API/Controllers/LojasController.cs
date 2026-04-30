@@ -89,11 +89,11 @@ namespace ConnectVeiculos.API.Controllers
 
         [HttpDelete("{id}")]
         [Authorize(Roles = "Administrador,Gerente")]
-        public async Task<IActionResult> InativarLoja(
-            [FromServices] IInativarLojaUseCase inativarLojaUseCase,
+        public async Task<IActionResult> ExcluirLoja(
+            [FromServices] IExcluirLojaUseCase excluirLojaUseCase,
             int id)
         {
-            await inativarLojaUseCase.Execute(id);
+            await excluirLojaUseCase.Execute(id);
             return NoContent();
         }
 

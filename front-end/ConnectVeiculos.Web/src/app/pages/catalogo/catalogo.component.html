@@ -328,10 +328,22 @@
               <span class="img-expand"><span class="material-icons">fullscreen</span></span>
             </div>
             @if (getImagensVeiculo(veiculoSelecionado).length > 1) {
-              <div class="detalhes-thumbs">
-                @for (img of getImagensVeiculo(veiculoSelecionado); track $index) {
-                  <img [src]="getImageUrl(img)" [class.active]="$index === detalhesImagemIndex"
-                       (click)="detalhesImagemIndex = $index" [alt]="'Foto ' + ($index + 1)" />
+              <div class="detalhes-thumbs-container">
+                @if (getImagensVeiculo(veiculoSelecionado).length > thumbsVisiveis) {
+                  <button class="thumbs-nav prev" (click)="thumbsAnterior()" [disabled]="thumbsOffset === 0">
+                    <span class="material-icons">chevron_left</span>
+                  </button>
+                }
+                <div class="detalhes-thumbs">
+                  @for (img of getThumbsVisiveis(); track $index) {
+                    <img [src]="getImageUrl(img.caminho)" [class.active]="img.index === detalhesImagemIndex"
+                         (click)="detalhesImagemIndex = img.index" [alt]="'Foto ' + (img.index + 1)" />
+                  }
+                </div>
+                @if (getImagensVeiculo(veiculoSelecionado).length > thumbsVisiveis) {
+                  <button class="thumbs-nav next" (click)="thumbsProxima()" [disabled]="thumbsOffset + thumbsVisiveis >= getImagensVeiculo(veiculoSelecionado).length">
+                    <span class="material-icons">chevron_right</span>
+                  </button>
                 }
               </div>
             }
@@ -471,6 +483,8 @@
         @for (v of comparando; track v.veiId) { <div class="comp-value">{{ v.veiCor || '-' }}</div> }
         <div class="comp-label">Categoria</div>
         @for (v of comparando; track v.veiId) { <div class="comp-value">{{ v.categoriaNome || '-' }}</div> }
+        <div class="comp-label">Opcionais</div>
+        @for (v of comparando; track v.veiId) { <div class="comp-value comp-opcionais">{{ v.veiOpcionais || '-' }}</div> }
         <div class="comp-label">Loja</div>
         @for (v of comparando; track v.veiId) { <div class="comp-value">{{ v.lojaNome }}</div> }
       </div>
@@ -488,7 +502,7 @@
       <div class="finance-form">
         <div class="finance-field">
           <label>Entrada (R$)</label>
-          <input type="number" [(ngModel)]="finEntrada" (ngModelChange)="calcularFinanciamento()" />
+          <input type="text" [(ngModel)]="finEntrada" (ngModelChange)="calcularFinanciamento()" appCurrencyMask />
         </div>
         <div class="finance-field">
           <label>Taxa mensal (%)</label>
@@ -511,6 +525,55 @@
         <div class="finance-item"><small>Total a pagar</small><strong>{{ formatarPreco(finEntrada + (finValorParcela * finParcelas)) }}</strong></div>
       </div>
       <p class="finance-disclaimer">* Simulacao meramente ilustrativa. Consulte as condicoes reais com a loja.</p>
+      <button class="btn-solicitar-credito" (click)="abrirSolicitacaoCredito()">
+        <span class="material-icons">request_quote</span>
+        Solicitar Analise de Credito
+      </button>
+    </div>
+  </div>
+}
+
+<!-- Modal Solicitacao de Financiamento (Lead) -->
+@if (showSolicitacaoCredito && finVeiculo) {
+  <div class="detalhes-overlay" (click)="fecharSolicitacaoCredito()">
+    <div class="testdrive-modal" (click)="$event.stopPropagation()">
+      <button class="detalhes-close" style="position:static;float:right" (click)="fecharSolicitacaoCredito()"><span class="material-icons">close</span></button>
+      @if (!solicitacaoEnviada) {
+        <h2><span class="material-icons">request_quote</span> Solicitar Analise de Credito</h2>
+        <p class="td-veiculo">{{ finVeiculo.veiMarca }} {{ finVeiculo.veiModelo }} {{ finVeiculo.veiAno }} - {{ formatarPreco(finVeiculo.veiPreco) }}</p>
+        <p class="solicitacao-info">Preencha os dados abaixo e nosso vendedor entrara em contato para apresentar as melhores condicoes de financiamento.</p>
+        <div class="td-form">
+          <input type="text" [(ngModel)]="solNome" placeholder="Nome completo *" class="required-input" />
+          <input type="tel" [(ngModel)]="solTelefone" placeholder="WhatsApp *" class="required-input" (input)="formatarSolTelefone()" maxlength="15" />
+          <input type="email" [(ngModel)]="solEmail" placeholder="E-mail" />
+          <input type="text" [(ngModel)]="solCpf" placeholder="CPF *" class="required-input" (input)="formatarSolCpf()" maxlength="14" />
+          <div class="td-row">
+            <input type="text" [(ngModel)]="solRenda" placeholder="Renda mensal *" appCurrencyMask class="required-input" />
+            <input type="text" [(ngModel)]="solEntrada" placeholder="Entrada" appCurrencyMask />
+          </div>
+          <select [(ngModel)]="solParcelas">
+            <option [ngValue]="null">Quantas parcelas?</option>
+            <option [ngValue]="12">12x</option>
+            <option [ngValue]="24">24x</option>
+            <option [ngValue]="36">36x</option>
+            <option [ngValue]="48">48x</option>
+            <option [ngValue]="60">60x</option>
+          </select>
+          <textarea [(ngModel)]="solObservacao" placeholder="Observacoes (opcional)" rows="2"></textarea>
+          <button class="btn-enviar-solicitacao" (click)="enviarSolicitacaoCredito()" [disabled]="!solNome || !solTelefone || !solCpf || !solRenda">
+            <span class="material-icons">send</span>
+            Enviar Solicitacao
+          </button>
+        </div>
+        <p class="finance-disclaimer">Seus dados estao seguros e serao usados apenas para a analise de credito.</p>
+      } @else {
+        <div class="td-sucesso">
+          <span class="material-icons">check_circle</span>
+          <h2>Solicitacao enviada!</h2>
+          <p>Em breve nosso vendedor entrara em contato pelo telefone/WhatsApp informado.</p>
+          <button class="btn-fechar-sucesso" (click)="fecharSolicitacaoCredito()">Fechar</button>
+        </div>
+      }
     </div>
   </div>
 }

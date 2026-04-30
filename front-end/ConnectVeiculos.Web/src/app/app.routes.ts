@@ -70,6 +70,11 @@ export const routes: Routes = [
         path: 'vendas',
         loadComponent: () => import('./pages/vendas/vendas.component').then(m => m.VendasComponent)
       },
+      // TODO: ativar quando tiver parceria com bancos (BV, Pan, etc)
+      // {
+      //   path: 'financiamentos',
+      //   loadComponent: () => import('./pages/financiamentos/financiamentos.component').then(m => m.FinanciamentosComponent)
+      // },
       {
         path: 'relatorios',
         loadComponent: () => import('./pages/relatorios/relatorios.component').then(m => m.RelatoriosComponent),
@@ -84,11 +89,20 @@ export const routes: Routes = [
         path: 'leads',
         loadComponent: () => import('./pages/leads/leads.component').then(m => m.LeadsComponent)
       },
-      // TODO: implementar futuramente
-      // {
-      //   path: 'negociacoes',
-      //   loadComponent: () => import('./pages/negociacoes/negociacoes.component').then(m => m.NegociacoesComponent)
-      // },
+      {
+        path: 'negociacoes',
+        loadComponent: () => import('./pages/negociacoes/negociacoes.component').then(m => m.NegociacoesComponent)
+      },
+      {
+        path: 'documentos',
+        loadComponent: () => import('./pages/documentos-veiculo/documentos-veiculo.component').then(m => m.DocumentosVeiculoComponent)
+      },
+      {
+        path: 'integracoes',
+        loadComponent: () => import('./pages/integracoes/integracoes.component').then(m => m.IntegracoesComponent),
+        canActivate: [roleGuard],
+        data: { roles: ['Administrador', 'Gerente'] }
+      },
       {
         path: 'favoritos',
         loadComponent: () => import('./pages/favoritos-admin/favoritos-admin.component').then(m => m.FavoritosAdminComponent),

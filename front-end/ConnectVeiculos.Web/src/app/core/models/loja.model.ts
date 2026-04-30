@@ -21,6 +21,7 @@ export interface Loja {
   lojCorSecundaria: string;
   lojInstagram?: string;
   lojFacebook?: string;
+  lojUrlCatalogo?: string;
 }
 
 export interface LojaInput {
@@ -46,4 +47,5 @@ export interface LojaInput {
   lojCorSecundaria?: string;
   lojInstagram?: string;
   lojFacebook?: string;
+  lojUrlCatalogo?: string;
 }

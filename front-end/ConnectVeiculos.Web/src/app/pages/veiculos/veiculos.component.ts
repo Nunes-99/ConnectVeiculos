@@ -5,6 +5,7 @@ import { VeiculoService, LojaService, CategoriaService, ImagemService, VeiculoIm
 import { Veiculo, Loja, Categoria } from '../../core/models';
 import { MaskDirective, CurrencyMaskDirective } from '../../shared/directives';
 import { PaginationComponent, ConfirmModalComponent } from '../../shared/components';
+import { getDetranLink, DetranLink } from '../../shared/utils/detran-links.util';
 import * as XLSX from 'xlsx';
 
 @Component({
@@ -50,6 +51,11 @@ export class VeiculosComponent implements OnInit {
   importando = false;
   importResult: { sucesso: number; erros: number; detalhes: string[] } | null = null;
   showImportResult = false;
+
+  // Consulta Detran
+  showDetranModal = false;
+  detranVeiculo: Veiculo | null = null;
+  detranLink: DetranLink = { uf: '', nome: '', url: '' };
 
   // Paginacao
   currentPage = 1;
@@ -102,6 +108,7 @@ export class VeiculosComponent implements OnInit {
     veiPreco: [0, [Validators.required, Validators.min(0)]],
     veiSts: ['D', Validators.required],
     veiPrecoCompra: [0, Validators.min(0)],
+    veiPrecoFipe: [null as number | null, Validators.min(0)],
     veiOpcionais: [''],
     veiObservacao: [''],
     veiDonoAtual: [''],
@@ -174,6 +181,7 @@ export class VeiculosComponent implements OnInit {
         veiPreco: veiculo.veiPreco,
         veiSts: veiculo.veiSts,
         veiPrecoCompra: veiculo.veiPrecoCompra,
+        veiPrecoFipe: veiculo.veiPrecoFipe ?? null,
         veiOpcionais: veiculo.veiOpcionais || '',
         veiObservacao: veiculo.veiObservacao || '',
         veiDonoAtual: veiculo.veiDonoAtual || '',
@@ -228,6 +236,7 @@ export class VeiculosComponent implements OnInit {
         veiPreco: 0,
         veiSts: 'D',
         veiPrecoCompra: 0,
+        veiPrecoFipe: null,
         veiObservacao: '',
         veiDonoAtual: '',
         veiDonoCelular: ''
@@ -260,6 +269,7 @@ export class VeiculosComponent implements OnInit {
       veiKm: Number(kmLimpo) || 0,
       veiPreco: Number(raw.veiPreco) || 0,
       veiPrecoCompra: Number(raw.veiPrecoCompra) || 0,
+      veiPrecoFipe: raw.veiPrecoFipe ? Number(raw.veiPrecoFipe) : null,
       veiOpcionais: raw.veiOpcionais || '',
       veiSitSts: raw.veiSitSts || '',
       veiObservacao: raw.veiObservacao || '',
@@ -449,6 +459,21 @@ export class VeiculosComponent implements OnInit {
   cancelarExclusaoImagem(): void {
     this.showConfirmImagemModal = false;
     this.imagemParaExcluir = null;
+  }
+
+  definirPrincipal(imagem: VeiculoImagem): void {
+    this.imagemService.definirPrincipal(imagem.imgId).subscribe({
+      next: () => {
+        const veiculoId = this.selectedVeiculo?.veiId || this.editId;
+        if (veiculoId) {
+          this.loadImagens(veiculoId);
+        }
+        this.toast.success('Imagem definida como principal!');
+      },
+      error: () => {
+        this.toast.error('Erro ao definir imagem principal.');
+      }
+    });
   }
 
   getImageUrl(caminho: string): string {
@@ -840,6 +865,32 @@ export class VeiculosComponent implements OnInit {
   toggleSocialStatus(veiculoId: number, rede: string, currentValue: boolean): void {
     this.veiculoService.atualizarStatusSocial(veiculoId, rede, !currentValue).subscribe({
       next: () => this.loadData()
+    });
+  }
+
+  // ============================================================
+  // Consultar Detran (redireciona pro site oficial do estado)
+  // ============================================================
+  abrirConsultaDetran(veiculo: Veiculo): void {
+    if (!veiculo.veiPlaca) {
+      this.toast.warning('Veiculo sem placa cadastrada.');
+      return;
+    }
+    this.detranVeiculo = veiculo;
+    const loja = this.lojas.find(l => l.lojId === veiculo.r_LojId);
+    this.detranLink = getDetranLink(loja?.lojEstado);
+    this.showDetranModal = true;
+  }
+
+  fecharConsultaDetran(): void {
+    this.showDetranModal = false;
+    this.detranVeiculo = null;
+  }
+
+  copiarPlaca(): void {
+    if (!this.detranVeiculo?.veiPlaca) return;
+    navigator.clipboard.writeText(this.detranVeiculo.veiPlaca).then(() => {
+      this.toast.success(`Placa ${this.detranVeiculo!.veiPlaca} copiada.`);
     });
   }
 }

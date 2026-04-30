@@ -356,6 +356,81 @@ O sistema possui notificacoes em tempo real usando SignalR:
   - Nova venda registrada
   - Novo veiculo cadastrado
   - Veiculo reservado
+  - Lead recebido via WhatsApp
+
+---
+
+## Integracoes com Plataformas Externas
+
+O ConnectVeiculos pode publicar seus veiculos automaticamente em outras plataformas e receber leads de varios canais. Acesse pelo menu **Sistema > Integracoes**.
+
+> **Quem pode configurar:** Administrador ou Gerente.
+> **Quem precisa criar a conta:** voce (dono da loja). Cada plataforma exige uma conta empresarial sua.
+
+### Mercado Livre
+
+- **O que faz:** publica seus veiculos automaticamente como anuncios. Quando voce vende ou inativa, o anuncio e removido do ML.
+- **Custo:** gratis. O ML cobra taxa apenas em vendas concretizadas pela plataforma (~11-16% conforme categoria).
+- **Como conectar:** clique em **"Conectar Mercado Livre"**, faca login com a sua conta ML no popup que abrir e autorize. Depois disso, todo veiculo cadastrado vira anuncio no ML automaticamente.
+- **Trocar de conta:** clique em **"Trocar conta"** ou **"Desconectar"** a qualquer momento.
+
+### Facebook / Instagram (Marketplace + Catalogo)
+
+- **O que faz:** seus veiculos aparecem no Facebook Marketplace, Instagram Shopping e podem ser usados em campanhas de Ads.
+- **Custo:** gratis para listagem organica. Pago apenas se quiser impulsionar com Meta Ads (voce define o orcamento).
+- **Como configurar:** o Facebook importa via "feed". A URL do feed esta na pagina de Integracoes — copie e cole no Meta Business Suite > Catalogo.
+
+### Google Merchant Center / Vehicle Ads
+
+- **O que faz:** seus veiculos aparecem no Google Shopping e Vehicle Ads.
+- **Custo:** listagem gratis. Vehicle Ads pago (a partir de ~R$5/dia, voce define).
+- **Como configurar:** mesma logica do Facebook — copie a URL do feed na pagina de Integracoes e cadastre no Google Merchant Center.
+
+### E-mail / SMTP
+
+- **O que faz:** envia e-mails automaticos da sua loja para clientes que favoritaram veiculos (quando o preco cair, novo veiculo similar) e para usuarios do admin (recuperar senha, confirmacao de venda).
+- **Custo:** gratis com e-mail proprio (Locaweb, UOL, KingHost, Gmail). Pago se usar servico dedicado.
+- **Como configurar:** clique em **"Configurar"** no card "E-mail / SMTP" da pagina de Integracoes. Preencha servidor, usuario, senha e remetente. **Antes de salvar, use o botao "Testar"** — manda um e-mail pro endereco que voce informar; se nao chegar (cheque tambem o spam), credenciais estao erradas.
+- **Detalhes tecnicos:** veja `GUIA-INTEGRACOES.md` (secao 5).
+
+> **Importante sobre SMTP:** o remetente deve ser um e-mail **da sua loja**, nao da plataforma. Voce paga apenas se usar servico dedicado (SendGrid etc) — e-mail proprio da hospedagem ja vem incluido.
+
+### WhatsApp Business
+
+- **O que faz:**
+  - Quando um cliente manda mensagem para o seu numero WhatsApp Business, o sistema cria automaticamente um **Lead** no admin.
+  - Voce pode responder e disparar mensagens prontas (templates aprovados) para confirmar test drives, recepcionar contatos, etc.
+- **Custo:** **voce paga, direto ao Meta, no cartao da sua conta Business Manager**.
+  - 1.000 conversas iniciadas pelo cliente por mes: **gratis**.
+  - Acima disso: ~R$ 0,06 por conversa de servico (utility) ou ~R$ 0,30 por conversa de marketing.
+- **Como configurar:**
+  1. Voce precisa ter uma conta Meta Business e cadastrar/verificar um **numero de telefone empresarial** (que **nao pode** estar em uso no WhatsApp comum).
+  2. Clique em **"Configurar"** na pagina de Integracoes — abre um modal com tutorial passo-a-passo.
+  3. Apos seguir o passo-a-passo no painel Meta, cole 3 informacoes na aba **"Colar credenciais"**:
+     - Access Token (System User Token permanente)
+     - Phone Number ID
+     - Verify Token (string que voce inventa)
+  4. Salve. Pronto — leads do WhatsApp comecam a chegar no admin.
+- **Detalhes tecnicos passo-a-passo:** veja `GUIA-INTEGRACOES.md` (secao 4).
+
+> **Importante sobre WhatsApp:** o Meta exige aprovacao previa dos textos fixos ("templates"), demora ~24h. Sem template aprovado, voce so consegue mandar mensagem livre dentro de **24h apos o cliente ter contatado** (regra da Meta). Fora dessa janela, so via template aprovado.
+
+---
+
+## Consultar Debitos no Detran
+
+Direto na lista de veiculos (admin > Veiculos), clique no icone de **martelo** (gavel) na coluna **Acoes**. O sistema:
+
+1. Identifica o estado da loja vinculada ao veiculo
+2. Abre uma janela com a placa pronta pra copiar
+3. Direciona para o site oficial do **Detran do estado** correspondente em uma nova aba
+
+Voce cola a placa no site do Detran, conclui a consulta de debitos/multas/IPVA **gratuitamente** la (e o canal oficial do governo, sem custo).
+
+> **Por que nao automatizar a consulta dentro do sistema?**
+> Os Detrans estaduais nao oferecem API publica gratuita. A unica forma 100% confiavel e gratuita de consultar debitos e indo no site oficial. Caso queira automacao no futuro, ha agregadores pagos (Cilia, Decode, Sinesp Conecta, etc) com custo a partir de ~R$ 1 por consulta.
+
+**Estados suportados:** todos os 27 (Acre a Tocantins). Se a UF da loja nao estiver mapeada, o sistema direciona para o Sinesp Cidadao federal.
 
 ---
 

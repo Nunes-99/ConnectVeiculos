@@ -121,7 +121,8 @@ namespace ConnectVeiculos.Application.UseCases.Catalogo
                         LojCorPrimaria = lojaInfo.LojCorPrimaria ?? "#1a237e",
                         LojCorSecundaria = lojaInfo.LojCorSecundaria ?? "#25d366",
                         LojInstagram = lojaInfo.LojInstagram,
-                        LojFacebook = lojaInfo.LojFacebook
+                        LojFacebook = lojaInfo.LojFacebook,
+                        LojUrlCatalogo = lojaInfo.LojUrlCatalogo
                     };
                 }
             }

@@ -114,6 +114,9 @@
                 <button class="btn-icon" (click)="openImagensModal(veiculo)" title="Imagens">
                   <span class="material-icons">photo_library</span>
                 </button>
+                <button class="btn-icon" (click)="abrirConsultaDetran(veiculo)" title="Consultar débitos no Detran" [disabled]="!veiculo.veiPlaca">
+                  <span class="material-icons">gavel</span>
+                </button>
                 <button class="btn-icon" (click)="openModal(veiculo)" title="Editar">
                   <span class="material-icons">edit</span>
                 </button>
@@ -316,6 +319,13 @@
           </div>
           <div class="form-row">
             <div class="form-group">
+              <label>Preço FIPE (referência)</label>
+              <input formControlName="veiPrecoFipe" appCurrencyMask placeholder="0,00" />
+              <small style="color:#666;font-size:11px">Usado para exibir badge "abaixo/acima da FIPE" no catálogo público.</small>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
               <label>Dono Atual</label>
               <input type="text" formControlName="veiDonoAtual" />
             </div>
@@ -379,11 +389,21 @@
                   <h4>Imagens cadastradas ({{ imagens.length }})</h4>
                   <div class="images-grid">
                     @for (imagem of imagens; track imagem.imgId) {
-                      <div class="image-item">
+                      <div class="image-item" [class.principal]="imagem.imgOrdem === 1">
                         <img [src]="getImageUrl(imagem.imgCaminho)" [alt]="'Imagem ' + imagem.imgOrdem" />
-                        <button type="button" class="btn-remove" (click)="removeImagem(imagem)" title="Remover">
-                          <span class="material-icons">delete</span>
-                        </button>
+                        @if (imagem.imgOrdem === 1) {
+                          <span class="badge-principal">Principal</span>
+                        }
+                        <div class="image-actions">
+                          @if (imagem.imgOrdem !== 1) {
+                            <button type="button" class="btn-principal" (click)="definirPrincipal(imagem)" title="Definir como principal">
+                              <span class="material-icons">star</span>
+                            </button>
+                          }
+                          <button type="button" class="btn-remove" (click)="removeImagem(imagem)" title="Remover">
+                            <span class="material-icons">delete</span>
+                          </button>
+                        </div>
                       </div>
                     }
                   </div>
@@ -453,11 +473,21 @@
           <h4>Imagens cadastradas ({{ imagens.length }})</h4>
           <div class="images-grid">
             @for (imagem of imagens; track imagem.imgId) {
-              <div class="image-item">
+              <div class="image-item" [class.principal]="imagem.imgOrdem === 1">
                 <img [src]="getImageUrl(imagem.imgCaminho)" [alt]="'Imagem ' + imagem.imgOrdem" />
-                <button class="btn-remove" (click)="removeImagem(imagem)" title="Remover">
-                  <span class="material-icons">delete</span>
-                </button>
+                @if (imagem.imgOrdem === 1) {
+                  <span class="badge-principal">Principal</span>
+                }
+                <div class="image-actions">
+                  @if (imagem.imgOrdem !== 1) {
+                    <button class="btn-principal" (click)="definirPrincipal(imagem)" title="Definir como principal">
+                      <span class="material-icons">star</span>
+                    </button>
+                  }
+                  <button class="btn-remove" (click)="removeImagem(imagem)" title="Remover">
+                    <span class="material-icons">delete</span>
+                  </button>
+                </div>
               </div>
             } @empty {
               <p class="no-images">Nenhuma imagem cadastrada</p>
@@ -626,6 +656,47 @@
         <button class="btn-primary" (click)="baixarModeloImport()">
           <span class="material-icons">download</span> Baixar Modelo Excel
         </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Modal: Consultar Detran -->
+@if (showDetranModal && detranVeiculo) {
+  <div class="modal-overlay" (click)="fecharConsultaDetran()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2><span class="material-icons">gavel</span> Consultar débitos no Detran</h2>
+        <button class="modal-close" (click)="fecharConsultaDetran()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body">
+        <p>O sistema vai abrir o site oficial do <strong>{{ detranLink.nome }}</strong> em uma nova aba. <strong>Cole a placa abaixo</strong> no campo de consulta de débitos do site:</p>
+
+        <div class="detran-placa-box">
+          <input type="text" [value]="detranVeiculo.veiPlaca" readonly />
+          <button class="btn-mini" (click)="copiarPlaca()" title="Copiar placa">
+            <span class="material-icons">content_copy</span> Copiar
+          </button>
+        </div>
+
+        @if (detranLink.observacao) {
+          <div class="wa-aviso">
+            <span class="material-icons">info</span>
+            {{ detranLink.observacao }}
+          </div>
+        }
+
+        <p class="detran-info">
+          <strong>{{ detranVeiculo.veiMarca }} {{ detranVeiculo.veiModelo }} {{ detranVeiculo.veiAno }}</strong>
+          @if (detranVeiculo.lojaNome) { — Loja: {{ detranVeiculo.lojaNome }} }
+        </p>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" (click)="fecharConsultaDetran()">Cancelar</button>
+          <a [href]="detranLink.url" target="_blank" rel="noopener" class="btn-primary" (click)="fecharConsultaDetran()">
+            <span class="material-icons">open_in_new</span> Abrir {{ detranLink.nome }}
+          </a>
+        </div>
       </div>
     </div>
   </div>

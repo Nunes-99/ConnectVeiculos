@@ -69,7 +69,8 @@ export class LojasComponent implements OnInit {
     lojCorSecundaria: ['#25d366'],
     lojImg: [''],
     lojInstagram: [''],
-    lojFacebook: ['']
+    lojFacebook: [''],
+    lojUrlCatalogo: ['', Validators.maxLength(500)]
   });
 
   ngOnInit(): void {
@@ -117,13 +118,16 @@ export class LojasComponent implements OnInit {
         lojCorSecundaria: loja.lojCorSecundaria || '#25d366',
         lojImg: loja.lojImg || '',
         lojInstagram: loja.lojInstagram || '',
-        lojFacebook: loja.lojFacebook || ''
+        lojFacebook: loja.lojFacebook || '',
+        lojUrlCatalogo: loja.lojUrlCatalogo || ''
       });
       this.logoPreview = loja.lojImg ? (loja.lojImg.startsWith('data:') ? loja.lojImg : this.imagemService.getImageUrl(loja.lojImg)) : null;
       this.logoFile = null;
     } else {
       this.editId = null;
-      this.form.reset({ lojSts: true, lojSlug: '', lojCorPrimaria: '#1a237e', lojCorSecundaria: '#25d366', lojImg: '', lojInstagram: '', lojFacebook: '' });
+      // Herdar URL do catálogo da primeira loja existente
+      const urlCatalogo = this.lojas.find(l => l.lojUrlCatalogo)?.lojUrlCatalogo || '';
+      this.form.reset({ lojSts: true, lojSlug: '', lojCorPrimaria: '#1a237e', lojCorSecundaria: '#25d366', lojImg: '', lojInstagram: '', lojFacebook: '', lojUrlCatalogo: urlCatalogo });
       this.logoPreview = null;
       this.logoFile = null;
     }
@@ -134,7 +138,7 @@ export class LojasComponent implements OnInit {
 
   closeModal(): void {
     this.showModal = false;
-    this.form.reset({ lojSts: true, lojSlug: '', lojCorPrimaria: '#1a237e', lojCorSecundaria: '#25d366', lojImg: '', lojInstagram: '', lojFacebook: '' });
+    this.form.reset({ lojSts: true, lojSlug: '', lojCorPrimaria: '#1a237e', lojCorSecundaria: '#25d366', lojImg: '', lojInstagram: '', lojFacebook: '', lojUrlCatalogo: '' });
     this.editId = null;
     this.logoPreview = null;
     this.logoFile = null;
@@ -172,8 +176,14 @@ export class LojasComponent implements OnInit {
     const slug = this.form.get('lojSlug')?.value;
     const id = this.editId;
     const param = slug || id;
+    const urlCatalogo = this.form.get('lojUrlCatalogo')?.value;
     if (param) {
-      window.open(`/catalogo/${param}`, '_blank');
+      if (urlCatalogo) {
+        const baseUrl = urlCatalogo.endsWith('/') ? urlCatalogo.slice(0, -1) : urlCatalogo;
+        window.open(`${baseUrl}/catalogo/${param}`, '_blank');
+      } else {
+        window.open(`/catalogo/${param}`, '_blank');
+      }
     }
   }
 
@@ -225,7 +235,8 @@ export class LojasComponent implements OnInit {
         next: () => {
           this.loadData();
           this.cancelarExclusao();
-        }
+        },
+        error: () => this.cancelarExclusao()
       });
     }
   }

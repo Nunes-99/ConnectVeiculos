@@ -26,6 +26,7 @@ namespace ConnectVeiculos.Application.InputModels.Lojas
         public string LojInstagram { get; set; }
         public string LojFacebook { get; set; }
         public string LojSlug { get; set; }
+        public string LojUrlCatalogo { get; set; }
 
         public LojaInputModel() { }
 

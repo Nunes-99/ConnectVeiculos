@@ -1,9 +1,11 @@
 using ConnectVeiculos.Application.UseCases.Veiculos;
 using ConnectVeiculos.Core.Entities.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Database.Common;
+using ConnectVeiculos.Core.Interfaces.Database.Repositories.Publicacoes;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Services;
 using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 
@@ -14,6 +16,10 @@ namespace ConnectVeiculos.Tests.UseCases.Veiculos
         private readonly Mock<IVeiculoRepository> _veiculoRepositoryMock;
         private readonly Mock<IUnitOfWork> _unitOfWorkMock;
         private readonly Mock<ICatalogoHubService> _catalogoHubServiceMock;
+        private readonly Mock<IMercadoLivreService> _mercadoLivreServiceMock;
+        private readonly Mock<IFacebookCatalogService> _facebookServiceMock;
+        private readonly Mock<IGoogleMerchantService> _googleServiceMock;
+        private readonly Mock<IVeiculoPublicacaoRepository> _publicacaoRepositoryMock;
         private readonly InativarVeiculoUseCase _useCase;
 
         public InativarVeiculoUseCaseTests()
@@ -21,7 +27,19 @@ namespace ConnectVeiculos.Tests.UseCases.Veiculos
             _veiculoRepositoryMock = new Mock<IVeiculoRepository>();
             _unitOfWorkMock = new Mock<IUnitOfWork>();
             _catalogoHubServiceMock = new Mock<ICatalogoHubService>();
-            _useCase = new InativarVeiculoUseCase(_veiculoRepositoryMock.Object, _unitOfWorkMock.Object, _catalogoHubServiceMock.Object);
+            _mercadoLivreServiceMock = new Mock<IMercadoLivreService>();
+            _facebookServiceMock = new Mock<IFacebookCatalogService>();
+            _googleServiceMock = new Mock<IGoogleMerchantService>();
+            _publicacaoRepositoryMock = new Mock<IVeiculoPublicacaoRepository>();
+            _useCase = new InativarVeiculoUseCase(
+                _veiculoRepositoryMock.Object,
+                _unitOfWorkMock.Object,
+                _catalogoHubServiceMock.Object,
+                _mercadoLivreServiceMock.Object,
+                _facebookServiceMock.Object,
+                _googleServiceMock.Object,
+                _publicacaoRepositoryMock.Object,
+                NullLogger<InativarVeiculoUseCase>.Instance);
         }
 
         [Fact]

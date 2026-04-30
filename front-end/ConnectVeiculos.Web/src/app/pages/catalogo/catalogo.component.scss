@@ -258,14 +258,17 @@
 
 .detalhes-content {
   display: grid; grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 16px 0 16px 16px;
 }
 
 // Galeria no detalhes
 .detalhes-galeria {
   background: #ffffff;
-  border-radius: 16px 0 0 16px;
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .detalhes-img-principal {
@@ -313,14 +316,43 @@
   }
 }
 
-.detalhes-thumbs {
-  display: flex; gap: 4px; padding: 8px 8px;
-  overflow-x: auto; background: #f0f0f0;
+.detalhes-thumbs-container {
+  display: flex;
+  align-items: center;
+  background: #f0f0f0;
   border-radius: 0 0 0 16px;
+  padding: 8px 4px;
+  gap: 4px;
+
+  .thumbs-nav {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #555;
+    transition: background 0.2s;
+    flex-shrink: 0;
+
+    &:hover:not(:disabled) { background: rgba(0,0,0,0.1); }
+    &:disabled { opacity: 0.3; cursor: default; }
+    .material-icons { font-size: 1.3rem; }
+  }
+}
+
+.detalhes-thumbs {
+  display: flex; gap: 4px;
+  overflow: hidden;
+  flex: 1;
+  justify-content: center;
   img {
     width: 72px; height: 52px; object-fit: cover;
     border-radius: 4px; cursor: pointer; opacity: 0.5;
     transition: opacity 0.2s; border: 2px solid transparent;
+    flex-shrink: 0;
     &.active, &:hover { opacity: 1; border-color: #1a237e; }
   }
 }
@@ -573,6 +605,30 @@
 }
 .finance-disclaimer { margin: 0; font-size: 0.8rem; color: #999; font-style: italic; }
 
+.btn-solicitar-credito {
+  width: 100%; margin-top: 1rem; padding: 12px;
+  background: #25d366; color: white; border: none; border-radius: 8px;
+  font-size: 0.95rem; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+  &:hover { background: #1da851; }
+  .material-icons { font-size: 1.2rem; }
+}
+
+.solicitacao-info {
+  font-size: 0.85rem; color: #666; line-height: 1.5;
+  background: #f5f5f5; padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem;
+}
+
+.btn-enviar-solicitacao {
+  margin-top: 0.5rem; padding: 12px;
+  background: #1a237e; color: white; border: none; border-radius: 8px;
+  font-size: 0.95rem; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+  &:hover { opacity: 0.9; }
+  &:disabled { opacity: 0.5; cursor: default; }
+  .material-icons { font-size: 1.2rem; }
+}
+
 // ==========================================
 // TEST DRIVE MODAL
 // ==========================================
@@ -813,6 +869,7 @@
   .detalhes-content { grid-template-columns: 1fr; }
   .detalhes-galeria { border-radius: 12px 12px 0 0; }
   .detalhes-img-principal { height: 260px; }
+  .detalhes-thumbs-container { border-radius: 0; }
   .detalhes-thumbs { border-radius: 0; }
   .detalhes-info { padding: 1.25rem;
     .det-specs { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
@@ -1186,3 +1243,4 @@
   // Pagination / empty
   .empty-state { color: #777; }
 }
+

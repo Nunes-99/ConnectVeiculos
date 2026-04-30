@@ -27,6 +27,7 @@ namespace ConnectVeiculos.Core.Entities.Lojas
         public string LojCorSecundaria { get; private set; }
         public string LojInstagram { get; private set; }
         public string LojFacebook { get; private set; }
+        public string LojUrlCatalogo { get; private set; }
 
         public Loja() { }
 
@@ -36,11 +37,11 @@ namespace ConnectVeiculos.Core.Entities.Lojas
             string lojWhatsApp, string lojImg, string lojCNPJ, string lojIE, bool lojSts,
             string lojCorPrimaria = null, string lojCorSecundaria = null,
             string lojInstagram = null, string lojFacebook = null,
-            string lojSlug = null)
+            string lojSlug = null, string lojUrlCatalogo = null)
         {
             SetProperties(lojId, lojNome, lojLogradouro, lojNumero, lojBairro, lojCidade,
                 lojEstado, lojCEP, lojComplemento, lojEmail, lojTel1, lojTel2, lojWhatsApp, lojImg,
-                lojCNPJ, lojIE, lojSts, lojCorPrimaria, lojCorSecundaria, lojInstagram, lojFacebook, lojSlug);
+                lojCNPJ, lojIE, lojSts, lojCorPrimaria, lojCorSecundaria, lojInstagram, lojFacebook, lojSlug, lojUrlCatalogo);
         }
 
         public void SetProperties(int lojId, string lojNome, string lojLogradouro, string lojNumero,
@@ -49,7 +50,7 @@ namespace ConnectVeiculos.Core.Entities.Lojas
             string lojWhatsApp, string lojImg, string lojCNPJ, string lojIE, bool lojSts,
             string lojCorPrimaria = null, string lojCorSecundaria = null,
             string lojInstagram = null, string lojFacebook = null,
-            string lojSlug = null)
+            string lojSlug = null, string lojUrlCatalogo = null)
         {
             LojId = lojId;
             LojNome = lojNome;
@@ -73,8 +74,14 @@ namespace ConnectVeiculos.Core.Entities.Lojas
             LojCorSecundaria = lojCorSecundaria ?? "#25d366";
             LojInstagram = lojInstagram;
             LojFacebook = lojFacebook;
+            LojUrlCatalogo = lojUrlCatalogo;
 
             Validate();
+        }
+
+        public void SetUrlCatalogo(string url)
+        {
+            LojUrlCatalogo = url;
         }
 
         private void Validate()

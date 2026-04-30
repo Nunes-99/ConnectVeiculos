@@ -2,9 +2,11 @@ using ConnectVeiculos.Application.InputModels.Veiculos;
 using ConnectVeiculos.Application.UseCases.Veiculos;
 using ConnectVeiculos.Core.Entities.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Database.Common;
+using ConnectVeiculos.Core.Interfaces.Database.Repositories.Publicacoes;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Services;
 using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 
@@ -16,6 +18,10 @@ namespace ConnectVeiculos.Tests.UseCases.Veiculos
         private readonly Mock<IUnitOfWork> _unitOfWorkMock;
         private readonly Mock<INotificacaoService> _notificacaoServiceMock;
         private readonly Mock<ICatalogoHubService> _catalogoHubServiceMock;
+        private readonly Mock<IMercadoLivreService> _mercadoLivreServiceMock;
+        private readonly Mock<IFacebookCatalogService> _facebookServiceMock;
+        private readonly Mock<IGoogleMerchantService> _googleServiceMock;
+        private readonly Mock<IVeiculoPublicacaoRepository> _publicacaoRepositoryMock;
         private readonly AtualizarVeiculoUseCase _useCase;
 
         public AtualizarVeiculoUseCaseTests()
@@ -24,11 +30,21 @@ namespace ConnectVeiculos.Tests.UseCases.Veiculos
             _unitOfWorkMock = new Mock<IUnitOfWork>();
             _notificacaoServiceMock = new Mock<INotificacaoService>();
             _catalogoHubServiceMock = new Mock<ICatalogoHubService>();
+            _mercadoLivreServiceMock = new Mock<IMercadoLivreService>();
+            _facebookServiceMock = new Mock<IFacebookCatalogService>();
+            _googleServiceMock = new Mock<IGoogleMerchantService>();
+            _publicacaoRepositoryMock = new Mock<IVeiculoPublicacaoRepository>();
             _useCase = new AtualizarVeiculoUseCase(
                 _veiculoRepositoryMock.Object,
                 _unitOfWorkMock.Object,
                 _notificacaoServiceMock.Object,
-                _catalogoHubServiceMock.Object);
+                _catalogoHubServiceMock.Object,
+                _mercadoLivreServiceMock.Object,
+                _facebookServiceMock.Object,
+                _googleServiceMock.Object,
+                _publicacaoRepositoryMock.Object,
+                NullLogger<AtualizarVeiculoUseCase>.Instance,
+                new Mock<IFavoritoNotificacaoService>().Object);
         }
 
         [Fact]

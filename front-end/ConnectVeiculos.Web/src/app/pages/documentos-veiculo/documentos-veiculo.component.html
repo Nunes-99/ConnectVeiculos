@@ -1,0 +1,146 @@
+<div class="page-header">
+  <h1><span class="material-icons">description</span> Documentos de Veículos</h1>
+  <button class="btn-primary" (click)="abrirModal()">
+    <span class="material-icons">add</span> Novo documento
+  </button>
+</div>
+
+<div class="filtros">
+  <label>
+    Veículo:
+    <select [(ngModel)]="veiculoFiltroId" (ngModelChange)="alterarFiltro()">
+      <option [ngValue]="null">— Todos vencendo em {{ diasAFrente }} dias —</option>
+      @for (v of veiculos; track v.veiId) {
+        <option [ngValue]="v.veiId">{{ v.veiMarca }} {{ v.veiModelo }} {{ v.veiAno }} ({{ v.veiPlaca || 'sem placa' }})</option>
+      }
+    </select>
+  </label>
+  @if (modoVencendo) {
+    <label>
+      Próximos:
+      <select [(ngModel)]="diasAFrente" (ngModelChange)="carregar()">
+        <option [ngValue]="7">7 dias</option>
+        <option [ngValue]="15">15 dias</option>
+        <option [ngValue]="30">30 dias</option>
+        <option [ngValue]="60">60 dias</option>
+        <option [ngValue]="90">90 dias</option>
+      </select>
+    </label>
+  }
+</div>
+
+@if (loading) {
+  <p class="empty">Carregando…</p>
+} @else if (documentos.length === 0) {
+  <p class="empty">Nenhum documento encontrado.</p>
+} @else {
+  <table class="documentos-table">
+    <thead>
+      <tr>
+        <th>Veículo</th>
+        <th>Tipo</th>
+        <th>Status</th>
+        <th>Vencimento</th>
+        <th>Observação</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (d of documentos; track d.docId) {
+        <tr [class.vencido]="(diasParaVencer(d.docDtVencimento) ?? 999) < 0"
+            [class.proximo]="(diasParaVencer(d.docDtVencimento) ?? 999) >= 0 && (diasParaVencer(d.docDtVencimento) ?? 999) <= 7">
+          <td>{{ veiculoNome(d.r_VeiId) }}</td>
+          <td>{{ tipoLabel(d.docTipo) }}</td>
+          <td>
+            <select [value]="d.docStatus" (change)="alterarStatus(d, $any($event.target).value)" class="status-select"
+                    [class.status-pendente]="d.docStatus === 'PENDENTE'"
+                    [class.status-andamento]="d.docStatus === 'EM_ANDAMENTO'"
+                    [class.status-concluido]="d.docStatus === 'CONCLUIDO'">
+              @for (s of statusOptions; track s.codigo) {
+                <option [value]="s.codigo">{{ s.label }}</option>
+              }
+            </select>
+          </td>
+          <td>
+            @if (d.docDtVencimento) {
+              {{ d.docDtVencimento | date:'dd/MM/yyyy' }}
+              @if (diasParaVencer(d.docDtVencimento) !== null) {
+                <small>({{ (diasParaVencer(d.docDtVencimento) ?? 0) < 0 ? 'vencido' : 'em ' + diasParaVencer(d.docDtVencimento) + ' dias' }})</small>
+              }
+            } @else { — }
+          </td>
+          <td>{{ d.docObservacao || '—' }}</td>
+          <td class="acoes">
+            <button class="btn-icon edit" (click)="abrirModal(d)" title="Editar"><span class="material-icons">edit</span></button>
+            <button class="btn-icon delete" (click)="pedirExclusao(d.docId)" title="Excluir"><span class="material-icons">delete</span></button>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+}
+
+@if (showModal) {
+  <div class="modal-overlay" (click)="fecharModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>{{ editId ? 'Editar Documento' : 'Novo Documento' }}</h2>
+        <button class="modal-close" (click)="fecharModal()"><span class="material-icons">close</span></button>
+      </div>
+      <form [formGroup]="form" (ngSubmit)="salvar()" class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="required">Veículo</label>
+            <select formControlName="veiculoId">
+              <option [ngValue]="null">Selecione...</option>
+              @for (v of veiculos; track v.veiId) {
+                <option [ngValue]="v.veiId">{{ v.veiMarca }} {{ v.veiModelo }} {{ v.veiAno }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="required">Tipo</label>
+            <select formControlName="tipo">
+              @for (t of tipos; track t.codigo) {
+                <option [value]="t.codigo">{{ t.label }}</option>
+              }
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Status</label>
+            <select formControlName="status">
+              @for (s of statusOptions; track s.codigo) {
+                <option [value]="s.codigo">{{ s.label }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Vencimento</label>
+            <input type="date" formControlName="dataVencimento" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Arquivo (URL/caminho)</label>
+          <input type="text" formControlName="arquivo" placeholder="Cole o link do arquivo" />
+        </div>
+        <div class="form-group">
+          <label>Observação</label>
+          <textarea formControlName="observacao" rows="3"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" (click)="fecharModal()">Cancelar</button>
+          <button type="submit" class="btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<app-confirm-modal
+  [show]="showConfirm"
+  title="Excluir documento?"
+  message="Esta ação não pode ser desfeita."
+  (confirm)="confirmarExclusao()"
+  (cancel)="cancelarExclusao()" />

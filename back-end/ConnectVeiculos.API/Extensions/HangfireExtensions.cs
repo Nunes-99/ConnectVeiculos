@@ -28,6 +28,8 @@ namespace ConnectVeiculos.API.Extensions
             services.AddScoped<LimparRefreshTokensJob>();
             services.AddScoped<LimparNotificacoesAntigasJob>();
             services.AddScoped<AtualizarCacheFipeJob>();
+            services.AddScoped<AlertarDocumentosVencendoJob>();
+            services.AddScoped<LimparTokensRecuperacaoJob>();
 
             return services;
         }
@@ -66,6 +68,18 @@ namespace ConnectVeiculos.API.Extensions
                 "atualizar-cache-fipe",
                 job => job.ExecuteAsync(),
                 Cron.Monthly(1, 2));
+
+            // Alertar documentos vencendo - Diariamente as 8h
+            RecurringJob.AddOrUpdate<AlertarDocumentosVencendoJob>(
+                "alertar-documentos-vencendo",
+                job => job.ExecuteAsync(),
+                Cron.Daily(8));
+
+            // Limpar tokens de recuperacao expirados - Diariamente as 4h
+            RecurringJob.AddOrUpdate<LimparTokensRecuperacaoJob>(
+                "limpar-tokens-recuperacao",
+                job => job.ExecuteAsync(),
+                Cron.Daily(4));
         }
     }
 
@@ -81,9 +95,32 @@ namespace ConnectVeiculos.API.Extensions
             if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
                 return true;
 
-            // Em producao, verificar se usuario esta autenticado e e admin
-            return httpContext.User.Identity?.IsAuthenticated == true
-                && httpContext.User.IsInRole("Administrador");
+            // Em producao: Basic Auth via env vars (HANGFIRE_USER / HANGFIRE_PASSWORD).
+            // Se nao configurado, dashboard fica fechado para todos.
+            var expectedUser = Environment.GetEnvironmentVariable("HANGFIRE_USER");
+            var expectedPwd = Environment.GetEnvironmentVariable("HANGFIRE_PASSWORD");
+            if (string.IsNullOrEmpty(expectedUser) || string.IsNullOrEmpty(expectedPwd))
+                return false;
+
+            var header = httpContext.Request.Headers["Authorization"].ToString();
+            if (string.IsNullOrEmpty(header) || !header.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase))
+            {
+                httpContext.Response.Headers["WWW-Authenticate"] = "Basic realm=\"Hangfire\"";
+                httpContext.Response.StatusCode = 401;
+                return false;
+            }
+
+            try
+            {
+                var encoded = header.Substring("Basic ".Length).Trim();
+                var decoded = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(encoded));
+                var parts = decoded.Split(':', 2);
+                if (parts.Length != 2) return false;
+
+                return string.Equals(parts[0], expectedUser, StringComparison.Ordinal)
+                    && string.Equals(parts[1], expectedPwd, StringComparison.Ordinal);
+            }
+            catch { return false; }
         }
     }
 }

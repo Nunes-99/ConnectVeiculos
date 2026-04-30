@@ -1,5 +1,6 @@
 import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
-import { inject } from '@angular/core';
+import { inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 import { AuthService, ToastService } from '../services';
@@ -8,10 +9,11 @@ export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
   const authService = inject(AuthService);
   const toast = inject(ToastService);
+  const platformId = inject(PLATFORM_ID);
 
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
-      if (error.status === 401) {
+      if (isPlatformBrowser(platformId) && error.status === 401) {
         authService.logout();
         router.navigate(['/login']);
       }
@@ -37,7 +39,7 @@ export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
         errorMessage = 'Erro interno do servidor';
       }
 
-      if (error.status !== 401) {
+      if (isPlatformBrowser(platformId) && error.status !== 401) {
         toast.error(errorMessage);
       }
 

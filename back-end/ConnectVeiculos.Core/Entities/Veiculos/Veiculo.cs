@@ -32,6 +32,7 @@ namespace ConnectVeiculos.Core.Entities.Veiculos
         public string VeiOpcionais { get; private set; }
         public string VeiDonoAtual { get; private set; }
         public string VeiDonoCelular { get; private set; }
+        public decimal? VeiPrecoFipe { get; private set; }
 
         // Navigation Properties
         public Loja Loja { get; private set; }
@@ -50,7 +51,8 @@ namespace ConnectVeiculos.Core.Entities.Veiculos
         public Veiculo(int veiId, int rLojId, int rCatId, string veiMarca, string veiModelo,
             short veiAno, string veiPlaca, string veiChassi, string veiCor, int veiKm,
             decimal veiPreco, DateTime veiDtEntrada, string veiSts, string veiSitSts, decimal veiPrecoCompra,
-            string veiObservacao = null, string veiDonoAtual = null, string veiDonoCelular = null, string veiOpcionais = null)
+            string veiObservacao = null, string veiDonoAtual = null, string veiDonoCelular = null,
+            string veiOpcionais = null, decimal? veiPrecoFipe = null)
         {
             Caracteristicas = new List<VeiculoCaracteristica>();
             Observacoes = new List<VeiculoObservacao>();
@@ -58,13 +60,14 @@ namespace ConnectVeiculos.Core.Entities.Veiculos
 
             SetProperties(veiId, rLojId, rCatId, veiMarca, veiModelo, veiAno, veiPlaca, veiChassi,
                 veiCor, veiKm, veiPreco, veiDtEntrada, veiSts, veiSitSts, veiPrecoCompra, veiObservacao,
-                veiDonoAtual, veiDonoCelular, veiOpcionais);
+                veiDonoAtual, veiDonoCelular, veiOpcionais, veiPrecoFipe);
         }
 
         public void SetProperties(int veiId, int rLojId, int rCatId, string veiMarca, string veiModelo,
             short veiAno, string veiPlaca, string veiChassi, string veiCor, int veiKm,
             decimal veiPreco, DateTime veiDtEntrada, string veiSts, string veiSitSts, decimal veiPrecoCompra,
-            string veiObservacao = null, string veiDonoAtual = null, string veiDonoCelular = null, string veiOpcionais = null)
+            string veiObservacao = null, string veiDonoAtual = null, string veiDonoCelular = null,
+            string veiOpcionais = null, decimal? veiPrecoFipe = null)
         {
             VeiId = veiId;
             R_LojId = rLojId;
@@ -85,6 +88,7 @@ namespace ConnectVeiculos.Core.Entities.Veiculos
             VeiDonoAtual = veiDonoAtual;
             VeiDonoCelular = veiDonoCelular;
             VeiOpcionais = veiOpcionais;
+            VeiPrecoFipe = veiPrecoFipe;
 
             Validate();
         }

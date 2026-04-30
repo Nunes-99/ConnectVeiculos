@@ -22,7 +22,8 @@ namespace ConnectVeiculos.API.Controllers
         public async Task<IActionResult> Registrar([FromBody] RegistrarLeadRequest request)
         {
             var lead = new Lead(0, request.VeiculoId, request.LojaId, request.NomeCliente,
-                request.Telefone, request.Email, request.Origem, "NOVO", request.Observacao);
+                request.Telefone, request.Email, request.Origem, "NOVO", request.Observacao,
+                request.Cpf, request.Renda, request.Entrada, request.Parcelas);
 
             _context.Leads.Add(lead);
             await _context.SaveChangesAsync();
@@ -81,6 +82,11 @@ namespace ConnectVeiculos.API.Controllers
         public string Email { get; set; }
         public string Origem { get; set; }
         public string Observacao { get; set; }
+        // Campos de financiamento
+        public string Cpf { get; set; }
+        public decimal? Renda { get; set; }
+        public decimal? Entrada { get; set; }
+        public int? Parcelas { get; set; }
     }
 
     public class AtualizarLeadStatusRequest

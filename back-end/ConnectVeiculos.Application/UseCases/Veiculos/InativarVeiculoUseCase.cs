@@ -1,7 +1,9 @@
 using ConnectVeiculos.Application.Interfaces.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Database.Common;
+using ConnectVeiculos.Core.Interfaces.Database.Repositories.Publicacoes;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Services;
+using Microsoft.Extensions.Logging;
 
 namespace ConnectVeiculos.Application.UseCases.Veiculos
 {
@@ -10,15 +12,30 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
         private readonly IVeiculoRepository _veiculoRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICatalogoHubService _catalogoHubService;
+        private readonly IMercadoLivreService _mercadoLivreService;
+        private readonly IFacebookCatalogService _facebookService;
+        private readonly IGoogleMerchantService _googleService;
+        private readonly IVeiculoPublicacaoRepository _publicacaoRepository;
+        private readonly ILogger<InativarVeiculoUseCase> _logger;
 
         public InativarVeiculoUseCase(
             IVeiculoRepository veiculoRepository,
             IUnitOfWork unitOfWork,
-            ICatalogoHubService catalogoHubService)
+            ICatalogoHubService catalogoHubService,
+            IMercadoLivreService mercadoLivreService,
+            IFacebookCatalogService facebookService,
+            IGoogleMerchantService googleService,
+            IVeiculoPublicacaoRepository publicacaoRepository,
+            ILogger<InativarVeiculoUseCase> logger)
         {
             _veiculoRepository = veiculoRepository;
             _unitOfWork = unitOfWork;
             _catalogoHubService = catalogoHubService;
+            _mercadoLivreService = mercadoLivreService;
+            _facebookService = facebookService;
+            _googleService = googleService;
+            _publicacaoRepository = publicacaoRepository;
+            _logger = logger;
         }
 
         public async Task Execute(int id)
@@ -43,6 +60,30 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                 {
                     veiculoId = id
                 });
+
+                // Remover anuncio do ML se existir
+                try
+                {
+                    var publicacao = await _publicacaoRepository.GetAtivaByVeiculoEPlataformaAsync(id, "MercadoLivre");
+                    if (publicacao != null)
+                    {
+                        await _mercadoLivreService.RemoverAnuncioAsync(publicacao.PubExternoId);
+                        publicacao.Remover();
+                        await _publicacaoRepository.UpdateAsync(publicacao);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Erro ao remover anuncio ML do veiculo {VeiculoId}", id);
+                }
+
+                // Remover do Facebook
+                try { await _facebookService.RemoverVeiculoAsync(id); }
+                catch (Exception ex) { _logger.LogError(ex, "Erro ao remover do Facebook"); }
+
+                // Remover do Google
+                try { await _googleService.RemoverVeiculoAsync(id); }
+                catch (Exception ex) { _logger.LogError(ex, "Erro ao remover do Google"); }
             }
             catch
             {

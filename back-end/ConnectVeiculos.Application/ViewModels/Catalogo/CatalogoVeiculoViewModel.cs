@@ -56,6 +56,7 @@ namespace ConnectVeiculos.Application.ViewModels.Catalogo
         public string LojInstagram { get; set; }
         public string LojFacebook { get; set; }
         public string LojSlug { get; set; }
+        public string LojUrlCatalogo { get; set; }
     }
 
     public class CatalogoLojaResumoViewModel

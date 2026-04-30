@@ -14,6 +14,10 @@ export interface Lead {
   leaStatus: string;
   leaObservacao: string;
   leaDtCriacao: string;
+  leaCpf?: string;
+  leaRenda?: number;
+  leaEntrada?: number;
+  leaParcelas?: number;
 }
 
 export interface LeadOrigem {

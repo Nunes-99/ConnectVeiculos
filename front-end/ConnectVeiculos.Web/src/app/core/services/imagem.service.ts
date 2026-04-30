@@ -31,6 +31,10 @@ export class ImagemService {
     return this.http.delete<void>(`${this.baseUrl}/imagens/${imagemId}`);
   }
 
+  definirPrincipal(imagemId: number): Observable<void> {
+    return this.http.put<void>(`${this.baseUrl}/imagens/${imagemId}/principal`, {});
+  }
+
   getImageUrl(caminho: string): string {
     return `${this.baseUrl}/imagens/file?path=${encodeURIComponent(caminho)}`;
   }

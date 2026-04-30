@@ -31,3 +31,16 @@ uploads/
 
 # Data
 data/
+
+# Secrets / configs locais com credenciais (NUNCA commitar!)
+back-end/ConnectVeiculos.API/appsettings.Development.json
+back-end/ConnectVeiculos.API/appsettings.*.local.json
+.env
+
+# Testes E2E (Playwright outputs)
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Outputs do dotnet publish
+publish/

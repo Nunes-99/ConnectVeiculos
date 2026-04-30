@@ -1,0 +1,466 @@
+<div class="page-header">
+  <h1><span class="material-icons">hub</span> Integracoes</h1>
+  <p>Gerencie as integracoes com plataformas externas para publicacao automatica de veiculos.</p>
+</div>
+
+<div class="integracoes-grid">
+  <!-- Mercado Livre -->
+  <div class="integracao-card">
+    <div class="card-header">
+      <div class="platform-info">
+        <span class="platform-icon ml-icon">ML</span>
+        <div>
+          <h3>Mercado Livre</h3>
+          <p>Publicacao automatica de anuncios</p>
+        </div>
+      </div>
+      <span class="status-badge" [class.connected]="mlConectado" [class.disconnected]="!mlConectado">
+        {{ mlConectado ? 'Conectado' : 'Desconectado' }}
+      </span>
+    </div>
+    <div class="card-body">
+      <p>Ao conectar, os veiculos com status <strong>Disponivel</strong> serao publicados automaticamente no Mercado Livre. Quando o status mudar (vendido, reservado ou inativo), o anuncio sera removido automaticamente.</p>
+
+      @if (mlConectado && mlConta) {
+        <div class="ml-conta-info">
+          <span class="material-icons">account_circle</span>
+          <div>
+            <strong>Conectado como {{ mlConta.nickname }}</strong>
+            @if (mlConta.email) { <small>{{ mlConta.email }}</small> }
+          </div>
+          @if (mlConta.urlPerfil) {
+            <a [href]="mlConta.urlPerfil" target="_blank" rel="noopener" title="Abrir perfil no ML">
+              <span class="material-icons">open_in_new</span>
+            </a>
+          }
+        </div>
+      }
+
+      <div class="card-actions">
+        @if (!mlConectado) {
+          <button class="btn-primary" (click)="conectarMercadoLivre()" [disabled]="mlLoading">
+            <span class="material-icons">link</span>
+            {{ mlLoading ? 'Verificando...' : 'Conectar Mercado Livre' }}
+          </button>
+        } @else {
+          <button class="btn-outline" (click)="conectarMercadoLivre()" title="Trocar para outra conta ML">
+            <span class="material-icons">swap_horiz</span> Trocar conta
+          </button>
+          <button class="btn-danger-outline" (click)="pedirDesconectar()">
+            <span class="material-icons">link_off</span> Desconectar
+          </button>
+        }
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="material-icons">info</span>
+      <small>Custo: Gratis (taxas do ML aplicam-se apenas em vendas realizadas pela plataforma)</small>
+    </div>
+  </div>
+
+  <!-- WhatsApp Business -->
+  <div class="integracao-card">
+    <div class="card-header">
+      <div class="platform-info">
+        <span class="platform-icon wa-icon">
+          <span class="material-icons">chat</span>
+        </span>
+        <div>
+          <h3>WhatsApp Business</h3>
+          <p>Receber leads e enviar mensagens automaticas</p>
+        </div>
+      </div>
+      <span class="status-badge" [class.connected]="waConfig.configurado" [class.disconnected]="!waConfig.configurado">
+        {{ waConfig.configurado ? 'Configurado' : 'Nao configurado' }}
+      </span>
+    </div>
+    <div class="card-body">
+      <p>
+        Quando configurado, mensagens recebidas no seu numero WhatsApp Business viram <strong>Leads</strong>
+        automaticamente no admin. Voce tambem pode <strong>responder</strong> e disparar <strong>templates</strong>
+        aprovados pelo Meta para confirmar test drives, recepcionar contatos etc.
+      </p>
+
+      @if (waConfig.configurado) {
+        <div class="ml-conta-info">
+          <span class="material-icons">verified</span>
+          <div>
+            <strong>Numero conectado</strong>
+            @if (waConfig.phoneId) { <small>Phone ID: {{ waConfig.phoneId }}</small> }
+          </div>
+        </div>
+      }
+
+      <div class="card-actions">
+        @if (!waConfig.configurado) {
+          <button class="btn-primary" (click)="abrirConfigWhatsApp()" [disabled]="waLoading">
+            <span class="material-icons">settings</span>
+            {{ waLoading ? 'Carregando...' : 'Configurar' }}
+          </button>
+        } @else {
+          <button class="btn-outline" (click)="abrirConfigWhatsApp()" title="Atualizar credenciais">
+            <span class="material-icons">edit</span> Reconfigurar
+          </button>
+          <button class="btn-danger-outline" (click)="pedirDesconectarWhatsApp()">
+            <span class="material-icons">link_off</span> Desconectar
+          </button>
+        }
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="material-icons">info</span>
+      <small>Custo: 1.000 conversas/mes gratis (iniciadas pelo cliente). Conversas adicionais ~R$0,06 (utility) ou ~R$0,30 (marketing). Pago direto ao Meta com o cartao da sua conta Business.</small>
+    </div>
+  </div>
+
+  <!-- Modal de configuracao WhatsApp -->
+  @if (showWaConfigModal) {
+    <div class="modal-overlay" (click)="fecharConfigWhatsApp()">
+      <div class="modal modal-lg" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2><span class="material-icons">chat</span> Configurar WhatsApp Business</h2>
+          <button class="modal-close" (click)="fecharConfigWhatsApp()"><span class="material-icons">close</span></button>
+        </div>
+
+        <div class="wa-tabs">
+          <button [class.active]="waAbaTutorial" (click)="waAbaTutorial = true">
+            <span class="material-icons">menu_book</span> Como configurar
+          </button>
+          <button [class.active]="!waAbaTutorial" (click)="waAbaTutorial = false">
+            <span class="material-icons">key</span> Colar credenciais
+          </button>
+        </div>
+
+        <div class="modal-body">
+          @if (waAbaTutorial) {
+            <div class="wa-tutorial">
+              <p><strong>Voce precisa fazer no Meta Business antes de plugar aqui:</strong></p>
+              <ol>
+                <li>Criar conta em <a href="https://business.facebook.com" target="_blank" rel="noopener">business.facebook.com</a> (gratis, 5 min)</li>
+                <li>Criar um <strong>WhatsApp Business Account (WABA)</strong> dentro dela</li>
+                <li>Cadastrar e <strong>verificar via SMS</strong> um numero empresarial (nao pode estar em uso no WhatsApp comum)</li>
+                <li>Em <a href="https://developers.facebook.com" target="_blank" rel="noopener">developers.facebook.com</a> criar uma app tipo <strong>Business</strong> e ativar o produto <strong>WhatsApp</strong></li>
+                <li>Gerar um <strong>System User Token permanente</strong> (nao expira)</li>
+                <li>Submeter ao Meta os primeiros <strong>templates de mensagem</strong> (~24h pra aprovar): ex. "lead_recebido", "testdrive_confirmado"</li>
+                <li>No painel Meta, configurar o <strong>Webhook</strong> com:
+                  <ul>
+                    <li>URL: <code>{{ webhookUrl }}</code> <button class="btn-mini" (click)="copiarUrl(webhookUrl)" title="Copiar"><span class="material-icons">content_copy</span></button></li>
+                    <li>Verify Token: o que voce escolher na proxima aba (default: <code>connectveiculos-verify</code>)</li>
+                    <li>Subscribed fields: <strong>messages</strong></li>
+                  </ul>
+                </li>
+              </ol>
+              <p class="wa-aviso">
+                <span class="material-icons">warning</span>
+                Guia detalhado em <strong>GUIA-INTEGRACOES.md</strong> &gt; secao 4. Quem paga as conversas e voce (Meta cobra direto no cartao da sua conta Business). 1.000 conversas iniciadas pelo cliente sao gratuitas todo mes.
+              </p>
+              <button class="btn-primary" (click)="waAbaTutorial = false">
+                Ja fiz tudo, vou colar as credenciais
+                <span class="material-icons">arrow_forward</span>
+              </button>
+            </div>
+          } @else {
+            <form [formGroup]="waForm" (ngSubmit)="salvarWhatsApp()" class="wa-form">
+              <div class="form-group">
+                <label class="required">Access Token (System User Token permanente)</label>
+                <div class="token-input">
+                  <input [type]="waMostrarToken ? 'text' : 'password'" formControlName="accessToken" placeholder="EAAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
+                  <button type="button" class="btn-mini" (click)="waMostrarToken = !waMostrarToken">
+                    <span class="material-icons">{{ waMostrarToken ? 'visibility_off' : 'visibility' }}</span>
+                  </button>
+                </div>
+                <small>Cole o token gerado em <em>Meta for Developers &gt; Sua app &gt; WhatsApp &gt; API Setup</em>.</small>
+              </div>
+
+              <div class="form-group">
+                <label class="required">Phone Number ID</label>
+                <input type="text" formControlName="phoneId" placeholder="123456789012345" />
+                <small>Numero ID que aparece em <em>WhatsApp &gt; API Setup &gt; From phone number</em>. Nao e o telefone, e o ID.</small>
+              </div>
+
+              <div class="form-group">
+                <label class="required">Verify Token (voce define)</label>
+                <input type="text" formControlName="verifyToken" placeholder="connectveiculos-verify" />
+                <small>Qualquer string secreta. Tem que ser EXATAMENTE igual a que voce coloca no campo <em>Verify Token</em> do webhook do Meta.</small>
+              </div>
+
+              <div class="wa-aviso">
+                <span class="material-icons">warning</span>
+                Antes de salvar aqui, configure no Meta o webhook apontando para
+                <code>{{ webhookUrl }}</code>
+                <button type="button" class="btn-mini" (click)="copiarUrl(webhookUrl)"><span class="material-icons">content_copy</span></button>
+              </div>
+
+              <div class="modal-footer">
+                <button type="button" class="btn-secondary" (click)="fecharConfigWhatsApp()" [disabled]="waSalvando">Cancelar</button>
+                <button type="submit" class="btn-primary" [disabled]="waSalvando || waForm.invalid">
+                  {{ waSalvando ? 'Salvando...' : 'Salvar credenciais' }}
+                </button>
+              </div>
+            </form>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <app-confirm-modal
+    [show]="showWaDesconectarModal"
+    titulo="Desconectar WhatsApp Business?"
+    mensagem="Apos desconectar, novas mensagens recebidas NAO geram mais Leads automaticamente. As mensagens ja recebidas continuam visiveis em Leads. O sistema parara de enviar mensagens via WhatsApp ate uma conta ser reconectada."
+    textoBotaoConfirmar="Sim, desconectar"
+    textoBotaoCancelar="Cancelar"
+    tipo="danger"
+    (confirmar)="confirmarDesconectarWhatsApp()"
+    (cancelar)="cancelarDesconectarWhatsApp()" />
+
+  <!-- E-mail / SMTP -->
+  <div class="integracao-card">
+    <div class="card-header">
+      <div class="platform-info">
+        <span class="platform-icon smtp-icon">
+          <span class="material-icons">mail</span>
+        </span>
+        <div>
+          <h3>E-mail / SMTP</h3>
+          <p>Notificacoes para clientes (preco caiu, veiculo similar, recuperar senha)</p>
+        </div>
+      </div>
+      <span class="status-badge" [class.connected]="smtpConfig.configurado" [class.disconnected]="!smtpConfig.configurado">
+        {{ smtpConfig.configurado ? 'Configurado' : 'Nao configurado' }}
+      </span>
+    </div>
+    <div class="card-body">
+      <p>
+        Quando configurado, o sistema envia e-mails automaticos: queda de preco para quem favoritou um veiculo, novo veiculo similar disponivel, recuperacao de senha do admin, confirmacao de venda.
+        O remetente sera o e-mail da sua loja (nao da plataforma) — voce paga apenas se usar servico pago como SendGrid.
+      </p>
+
+      @if (smtpConfig.configurado && smtpConfig.senderEmail) {
+        <div class="ml-conta-info">
+          <span class="material-icons">verified</span>
+          <div>
+            <strong>{{ smtpConfig.senderName }}</strong>
+            <small>{{ smtpConfig.senderEmail }} • {{ smtpConfig.smtpServer }}:{{ smtpConfig.smtpPort }}</small>
+          </div>
+        </div>
+      }
+
+      <div class="card-actions">
+        @if (!smtpConfig.configurado) {
+          <button class="btn-primary" (click)="abrirConfigSmtp()" [disabled]="smtpLoading">
+            <span class="material-icons">settings</span>
+            {{ smtpLoading ? 'Carregando...' : 'Configurar' }}
+          </button>
+        } @else {
+          <button class="btn-outline" (click)="abrirConfigSmtp()" title="Atualizar credenciais">
+            <span class="material-icons">edit</span> Reconfigurar
+          </button>
+          <button class="btn-danger-outline" (click)="pedirDesconectarSmtp()">
+            <span class="material-icons">link_off</span> Desconectar
+          </button>
+        }
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="material-icons">info</span>
+      <small>Custo: gratis se usar e-mail proprio (Locaweb, UOL, KingHost, Gmail). Pago se usar servico dedicado tipo SendGrid (free 100/dia, depois ~R$100/mes para 50k).</small>
+    </div>
+  </div>
+
+  <!-- Modal config SMTP -->
+  @if (showSmtpConfigModal) {
+    <div class="modal-overlay" (click)="fecharConfigSmtp()">
+      <div class="modal modal-lg" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2><span class="material-icons">mail</span> Configurar E-mail / SMTP</h2>
+          <button class="modal-close" (click)="fecharConfigSmtp()"><span class="material-icons">close</span></button>
+        </div>
+        <div class="modal-body">
+          <form [formGroup]="smtpForm" (ngSubmit)="salvarSmtp()" class="wa-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="required">Servidor SMTP</label>
+                <input type="text" formControlName="smtpServer" placeholder="smtp.gmail.com" />
+                <small>Ex: smtp.gmail.com, smtp.locaweb.com.br, smtp.kinghost.net, smtp.sendgrid.net</small>
+              </div>
+              <div class="form-group">
+                <label class="required">Porta</label>
+                <input type="number" formControlName="smtpPort" placeholder="587" />
+                <small>587 (TLS) ou 465 (SSL). Default: 587.</small>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="required">E-mail remetente</label>
+                <input type="email" formControlName="senderEmail" placeholder="contato@minhaloja.com.br" />
+                <small>Aparece como "De:" nos e-mails enviados.</small>
+              </div>
+              <div class="form-group">
+                <label class="required">Nome remetente</label>
+                <input type="text" formControlName="senderName" placeholder="Diamante Veiculos" />
+                <small>Aparece como "De:" antes do e-mail.</small>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="required">Usuario SMTP</label>
+              <input type="text" formControlName="username" placeholder="contato@minhaloja.com.br ou apikey" />
+              <small>Geralmente igual ao e-mail. Para SendGrid, e a string "apikey".</small>
+            </div>
+
+            <div class="form-group">
+              <label [class.required]="!smtpConfig.configurado">Senha SMTP {{ smtpConfig.configurado ? '(deixe em branco para manter atual)' : '' }}</label>
+              <div class="token-input">
+                <input [type]="smtpMostrarSenha ? 'text' : 'password'" formControlName="password" placeholder="senha do e-mail ou app password" />
+                <button type="button" class="btn-mini" (click)="smtpMostrarSenha = !smtpMostrarSenha">
+                  <span class="material-icons">{{ smtpMostrarSenha ? 'visibility_off' : 'visibility' }}</span>
+                </button>
+              </div>
+              <small>Para Gmail: gere App Password em myaccount.google.com/apppasswords (precisa 2-Step Verification ativo).</small>
+            </div>
+
+            <div class="form-group">
+              <label>
+                <input type="checkbox" formControlName="enableSsl" /> Usar SSL/TLS (recomendado)
+              </label>
+            </div>
+
+            <div class="wa-aviso">
+              <span class="material-icons">warning</span>
+              Sempre TESTE antes de salvar — credencial errada faz notificacoes silenciarem sem aviso.
+            </div>
+
+            <div class="smtp-test-block">
+              <label>Enviar e-mail de teste para:</label>
+              <div class="token-input">
+                <input type="email" [(ngModel)]="smtpEmailTeste" [ngModelOptions]="{standalone: true}" placeholder="seu-email@exemplo.com" />
+                <button type="button" class="btn-mini btn-test" (click)="testarSmtp()" [disabled]="smtpTestando">
+                  <span class="material-icons">send</span> {{ smtpTestando ? 'Enviando...' : 'Testar' }}
+                </button>
+              </div>
+              @if (smtpTesteResultado) {
+                <div class="smtp-test-result" [class.sucesso]="smtpTesteResultado.sucesso" [class.falha]="!smtpTesteResultado.sucesso">
+                  <span class="material-icons">{{ smtpTesteResultado.sucesso ? 'check_circle' : 'error' }}</span>
+                  {{ smtpTesteResultado.mensagem }}
+                </div>
+              }
+              <small>O teste usa as credenciais ATUALMENTE SALVAS. Se acabou de mexer no formulario, salve antes de testar.</small>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" class="btn-secondary" (click)="fecharConfigSmtp()" [disabled]="smtpSalvando">Cancelar</button>
+              <button type="submit" class="btn-primary" [disabled]="smtpSalvando || smtpForm.invalid">
+                {{ smtpSalvando ? 'Salvando...' : 'Salvar' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  }
+
+  <app-confirm-modal
+    [show]="showSmtpDesconectarModal"
+    titulo="Desconectar SMTP?"
+    mensagem="Apos desconectar, e-mails de notificacao (preco caiu, veiculo similar, recuperar senha) deixam de ser enviados. Configure novamente quando quiser reativar."
+    textoBotaoConfirmar="Sim, desconectar"
+    textoBotaoCancelar="Cancelar"
+    tipo="danger"
+    (confirmar)="confirmarDesconectarSmtp()"
+    (cancelar)="cancelarDesconectarSmtp()" />
+
+  <!-- Facebook Catalog -->
+  <div class="integracao-card">
+    <div class="card-header">
+      <div class="platform-info">
+        <span class="platform-icon fb-icon">f</span>
+        <div>
+          <h3>Facebook / Instagram</h3>
+          <p>Catalogo de produtos para Marketplace e Ads</p>
+        </div>
+      </div>
+      <span class="status-badge feed">Feed</span>
+    </div>
+    <div class="card-body">
+      <p>O Facebook importa automaticamente os veiculos atraves de um feed de dados. Configure a URL abaixo no <strong>Meta Business Suite > Catalogo > Fontes de dados</strong>.</p>
+      <div class="feed-url-section">
+        <label>URL do Feed:</label>
+        <div class="feed-url-row">
+          <input type="text" [value]="feedFacebookUrl" readonly />
+          <button class="btn-copy" (click)="copiarUrl(feedFacebookUrl)">
+            <span class="material-icons">content_copy</span>
+          </button>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="https://business.facebook.com/commerce" target="_blank" class="btn-outline">
+          <span class="material-icons">open_in_new</span>
+          Abrir Meta Business Suite
+        </a>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="material-icons">info</span>
+      <small>Custo: Gratis para listagem organica. Para impulsionar com Ads, o cliente define o orcamento.</small>
+    </div>
+  </div>
+
+  <!-- Modais de confirmacao do ML -->
+  <app-confirm-modal
+    [show]="showSubstituirModal"
+    titulo="Substituir conta Mercado Livre?"
+    [mensagem]="'Ja existe uma conta ML conectada' + (mlConta ? ' (' + mlConta.nickname + ')' : '') + '. Conectar uma nova conta vai SUBSTITUIR a atual e os anuncios futuros irao para a nova conta. Continuar?'"
+    textoBotaoConfirmar="Sim, substituir"
+    textoBotaoCancelar="Cancelar"
+    tipo="warning"
+    (confirmar)="confirmarSubstituicao()"
+    (cancelar)="cancelarSubstituicao()" />
+
+  <app-confirm-modal
+    [show]="showDesconectarModal"
+    titulo="Desconectar Mercado Livre?"
+    mensagem="Apos desconectar, novos veiculos cadastrados NAO serao publicados automaticamente no ML ate uma nova conta ser conectada. Os anuncios ja publicados continuam ativos no ML."
+    textoBotaoConfirmar="Sim, desconectar"
+    textoBotaoCancelar="Cancelar"
+    tipo="danger"
+    (confirmar)="confirmarDesconectar()"
+    (cancelar)="cancelarDesconectar()" />
+
+  <!-- Google Merchant -->
+  <div class="integracao-card">
+    <div class="card-header">
+      <div class="platform-info">
+        <span class="platform-icon google-icon">G</span>
+        <div>
+          <h3>Google Merchant / Vehicle Ads</h3>
+          <p>Listagem no Google Shopping e Vehicle Ads</p>
+        </div>
+      </div>
+      <span class="status-badge feed">Feed</span>
+    </div>
+    <div class="card-body">
+      <p>O Google importa os veiculos atraves de um feed XML. Configure a URL abaixo no <strong>Google Merchant Center > Produtos > Feeds</strong>.</p>
+      <div class="feed-url-section">
+        <label>URL do Feed:</label>
+        <div class="feed-url-row">
+          <input type="text" [value]="feedGoogleUrl" readonly />
+          <button class="btn-copy" (click)="copiarUrl(feedGoogleUrl)">
+            <span class="material-icons">content_copy</span>
+          </button>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="https://merchants.google.com" target="_blank" class="btn-outline">
+          <span class="material-icons">open_in_new</span>
+          Abrir Google Merchant Center
+        </a>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="material-icons">info</span>
+      <small>Custo: Listagem gratis. Para Google Ads (Vehicle Ads), o cliente define o orcamento (min ~R$5/dia).</small>
+    </div>
+  </div>
+</div>

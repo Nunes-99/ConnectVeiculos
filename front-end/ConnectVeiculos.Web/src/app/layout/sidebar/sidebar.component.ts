@@ -1,4 +1,5 @@
-import { Component, EventEmitter, inject, Input, Output } from '@angular/core';
+import { Component, EventEmitter, inject, Input, Output, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { AuthService, ThemeService, LojaService } from '../../core/services';
@@ -37,6 +38,8 @@ export class SidebarComponent {
         { label: 'Painel Geral', icon: 'dashboard', route: '/dashboard' },
         { label: 'Veículos', icon: 'directions_car', route: '/veiculos' },
         { label: 'Vendas', icon: 'point_of_sale', route: '/vendas' },
+        { label: 'Documentos', icon: 'description', route: '/documentos' },
+        // { label: 'Financiamento', icon: 'account_balance', route: '/financiamentos' }, // TODO: ativar quando tiver parceria com bancos (BV, Pan, etc)
         { label: 'Relatórios', icon: 'assessment', route: '/relatorios' },
       ]
     },
@@ -52,7 +55,7 @@ export class SidebarComponent {
       title: 'Comercial',
       items: [
         { label: 'Captação de Clientes', icon: 'people_outline', route: '/leads' },
-        // { label: 'Negociações', icon: 'handshake', route: '/negociacoes' }, // TODO: implementar futuramente
+        { label: 'Negociações', icon: 'handshake', route: '/negociacoes' },
         { label: 'Test Drives', icon: 'event', route: '/test-drives' },
         { label: 'Favoritos', icon: 'favorite', route: '/favoritos' },
       ]
@@ -60,6 +63,7 @@ export class SidebarComponent {
     {
       title: 'Sistema',
       items: [
+        { label: 'Integracoes', icon: 'hub', route: '/integracoes' },
         { label: 'Logs', icon: 'history', route: '/logs' },
       ]
     }
@@ -73,13 +77,17 @@ export class SidebarComponent {
     });
   }
 
+  private platformId = inject(PLATFORM_ID);
+
   abrirCatalogo(loja?: Loja): void {
+    if (!isPlatformBrowser(this.platformId)) return;
     const param = loja?.lojSlug || loja?.lojId;
     const url = param ? `/catalogo/${param}` : '/catalogo';
     window.open(url, '_blank');
   }
 
   copiarLinkCatalogo(loja?: Loja): void {
+    if (!isPlatformBrowser(this.platformId)) return;
     const baseUrl = window.location.origin;
     const param = loja?.lojSlug || loja?.lojId;
     const url = param ? `${baseUrl}/catalogo/${param}` : `${baseUrl}/catalogo`;

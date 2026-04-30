@@ -1,0 +1,145 @@
+<div class="page-header">
+  <h1><span class="material-icons">account_balance</span> Financiamento - Consulta Real</h1>
+  <p>Simule e envie propostas de financiamento para bancos parceiros.</p>
+</div>
+
+<div class="financiamento-layout">
+  <!-- Formulario -->
+  <div class="form-card">
+    <h3>Dados da Simulacao</h3>
+
+    <div class="form-group">
+      <label class="required">Veiculo</label>
+      <select [(ngModel)]="veiculoSelecionadoId" (ngModelChange)="onVeiculoChange()">
+        <option [ngValue]="null">Selecione um veiculo</option>
+        @for (v of veiculos; track v.veiId) {
+          <option [ngValue]="v.veiId">{{ v.veiMarca }} {{ v.veiModelo }} {{ v.veiAno }} - {{ formatarMoeda(v.veiPreco) }}</option>
+        }
+      </select>
+    </div>
+
+    @if (veiculoSelecionado) {
+      <div class="veiculo-info">
+        <div class="info-item">
+          <small>Valor do Veiculo</small>
+          <strong>{{ formatarMoeda(veiculoSelecionado.veiPreco) }}</strong>
+        </div>
+        <div class="info-item">
+          <small>Ano</small>
+          <strong>{{ veiculoSelecionado.veiAno }}</strong>
+        </div>
+        <div class="info-item">
+          <small>KM</small>
+          <strong>{{ veiculoSelecionado.veiKm | number:'1.0-0' }} km</strong>
+        </div>
+      </div>
+    }
+
+    <div class="form-group">
+      <label class="required">CPF do Cliente</label>
+      <input type="text" [(ngModel)]="cpfCliente" appMask="cpf" placeholder="000.000.000-00" maxlength="14" />
+    </div>
+
+    <div class="form-group">
+      <label class="required">Renda Mensal</label>
+      <input type="text" [(ngModel)]="rendaMensal" appCurrencyMask placeholder="R$ 0,00" />
+    </div>
+
+    <div class="form-group">
+      <label>Valor de Entrada</label>
+      <input type="text" [(ngModel)]="valorEntrada" appCurrencyMask placeholder="R$ 0,00" />
+    </div>
+
+    <div class="form-group">
+      <label>Parcelas</label>
+      <div class="parcelas-options">
+        @for (p of opcoesParc; track p) {
+          <button [class.active]="parcelas === p" (click)="parcelas = p">{{ p }}x</button>
+        }
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Banco</label>
+      <select [(ngModel)]="bancoSelecionado">
+        <option value="TODOS">Todos os bancos</option>
+        @for (banco of bancos; track banco.codigoBanco) {
+          <option [value]="banco.codigoBanco" [disabled]="!banco.configurado">
+            {{ banco.nomeBanco }}{{ banco.configurado ? '' : ' (nao configurado)' }}
+          </option>
+        }
+      </select>
+      @if (bancos.length > 0 && !bancos.some(b => b.configurado)) {
+        <small class="banco-aviso">
+          <span class="material-icons">info</span>
+          Nenhum banco configurado. Configure as credenciais em Integracoes para ativar.
+        </small>
+      }
+    </div>
+
+    <button class="btn-simular" (click)="simular()" [disabled]="loading || !veiculoSelecionado">
+      <span class="material-icons">{{ loading ? 'hourglass_empty' : 'search' }}</span>
+      {{ loading ? 'Consultando bancos...' : 'Simular Financiamento' }}
+    </button>
+  </div>
+
+  <!-- Resultados -->
+  <div class="resultados-area">
+    @if (!simulado && !loading) {
+      <div class="empty-state">
+        <span class="material-icons">account_balance</span>
+        <p>Preencha os dados e clique em <strong>Simular</strong> para consultar os bancos.</p>
+      </div>
+    }
+
+    @if (loading) {
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Consultando bancos parceiros...</p>
+      </div>
+    }
+
+    @if (simulado && resultados.length > 0) {
+      <h3>Propostas Recebidas</h3>
+      <div class="resultados-grid">
+        @for (r of resultados; track r.codigoBanco) {
+          <div class="resultado-card" [class.aprovado]="r.aprovado" [class.recusado]="!r.aprovado">
+            <div class="resultado-header">
+              <strong>{{ r.banco }}</strong>
+              <span class="status-chip" [class.approved]="r.aprovado">
+                {{ r.aprovado ? 'Pre-aprovado' : 'Nao aprovado' }}
+              </span>
+            </div>
+            @if (r.aprovado) {
+              <div class="resultado-body">
+                <div class="resultado-destaque">
+                  <small>Parcela</small>
+                  <span class="valor-parcela">{{ formatarMoeda(r.valorParcela) }}</span>
+                  <small>{{ r.parcelas }}x</small>
+                </div>
+                <div class="resultado-detalhes">
+                  <div><small>Taxa mensal</small><span>{{ formatarTaxa(r.taxaMensal) }}</span></div>
+                  <div><small>Taxa anual</small><span>{{ r.taxaAnual?.toFixed(2) }}% a.a.</span></div>
+                  <div><small>CET anual</small><span>{{ r.cetAnual?.toFixed(2) }}%</span></div>
+                  <div><small>Valor financiado</small><span>{{ formatarMoeda(r.valorFinanciado) }}</span></div>
+                  <div><small>Valor total</small><span>{{ formatarMoeda(r.valorTotal) }}</span></div>
+                </div>
+              </div>
+            } @else {
+              <div class="resultado-body recusado-msg">
+                <p>{{ r.mensagem }}</p>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    @if (simulado && resultados.length === 0) {
+      <div class="empty-state">
+        <span class="material-icons">sentiment_dissatisfied</span>
+        <p>Nenhum banco retornou proposta para esta simulacao.</p>
+      </div>
+    }
+  </div>
+</div>

@@ -65,6 +65,15 @@ namespace ConnectVeiculos.API.Controllers
             return CreatedAtAction(nameof(ConsultarImagens), new { veiculoId }, imagem);
         }
 
+        [HttpPut("{imagemId}/principal")]
+        public async Task<IActionResult> DefinirPrincipal(
+            [FromServices] IDefinirImagemPrincipalUseCase definirPrincipalUseCase,
+            int imagemId)
+        {
+            await definirPrincipalUseCase.Execute(imagemId);
+            return NoContent();
+        }
+
         [HttpDelete("{imagemId}")]
         public async Task<IActionResult> ExcluirImagem(
             [FromServices] IExcluirImagemVeiculoUseCase excluirImagemUseCase,

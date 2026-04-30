@@ -119,5 +119,22 @@ namespace ConnectVeiculos.API.Controllers
             var resultado = await useCase.Execute();
             return Ok(resultado);
         }
+
+        /// <summary>
+        /// Retorna dashboard de lucro: receita, custos, despesas, comissoes,
+        /// lucro liquido, margem media, evolucao mensal e top veiculos rentaveis.
+        /// </summary>
+        [HttpGet("lucro")]
+        [ProducesResponseType(typeof(LucroDashboardViewModel), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> ConsultarLucro(
+            [FromQuery] DateTime? dataInicio,
+            [FromQuery] DateTime? dataFim,
+            [FromQuery] int? lojaId,
+            [FromServices] IConsultarLucroDashboardUseCase useCase)
+        {
+            var resultado = await useCase.Execute(dataInicio, dataFim, lojaId);
+            return Ok(resultado);
+        }
     }
 }

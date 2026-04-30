@@ -57,5 +57,14 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework.Repositories
             _context.LojasUsuarios.RemoveRange(registros);
             await _context.SaveChangesAsync();
         }
+
+        public async Task DeleteByLojaIdAsync(int lojaId)
+        {
+            var registros = await _context.LojasUsuarios
+                .Where(lu => lu.R_LojId == lojaId)
+                .ToListAsync();
+            _context.LojasUsuarios.RemoveRange(registros);
+            await _context.SaveChangesAsync();
+        }
     }
 }

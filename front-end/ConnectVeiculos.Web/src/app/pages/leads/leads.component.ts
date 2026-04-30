@@ -50,7 +50,8 @@ export class LeadsComponent implements OnInit {
       'WHATSAPP_DETALHE': 'WhatsApp Detalhe',
       'TEST_DRIVE': 'Test Drive',
       'DIRETO': 'Direto',
-      'INDICACAO': 'Indicação'
+      'INDICACAO': 'Indicação',
+      'FINANCIAMENTO': 'Solicitação de Financiamento'
     };
     return labels[origem] || origem;
   }

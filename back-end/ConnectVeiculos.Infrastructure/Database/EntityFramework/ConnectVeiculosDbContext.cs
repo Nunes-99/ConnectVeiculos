@@ -21,7 +21,11 @@ using ConnectVeiculos.Core.Entities.Despesas;
 using ConnectVeiculos.Core.Entities.Leads;
 using ConnectVeiculos.Core.Entities.Favoritos;
 using ConnectVeiculos.Core.Entities.Webhooks;
+using ConnectVeiculos.Core.Entities.Configuracoes;
+using ConnectVeiculos.Core.Entities.Documentos;
 using ConnectVeiculos.Core.Entities.Negociacoes;
+using ConnectVeiculos.Core.Entities.Publicacoes;
+using ConnectVeiculos.Core.Entities.PushSubscriptions;
 using Microsoft.EntityFrameworkCore;
 
 namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
@@ -54,6 +58,10 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
         public DbSet<Lead> Leads { get; set; }
         public DbSet<Favorito> Favoritos { get; set; }
         public DbSet<Negociacao> Negociacoes { get; set; }
+        public DbSet<VeiculoPublicacao> VeiculoPublicacoes { get; set; }
+        public DbSet<ConfiguracaoSistema> Configuracoes { get; set; }
+        public DbSet<VeiculoDocumento> VeiculosDocumentos { get; set; }
+        public DbSet<PushSubscription> PushSubscriptions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -100,6 +108,7 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
                 entity.Property(e => e.LojFacebook).HasMaxLength(255);
                 entity.Property(e => e.LojSlug).HasMaxLength(100);
                 entity.HasIndex(e => e.LojSlug).IsUnique();
+                entity.Property(e => e.LojUrlCatalogo).HasMaxLength(500);
             });
 
             // LojaUsuario
@@ -141,6 +150,7 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
                 entity.Property(e => e.VeiObservacao).HasMaxLength(2000);
                 entity.Property(e => e.VeiDonoAtual).HasMaxLength(150);
                 entity.Property(e => e.VeiDonoCelular).HasMaxLength(20);
+                entity.Property(e => e.VeiPrecoFipe).HasPrecision(10, 2);
                 entity.HasOne(e => e.Loja).WithMany().HasForeignKey(e => e.R_LojId);
                 entity.HasOne(e => e.Categoria).WithMany().HasForeignKey(e => e.R_CatId);
             });
@@ -212,6 +222,29 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
                 entity.Property(e => e.ImgId).ValueGeneratedOnAdd();
                 entity.Property(e => e.ImgCaminho).HasMaxLength(500);
                 entity.HasOne(e => e.Veiculo).WithMany(v => v.Imagens).HasForeignKey(e => e.R_VeiId);
+            });
+
+            // ConfiguracaoSistema
+            modelBuilder.Entity<ConfiguracaoSistema>(entity =>
+            {
+                entity.ToTable("ConfiguracaoSistema");
+                entity.HasKey(e => e.CfgId);
+                entity.Property(e => e.CfgId).ValueGeneratedOnAdd();
+                entity.Property(e => e.CfgChave).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.CfgValor).HasMaxLength(2000);
+                entity.HasIndex(e => e.CfgChave).IsUnique();
+            });
+
+            // VeiculoPublicacao
+            modelBuilder.Entity<VeiculoPublicacao>(entity =>
+            {
+                entity.ToTable("VeiculoPublicacao");
+                entity.HasKey(e => e.PubId);
+                entity.Property(e => e.PubId).ValueGeneratedOnAdd();
+                entity.Property(e => e.PubPlataforma).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.PubExternoId).HasMaxLength(200);
+                entity.Property(e => e.PubStatus).HasMaxLength(20);
+                entity.Property(e => e.PubUrl).HasMaxLength(500);
             });
 
             // Venda
@@ -321,13 +354,38 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
             modelBuilder.Entity<VeiculoDespesa>(entity => { entity.ToTable("VeiculoDespesa"); entity.HasKey(e => e.DesId); entity.Property(e => e.DesId).ValueGeneratedOnAdd(); entity.Property(e => e.DesTipo).HasMaxLength(50).IsRequired(); entity.Property(e => e.DesDescricao).HasMaxLength(500); entity.Property(e => e.DesValor).HasPrecision(10, 2); });
 
             // Lead
-            modelBuilder.Entity<Lead>(entity => { entity.ToTable("Lead"); entity.HasKey(e => e.LeaId); entity.Property(e => e.LeaId).ValueGeneratedOnAdd(); entity.Property(e => e.LeaNomeCliente).HasMaxLength(200); entity.Property(e => e.LeaTelefone).HasMaxLength(20); entity.Property(e => e.LeaEmail).HasMaxLength(255); entity.Property(e => e.LeaOrigem).HasMaxLength(30); entity.Property(e => e.LeaStatus).HasMaxLength(20); entity.Property(e => e.LeaObservacao).HasMaxLength(1000); });
+            modelBuilder.Entity<Lead>(entity => { entity.ToTable("Lead"); entity.HasKey(e => e.LeaId); entity.Property(e => e.LeaId).ValueGeneratedOnAdd(); entity.Property(e => e.LeaNomeCliente).HasMaxLength(200); entity.Property(e => e.LeaTelefone).HasMaxLength(20); entity.Property(e => e.LeaEmail).HasMaxLength(255); entity.Property(e => e.LeaOrigem).HasMaxLength(30); entity.Property(e => e.LeaStatus).HasMaxLength(20); entity.Property(e => e.LeaObservacao).HasMaxLength(1000); entity.Property(e => e.LeaCpf).HasMaxLength(14); entity.Property(e => e.LeaRenda).HasPrecision(12, 2); entity.Property(e => e.LeaEntrada).HasPrecision(12, 2); });
 
             // Negociacao
             modelBuilder.Entity<Negociacao>(entity => { entity.ToTable("Negociacao"); entity.HasKey(e => e.NegId); entity.Property(e => e.NegId).ValueGeneratedOnAdd(); entity.Property(e => e.NegNomeCliente).HasMaxLength(200); entity.Property(e => e.NegTelefone).HasMaxLength(20); entity.Property(e => e.NegEmail).HasMaxLength(255); entity.Property(e => e.NegValorProposta).HasPrecision(10, 2); entity.Property(e => e.NegStatus).HasMaxLength(20); entity.Property(e => e.NegObservacao).HasMaxLength(1000); });
 
             // Favorito
             modelBuilder.Entity<Favorito>(entity => { entity.ToTable("Favorito"); entity.HasKey(e => e.FavId); entity.Property(e => e.FavId).ValueGeneratedOnAdd(); entity.Property(e => e.FavEmail).HasMaxLength(255).IsRequired(); entity.Property(e => e.FavNome).HasMaxLength(200); entity.Property(e => e.FavTelefone).HasMaxLength(20); entity.HasIndex(e => new { e.FavEmail, e.R_VeiId }).IsUnique(); });
+
+            // VeiculoDocumento
+            modelBuilder.Entity<VeiculoDocumento>(entity =>
+            {
+                entity.ToTable("VeiculoDocumento");
+                entity.HasKey(e => e.DocId);
+                entity.Property(e => e.DocId).ValueGeneratedOnAdd();
+                entity.Property(e => e.DocTipo).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.DocStatus).HasMaxLength(20).IsRequired();
+                entity.Property(e => e.DocArquivo).HasMaxLength(500);
+                entity.Property(e => e.DocObservacao).HasMaxLength(1000);
+            });
+
+            // PushSubscription
+            modelBuilder.Entity<PushSubscription>(entity =>
+            {
+                entity.ToTable("PushSubscription");
+                entity.HasKey(e => e.PsbId);
+                entity.Property(e => e.PsbId).ValueGeneratedOnAdd();
+                entity.Property(e => e.PsbEndpoint).HasMaxLength(500).IsRequired();
+                entity.Property(e => e.PsbP256dh).HasMaxLength(200).IsRequired();
+                entity.Property(e => e.PsbAuth).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.PsbUserAgent).HasMaxLength(500);
+                entity.HasIndex(e => e.PsbEndpoint).IsUnique();
+            });
         }
     }
 }

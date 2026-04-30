@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /catalogo/
+Disallow: /dashboard
+Disallow: /login
+Disallow: /usuarios
+Disallow: /veiculos
+Disallow: /lojas
+Disallow: /acessos
+Disallow: /categorias
+Disallow: /vendas
+Disallow: /relatorios
+Disallow: /test-drives
+Disallow: /leads
+Disallow: /favoritos
+Disallow: /logs
+Disallow: /recuperar-senha
+Disallow: /redefinir-senha
+
+Sitemap: /sitemap.xml

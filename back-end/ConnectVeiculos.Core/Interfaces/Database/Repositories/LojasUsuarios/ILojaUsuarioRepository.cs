@@ -10,5 +10,6 @@ namespace ConnectVeiculos.Core.Interfaces.Database.Repositories.LojasUsuarios
         Task<int> CreateAsync(LojaUsuario lojaUsuario);
         Task UpdateAsync(LojaUsuario lojaUsuario);
         Task DeleteByUsuarioIdAsync(int usuarioId);
+        Task DeleteByLojaIdAsync(int lojaId);
     }
 }

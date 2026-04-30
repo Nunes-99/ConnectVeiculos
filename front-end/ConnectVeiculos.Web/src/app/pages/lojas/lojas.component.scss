@@ -131,6 +131,14 @@ input.cep-auto:disabled {
   color: var(--text-secondary, #888);
 }
 
+.url-hint-global {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: #ff9800;
+  font-style: italic;
+}
+
 .color-preview {
   height: 50px;
   border-radius: 8px;

@@ -1,6 +1,6 @@
 namespace ConnectVeiculos.Application.Interfaces.Lojas
 {
-    public interface IInativarLojaUseCase
+    public interface IExcluirLojaUseCase
     {
         Task Execute(int id);
     }

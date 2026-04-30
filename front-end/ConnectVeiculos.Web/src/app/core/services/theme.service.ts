@@ -1,4 +1,5 @@
-import { Injectable, signal, effect } from '@angular/core';
+import { Injectable, inject, signal, effect, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 
 export type Theme = 'light' | 'dark';
 
@@ -7,6 +8,7 @@ export type Theme = 'light' | 'dark';
 })
 export class ThemeService {
   private readonly STORAGE_KEY = 'theme';
+  private platformId = inject(PLATFORM_ID);
 
   // Signal para o tema atual
   theme = signal<Theme>(this.getInitialTheme());
@@ -22,6 +24,8 @@ export class ThemeService {
   }
 
   private getInitialTheme(): Theme {
+    if (!isPlatformBrowser(this.platformId)) return 'light';
+
     // Verificar preferencia salva
     const savedTheme = localStorage.getItem(this.STORAGE_KEY) as Theme;
     if (savedTheme) {
@@ -37,6 +41,7 @@ export class ThemeService {
   }
 
   private applyTheme(theme: Theme): void {
+    if (!isPlatformBrowser(this.platformId)) return;
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem(this.STORAGE_KEY, theme);
   }

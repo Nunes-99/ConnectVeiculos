@@ -41,6 +41,7 @@ export interface CatalogoLoja {
   lojCorSecundaria: string;
   lojInstagram?: string;
   lojFacebook?: string;
+  lojUrlCatalogo?: string;
 }
 
 export interface CatalogoLojaResumo {

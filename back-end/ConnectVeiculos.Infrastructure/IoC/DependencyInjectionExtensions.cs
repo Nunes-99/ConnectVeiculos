@@ -85,6 +85,10 @@ namespace ConnectVeiculos.Infrastructure.IoC
             // Email Service
             services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
             services.AddTransient<IEmailService, SmtpEmailService>();
+            services.AddTransient<Core.Interfaces.Services.IFavoritoNotificacaoService, Services.Notificacao.FavoritoNotificacaoService>();
+            services.AddTransient<Core.Interfaces.Services.IPushNotificationService, Services.Push.PushNotificationService>();
+            services.AddHttpClient<Core.Interfaces.Services.IWhatsAppService, Services.WhatsApp.WhatsAppService>()
+                .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(10));
 
             // DbSession para Dapper (usa a connection string apropriada)
             var dapperConnectionString = usePostgres ? postgresConnection! : connectionString;
@@ -130,6 +134,7 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.AddTransient<IRefreshTokenRepository, RefreshTokenRepository>();
             services.AddTransient<INotificacaoRepository, NotificacaoRepository>();
             services.AddTransient<IWebhookRepository, WebhookRepository>();
+            services.AddTransient<Core.Interfaces.Database.Repositories.Despesas.IVeiculoDespesaRepository, Database.EntityFramework.Repositories.VeiculoDespesaRepository>();
 
             // Services
             services.AddTransient<IQrCodeService, QrCodeService>();
@@ -180,7 +185,7 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.AddTransient<IConsultarLojaPorIdUseCase, ConsultarLojaPorIdUseCase>();
             services.AddTransient<ICadastrarLojaUseCase, CadastrarLojaUseCase>();
             services.AddTransient<IAtualizarLojaUseCase, AtualizarLojaUseCase>();
-            services.AddTransient<IInativarLojaUseCase, InativarLojaUseCase>();
+            services.AddTransient<IExcluirLojaUseCase, ExcluirLojaUseCase>();
 
             // UseCases - Acessos
             services.AddTransient<IConsultarAcessosUseCase, ConsultarAcessosUseCase>();
@@ -207,6 +212,7 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.AddTransient<IConsultarFaturamentoMensalUseCase, ConsultarFaturamentoMensalUseCase>();
             services.AddTransient<IConsultarTopVeiculosUseCase, ConsultarTopVeiculosUseCase>();
             services.AddTransient<IConsultarComparativoMensalUseCase, ConsultarComparativoMensalUseCase>();
+            services.AddTransient<IConsultarLucroDashboardUseCase, ConsultarLucroDashboardUseCase>();
 
             // UseCases - Vendas
             services.AddTransient<IConsultarVendasUseCase, ConsultarVendasUseCase>();
@@ -214,10 +220,51 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.AddTransient<IRegistrarVendaUseCase, RegistrarVendaUseCase>();
             services.AddTransient<IEstornarVendaUseCase, EstornarVendaUseCase>();
 
+            // Repositories - Configuracoes
+            services.AddTransient<Core.Interfaces.Database.Repositories.Configuracoes.IConfiguracaoSistemaRepository, Database.EntityFramework.Repositories.ConfiguracaoSistemaRepository>();
+
+            // Repositories - Publicacoes
+            services.AddTransient<Core.Interfaces.Database.Repositories.Publicacoes.IVeiculoPublicacaoRepository, Database.EntityFramework.Repositories.VeiculoPublicacaoRepository>();
+
+            // Services - Integracoes
+            services.Configure<Services.MercadoLivre.MercadoLivreSettings>(opts =>
+            {
+                configuration.GetSection("MercadoLivreSettings").Bind(opts);
+                // Override via env vars (prioritarias para producao)
+                var envAppId = Environment.GetEnvironmentVariable("ML_APP_ID");
+                var envSecret = Environment.GetEnvironmentVariable("ML_CLIENT_SECRET");
+                var envRedirect = Environment.GetEnvironmentVariable("ML_REDIRECT_URI");
+                if (!string.IsNullOrEmpty(envAppId)) opts.AppId = envAppId;
+                if (!string.IsNullOrEmpty(envSecret)) opts.ClientSecret = envSecret;
+                if (!string.IsNullOrEmpty(envRedirect)) opts.RedirectUri = envRedirect;
+            });
+            services.AddHttpClient<Core.Interfaces.Services.IMercadoLivreService, Services.MercadoLivre.MercadoLivreService>()
+                .ConfigureHttpClient(client => client.Timeout = TimeSpan.FromSeconds(10));
+            services.AddTransient<Core.Interfaces.Services.IFeedService, Services.Feed.FeedService>();
+
+            // Services - Facebook Catalog (push instantaneo)
+            services.Configure<Services.Facebook.FacebookCatalogSettings>(configuration.GetSection("FacebookCatalogSettings"));
+            services.AddHttpClient<Core.Interfaces.Services.IFacebookCatalogService, Services.Facebook.FacebookCatalogService>()
+                .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(10));
+
+            // Services - Google Merchant (push instantaneo)
+            services.Configure<Services.Google.GoogleMerchantSettings>(configuration.GetSection("GoogleMerchantSettings"));
+            services.AddHttpClient<Core.Interfaces.Services.IGoogleMerchantService, Services.Google.GoogleMerchantService>()
+                .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(10));
+
+            // Services - Financiamento Bancos
+            services.Configure<Services.Financiamento.BvFinanciamentoSettings>(configuration.GetSection("BvFinanciamentoSettings"));
+            services.Configure<Services.Financiamento.PanFinanciamentoSettings>(configuration.GetSection("PanFinanciamentoSettings"));
+            services.AddHttpClient<Core.Interfaces.Services.IBancoFinanciamentoService, Services.Financiamento.BvFinanciamentoService>("BV")
+                .ConfigureHttpClient(client => client.Timeout = TimeSpan.FromSeconds(15));
+            services.AddHttpClient<Core.Interfaces.Services.IBancoFinanciamentoService, Services.Financiamento.PanFinanciamentoService>("PAN")
+                .ConfigureHttpClient(client => client.Timeout = TimeSpan.FromSeconds(15));
+
             // UseCases - Imagens
             services.AddTransient<IConsultarImagensVeiculoUseCase, ConsultarImagensVeiculoUseCase>();
             services.AddTransient<IUploadImagemVeiculoUseCase, UploadImagemVeiculoUseCase>();
             services.AddTransient<IExcluirImagemVeiculoUseCase, ExcluirImagemVeiculoUseCase>();
+            services.AddTransient<IDefinirImagemPrincipalUseCase, DefinirImagemPrincipalUseCase>();
 
             // UseCases - Relatorios
             services.AddTransient<IConsultarRelatorioVendasUseCase, ConsultarRelatorioVendasUseCase>();
@@ -284,6 +331,58 @@ namespace ConnectVeiculos.Infrastructure.IoC
 
                 // Adicionar coluna de opcionais do veiculo
                 AddColumnIfNotExists(connection, "Veiculo", "VeiOpcionais", "TEXT");
+
+                // URL do catalogo compartilhada entre lojas
+                AddColumnIfNotExists(connection, "Loja", "LojUrlCatalogo", "TEXT");
+
+                // Preco FIPE do veiculo (consulta automatica/manual)
+                AddColumnIfNotExists(connection, "Veiculo", "VeiPrecoFipe", "REAL");
+
+                // Campos de financiamento no Lead
+                AddColumnIfNotExists(connection, "Lead", "LeaCpf", "TEXT");
+                AddColumnIfNotExists(connection, "Lead", "LeaRenda", "REAL");
+                AddColumnIfNotExists(connection, "Lead", "LeaEntrada", "REAL");
+                AddColumnIfNotExists(connection, "Lead", "LeaParcelas", "INTEGER");
+
+                // Tabela de configuracoes do sistema (tokens ML/Google/Facebook etc.)
+                CreateTableIfNotExists(connection, "ConfiguracaoSistema",
+                    @"CfgId INTEGER PRIMARY KEY AUTOINCREMENT,
+                      CfgChave TEXT NOT NULL UNIQUE,
+                      CfgValor TEXT,
+                      CfgDtAtualizacao TEXT");
+
+                // Tabela de publicacoes em plataformas externas
+                CreateTableIfNotExists(connection, "VeiculoPublicacao",
+                    @"PubId INTEGER PRIMARY KEY AUTOINCREMENT,
+                      R_VeiId INTEGER NOT NULL,
+                      PubPlataforma TEXT NOT NULL,
+                      PubExternoId TEXT,
+                      PubStatus TEXT DEFAULT 'ATIVO',
+                      PubUrl TEXT,
+                      PubDtPublicacao TEXT,
+                      PubDtRemocao TEXT");
+
+                // Tabela de documentos do veiculo (CRLV, laudo, transferencia, etc)
+                CreateTableIfNotExists(connection, "VeiculoDocumento",
+                    @"DocId INTEGER PRIMARY KEY AUTOINCREMENT,
+                      R_VeiId INTEGER NOT NULL,
+                      DocTipo TEXT NOT NULL,
+                      DocStatus TEXT NOT NULL DEFAULT 'PENDENTE',
+                      DocArquivo TEXT,
+                      DocObservacao TEXT,
+                      DocDtVencimento TEXT,
+                      DocDtCriacao TEXT NOT NULL DEFAULT (datetime('now')),
+                      DocDtConclusao TEXT");
+
+                // Tabela de subscriptions de Push Notification (PWA)
+                CreateTableIfNotExists(connection, "PushSubscription",
+                    @"PsbId INTEGER PRIMARY KEY AUTOINCREMENT,
+                      R_UsuId INTEGER,
+                      PsbEndpoint TEXT NOT NULL UNIQUE,
+                      PsbP256dh TEXT NOT NULL,
+                      PsbAuth TEXT NOT NULL,
+                      PsbUserAgent TEXT,
+                      PsbDtCriacao TEXT NOT NULL DEFAULT (datetime('now'))");
 
                 // Criar tabelas que podem nao existir em bancos antigos
                 CreateTableIfNotExists(connection, "Lead",

@@ -100,9 +100,15 @@
             }
           </div>
           <div class="form-group">
-            <label>Slug (URL do catalogo)</label>
+            <label>Slug (identificador da loja)</label>
             <input type="text" formControlName="lojSlug" placeholder="auto-center-sp" maxlength="100" />
-            <small class="slug-hint">URL: connectveiculos.com.br/catalogo/{{ form.get('lojSlug')?.value || 'slug-da-loja' }}</small>
+            <small class="slug-hint">Identificador: {{ form.get('lojSlug')?.value || 'slug-da-loja' }}</small>
+          </div>
+          <div class="form-group">
+            <label>URL do Catálogo</label>
+            <input type="text" formControlName="lojUrlCatalogo" placeholder="https://www.meusite.com.br" maxlength="500" />
+            <small class="slug-hint">Link do catálogo: {{ (form.get('lojUrlCatalogo')?.value || 'https://www.meusite.com.br') }}/catalogo/{{ form.get('lojSlug')?.value || 'slug-da-loja' }}</small>
+            <small class="url-hint-global">Esta URL é compartilhada entre todas as lojas. Ao alterar, será replicada para as demais.</small>
           </div>
           <div class="form-row">
             <div class="form-group">

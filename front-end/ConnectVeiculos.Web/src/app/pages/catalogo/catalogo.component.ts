@@ -1,9 +1,12 @@
-import { Component, inject, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { Title } from '@angular/platform-browser';
 import { CatalogoService, ImagemService, TestDriveService, LeadService, FavoritoService, ToastService } from '../../core/services';
+import { SeoService } from '../../core/services/seo.service';
 import { CurrencyMaskDirective } from '../../shared/directives';
 import { CatalogoVeiculo, CatalogoFiltro, CatalogoLoja, CatalogoLojaResumo } from '../../core/models';
 import * as signalR from '@microsoft/signalr';
@@ -42,6 +45,8 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private titleService = inject(Title);
   private toast = inject(ToastService);
+  private seoService = inject(SeoService);
+  private platformId = inject(PLATFORM_ID);
 
   veiculos: CatalogoVeiculo[] = [];
   filtros: CatalogoFiltro = {
@@ -59,6 +64,9 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   lojaId: number | null = null;
   lojaSlug: string | null = null;
 
+  // Subscriptions
+  private routeSubscription: Subscription | null = null;
+
   // Real-time
   private hubConnection: signalR.HubConnection | null = null;
   conectado = false;
@@ -68,6 +76,8 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   showDetalhes = false;
   veiculoSelecionado: CatalogoVeiculo | null = null;
   detalhesImagemIndex = 0;
+  thumbsOffset = 0;
+  thumbsVisiveis = 5;
 
   // Galeria fullscreen
   showGaleria = false;
@@ -119,6 +129,18 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   finParcelas = 48;
   finValorParcela = 0;
 
+  // Solicitacao de credito (lead de financiamento)
+  showSolicitacaoCredito = false;
+  solicitacaoEnviada = false;
+  solNome = '';
+  solTelefone = '';
+  solEmail = '';
+  solCpf = '';
+  solRenda = 0;
+  solEntrada = 0;
+  solParcelas: number | null = null;
+  solObservacao = '';
+
   // Test drive form
   showTestDrive = false;
   testDriveVeiculo: CatalogoVeiculo | null = null;
@@ -141,8 +163,10 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   linkCopiado = false;
 
   ngOnInit(): void {
-    this.loadFavoritos();
-    this.route.params.subscribe(params => {
+    if (isPlatformBrowser(this.platformId)) {
+      this.loadFavoritos();
+    }
+    this.routeSubscription = this.route.params.subscribe(params => {
       if (params['lojaId']) {
         const param = params['lojaId'];
         if (/^\d+$/.test(param)) {
@@ -157,11 +181,14 @@ export class CatalogoComponent implements OnInit, OnDestroy {
         this.autoOpenVeiculoId = Number(params['veiculoId']);
       }
       this.loadCatalogo();
-      this.iniciarSignalR();
+      if (isPlatformBrowser(this.platformId)) {
+        this.iniciarSignalR();
+      }
     });
   }
 
   ngOnDestroy(): void {
+    this.routeSubscription?.unsubscribe();
     this.pararSignalR();
   }
 
@@ -231,17 +258,20 @@ export class CatalogoComponent implements OnInit, OnDestroy {
         this.categorias = [...new Set(this.veiculos.map(v => v.categoriaNome).filter(c => c))];
         this.filtrarPorTexto();
         this.loading = false;
-        // Atualizar titulo da pagina com nome da empresa
-        if (this.loja) {
-          this.titleService.setTitle(`${this.loja.lojNome} - Catalogo de Veiculos`);
-        } else {
-          this.titleService.setTitle('Catalogo de Veiculos');
-        }
-        // Auto-open vehicle if navigated via direct URL
+        // SEO: meta tags e dados estruturados
         if (this.autoOpenVeiculoId) {
           const v = this.veiculos.find(v => v.veiId === this.autoOpenVeiculoId);
-          if (v) this.abrirDetalhes(v);
+          if (v) {
+            this.seoService.setVehiclePage(v);
+            this.seoService.setVehicleJsonLd(v);
+            if (isPlatformBrowser(this.platformId)) {
+              this.abrirDetalhes(v);
+            }
+          }
           this.autoOpenVeiculoId = null;
+        } else {
+          this.seoService.setCatalogPage(this.loja);
+          this.seoService.setCatalogJsonLd(this.veiculos);
         }
       },
       error: () => this.loading = false
@@ -312,20 +342,26 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   abrirDetalhes(veiculo: CatalogoVeiculo): void {
     this.veiculoSelecionado = veiculo;
     this.detalhesImagemIndex = 0;
+    this.thumbsOffset = 0;
     this.showDetalhes = true;
-    document.body.style.overflow = 'hidden';
+    if (isPlatformBrowser(this.platformId)) {
+      document.body.style.overflow = 'hidden';
+    }
   }
 
   fecharDetalhes(): void {
     this.showDetalhes = false;
     this.veiculoSelecionado = null;
-    document.body.style.overflow = '';
+    if (isPlatformBrowser(this.platformId)) {
+      document.body.style.overflow = '';
+    }
   }
 
   detalhesAnterior(): void {
     if (this.veiculoSelecionado) {
       const total = this.getImagensVeiculo(this.veiculoSelecionado).length;
       this.detalhesImagemIndex = (this.detalhesImagemIndex - 1 + total) % total;
+      this.ajustarThumbsOffset();
     }
   }
 
@@ -333,6 +369,33 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     if (this.veiculoSelecionado) {
       const total = this.getImagensVeiculo(this.veiculoSelecionado).length;
       this.detalhesImagemIndex = (this.detalhesImagemIndex + 1) % total;
+      this.ajustarThumbsOffset();
+    }
+  }
+
+  getThumbsVisiveis(): { caminho: string; index: number }[] {
+    if (!this.veiculoSelecionado) return [];
+    const imagens = this.getImagensVeiculo(this.veiculoSelecionado);
+    return imagens
+      .slice(this.thumbsOffset, this.thumbsOffset + this.thumbsVisiveis)
+      .map((caminho, i) => ({ caminho, index: this.thumbsOffset + i }));
+  }
+
+  thumbsAnterior(): void {
+    this.thumbsOffset = Math.max(0, this.thumbsOffset - this.thumbsVisiveis);
+  }
+
+  thumbsProxima(): void {
+    if (!this.veiculoSelecionado) return;
+    const total = this.getImagensVeiculo(this.veiculoSelecionado).length;
+    this.thumbsOffset = Math.min(total - this.thumbsVisiveis, this.thumbsOffset + this.thumbsVisiveis);
+  }
+
+  private ajustarThumbsOffset(): void {
+    if (this.detalhesImagemIndex < this.thumbsOffset) {
+      this.thumbsOffset = this.detalhesImagemIndex;
+    } else if (this.detalhesImagemIndex >= this.thumbsOffset + this.thumbsVisiveis) {
+      this.thumbsOffset = this.detalhesImagemIndex - this.thumbsVisiveis + 1;
     }
   }
 
@@ -392,6 +455,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
 
   // WhatsApp
   abrirWhatsApp(veiculo?: CatalogoVeiculo): void {
+    if (!isPlatformBrowser(this.platformId)) return;
     const v = veiculo || this.veiculoSelecionado;
     if (!v) return;
     const telefone = v.lojaWhatsApp?.replace(/\D/g, '') || this.loja?.lojWhatsApp?.replace(/\D/g, '') || this.loja?.lojTel1?.replace(/\D/g, '') || '';
@@ -408,6 +472,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   }
 
   abrirWhatsAppGeral(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
     const telefone = this.loja?.lojWhatsApp?.replace(/\D/g, '') || this.loja?.lojTel1?.replace(/\D/g, '') || '';
     if (!telefone && this.veiculos.length > 0) {
       const tel = this.veiculos[0].lojaWhatsApp?.replace(/\D/g, '') || '';
@@ -460,7 +525,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   }
 
   confirmarFavoritoCadastro(): void {
-    if (!this.favoritoEmail) return;
+    if (!this.favoritoEmail || !isPlatformBrowser(this.platformId)) return;
     // Salvar dados do visitante localmente
     this.favoritoLogado = true;
     localStorage.setItem('catalogo_fav_email', this.favoritoEmail);
@@ -511,6 +576,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   }
 
   private saveFavoritosLocal(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
     localStorage.setItem('catalogo_favoritos', JSON.stringify([...this.favoritos]));
   }
 
@@ -572,6 +638,82 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     } else {
       this.finValorParcela = valorFinanciado / this.finParcelas;
     }
+  }
+
+  // ==========================================
+  // SOLICITACAO DE CREDITO (LEAD DE FINANCIAMENTO)
+  // ==========================================
+  abrirSolicitacaoCredito(): void {
+    this.solicitacaoEnviada = false;
+    this.solNome = '';
+    this.solTelefone = '';
+    this.solEmail = '';
+    this.solCpf = '';
+    this.solRenda = 0;
+    this.solEntrada = this.finEntrada || 0;
+    this.solParcelas = this.finParcelas || null;
+    this.solObservacao = '';
+    this.showSolicitacaoCredito = true;
+  }
+
+  fecharSolicitacaoCredito(): void {
+    this.showSolicitacaoCredito = false;
+    this.solicitacaoEnviada = false;
+  }
+
+  formatarSolTelefone(): void {
+    let v = this.solTelefone.replace(/\D/g, '');
+    if (v.length > 11) v = v.substring(0, 11);
+    if (v.length > 6) {
+      this.solTelefone = `(${v.substring(0, 2)}) ${v.substring(2, 7)}-${v.substring(7)}`;
+    } else if (v.length > 2) {
+      this.solTelefone = `(${v.substring(0, 2)}) ${v.substring(2)}`;
+    } else if (v.length > 0) {
+      this.solTelefone = `(${v}`;
+    }
+  }
+
+  formatarSolCpf(): void {
+    let v = this.solCpf.replace(/\D/g, '');
+    if (v.length > 11) v = v.substring(0, 11);
+    if (v.length > 9) {
+      this.solCpf = `${v.substring(0, 3)}.${v.substring(3, 6)}.${v.substring(6, 9)}-${v.substring(9)}`;
+    } else if (v.length > 6) {
+      this.solCpf = `${v.substring(0, 3)}.${v.substring(3, 6)}.${v.substring(6)}`;
+    } else if (v.length > 3) {
+      this.solCpf = `${v.substring(0, 3)}.${v.substring(3)}`;
+    } else {
+      this.solCpf = v;
+    }
+  }
+
+  enviarSolicitacaoCredito(): void {
+    if (!this.finVeiculo || !this.solNome || !this.solTelefone || !this.solCpf || !this.solRenda) {
+      return;
+    }
+
+    const data = {
+      veiculoId: this.finVeiculo.veiId,
+      lojaId: this.lojaId,
+      nomeCliente: this.solNome,
+      telefone: this.solTelefone,
+      email: this.solEmail || null,
+      origem: 'FINANCIAMENTO',
+      observacao: this.solObservacao || null,
+      cpf: this.solCpf,
+      renda: this.solRenda,
+      entrada: this.solEntrada || null,
+      parcelas: this.solParcelas
+    };
+
+    this.leadService.registrar(data).subscribe({
+      next: () => {
+        this.solicitacaoEnviada = true;
+      },
+      error: () => {
+        this.toast.error('Erro ao enviar solicitacao. Tente novamente.');
+      }
+    });
   }
 
   // ==========================================
@@ -700,13 +842,14 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   }
 
   getShareUrl(veiculo: CatalogoVeiculo): string {
-    const base = window.location.origin;
+    const urlCatalogo = this.loja?.lojUrlCatalogo;
+    const base = urlCatalogo ? urlCatalogo.replace(/\/$/, '') : (isPlatformBrowser(this.platformId) ? window.location.origin : '');
     const lojaParam = this.lojaSlug || this.loja?.lojSlug || this.lojaId;
     return lojaParam ? `${base}/catalogo/${lojaParam}/veiculo/${veiculo.veiId}` : `${base}/catalogo?veiculo=${veiculo.veiId}`;
   }
 
   copiarLink(): void {
-    if (!this.shareVeiculo) return;
+    if (!this.shareVeiculo || !isPlatformBrowser(this.platformId)) return;
     navigator.clipboard.writeText(this.getShareUrl(this.shareVeiculo)).then(() => {
       this.linkCopiado = true;
       setTimeout(() => this.linkCopiado = false, 2000);
@@ -714,7 +857,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   }
 
   compartilharWhatsApp(): void {
-    if (!this.shareVeiculo) return;
+    if (!this.shareVeiculo || !isPlatformBrowser(this.platformId)) return;
     const v = this.shareVeiculo;
     const texto = encodeURIComponent(`Confira: ${v.veiMarca} ${v.veiModelo} ${v.veiAno} - ${this.formatarPreco(v.veiPreco)}\n${this.getShareUrl(v)}`);
     window.open(`https://wa.me/?text=${texto}`, '_blank');
