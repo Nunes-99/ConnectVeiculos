@@ -2,7 +2,7 @@ import { Component, inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { IntegracaoService, MercadoLivreContaInfo, WhatsAppConfigInfo, EmailConfigInfo } from '../../core/services/integracao.service';
+import { IntegracaoService, MercadoLivreContaInfo, WhatsAppConfigInfo, EmailConfigInfo, FacebookConfigInfo, GoogleMerchantConfigInfo, TestIntegracaoResult } from '../../core/services/integracao.service';
 import { ToastService } from '../../core/services';
 import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal.component';
 
@@ -65,6 +65,40 @@ export class IntegracoesComponent implements OnInit {
   smtpTestando = false;
   smtpTesteResultado: { sucesso: boolean; mensagem: string } | null = null;
 
+  // Facebook Catalog (Push API)
+  fbConfig: FacebookConfigInfo = { configurado: false, tokenDefinido: false };
+  fbLoading = false;
+  showFbConfigModal = false;
+  showFbDesconectarModal = false;
+  fbAbaTutorial = true;
+  fbForm: FormGroup = this.fb.group({
+    accessToken: ['', Validators.required],
+    catalogId: ['', Validators.required],
+    apiVersion: ['v18.0', Validators.required]
+  });
+  fbSalvando = false;
+  fbMostrarToken = false;
+  fbTestando = false;
+  fbTesteResultado: TestIntegracaoResult | null = null;
+
+  // Google Merchant (Push API)
+  gmConfig: GoogleMerchantConfigInfo = { configurado: false, clientSecretDefinido: false, refreshTokenDefinido: false };
+  gmLoading = false;
+  showGmConfigModal = false;
+  showGmDesconectarModal = false;
+  gmAbaTutorial = true;
+  gmForm: FormGroup = this.fb.group({
+    clientId: ['', Validators.required],
+    clientSecret: ['', Validators.required],
+    refreshToken: ['', Validators.required],
+    merchantId: ['', Validators.required]
+  });
+  gmSalvando = false;
+  gmMostrarSecret = false;
+  gmMostrarRefresh = false;
+  gmTestando = false;
+  gmTesteResultado: TestIntegracaoResult | null = null;
+
   ngOnInit(): void {
     this.feedFacebookUrl = this.integracaoService.getFacebookFeedUrl();
     this.feedGoogleUrl = this.integracaoService.getGoogleFeedUrl();
@@ -74,6 +108,8 @@ export class IntegracoesComponent implements OnInit {
     this.checkMercadoLivreStatus();
     this.checkWhatsAppStatus();
     this.checkSmtpStatus();
+    this.checkFacebookStatus();
+    this.checkGoogleStatus();
   }
 
   // ============================================================
@@ -261,6 +297,148 @@ export class IntegracoesComponent implements OnInit {
     });
   }
   cancelarDesconectarSmtp(): void { this.showSmtpDesconectarModal = false; }
+
+  // ============================================================
+  // Facebook Catalog (Push API)
+  // ============================================================
+  checkFacebookStatus(): void {
+    this.fbLoading = true;
+    this.integracaoService.getFacebookConfig().subscribe({
+      next: (info) => { this.fbConfig = info; this.fbLoading = false; },
+      error: () => {
+        this.fbConfig = { configurado: false, tokenDefinido: false };
+        this.fbLoading = false;
+      }
+    });
+  }
+
+  abrirConfigFacebook(): void {
+    this.fbAbaTutorial = !this.fbConfig.configurado;
+    this.fbMostrarToken = false;
+    this.fbTesteResultado = null;
+    this.fbForm.reset({
+      accessToken: '',
+      catalogId: this.fbConfig.catalogId || '',
+      apiVersion: this.fbConfig.apiVersion || 'v18.0'
+    });
+    this.showFbConfigModal = true;
+  }
+
+  fecharConfigFacebook(): void {
+    this.showFbConfigModal = false;
+    this.fbTesteResultado = null;
+  }
+
+  salvarFacebook(): void {
+    if (this.fbForm.invalid) { this.fbForm.markAllAsTouched(); return; }
+    this.fbSalvando = true;
+    this.integracaoService.saveFacebookConfig(this.fbForm.value).subscribe({
+      next: () => {
+        this.toast.success('Facebook Catalog configurado.');
+        this.fbSalvando = false;
+        this.showFbConfigModal = false;
+        this.checkFacebookStatus();
+      },
+      error: (err) => {
+        this.toast.error(err?.error?.error || 'Erro ao salvar Facebook Catalog.');
+        this.fbSalvando = false;
+      }
+    });
+  }
+
+  testarFacebook(): void {
+    this.fbTestando = true;
+    this.fbTesteResultado = null;
+    this.integracaoService.testarFacebook().subscribe({
+      next: (r) => { this.fbTesteResultado = r; this.fbTestando = false; },
+      error: (err) => {
+        this.fbTesteResultado = err?.error || { sucesso: false, mensagem: 'Falha no teste.' };
+        this.fbTestando = false;
+      }
+    });
+  }
+
+  pedirDesconectarFacebook(): void { this.showFbDesconectarModal = true; }
+  confirmarDesconectarFacebook(): void {
+    this.showFbDesconectarModal = false;
+    this.integracaoService.desconectarFacebook().subscribe({
+      next: () => { this.toast.success('Facebook Catalog desconectado.'); this.checkFacebookStatus(); },
+      error: () => this.toast.error('Erro ao desconectar Facebook Catalog.')
+    });
+  }
+  cancelarDesconectarFacebook(): void { this.showFbDesconectarModal = false; }
+
+  // ============================================================
+  // Google Merchant (Push API)
+  // ============================================================
+  checkGoogleStatus(): void {
+    this.gmLoading = true;
+    this.integracaoService.getGoogleConfig().subscribe({
+      next: (info) => { this.gmConfig = info; this.gmLoading = false; },
+      error: () => {
+        this.gmConfig = { configurado: false, clientSecretDefinido: false, refreshTokenDefinido: false };
+        this.gmLoading = false;
+      }
+    });
+  }
+
+  abrirConfigGoogle(): void {
+    this.gmAbaTutorial = !this.gmConfig.configurado;
+    this.gmMostrarSecret = false;
+    this.gmMostrarRefresh = false;
+    this.gmTesteResultado = null;
+    this.gmForm.reset({
+      clientId: this.gmConfig.clientId || '',
+      clientSecret: '',
+      refreshToken: '',
+      merchantId: this.gmConfig.merchantId || ''
+    });
+    this.showGmConfigModal = true;
+  }
+
+  fecharConfigGoogle(): void {
+    this.showGmConfigModal = false;
+    this.gmTesteResultado = null;
+  }
+
+  salvarGoogle(): void {
+    if (this.gmForm.invalid) { this.gmForm.markAllAsTouched(); return; }
+    this.gmSalvando = true;
+    this.integracaoService.saveGoogleConfig(this.gmForm.value).subscribe({
+      next: () => {
+        this.toast.success('Google Merchant configurado.');
+        this.gmSalvando = false;
+        this.showGmConfigModal = false;
+        this.checkGoogleStatus();
+      },
+      error: (err) => {
+        this.toast.error(err?.error?.error || 'Erro ao salvar Google Merchant.');
+        this.gmSalvando = false;
+      }
+    });
+  }
+
+  testarGoogle(): void {
+    this.gmTestando = true;
+    this.gmTesteResultado = null;
+    this.integracaoService.testarGoogle().subscribe({
+      next: (r) => { this.gmTesteResultado = r; this.gmTestando = false; },
+      error: (err) => {
+        this.gmTesteResultado = err?.error || { sucesso: false, mensagem: 'Falha no teste.' };
+        this.gmTestando = false;
+      }
+    });
+  }
+
+  pedirDesconectarGoogle(): void { this.showGmDesconectarModal = true; }
+  confirmarDesconectarGoogle(): void {
+    this.showGmDesconectarModal = false;
+    this.integracaoService.desconectarGoogle().subscribe({
+      next: () => { this.toast.success('Google Merchant desconectado.'); this.checkGoogleStatus(); },
+      error: () => this.toast.error('Erro ao desconectar Google Merchant.')
+    });
+  }
+  cancelarDesconectarGoogle(): void { this.showGmDesconectarModal = false; }
 
   // ============================================================
   // Util

@@ -221,42 +221,45 @@ A partir de agora:
 
 ## 2.7 Configurar no sistema
 
-> **Atencao:** ao contrario de Mercado Livre, WhatsApp e SMTP (que tem UI no admin), Facebook ainda exige editar arquivo no servidor. Isso vai mudar em uma proxima versao do produto. Se voce nao tem acesso SSH, peca para quem cuida do deploy.
+**Opcao A (recomendado) — via UI do admin:**
 
-**Opcao A — via env vars no `.env` da VM (recomendado em producao):**
+1. Faca login no admin (`/login`) com perfil **Administrador** ou **Gerente**
+2. Va em **Integracoes** (menu lateral)
+3. No card **Facebook / Instagram**, clique em **Configurar Push API**
+4. Aba **Como configurar** ja resume o passo a passo; clique em **Ja fiz tudo, vou colar as credenciais**
+5. Cole:
+   - **Access Token**: token permanente do passo 2.5.4 (`EAAxxxxxxxxxx`)
+   - **Catalog ID**: ID do passo 2.6
+   - **Versao da API**: `v18.0` (default, ajuste se Meta mudar)
+6. Clique em **Testar agora** — o sistema chama o Graph API e retorna o nome do catalogo + numero de produtos
+7. Se OK, clique em **Salvar credenciais**
+
+As credenciais ficam armazenadas no banco (tabela `ConfiguracaoSistema`, criptografadas em transito por HTTPS). Para desconectar depois, mesmo card -> **Desconectar**.
+
+**Opcao B — via env vars no `.env` da VM (sobrescreve a UI):**
+
+Util se voce quer "travar" as credenciais via infra (env vars sempre tem precedencia sobre o que esta salvo na UI).
 
 ```bash
-# SSH na VM
 ssh -i sua-chave.key ubuntu@SEU_IP
-
-# Editar .env
 cd ~/ConnectVeiculos
 nano .env
 ```
 
-Adicione/edite as 2 linhas:
+Adicione:
 ```
-FB_ACCESS_TOKEN=EAAxxxxxxxxxxxxx (token permanente do passo 2.5.4)
-FB_CATALOG_ID=123456789012345 (ID do passo 2.6)
-```
-
-Reinicie:
-```bash
-sudo docker compose restart backend-cliente
+FB_ACCESS_TOKEN=EAAxxxxxxxxxxxxx
+FB_CATALOG_ID=123456789012345
+FB_API_VERSION=v18.0
 ```
 
-**Opcao B — via `appsettings.json` (so em desenvolvimento local):**
+Reinicie: `sudo docker compose restart backend-cliente`.
 
-1. Abra: `back-end/ConnectVeiculos.API/appsettings.Development.json`
-2. Adicione:
-```json
-"FacebookCatalogSettings": {
-    "AccessToken": "EAAxxxxxxxxxxxxx",
-    "CatalogId": "123456789012345",
-    "ApiVersion": "v18.0"
-}
-```
-3. **Reinicie o backend**
+**Opcao C — via `appsettings.json` (apenas dev local, fallback final):**
+
+Editar `back-end/ConnectVeiculos.API/appsettings.Development.json` e adicionar bloco `FacebookCatalogSettings`. **Nao use em producao** — credenciais em arquivo versionavel sao um anti-pattern.
+
+> **Precedencia**: env var > banco (UI) > appsettings.json. Se voce setar via UI e depois exportar a env var, a env var ganha.
 
 ## 2.8 Testar
 
@@ -379,12 +382,25 @@ Para criar anuncios pagos do veiculo:
 
 ## 3.5 Configurar no sistema
 
-> **Atencao:** ao contrario de Mercado Livre, WhatsApp e SMTP, Google ainda exige editar arquivo no servidor. Isso vai mudar em uma proxima versao do produto. Se voce nao tem acesso SSH, peca para quem cuida do deploy.
+**Opcao A (recomendado) — via UI do admin:**
 
-**Opcao A — via env vars no `.env` da VM (recomendado em producao):**
+1. Faca login no admin (`/login`) com perfil **Administrador** ou **Gerente**
+2. Va em **Integracoes** (menu lateral)
+3. No card **Google Merchant / Vehicle Ads**, clique em **Configurar Content API**
+4. A aba **Como configurar** resume o passo a passo. Quando estiver pronto, clique em **Ja fiz tudo, vou colar as credenciais**
+5. Cole:
+   - **Merchant ID**: passo 3.4.5
+   - **Client ID**: passo 3.4.3
+   - **Client Secret**: passo 3.4.3
+   - **Refresh Token**: passo 3.4.4
+6. Clique em **Testar agora** — o sistema renova o access token via refresh e consulta sua conta no Merchant Center
+7. Se OK, clique em **Salvar credenciais**
+
+As credenciais ficam no banco (tabela `ConfiguracaoSistema`). O access token e renovado automaticamente quando expira (via refresh token). Para desconectar, mesmo card -> **Desconectar**.
+
+**Opcao B — via env vars no `.env` da VM (sobrescreve a UI):**
 
 ```bash
-# SSH na VM
 ssh -i sua-chave.key ubuntu@SEU_IP
 cd ~/ConnectVeiculos
 nano .env
@@ -392,31 +408,19 @@ nano .env
 
 Adicione:
 ```
-GOOGLE_MERCHANT_CLIENT_ID=xxx.apps.googleusercontent.com (passo 3.4.3)
-GOOGLE_MERCHANT_CLIENT_SECRET=GOCSPX-xxxxxxxxxxxxx (passo 3.4.3)
-GOOGLE_MERCHANT_REFRESH_TOKEN=1//xxxxxxxxxxxxx (passo 3.4.4)
-GOOGLE_MERCHANT_ID=123456789 (passo 3.4.5)
+GOOGLE_MERCHANT_CLIENT_ID=xxx.apps.googleusercontent.com
+GOOGLE_MERCHANT_CLIENT_SECRET=GOCSPX-xxxxxxxxxxxxx
+GOOGLE_MERCHANT_REFRESH_TOKEN=1//xxxxxxxxxxxxx
+GOOGLE_MERCHANT_ID=123456789
 ```
 
-Reinicie:
-```bash
-sudo docker compose restart backend-cliente
-```
+Reinicie: `sudo docker compose restart backend-cliente`.
 
-**Opcao B — via `appsettings.json` (so em desenvolvimento local):**
+**Opcao C — via `appsettings.json` (apenas dev local, fallback final):**
 
-1. Abra: `back-end/ConnectVeiculos.API/appsettings.Development.json`
-2. Adicione:
-```json
-"GoogleMerchantSettings": {
-    "AccessToken": "",
-    "RefreshToken": "1//xxxxxxxxxxxxx",
-    "MerchantId": "123456789",
-    "ClientId": "xxx.apps.googleusercontent.com",
-    "ClientSecret": "GOCSPX-xxxxxxxxxxxxx"
-}
-```
-3. **Reinicie o backend**
+Editar `back-end/ConnectVeiculos.API/appsettings.Development.json` e adicionar bloco `GoogleMerchantSettings`. Nao use em producao.
+
+> **Precedencia**: env var > banco (UI) > appsettings.json.
 
 ## 3.6 Testar
 

@@ -47,6 +47,39 @@ export interface SmtpConfigInput {
   enableSsl: boolean;
 }
 
+export interface FacebookConfigInfo {
+  configurado: boolean;
+  catalogId?: string;
+  apiVersion?: string;
+  tokenDefinido: boolean;
+}
+
+export interface FacebookConfigInput {
+  accessToken: string;
+  catalogId: string;
+  apiVersion: string;
+}
+
+export interface GoogleMerchantConfigInfo {
+  configurado: boolean;
+  merchantId?: string;
+  clientId?: string;
+  clientSecretDefinido: boolean;
+  refreshTokenDefinido: boolean;
+}
+
+export interface GoogleMerchantConfigInput {
+  clientId: string;
+  clientSecret: string;
+  refreshToken: string;
+  merchantId: string;
+}
+
+export interface TestIntegracaoResult {
+  sucesso: boolean;
+  mensagem?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -120,6 +153,40 @@ export class IntegracaoService {
   // Publicacoes
   getPublicacoes(veiculoId: number): Observable<Publicacao[]> {
     return this.http.get<Publicacao[]>(`${this.baseUrl}/integracoes/publicacoes/${veiculoId}`);
+  }
+
+  // Facebook Catalog
+  getFacebookConfig(): Observable<FacebookConfigInfo> {
+    return this.http.get<FacebookConfigInfo>(`${this.baseUrl}/integracoes/facebook/config`);
+  }
+
+  saveFacebookConfig(data: FacebookConfigInput): Observable<{ mensagem: string }> {
+    return this.http.post<{ mensagem: string }>(`${this.baseUrl}/integracoes/facebook/config`, data);
+  }
+
+  desconectarFacebook(): Observable<{ mensagem: string }> {
+    return this.http.post<{ mensagem: string }>(`${this.baseUrl}/integracoes/facebook/desconectar`, {});
+  }
+
+  testarFacebook(): Observable<TestIntegracaoResult> {
+    return this.http.post<TestIntegracaoResult>(`${this.baseUrl}/integracoes/facebook/test`, {});
+  }
+
+  // Google Merchant
+  getGoogleConfig(): Observable<GoogleMerchantConfigInfo> {
+    return this.http.get<GoogleMerchantConfigInfo>(`${this.baseUrl}/integracoes/google/config`);
+  }
+
+  saveGoogleConfig(data: GoogleMerchantConfigInput): Observable<{ mensagem: string }> {
+    return this.http.post<{ mensagem: string }>(`${this.baseUrl}/integracoes/google/config`, data);
+  }
+
+  desconectarGoogle(): Observable<{ mensagem: string }> {
+    return this.http.post<{ mensagem: string }>(`${this.baseUrl}/integracoes/google/desconectar`, {});
+  }
+
+  testarGoogle(): Observable<TestIntegracaoResult> {
+    return this.http.post<TestIntegracaoResult>(`${this.baseUrl}/integracoes/google/test`, {});
   }
 
   // Feeds

@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using ConnectVeiculos.Core.Interfaces.Database.Repositories.Configuracoes;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Lojas;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.VeiculosImagens;
@@ -11,12 +12,17 @@ namespace ConnectVeiculos.Infrastructure.Services.Facebook
 {
     public class FacebookCatalogService : IFacebookCatalogService
     {
+        private const string KEY_TOKEN = "FB_ACCESS_TOKEN";
+        private const string KEY_CATALOG = "FB_CATALOG_ID";
+        private const string KEY_VERSION = "FB_API_VERSION";
+
         private readonly HttpClient _httpClient;
         private readonly FacebookCatalogSettings _settings;
         private readonly ILogger<FacebookCatalogService> _logger;
         private readonly IVeiculoRepository _veiculoRepository;
         private readonly IVeiculoImagemRepository _imagemRepository;
         private readonly ILojaRepository _lojaRepository;
+        private readonly IConfiguracaoSistemaRepository _configRepository;
 
         public FacebookCatalogService(
             HttpClient httpClient,
@@ -24,7 +30,8 @@ namespace ConnectVeiculos.Infrastructure.Services.Facebook
             ILogger<FacebookCatalogService> logger,
             IVeiculoRepository veiculoRepository,
             IVeiculoImagemRepository imagemRepository,
-            ILojaRepository lojaRepository)
+            ILojaRepository lojaRepository,
+            IConfiguracaoSistemaRepository configRepository)
         {
             _httpClient = httpClient;
             _settings = settings.Value;
@@ -32,16 +39,102 @@ namespace ConnectVeiculos.Infrastructure.Services.Facebook
             _veiculoRepository = veiculoRepository;
             _imagemRepository = imagemRepository;
             _lojaRepository = lojaRepository;
+            _configRepository = configRepository;
         }
 
-        public bool IsConfigured()
+        // Precedencia: env var > database (ConfiguracaoSistema) > appsettings.json
+        private async Task<(string token, string catalogId, string apiVersion)> ResolveAsync()
         {
-            return !string.IsNullOrEmpty(_settings.AccessToken) && !string.IsNullOrEmpty(_settings.CatalogId);
+            var envToken = Environment.GetEnvironmentVariable("FB_ACCESS_TOKEN");
+            var envCatalog = Environment.GetEnvironmentVariable("FB_CATALOG_ID");
+            var envVersion = Environment.GetEnvironmentVariable("FB_API_VERSION");
+
+            var token = !string.IsNullOrEmpty(envToken)
+                ? envToken
+                : (await _configRepository.GetValorAsync(KEY_TOKEN)) ?? _settings.AccessToken ?? "";
+
+            var catalogId = !string.IsNullOrEmpty(envCatalog)
+                ? envCatalog
+                : (await _configRepository.GetValorAsync(KEY_CATALOG)) ?? _settings.CatalogId ?? "";
+
+            var apiVersion = !string.IsNullOrEmpty(envVersion)
+                ? envVersion
+                : (await _configRepository.GetValorAsync(KEY_VERSION))
+                  ?? (string.IsNullOrEmpty(_settings.ApiVersion) ? "v18.0" : _settings.ApiVersion);
+
+            return (token, catalogId, apiVersion);
+        }
+
+        public async Task<bool> IsConfiguredAsync()
+        {
+            var (token, catalogId, _) = await ResolveAsync();
+            return !string.IsNullOrEmpty(token) && !string.IsNullOrEmpty(catalogId);
+        }
+
+        public async Task<FacebookConfigInfo> GetConfigAsync()
+        {
+            var (token, catalogId, apiVersion) = await ResolveAsync();
+            return new FacebookConfigInfo
+            {
+                Configurado = !string.IsNullOrEmpty(token) && !string.IsNullOrEmpty(catalogId),
+                CatalogId = catalogId,
+                ApiVersion = apiVersion,
+                TokenDefinido = !string.IsNullOrEmpty(token)
+            };
+        }
+
+        public async Task SalvarConfigAsync(FacebookConfigInput input)
+        {
+            if (!string.IsNullOrWhiteSpace(input.AccessToken))
+                await _configRepository.SetValorAsync(KEY_TOKEN, input.AccessToken.Trim());
+            if (!string.IsNullOrWhiteSpace(input.CatalogId))
+                await _configRepository.SetValorAsync(KEY_CATALOG, input.CatalogId.Trim());
+            if (!string.IsNullOrWhiteSpace(input.ApiVersion))
+                await _configRepository.SetValorAsync(KEY_VERSION, input.ApiVersion.Trim());
+        }
+
+        public async Task DesconectarAsync()
+        {
+            await _configRepository.SetValorAsync(KEY_TOKEN, "");
+            await _configRepository.SetValorAsync(KEY_CATALOG, "");
+            await _configRepository.SetValorAsync(KEY_VERSION, "");
+        }
+
+        public async Task<TestIntegracaoResult> TestarAsync()
+        {
+            var (token, catalogId, apiVersion) = await ResolveAsync();
+            if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(catalogId))
+                return new TestIntegracaoResult { Sucesso = false, Mensagem = "Configuracao incompleta. Informe AccessToken e CatalogId." };
+
+            try
+            {
+                var url = $"https://graph.facebook.com/{apiVersion}/{catalogId}?fields=name,vertical,product_count";
+                var request = new HttpRequestMessage(HttpMethod.Get, url);
+                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+                var response = await _httpClient.SendAsync(request);
+                var body = await response.Content.ReadAsStringAsync();
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return new TestIntegracaoResult { Sucesso = false, Mensagem = $"Falha ({(int)response.StatusCode}): {body}" };
+                }
+
+                using var doc = JsonDocument.Parse(body);
+                var nome = doc.RootElement.TryGetProperty("name", out var n) ? n.GetString() : "";
+                var prod = doc.RootElement.TryGetProperty("product_count", out var p) ? p.GetInt32().ToString() : "?";
+                return new TestIntegracaoResult { Sucesso = true, Mensagem = $"Catalogo '{nome}' OK. {prod} produto(s)." };
+            }
+            catch (Exception ex)
+            {
+                return new TestIntegracaoResult { Sucesso = false, Mensagem = ex.Message };
+            }
         }
 
         public async Task PublicarVeiculoAsync(int veiculoId)
         {
-            if (!IsConfigured()) return;
+            var (token, catalogId, apiVersion) = await ResolveAsync();
+            if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(catalogId)) return;
 
             var veiculo = await _veiculoRepository.GetByIdAsync(veiculoId);
             if (veiculo == null) return;
@@ -56,7 +149,6 @@ namespace ConnectVeiculos.Infrastructure.Services.Facebook
                 ? $"{baseUrl}/api/imagens/file?path={Uri.EscapeDataString(imagemPrincipal.ImgCaminho)}"
                 : "";
 
-            // Catalog Batch API - upsert do produto
             var batch = new
             {
                 requests = new[]
@@ -89,12 +181,13 @@ namespace ConnectVeiculos.Infrastructure.Services.Facebook
                 }
             };
 
-            await EnviarBatchAsync(batch, veiculoId, "publicar");
+            await EnviarBatchAsync(batch, veiculoId, "publicar", token, catalogId, apiVersion);
         }
 
         public async Task RemoverVeiculoAsync(int veiculoId)
         {
-            if (!IsConfigured()) return;
+            var (token, catalogId, apiVersion) = await ResolveAsync();
+            if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(catalogId)) return;
 
             var batch = new
             {
@@ -108,19 +201,19 @@ namespace ConnectVeiculos.Infrastructure.Services.Facebook
                 }
             };
 
-            await EnviarBatchAsync(batch, veiculoId, "remover");
+            await EnviarBatchAsync(batch, veiculoId, "remover", token, catalogId, apiVersion);
         }
 
-        private async Task EnviarBatchAsync(object batch, int veiculoId, string operacao)
+        private async Task EnviarBatchAsync(object batch, int veiculoId, string operacao, string token, string catalogId, string apiVersion)
         {
             try
             {
-                var url = $"https://graph.facebook.com/{_settings.ApiVersion}/{_settings.CatalogId}/items_batch";
+                var url = $"https://graph.facebook.com/{apiVersion}/{catalogId}/items_batch";
                 var json = JsonSerializer.Serialize(batch);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                 var request = new HttpRequestMessage(HttpMethod.Post, url);
-                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _settings.AccessToken);
+                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
                 request.Content = content;
 
                 var response = await _httpClient.SendAsync(request);

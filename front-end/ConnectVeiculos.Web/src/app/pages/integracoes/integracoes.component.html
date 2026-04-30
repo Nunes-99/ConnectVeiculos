@@ -381,23 +381,51 @@
           <p>Catalogo de produtos para Marketplace e Ads</p>
         </div>
       </div>
-      <span class="status-badge feed">Feed</span>
+      <span class="status-badge" [class.connected]="fbConfig.configurado" [class.disconnected]="!fbConfig.configurado">
+        {{ fbConfig.configurado ? 'Conectado' : 'Nao configurado' }}
+      </span>
     </div>
     <div class="card-body">
-      <p>O Facebook importa automaticamente os veiculos atraves de um feed de dados. Configure a URL abaixo no <strong>Meta Business Suite > Catalogo > Fontes de dados</strong>.</p>
+      <p>O Facebook pode importar veiculos de duas formas: <strong>Feed XML</strong> (atualiza ~3x ao dia) e <strong>Push API</strong> (atualiza em segundos quando voce cadastra/vende um veiculo). Use as duas em paralelo para ter o melhor dos dois mundos.</p>
+
+      @if (fbConfig.configurado) {
+        <div class="ml-conta-info">
+          <span class="material-icons">verified</span>
+          <div>
+            <strong>Catalogo conectado</strong>
+            @if (fbConfig.catalogId) { <small>Catalog ID: {{ fbConfig.catalogId }} • API {{ fbConfig.apiVersion }}</small> }
+          </div>
+        </div>
+      }
+
       <div class="feed-url-section">
-        <label>URL do Feed:</label>
+        <label>URL do Feed XML (opcional):</label>
         <div class="feed-url-row">
           <input type="text" [value]="feedFacebookUrl" readonly />
           <button class="btn-copy" (click)="copiarUrl(feedFacebookUrl)">
             <span class="material-icons">content_copy</span>
           </button>
         </div>
+        <small>Configure no Meta Business Suite &gt; Catalogo &gt; Fontes de dados.</small>
       </div>
+
       <div class="card-actions">
+        @if (!fbConfig.configurado) {
+          <button class="btn-primary" (click)="abrirConfigFacebook()" [disabled]="fbLoading">
+            <span class="material-icons">settings</span>
+            {{ fbLoading ? 'Carregando...' : 'Configurar Push API' }}
+          </button>
+        } @else {
+          <button class="btn-outline" (click)="abrirConfigFacebook()" title="Atualizar credenciais">
+            <span class="material-icons">edit</span> Reconfigurar
+          </button>
+          <button class="btn-danger-outline" (click)="pedirDesconectarFacebook()">
+            <span class="material-icons">link_off</span> Desconectar
+          </button>
+        }
         <a href="https://business.facebook.com/commerce" target="_blank" class="btn-outline">
           <span class="material-icons">open_in_new</span>
-          Abrir Meta Business Suite
+          Meta Business Suite
         </a>
       </div>
     </div>
@@ -406,6 +434,110 @@
       <small>Custo: Gratis para listagem organica. Para impulsionar com Ads, o cliente define o orcamento.</small>
     </div>
   </div>
+
+  <!-- Modal config Facebook Catalog -->
+  @if (showFbConfigModal) {
+    <div class="modal-overlay" (click)="fecharConfigFacebook()">
+      <div class="modal modal-lg" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2><span class="material-icons">storefront</span> Configurar Facebook Catalog</h2>
+          <button class="modal-close" (click)="fecharConfigFacebook()"><span class="material-icons">close</span></button>
+        </div>
+
+        <div class="wa-tabs">
+          <button [class.active]="fbAbaTutorial" (click)="fbAbaTutorial = true">
+            <span class="material-icons">menu_book</span> Como configurar
+          </button>
+          <button [class.active]="!fbAbaTutorial" (click)="fbAbaTutorial = false">
+            <span class="material-icons">key</span> Colar credenciais
+          </button>
+        </div>
+
+        <div class="modal-body">
+          @if (fbAbaTutorial) {
+            <div class="wa-tutorial">
+              <p><strong>Voce precisa fazer no Meta Business antes de plugar aqui:</strong></p>
+              <ol>
+                <li>Acesse <a href="https://business.facebook.com" target="_blank" rel="noopener">business.facebook.com</a> e crie um <strong>Catalogo</strong> (tipo: Veiculos).</li>
+                <li>Anote o <strong>Catalog ID</strong> que aparece em <em>Configuracoes do catalogo</em> (numero longo).</li>
+                <li>Em <a href="https://developers.facebook.com" target="_blank" rel="noopener">developers.facebook.com</a> crie uma app tipo <strong>Business</strong> (ou reuse a do WhatsApp).</li>
+                <li>Em <em>App &gt; System Users</em> crie um System User com permissao <strong>Catalog Management</strong> sobre seu catalogo.</li>
+                <li>Gere um <strong>Token Permanente</strong> (System User Token) com escopo <code>catalog_management</code> e <code>business_management</code>.</li>
+                <li>Cole AccessToken e Catalog ID na proxima aba e clique em <strong>Testar</strong> antes de salvar.</li>
+              </ol>
+              <p class="wa-aviso">
+                <span class="material-icons">warning</span>
+                O System User Token e <strong>permanente</strong> (nao expira) — guarde com cuidado e use SEMPRE este aqui, nao tokens de usuario que expiram em 60 dias. Detalhes em <strong>GUIA-INTEGRACOES.md &gt; secao 2</strong>.
+              </p>
+              <button class="btn-primary" (click)="fbAbaTutorial = false">
+                Ja fiz tudo, vou colar as credenciais
+                <span class="material-icons">arrow_forward</span>
+              </button>
+            </div>
+          } @else {
+            <form [formGroup]="fbForm" (ngSubmit)="salvarFacebook()" class="wa-form">
+              <div class="form-group">
+                <label class="required">Access Token (System User Token permanente)</label>
+                <div class="token-input">
+                  <input [type]="fbMostrarToken ? 'text' : 'password'" formControlName="accessToken" placeholder="EAAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
+                  <button type="button" class="btn-mini" (click)="fbMostrarToken = !fbMostrarToken">
+                    <span class="material-icons">{{ fbMostrarToken ? 'visibility_off' : 'visibility' }}</span>
+                  </button>
+                </div>
+                <small>Token gerado no painel <em>System User</em> com permissao <code>catalog_management</code>.</small>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="required">Catalog ID</label>
+                  <input type="text" formControlName="catalogId" placeholder="1234567890123456" />
+                  <small>Numero exibido em Catalogo &gt; Configuracoes.</small>
+                </div>
+                <div class="form-group">
+                  <label class="required">Versao da API</label>
+                  <input type="text" formControlName="apiVersion" placeholder="v18.0" />
+                  <small>Padrao: v18.0. Atualize se Meta mudar a versao recomendada.</small>
+                </div>
+              </div>
+
+              <div class="smtp-test-block">
+                <label>Testar conexao com o catalogo:</label>
+                <div class="token-input">
+                  <button type="button" class="btn-mini btn-test" (click)="testarFacebook()" [disabled]="fbTestando">
+                    <span class="material-icons">science</span> {{ fbTestando ? 'Testando...' : 'Testar agora' }}
+                  </button>
+                </div>
+                @if (fbTesteResultado) {
+                  <div class="smtp-test-result" [class.sucesso]="fbTesteResultado.sucesso" [class.falha]="!fbTesteResultado.sucesso">
+                    <span class="material-icons">{{ fbTesteResultado.sucesso ? 'check_circle' : 'error' }}</span>
+                    {{ fbTesteResultado.mensagem }}
+                  </div>
+                }
+                <small>O teste usa as credenciais ATUALMENTE SALVAS. Salve antes de testar se acabou de mexer no formulario.</small>
+              </div>
+
+              <div class="modal-footer">
+                <button type="button" class="btn-secondary" (click)="fecharConfigFacebook()" [disabled]="fbSalvando">Cancelar</button>
+                <button type="submit" class="btn-primary" [disabled]="fbSalvando || fbForm.invalid">
+                  {{ fbSalvando ? 'Salvando...' : 'Salvar credenciais' }}
+                </button>
+              </div>
+            </form>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <app-confirm-modal
+    [show]="showFbDesconectarModal"
+    titulo="Desconectar Facebook Catalog?"
+    mensagem="Apos desconectar, novos veiculos nao serao mais publicados/atualizados via Push API no catalogo do Facebook. O feed XML continua funcionando se voce o configurou no Meta. Configure novamente quando quiser reativar o push instantaneo."
+    textoBotaoConfirmar="Sim, desconectar"
+    textoBotaoCancelar="Cancelar"
+    tipo="danger"
+    (confirmar)="confirmarDesconectarFacebook()"
+    (cancelar)="cancelarDesconectarFacebook()" />
 
   <!-- Modais de confirmacao do ML -->
   <app-confirm-modal
@@ -438,23 +570,51 @@
           <p>Listagem no Google Shopping e Vehicle Ads</p>
         </div>
       </div>
-      <span class="status-badge feed">Feed</span>
+      <span class="status-badge" [class.connected]="gmConfig.configurado" [class.disconnected]="!gmConfig.configurado">
+        {{ gmConfig.configurado ? 'Conectado' : 'Nao configurado' }}
+      </span>
     </div>
     <div class="card-body">
-      <p>O Google importa os veiculos atraves de um feed XML. Configure a URL abaixo no <strong>Google Merchant Center > Produtos > Feeds</strong>.</p>
+      <p>O Google pode importar veiculos via <strong>Feed XML</strong> (atualiza ~3x ao dia) ou via <strong>Content API</strong> (atualiza em segundos quando voce cadastra/vende). Para reduzir o tempo entre a publicacao e o anuncio aparecer, configure a Content API.</p>
+
+      @if (gmConfig.configurado) {
+        <div class="ml-conta-info">
+          <span class="material-icons">verified</span>
+          <div>
+            <strong>Conta conectada</strong>
+            @if (gmConfig.merchantId) { <small>Merchant ID: {{ gmConfig.merchantId }}</small> }
+          </div>
+        </div>
+      }
+
       <div class="feed-url-section">
-        <label>URL do Feed:</label>
+        <label>URL do Feed XML (opcional):</label>
         <div class="feed-url-row">
           <input type="text" [value]="feedGoogleUrl" readonly />
           <button class="btn-copy" (click)="copiarUrl(feedGoogleUrl)">
             <span class="material-icons">content_copy</span>
           </button>
         </div>
+        <small>Configure no Google Merchant Center &gt; Produtos &gt; Feeds.</small>
       </div>
+
       <div class="card-actions">
+        @if (!gmConfig.configurado) {
+          <button class="btn-primary" (click)="abrirConfigGoogle()" [disabled]="gmLoading">
+            <span class="material-icons">settings</span>
+            {{ gmLoading ? 'Carregando...' : 'Configurar Content API' }}
+          </button>
+        } @else {
+          <button class="btn-outline" (click)="abrirConfigGoogle()" title="Atualizar credenciais">
+            <span class="material-icons">edit</span> Reconfigurar
+          </button>
+          <button class="btn-danger-outline" (click)="pedirDesconectarGoogle()">
+            <span class="material-icons">link_off</span> Desconectar
+          </button>
+        }
         <a href="https://merchants.google.com" target="_blank" class="btn-outline">
           <span class="material-icons">open_in_new</span>
-          Abrir Google Merchant Center
+          Merchant Center
         </a>
       </div>
     </div>
@@ -463,4 +623,126 @@
       <small>Custo: Listagem gratis. Para Google Ads (Vehicle Ads), o cliente define o orcamento (min ~R$5/dia).</small>
     </div>
   </div>
+
+  <!-- Modal config Google Merchant -->
+  @if (showGmConfigModal) {
+    <div class="modal-overlay" (click)="fecharConfigGoogle()">
+      <div class="modal modal-lg" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2><span class="material-icons">shopping_cart</span> Configurar Google Merchant</h2>
+          <button class="modal-close" (click)="fecharConfigGoogle()"><span class="material-icons">close</span></button>
+        </div>
+
+        <div class="wa-tabs">
+          <button [class.active]="gmAbaTutorial" (click)="gmAbaTutorial = true">
+            <span class="material-icons">menu_book</span> Como configurar
+          </button>
+          <button [class.active]="!gmAbaTutorial" (click)="gmAbaTutorial = false">
+            <span class="material-icons">key</span> Colar credenciais
+          </button>
+        </div>
+
+        <div class="modal-body">
+          @if (gmAbaTutorial) {
+            <div class="wa-tutorial">
+              <p><strong>Voce precisa fazer no Google antes de plugar aqui:</strong></p>
+              <ol>
+                <li>Crie uma conta no <a href="https://merchants.google.com" target="_blank" rel="noopener">Google Merchant Center</a> e anote o <strong>Merchant ID</strong> (canto superior).</li>
+                <li>Acesse <a href="https://console.cloud.google.com" target="_blank" rel="noopener">Google Cloud Console</a> e crie um projeto.</li>
+                <li>Em <em>APIs e Servicos &gt; Biblioteca</em>, ative a <strong>Content API for Shopping</strong>.</li>
+                <li>Em <em>APIs e Servicos &gt; Credenciais</em>, crie credenciais tipo <strong>OAuth 2.0 Client ID</strong> (tipo "Desktop app"). Copie o <strong>Client ID</strong> e o <strong>Client Secret</strong>.</li>
+                <li>Use o <a href="https://developers.google.com/oauthplayground/" target="_blank" rel="noopener">OAuth Playground</a> para gerar o <strong>Refresh Token</strong>:
+                  <ul>
+                    <li>No icone de engrenagem, marque <em>"Use your own OAuth credentials"</em> e cole Client ID + Secret.</li>
+                    <li>Em <em>Step 1</em>, selecione o escopo <code>https://www.googleapis.com/auth/content</code>.</li>
+                    <li>Autorize com a conta Google que tem acesso ao Merchant Center.</li>
+                    <li>Em <em>Step 2</em>, clique em <em>Exchange authorization code for tokens</em> e copie o <strong>refresh_token</strong>.</li>
+                  </ul>
+                </li>
+                <li>Cole tudo na proxima aba e clique em <strong>Testar</strong>.</li>
+              </ol>
+              <p class="wa-aviso">
+                <span class="material-icons">warning</span>
+                O Refresh Token nao expira (a menos que seja revogado manualmente). Guarde com cuidado. Detalhes em <strong>GUIA-INTEGRACOES.md &gt; secao 3</strong>.
+              </p>
+              <button class="btn-primary" (click)="gmAbaTutorial = false">
+                Ja fiz tudo, vou colar as credenciais
+                <span class="material-icons">arrow_forward</span>
+              </button>
+            </div>
+          } @else {
+            <form [formGroup]="gmForm" (ngSubmit)="salvarGoogle()" class="wa-form">
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="required">Merchant ID</label>
+                  <input type="text" formControlName="merchantId" placeholder="123456789" />
+                  <small>Numero exibido no canto superior do Merchant Center.</small>
+                </div>
+                <div class="form-group">
+                  <label class="required">Client ID</label>
+                  <input type="text" formControlName="clientId" placeholder="xxxxx.apps.googleusercontent.com" />
+                  <small>Gerado em Cloud Console &gt; Credenciais &gt; OAuth 2.0.</small>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="required">Client Secret</label>
+                <div class="token-input">
+                  <input [type]="gmMostrarSecret ? 'text' : 'password'" formControlName="clientSecret" placeholder="GOCSPX-xxxxxxxxxxxxxxxx" />
+                  <button type="button" class="btn-mini" (click)="gmMostrarSecret = !gmMostrarSecret">
+                    <span class="material-icons">{{ gmMostrarSecret ? 'visibility_off' : 'visibility' }}</span>
+                  </button>
+                </div>
+                <small>Acompanha o Client ID — disponivel apenas no momento da criacao da credencial.</small>
+              </div>
+
+              <div class="form-group">
+                <label class="required">Refresh Token</label>
+                <div class="token-input">
+                  <input [type]="gmMostrarRefresh ? 'text' : 'password'" formControlName="refreshToken" placeholder="1//0gxxxxxxxxxxxxxxxxxxxxxxx" />
+                  <button type="button" class="btn-mini" (click)="gmMostrarRefresh = !gmMostrarRefresh">
+                    <span class="material-icons">{{ gmMostrarRefresh ? 'visibility_off' : 'visibility' }}</span>
+                  </button>
+                </div>
+                <small>Gerado pelo OAuth Playground com escopo <code>auth/content</code>.</small>
+              </div>
+
+              <div class="smtp-test-block">
+                <label>Testar conexao com o Merchant Center:</label>
+                <div class="token-input">
+                  <button type="button" class="btn-mini btn-test" (click)="testarGoogle()" [disabled]="gmTestando">
+                    <span class="material-icons">science</span> {{ gmTestando ? 'Testando...' : 'Testar agora' }}
+                  </button>
+                </div>
+                @if (gmTesteResultado) {
+                  <div class="smtp-test-result" [class.sucesso]="gmTesteResultado.sucesso" [class.falha]="!gmTesteResultado.sucesso">
+                    <span class="material-icons">{{ gmTesteResultado.sucesso ? 'check_circle' : 'error' }}</span>
+                    {{ gmTesteResultado.mensagem }}
+                  </div>
+                }
+                <small>O teste usa as credenciais ATUALMENTE SALVAS. Salve antes de testar se acabou de mexer no formulario.</small>
+              </div>
+
+              <div class="modal-footer">
+                <button type="button" class="btn-secondary" (click)="fecharConfigGoogle()" [disabled]="gmSalvando">Cancelar</button>
+                <button type="submit" class="btn-primary" [disabled]="gmSalvando || gmForm.invalid">
+                  {{ gmSalvando ? 'Salvando...' : 'Salvar credenciais' }}
+                </button>
+              </div>
+            </form>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <app-confirm-modal
+    [show]="showGmDesconectarModal"
+    titulo="Desconectar Google Merchant?"
+    mensagem="Apos desconectar, novos veiculos nao serao mais publicados/atualizados via Content API. O feed XML continua funcionando se voce o configurou no Merchant Center. Configure novamente quando quiser reativar o push instantaneo."
+    textoBotaoConfirmar="Sim, desconectar"
+    textoBotaoCancelar="Cancelar"
+    tipo="danger"
+    (confirmar)="confirmarDesconectarGoogle()"
+    (cancelar)="cancelarDesconectarGoogle()" />
 </div>

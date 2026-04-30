@@ -356,6 +356,99 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
         }
 
         // ==========================================
+        // FACEBOOK CATALOG
+        // ==========================================
+
+        [HttpGet("facebook/status")]
+        public async Task<IActionResult> FacebookStatus([FromServices] IFacebookCatalogService fb)
+        {
+            return Ok(new { configurado = await fb.IsConfiguredAsync() });
+        }
+
+        [HttpGet("facebook/config")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> GetFacebookConfig([FromServices] IFacebookCatalogService fb)
+        {
+            return Ok(await fb.GetConfigAsync());
+        }
+
+        [HttpPost("facebook/config")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> SaveFacebookConfig(
+            [FromServices] IFacebookCatalogService fb,
+            [FromBody] FacebookConfigInput request)
+        {
+            if (string.IsNullOrWhiteSpace(request.AccessToken) || string.IsNullOrWhiteSpace(request.CatalogId))
+                return BadRequest(new { error = "AccessToken e CatalogId sao obrigatorios." });
+
+            await fb.SalvarConfigAsync(request);
+            return Ok(new { mensagem = "Configuracao do Facebook Catalog salva." });
+        }
+
+        [HttpPost("facebook/desconectar")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> DesconectarFacebook([FromServices] IFacebookCatalogService fb)
+        {
+            await fb.DesconectarAsync();
+            return Ok(new { mensagem = "Facebook Catalog desconectado." });
+        }
+
+        [HttpPost("facebook/test")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> TestarFacebook([FromServices] IFacebookCatalogService fb)
+        {
+            var result = await fb.TestarAsync();
+            return result.Sucesso ? Ok(result) : StatusCode(502, result);
+        }
+
+        // ==========================================
+        // GOOGLE MERCHANT CENTER
+        // ==========================================
+
+        [HttpGet("google/status")]
+        public async Task<IActionResult> GoogleStatus([FromServices] IGoogleMerchantService gm)
+        {
+            return Ok(new { configurado = await gm.IsConfiguredAsync() });
+        }
+
+        [HttpGet("google/config")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> GetGoogleConfig([FromServices] IGoogleMerchantService gm)
+        {
+            return Ok(await gm.GetConfigAsync());
+        }
+
+        [HttpPost("google/config")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> SaveGoogleConfig(
+            [FromServices] IGoogleMerchantService gm,
+            [FromBody] GoogleMerchantConfigInput request)
+        {
+            if (string.IsNullOrWhiteSpace(request.ClientId) || string.IsNullOrWhiteSpace(request.ClientSecret)
+                || string.IsNullOrWhiteSpace(request.RefreshToken) || string.IsNullOrWhiteSpace(request.MerchantId))
+                return BadRequest(new { error = "ClientId, ClientSecret, RefreshToken e MerchantId sao obrigatorios." });
+
+            await gm.SalvarConfigAsync(request);
+            return Ok(new { mensagem = "Configuracao do Google Merchant salva." });
+        }
+
+        [HttpPost("google/desconectar")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> DesconectarGoogle([FromServices] IGoogleMerchantService gm)
+        {
+            await gm.DesconectarAsync();
+            return Ok(new { mensagem = "Google Merchant desconectado." });
+        }
+
+        [HttpPost("google/test")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> TestarGoogle([FromServices] IGoogleMerchantService gm)
+        {
+            var result = await gm.TestarAsync();
+            return result.Sucesso ? Ok(result) : StatusCode(502, result);
+        }
+
+        // ==========================================
         // PUBLICACOES
         // ==========================================
 
