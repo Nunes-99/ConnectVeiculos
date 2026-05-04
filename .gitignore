@@ -52,3 +52,12 @@ playwright/.cache/
 
 # Outputs do dotnet publish
 publish/
+
+# Scripts de deploy locais (especificos do PC do dev — paths absolutos,
+# IP da VM atual, leem credenciais de fora do projeto)
+scripts/deploy-vm.sh
+scripts/deploy-stack.sh
+
+# Documentacao operacional local (snapshots de status do projeto fora do repo)
+GUIA-DEPLOY-GITHUB.md
+STATUS-PROJETO.md
