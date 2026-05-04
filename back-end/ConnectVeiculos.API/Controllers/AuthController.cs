@@ -1,3 +1,4 @@
+using ConnectVeiculos.Application.Exceptions;
 using ConnectVeiculos.Application.InputModels.Auth;
 using ConnectVeiculos.Application.InputModels.RecuperacaoSenha;
 using ConnectVeiculos.Application.Interfaces.Auth;
@@ -5,6 +6,7 @@ using ConnectVeiculos.Application.Interfaces.RecuperacaoSenha;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using System.Security.Claims;
 
 namespace ConnectVeiculos.API.Controllers
 {
@@ -111,6 +113,56 @@ namespace ConnectVeiculos.API.Controllers
             catch (Exception ex)
             {
                 return BadRequest(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Troca a senha do usuario autenticado (exige senha atual)
+        /// </summary>
+        /// <remarks>
+        /// O token JWT atual continua valido ate sua expiracao natural — a nova
+        /// senha so e exigida no proximo login. Essa abordagem evita interromper
+        /// a sessao em curso quando o usuario troca a senha.
+        /// </remarks>
+        /// <response code="200">Senha alterada com sucesso</response>
+        /// <response code="400">Senha atual incorreta ou nova senha invalida</response>
+        /// <response code="401">Nao autenticado</response>
+        [HttpPost("trocar-senha")]
+        [Authorize]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> TrocarSenha(
+            [FromServices] ITrocarSenhaUseCase useCase,
+            [FromBody] TrocarSenhaInputModel input)
+        {
+            if (input == null)
+                return BadRequest("Dados invalidos.");
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var usuarioIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                              ?? User.FindFirst("UserId")?.Value;
+
+            if (!int.TryParse(usuarioIdClaim, out var usuarioId) || usuarioId <= 0)
+                return Unauthorized("Token invalido.");
+
+            try
+            {
+                await useCase.ExecutarAsync(usuarioId, input);
+                return Ok(new
+                {
+                    mensagem = "Senha alterada com sucesso. A nova senha sera exigida no proximo login.",
+                });
+            }
+            catch (InputModelException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
         }
     }

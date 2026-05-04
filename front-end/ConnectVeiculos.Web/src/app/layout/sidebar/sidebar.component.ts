@@ -1,8 +1,9 @@
-import { Component, EventEmitter, inject, Input, Output, PLATFORM_ID } from '@angular/core';
+import { Component, EventEmitter, inject, Input, Output, PLATFORM_ID, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { AuthService, ThemeService, LojaService } from '../../core/services';
+import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import { AuthService, ThemeService, LojaService, ToastService } from '../../core/services';
 import { NotificationsComponent } from '../../shared/components/notifications/notifications.component';
 import { Loja } from '../../core/models';
 
@@ -15,7 +16,7 @@ interface MenuItem {
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [CommonModule, RouterModule, NotificationsComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, NotificationsComponent],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.scss'
 })
@@ -23,6 +24,8 @@ export class SidebarComponent {
   authService = inject(AuthService);
   themeService = inject(ThemeService);
   private lojaService = inject(LojaService);
+  private fb = inject(FormBuilder);
+  private toast = inject(ToastService);
 
   @Input() mobileOpen = false;
   @Output() closeSidebar = new EventEmitter<void>();
@@ -30,6 +33,22 @@ export class SidebarComponent {
   lojas: Loja[] = [];
   linkCopiado = false;
   catalogoExpanded = false;
+
+  mostrarTrocarSenha = signal(false);
+  salvandoSenha = signal(false);
+
+  formSenha: FormGroup = this.fb.group({
+    senhaAtual: ['', Validators.required],
+    novaSenha: ['', [Validators.required, Validators.minLength(6)]],
+    confirmarSenha: ['', Validators.required]
+  }, { validators: this.senhasIguais });
+
+  private senhasIguais(group: AbstractControl): ValidationErrors | null {
+    const nova = group.get('novaSenha')?.value;
+    const conf = group.get('confirmarSenha')?.value;
+    if (!nova || !conf) return null;
+    return nova === conf ? null : { mismatch: true };
+  }
 
   menuGroups = [
     {
@@ -109,5 +128,43 @@ export class SidebarComponent {
 
   toggleTheme(): void {
     this.themeService.toggleTheme();
+  }
+
+  abrirTrocarSenha(): void {
+    this.formSenha.reset({ senhaAtual: '', novaSenha: '', confirmarSenha: '' });
+    this.mostrarTrocarSenha.set(true);
+  }
+
+  fecharTrocarSenha(): void {
+    if (this.salvandoSenha()) return;
+    this.mostrarTrocarSenha.set(false);
+    this.formSenha.reset({ senhaAtual: '', novaSenha: '', confirmarSenha: '' });
+  }
+
+  salvarTrocarSenha(): void {
+    if (this.formSenha.invalid || this.salvandoSenha()) {
+      this.formSenha.markAllAsTouched();
+      return;
+    }
+    const { senhaAtual, novaSenha, confirmarSenha } = this.formSenha.value;
+    this.salvandoSenha.set(true);
+    this.authService.trocarSenha(senhaAtual, novaSenha, confirmarSenha).subscribe({
+      next: (res) => {
+        this.toast.success(res?.mensagem ?? 'Senha alterada. Sera exigida no proximo login.');
+        this.salvandoSenha.set(false);
+        this.mostrarTrocarSenha.set(false);
+        this.formSenha.reset({ senhaAtual: '', novaSenha: '', confirmarSenha: '' });
+      },
+      error: (err) => {
+        const msg = err?.error?.message ?? err?.error?.mensagem ?? 'Nao foi possivel trocar a senha.';
+        this.toast.error(typeof msg === 'string' ? msg : 'Nao foi possivel trocar a senha.');
+        this.salvandoSenha.set(false);
+      }
+    });
+  }
+
+  hasErrorSenha(field: string, error: string): boolean {
+    const ctrl = this.formSenha.get(field);
+    return !!(ctrl && ctrl.hasError(error) && ctrl.touched);
   }
 }

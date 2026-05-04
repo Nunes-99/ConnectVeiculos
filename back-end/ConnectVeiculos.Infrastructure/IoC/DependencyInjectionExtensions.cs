@@ -156,6 +156,7 @@ namespace ConnectVeiculos.Infrastructure.IoC
 
             // UseCases - Auth
             services.AddTransient<ILoginUseCase, LoginUseCase>();
+            services.AddTransient<ITrocarSenhaUseCase, TrocarSenhaUseCase>();
 
             // UseCases - Recuperacao de Senha
             services.AddTransient<ISolicitarRecuperacaoSenhaUseCase, SolicitarRecuperacaoSenhaUseCase>();

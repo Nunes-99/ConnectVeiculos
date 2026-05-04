@@ -122,4 +122,12 @@ export class AuthService extends ApiService {
       confirmarSenha
     });
   }
+
+  trocarSenha(senhaAtual: string, novaSenha: string, confirmarSenha: string): Observable<{ mensagem: string }> {
+    return this.post<{ mensagem: string }>('auth/trocar-senha', {
+      senhaAtual,
+      novaSenha,
+      confirmarSenha
+    });
+  }
 }
