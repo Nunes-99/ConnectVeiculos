@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+# Cancela builds antigos da mesma branch quando um novo push chega.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (.NET 8)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: back-end
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore ConnectVeiculos.sln
+
+      - name: Build (Release, no warnings allowed)
+        run: dotnet build ConnectVeiculos.sln --configuration Release --no-restore -warnaserror
+
+      - name: Run unit tests
+        run: dotnet test ConnectVeiculos.Tests/ConnectVeiculos.Tests.csproj --configuration Release --no-build --verbosity normal
+
+  frontend:
+    name: Frontend (Angular 18)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: front-end/ConnectVeiculos.Web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: front-end/ConnectVeiculos.Web/package-lock.json
+
+      - name: Install deps (npm ci)
+        run: npm ci
+
+      - name: Build (production)
+        run: npx ng build --configuration=production
