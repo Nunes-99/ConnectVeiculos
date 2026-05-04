@@ -50,8 +50,13 @@ echo
 
 # --- 1. Atualizar sistema ---
 echo "==> [1/6] Atualizando Ubuntu..."
-sudo apt-get update -qq
-sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y -qq
+# Retenta uma vez se mirror estiver em sync, e como ultimo recurso ignora
+# arquivos de traducao (i18n) que sao a causa mais comum de "unexpected size".
+# Esses arquivos nao sao usados na instalacao real de pacotes.
+sudo apt-get update -qq \
+    || sudo apt-get update -qq -o Acquire::Languages=none \
+    || echo "  ⚠️  apt-get update parcial (mirror sync); continuando"
+sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y -qq -o Acquire::Languages=none
 
 # --- 2. Instalar Docker se nao estiver presente ---
 echo "==> [2/6] Instalando Docker..."

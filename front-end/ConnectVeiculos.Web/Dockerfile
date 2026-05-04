@@ -19,6 +19,12 @@ WORKDIR /app
 # Copiar apenas o output (browser + server) do stage de build
 COPY --from=build /app/dist/connect-veiculos.web ./dist/connect-veiculos.web
 
+# Angular 17+ gera o template como `index.csr.html`, mas o middleware
+# express.static tem fallback hardcoded em `index.html`. Disponibiliza
+# o mesmo arquivo nos dois nomes para o servidor encontrar em qualquer caminho.
+RUN cp ./dist/connect-veiculos.web/browser/index.csr.html \
+       ./dist/connect-veiculos.web/browser/index.html
+
 # Copiar package.json minimo so com dependencias de runtime do server.mjs
 # (Express e dependencias do Angular SSR ja estao bundled em server.mjs)
 COPY --from=build /app/package*.json ./

@@ -60,9 +60,10 @@ export function app(): express.Express {
   server.get('/catalogo/:lojaId', ssrHandler(commonEngine, indexHtml, browserDistFolder));
   server.get('/catalogo/:lojaId/veiculo/:veiculoId', ssrHandler(commonEngine, indexHtml, browserDistFolder));
 
-  // Demais rotas: servir o index.html estático (client-side only)
+  // Demais rotas: servir o index estático (client-side only).
+  // Angular 17+ gera o template CSR como `index.csr.html` (em vez de `index.html`).
   server.get('**', (req, res) => {
-    res.sendFile(join(browserDistFolder, 'index.html'));
+    res.sendFile(join(browserDistFolder, 'index.csr.html'));
   });
 
   return server;
