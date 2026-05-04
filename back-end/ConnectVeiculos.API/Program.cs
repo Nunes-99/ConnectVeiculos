@@ -5,6 +5,7 @@ using ConnectVeiculos.API.Filters;
 using ConnectVeiculos.Application.Validators;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -209,10 +210,25 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy("VendedorOrAbove", policy => policy.RequireRole("Vendedor", "Gerente", "Administrador"))
     .AddPolicy("AnyAuthenticated", policy => policy.RequireAuthenticatedUser());
 
+// Honrar X-Forwarded-* enviados pelo nginx (proxy reverso fazendo TLS termination).
+// Sem isso, o ASP.NET nao sabe que o request original veio via HTTPS (gera URLs http://
+// em redirects/callbacks OAuth, e cookies "Secure" podem nao ser enviados). KnownNetworks/
+// KnownProxies sao limpos porque o nginx esta numa rede Docker, nao em loopback.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 // Configurar Injecao de Dependencia com SQLite
 builder.Services.WireUpDependencies(builder.Configuration);
 
 var app = builder.Build();
+
+// Aplicar ForwardedHeaders o mais cedo possivel no pipeline, antes de qualquer
+// middleware que dependa de scheme/host (HttpsRedirection, Authentication, CORS).
+app.UseForwardedHeaders();
 
 // Inicializar banco de dados SQLite (cria as tabelas se nao existirem)
 app.UseInitializeDatabase();
