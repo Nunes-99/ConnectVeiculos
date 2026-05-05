@@ -164,5 +164,69 @@ namespace ConnectVeiculos.API.Controllers
                 criadoEm = t.TenDtCriacao
             }));
         }
+
+        /// <summary>
+        /// Remove um tenant do master e ARQUIVA (renomeia, nao deleta) o banco
+        /// para data/_arquivado_{slug}_YYYYMMDD-HHMMSS.db. Operacao recuperavel
+        /// — para restaurar, basta renomear de volta e re-inserir no master.
+        /// O tenant 'default' nao pode ser excluido (protecao).
+        /// </summary>
+        [HttpDelete("{slug}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> Delete(string slug, CancellationToken ct)
+        {
+            if (string.IsNullOrEmpty(_adminToken))
+                return StatusCode(503, new { message = "ADMIN_API_TOKEN nao configurado." });
+            if (!Request.Headers.TryGetValue("X-Admin-Token", out var sent) || sent != _adminToken)
+                return Unauthorized(new { message = "Token administrativo invalido ou ausente." });
+
+            slug = slug.Trim().ToLowerInvariant();
+            if (slug == "default")
+                return BadRequest(new { message = "Tenant 'default' nao pode ser excluido (protecao)." });
+
+            var tenant = await _master.Tenants.FirstOrDefaultAsync(t => t.TenSlug == slug, ct);
+            if (tenant == null)
+                return NotFound(new { message = $"Tenant '{slug}' nao encontrado." });
+
+            // 1) Arquiva o banco do tenant (rename, nao delete — recuperavel)
+            var dataDir = Environment.GetEnvironmentVariable("TENANTS_DATA_DIR") ?? "/app/data";
+            var dbPath = Path.Combine(dataDir, tenant.TenDatabaseFile);
+            string? archivedPath = null;
+            if (System.IO.File.Exists(dbPath))
+            {
+                var stamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss");
+                archivedPath = Path.Combine(dataDir, $"_arquivado_{tenant.TenSlug}_{stamp}.db");
+                System.IO.File.Move(dbPath, archivedPath);
+                _logger.LogInformation("Tenant '{Slug}': banco {File} arquivado em {Archived}",
+                    tenant.TenSlug, tenant.TenDatabaseFile, archivedPath);
+            }
+            else
+            {
+                _logger.LogWarning("Tenant '{Slug}': banco {File} nao existia em disco — apenas remove do master",
+                    tenant.TenSlug, tenant.TenDatabaseFile);
+            }
+
+            // 2) Remove do master
+            _master.Tenants.Remove(tenant);
+            await _master.SaveChangesAsync(ct);
+
+            // 3) Invalida cache para o middleware nao reconhecer mais o subdomain
+            _store.InvalidateCache();
+
+            _logger.LogInformation("Tenant '{Slug}' (id {Id}) removido do master", tenant.TenSlug, tenant.TenId);
+
+            return Ok(new
+            {
+                slug = tenant.TenSlug,
+                tenantId = tenant.TenId,
+                arquivado = archivedPath,
+                mensagem = archivedPath != null
+                    ? $"Tenant '{slug}' removido. Banco arquivado em {archivedPath} — para restaurar, mova de volta e reinsira no master."
+                    : $"Tenant '{slug}' removido do master (banco ja nao existia)."
+            });
+        }
     }
 }
