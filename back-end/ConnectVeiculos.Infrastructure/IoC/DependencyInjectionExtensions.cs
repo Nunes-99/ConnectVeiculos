@@ -312,16 +312,23 @@ namespace ConnectVeiculos.Infrastructure.IoC
             var dbContext = scope.ServiceProvider.GetRequiredService<ConnectVeiculosDbContext>();
             dbContext.Database.EnsureCreated();
 
-            // Aplicar alteracoes de schema para bancos existentes
-            ApplySchemaUpdates(dbContext);
-
-            // Seed inicial - criar usuario admin se nao existir
+            // Seed inicial — admin + Acessos + Categorias.
+            // ApplySchemaUpdates NAO eh chamado aqui mais — o TenantsMigrationsRunner
+            // roda em todos os tenants ativos (incluindo default) logo depois e aplica
+            // os schema updates em cada banco.
             SeedInitialData(dbContext);
 
             return app;
         }
 
-        private static void ApplySchemaUpdates(ConnectVeiculosDbContext dbContext)
+        /// <summary>
+        /// Aplica alteracoes de schema (AddColumnIfNotExists / CreateTableIfNotExists)
+        /// em qualquer DbContext do tipo ConnectVeiculosDbContext. Idempotente — pode
+        /// rodar quantas vezes quiser, so adiciona o que faltar. Chamado no startup
+        /// pelo TenantsMigrationsRunner para cada tenant ativo, e tambem pelo
+        /// TenantsAdminController quando cria tenant novo.
+        /// </summary>
+        public static void ApplySchemaUpdates(ConnectVeiculosDbContext dbContext)
         {
             try
             {

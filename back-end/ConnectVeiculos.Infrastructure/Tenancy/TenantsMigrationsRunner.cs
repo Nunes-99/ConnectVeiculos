@@ -1,6 +1,7 @@
 using ConnectVeiculos.Core.Entities.Tenants;
 using ConnectVeiculos.Core.Interfaces.Tenancy;
 using ConnectVeiculos.Infrastructure.Database.EntityFramework;
+using ConnectVeiculos.Infrastructure.IoC;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -73,7 +74,12 @@ namespace ConnectVeiculos.Infrastructure.Tenancy
                 using var ctx = new ConnectVeiculosDbContext(optionsBuilder.Options);
                 await ctx.Database.EnsureCreatedAsync(ct);
 
-                _logger.LogInformation("Tenant '{Slug}' ({Nome}): banco {File} pronto",
+                // Aplica schema updates legacy (colunas adicionadas via ALTER TABLE
+                // em features anteriores). Idempotente — bancos novos ja tem todas
+                // as colunas via EnsureCreated, bancos antigos recebem o que falta.
+                DependencyInjectionExtensions.ApplySchemaUpdates(ctx);
+
+                _logger.LogInformation("Tenant '{Slug}' ({Nome}): banco {File} pronto (schema atualizado)",
                     tenant.TenSlug, tenant.TenNome, tenant.TenDatabaseFile);
             }
         }

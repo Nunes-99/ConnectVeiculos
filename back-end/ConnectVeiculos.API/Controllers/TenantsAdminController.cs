@@ -105,6 +105,10 @@ namespace ConnectVeiculos.API.Controllers
             {
                 await ctx.Database.EnsureCreatedAsync(ct);
 
+                // Aplica schema updates legacy (colunas adicionadas via ALTER TABLE).
+                // Idempotente — banco novo ja tem schema atual, mas garantia.
+                DependencyInjectionExtensions.ApplySchemaUpdates(ctx);
+
                 // Popula tabelas de referencia (Acessos, Categorias) que toda
                 // instancia do sistema espera ter pre-existentes.
                 DependencyInjectionExtensions.SeedSystemReferences(ctx);
