@@ -98,6 +98,7 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.AddSingleton<ITenantStore, TenantStore>();
             services.AddScoped<ITenantContext, TenantContext>();
             services.AddScoped<ITenantConnectionFactory, TenantConnectionFactory>();
+            services.AddSingleton<TenantsMigrationsRunner>();
             // ===== fim tenancy
 
             // Email Service
@@ -108,28 +109,37 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.AddHttpClient<Core.Interfaces.Services.IWhatsAppService, Services.WhatsApp.WhatsAppService>()
                 .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(10));
 
-            // DbSession para Dapper (usa a connection string apropriada)
-            var dapperConnectionString = usePostgres ? postgresConnection! : connectionString;
-            services.AddScoped(sp => new DbSession(dapperConnectionString, usePostgres));
+            // DbSession para Dapper — agora tenant-aware via TenantConnectionFactory.
+            // Em request HTTP com tenant resolvido, usa data/{slug}.db; senao
+            // (startup, jobs, testes) usa a connection string padrao do appsettings.
+            services.AddScoped(sp =>
+            {
+                var factory = sp.GetRequiredService<ITenantConnectionFactory>();
+                return new DbSession(factory.GetConnectionString(), usePostgres);
+            });
             services.AddScoped<IUnitOfWork, Database.UnitOfWork.UnitOfWork>();
 
             // Registrar interceptors
             services.AddSingleton<SoftDeleteInterceptor>();
             services.AddScoped<AuditInterceptor>();
 
-            // DbContext para Entity Framework (PostgreSQL em produção, SQLite em desenvolvimento)
+            // DbContext para Entity Framework — tambem tenant-aware via factory.
+            // Mesma logica do DbSession acima: tenant resolvido na request usa
+            // banco do tenant; sem tenant resolvido cai no fallback.
             services.AddDbContext<ConnectVeiculosDbContext>((serviceProvider, options) =>
             {
                 var softDeleteInterceptor = serviceProvider.GetRequiredService<SoftDeleteInterceptor>();
                 var auditInterceptor = serviceProvider.GetRequiredService<AuditInterceptor>();
+                var tenantFactory = serviceProvider.GetRequiredService<ITenantConnectionFactory>();
+                var connStr = tenantFactory.GetConnectionString();
 
                 if (usePostgres)
                 {
-                    options.UseNpgsql(postgresConnection);
+                    options.UseNpgsql(connStr);
                 }
                 else
                 {
-                    options.UseSqlite(connectionString);
+                    options.UseSqlite(connStr);
                 }
 
                 options.AddInterceptors(softDeleteInterceptor, auditInterceptor);

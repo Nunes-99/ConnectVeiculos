@@ -28,11 +28,32 @@ namespace ConnectVeiculos.API.Middlewares
 
         public async Task InvokeAsync(HttpContext context, ITenantStore store, ITenantContext tenantContext)
         {
+            // Rotas que NAO precisam de tenant: ACME challenge, swagger, health.
+            // Estas tipicamente rodam ANTES desse middleware no pipeline, mas
+            // como protecao extra, deixamos passar sem resolver tenant.
+            var path = context.Request.Path.Value ?? string.Empty;
+            if (path.StartsWith("/.well-known/", StringComparison.OrdinalIgnoreCase)
+                || path.StartsWith("/health", StringComparison.OrdinalIgnoreCase)
+                || path.StartsWith("/swagger", StringComparison.OrdinalIgnoreCase))
+            {
+                await _next(context);
+                return;
+            }
+
             var slug = ExtractTenantSlug(context.Request.Host.Host);
 
             var tenant = await store.GetBySlugAsync(slug, context.RequestAborted);
             if (tenant == null)
             {
+                // Master vazio + slug "default" = primeiro boot apos a refatoracao,
+                // antes da migracao final do tenant default. Deixa cair no fallback
+                // do TenantConnectionFactory (DefaultConnection do appsettings).
+                if (slug == DefaultTenantSlug)
+                {
+                    await _next(context);
+                    return;
+                }
+
                 _logger.LogWarning("Tenant nao encontrado para subdomain '{Slug}' (host '{Host}')",
                     slug, context.Request.Host.Host);
                 context.Response.StatusCode = StatusCodes.Status404NotFound;

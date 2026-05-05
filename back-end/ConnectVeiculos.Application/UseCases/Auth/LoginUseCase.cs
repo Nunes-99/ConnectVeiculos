@@ -2,6 +2,7 @@ using ConnectVeiculos.Application.InputModels.Auth;
 using ConnectVeiculos.Application.Interfaces.Auth;
 using ConnectVeiculos.Application.ViewModels.Auth;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Usuarios;
+using ConnectVeiculos.Core.Interfaces.Tenancy;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -14,11 +15,14 @@ namespace ConnectVeiculos.Application.UseCases.Auth
     {
         private readonly IUsuarioRepository _usuarioRepository;
         private readonly IConfiguration _configuration;
+        private readonly ITenantContext? _tenantContext;
 
-        public LoginUseCase(IUsuarioRepository usuarioRepository, IConfiguration configuration)
+        public LoginUseCase(IUsuarioRepository usuarioRepository, IConfiguration configuration,
+            ITenantContext? tenantContext = null)
         {
             _usuarioRepository = usuarioRepository;
             _configuration = configuration;
+            _tenantContext = tenantContext;
         }
 
         public async Task<LoginViewModel?> Execute(LoginInputModel input)
@@ -68,6 +72,14 @@ namespace ConnectVeiculos.Application.UseCases.Auth
                 new Claim(ClaimTypes.Name, nome),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
+
+            // Tenant claims (multi-tenancy). TenantId 0 = sistema rodando em fallback
+            // (master vazio). TenantSlug "default" representa o tenant raiz.
+            if (_tenantContext != null && _tenantContext.IsResolved)
+            {
+                claims.Add(new Claim("tenant_id", _tenantContext.TenantId.ToString()));
+                claims.Add(new Claim("tenant_slug", _tenantContext.TenantSlug));
+            }
 
             // Adicionar role ao token se existir
             if (!string.IsNullOrEmpty(funcao))

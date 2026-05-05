@@ -2,6 +2,7 @@ using ConnectVeiculos.Infrastructure.IoC;
 using ConnectVeiculos.Infrastructure.Hubs;
 using ConnectVeiculos.API.Extensions;
 using ConnectVeiculos.API.Filters;
+using ConnectVeiculos.API.Middlewares;
 using ConnectVeiculos.Application.Validators;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -233,6 +234,15 @@ app.UseForwardedHeaders();
 // Inicializar banco de dados SQLite (cria as tabelas se nao existirem)
 app.UseInitializeDatabase();
 
+// Multi-tenant: garante que master e cada tenant tem schema atualizado.
+// Roda uma vez no startup. Se nao tiver tenants registrados, segue em modo
+// single-tenant (fallback DefaultConnection) ate o primeiro tenant ser criado.
+using (var scope = app.Services.CreateScope())
+{
+    var runner = scope.ServiceProvider.GetRequiredService<ConnectVeiculos.Infrastructure.Tenancy.TenantsMigrationsRunner>();
+    await runner.RunAsync();
+}
+
 // Configure the HTTP request pipeline.
 // Swagger habilitado em todos os ambientes para facilitar testes
 app.UseSwagger();
@@ -247,6 +257,12 @@ app.UseHttpsRedirection();
 app.UseResponseCompression();
 
 app.UseRouting();
+
+// Multi-tenant: resolve o tenant pelo subdomain do request e popula o
+// ITenantContext. Skip de rotas que nao precisam (health, swagger, ACME)
+// esta dentro do proprio middleware. Plugado ANTES de Authentication
+// pra que claims tenham acesso ao tenant resolvido.
+app.UseTenantResolution();
 
 // CORS configuravel via variavel de ambiente (ALLOWED_ORIGINS)
 var allowedOrigins = Environment.GetEnvironmentVariable("ALLOWED_ORIGINS")?.Split(',')
