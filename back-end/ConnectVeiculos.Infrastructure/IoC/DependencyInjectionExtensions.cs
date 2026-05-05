@@ -1,5 +1,7 @@
 using ConnectVeiculos.Application.Interfaces.Acessos;
 using ConnectVeiculos.Application.Interfaces.Auth;
+using ConnectVeiculos.Core.Interfaces.Tenancy;
+using ConnectVeiculos.Infrastructure.Tenancy;
 using ConnectVeiculos.Application.Interfaces.Catalogo;
 using ConnectVeiculos.Application.Interfaces.Categorias;
 using ConnectVeiculos.Application.Interfaces.Dashboard;
@@ -81,6 +83,22 @@ namespace ConnectVeiculos.Infrastructure.IoC
             // Cache In-Memory
             services.AddMemoryCache();
             services.AddSingleton<ICacheService, MemoryCacheService>();
+
+            // ===== Tenancy infrastructure (criada na Fase 2 do multi-tenant)
+            // Componentes registrados aqui mas o middleware ainda nao esta ativo
+            // no pipeline (ver Program.cs). Sistema continua single-tenant ate
+            // a Fase 5 ativar o middleware e migrar o banco atual para tenant
+            // "default".
+            //
+            // Master DbContext — registry de tenants em data/_master.db
+            var dataDir = Environment.GetEnvironmentVariable("TENANTS_DATA_DIR") ?? "/app/data";
+            var masterDbPath = Path.Combine(dataDir, "_master.db");
+            services.AddDbContext<MasterDbContext>(options =>
+                options.UseSqlite($"Data Source={masterDbPath}"));
+            services.AddSingleton<ITenantStore, TenantStore>();
+            services.AddScoped<ITenantContext, TenantContext>();
+            services.AddScoped<ITenantConnectionFactory, TenantConnectionFactory>();
+            // ===== fim tenancy
 
             // Email Service
             services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
