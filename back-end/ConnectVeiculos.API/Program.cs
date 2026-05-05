@@ -72,35 +72,55 @@ builder.Services.AddValidatorsFromAssemblyContaining<LoginInputModelValidator>()
 // Configurar Hangfire (Background Jobs)
 builder.Services.AddCustomHangfire();
 
-// Configurar Rate Limiting
+// Configurar Rate Limiting (multi-tenant: particiona por subdomain do Host
+// + IP, para que bot abusivo em um tenant nao consuma cota dos outros).
+//
+// Limiter roda ANTES do TenantResolutionMiddleware (CORS antes de Routing),
+// entao usamos o Host header diretamente como proxy do tenant.
 builder.Services.AddRateLimiter(options =>
 {
-    // Politica para login (5 tentativas por minuto por IP)
-    options.AddFixedWindowLimiter("login", opt =>
+    static string TenantPartitionKey(HttpContext ctx)
     {
-        opt.PermitLimit = 5;
-        opt.Window = TimeSpan.FromMinutes(1);
-        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        opt.QueueLimit = 0;
-    });
+        var host = ctx.Request.Host.Host ?? "unknown";
+        var ip = ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return $"{host}:{ip}";
+    }
 
-    // Politica para API geral (100 requests por minuto por usuario)
-    options.AddFixedWindowLimiter("api", opt =>
-    {
-        opt.PermitLimit = 100;
-        opt.Window = TimeSpan.FromMinutes(1);
-        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        opt.QueueLimit = 2;
-    });
+    // Login: 5 tentativas / min, particao = host + IP (anti brute-force isolado por tenant)
+    options.AddPolicy("login", httpContext =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: TenantPartitionKey(httpContext),
+            factory: _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
 
-    // Politica para endpoints publicos (30 requests por minuto por IP)
-    options.AddFixedWindowLimiter("public", opt =>
-    {
-        opt.PermitLimit = 30;
-        opt.Window = TimeSpan.FromMinutes(1);
-        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        opt.QueueLimit = 0;
-    });
+    // API: 100 requests / min, mesma particao
+    options.AddPolicy("api", httpContext =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: TenantPartitionKey(httpContext),
+            factory: _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 100,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst,
+                QueueLimit = 2
+            }));
+
+    // Catalogo publico: 30 requests / min, particao = host + IP
+    options.AddPolicy("public", httpContext =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: TenantPartitionKey(httpContext),
+            factory: _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 30,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
 
     options.OnRejected = async (context, token) =>
     {

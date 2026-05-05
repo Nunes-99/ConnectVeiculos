@@ -2,6 +2,7 @@ using ConnectVeiculos.Core.Entities.Notificacoes;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Notificacoes;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Usuarios;
 using ConnectVeiculos.Core.Interfaces.Services;
+using ConnectVeiculos.Core.Interfaces.Tenancy;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,53 +10,67 @@ using Microsoft.Extensions.DependencyInjection;
 namespace ConnectVeiculos.Infrastructure.Hubs
 {
     /// <summary>
-    /// Hub SignalR para notificacoes em tempo real
+    /// Hub SignalR para notificacoes em tempo real.
+    /// Multi-tenant: cada conexao entra em grupos prefixados com tenant_id —
+    /// "tenant_{T}", "user_{T}_{U}" — para evitar broadcast cross-tenant.
     /// </summary>
     [Authorize]
     public class NotificacaoHub : Hub
     {
-        /// <summary>
-        /// Chamado quando um cliente se conecta
-        /// </summary>
         public override async Task OnConnectedAsync()
         {
-            var userId = Context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                      ?? Context.User?.FindFirst("UserId")?.Value;
+            var (tenantId, userId) = GetTenantAndUserId();
+            if (string.IsNullOrEmpty(tenantId))
+            {
+                // Token sem tenant_id — recusa conexao por seguranca
+                Context.Abort();
+                return;
+            }
+
+            // Grupos isolados por tenant
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"tenant_{tenantId}");
             if (!string.IsNullOrEmpty(userId))
             {
-                await Groups.AddToGroupAsync(Context.ConnectionId, $"user_{userId}");
+                await Groups.AddToGroupAsync(Context.ConnectionId, $"user_{tenantId}_{userId}");
             }
             await base.OnConnectedAsync();
         }
 
-        /// <summary>
-        /// Chamado quando um cliente se desconecta
-        /// </summary>
-        public override async Task OnDisconnectedAsync(Exception exception)
+        public override async Task OnDisconnectedAsync(Exception? exception)
         {
-            var userId = Context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                      ?? Context.User?.FindFirst("UserId")?.Value;
-            if (!string.IsNullOrEmpty(userId))
+            var (tenantId, userId) = GetTenantAndUserId();
+            if (!string.IsNullOrEmpty(tenantId))
             {
-                await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"user_{userId}");
+                await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"tenant_{tenantId}");
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"user_{tenantId}_{userId}");
+                }
             }
             await base.OnDisconnectedAsync(exception);
         }
 
-        /// <summary>
-        /// Entrar em um grupo (para notificacoes de loja especifica)
-        /// </summary>
         public async Task JoinGroup(string groupName)
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
+            // Prefixa nomes de grupo customizado com tenant para evitar colisao
+            var (tenantId, _) = GetTenantAndUserId();
+            if (string.IsNullOrEmpty(tenantId)) return;
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"tenant_{tenantId}:{groupName}");
         }
 
-        /// <summary>
-        /// Sair de um grupo
-        /// </summary>
         public async Task LeaveGroup(string groupName)
         {
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
+            var (tenantId, _) = GetTenantAndUserId();
+            if (string.IsNullOrEmpty(tenantId)) return;
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"tenant_{tenantId}:{groupName}");
+        }
+
+        private (string? tenantId, string? userId) GetTenantAndUserId()
+        {
+            var tenantId = Context.User?.FindFirst("tenant_id")?.Value;
+            var userId = Context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                      ?? Context.User?.FindFirst("UserId")?.Value;
+            return (tenantId, userId);
         }
     }
 
@@ -66,21 +81,33 @@ namespace ConnectVeiculos.Infrastructure.Hubs
     {
     }
 
+    /// <summary>
+    /// Implementacao tenant-aware: descobre o tenant atual via ITenantContext
+    /// (Scoped, populado pelo middleware ou pelo TenantScope dos jobs Hangfire).
+    /// </summary>
     public class NotificacaoHubService : INotificacaoHubService
     {
         private readonly IHubContext<NotificacaoHub> _hubContext;
         private readonly IServiceScopeFactory _scopeFactory;
+        private readonly ITenantContext _tenantContext;
 
         public NotificacaoHubService(
             IHubContext<NotificacaoHub> hubContext,
-            IServiceScopeFactory scopeFactory)
+            IServiceScopeFactory scopeFactory,
+            ITenantContext tenantContext)
         {
             _hubContext = hubContext;
             _scopeFactory = scopeFactory;
+            _tenantContext = tenantContext;
         }
+
+        private string TenantPrefix() => _tenantContext.IsResolved
+            ? _tenantContext.TenantId.ToString()
+            : throw new InvalidOperationException("NotificacaoHubService chamado sem tenant resolvido — broadcast cross-tenant bloqueado.");
 
         public async Task EnviarParaUsuarioAsync(int usuarioId, string tipo, object dados)
         {
+            var tenantId = TenantPrefix();
             using var scope = _scopeFactory.CreateScope();
             var notificacaoRepo = scope.ServiceProvider.GetRequiredService<INotificacaoRepository>();
 
@@ -88,18 +115,20 @@ namespace ConnectVeiculos.Infrastructure.Hubs
             var notificacao = CriarNotificacaoComTipo(usuarioId, titulo, mensagem, tipo);
             await notificacaoRepo.AddAsync(notificacao);
 
-            await _hubContext.Clients.Group($"user_{usuarioId}")
+            await _hubContext.Clients.Group($"user_{tenantId}_{usuarioId}")
                 .SendAsync("ReceberNotificacao", new { tipo, dados, timestamp = DateTime.UtcNow });
         }
 
         public async Task EnviarParaGrupoAsync(string grupo, string tipo, object dados)
         {
-            await _hubContext.Clients.Group(grupo)
+            var tenantId = TenantPrefix();
+            await _hubContext.Clients.Group($"tenant_{tenantId}:{grupo}")
                 .SendAsync("ReceberNotificacao", new { tipo, dados, timestamp = DateTime.UtcNow });
         }
 
         public async Task EnviarParaTodosAsync(string tipo, object dados)
         {
+            var tenantId = TenantPrefix();
             using var scope = _scopeFactory.CreateScope();
             var notificacaoRepo = scope.ServiceProvider.GetRequiredService<INotificacaoRepository>();
             var usuarioRepo = scope.ServiceProvider.GetRequiredService<IUsuarioRepository>();
@@ -114,7 +143,8 @@ namespace ConnectVeiculos.Infrastructure.Hubs
                 await notificacaoRepo.AddAsync(notificacao);
             }
 
-            await _hubContext.Clients.All
+            // Broadcast restrito ao grupo do tenant — Clients.All vazaria entre tenants
+            await _hubContext.Clients.Group($"tenant_{tenantId}")
                 .SendAsync("ReceberNotificacao", new { tipo, dados, timestamp });
         }
 

@@ -80,9 +80,15 @@ namespace ConnectVeiculos.Infrastructure.IoC
 
             var usePostgres = !string.IsNullOrEmpty(postgresConnection);
 
-            // Cache In-Memory
+            // Cache In-Memory.
+            // MemoryCacheService eh Singleton (cache de processo). Mas o service
+            // exposto via ICacheService eh o decorator TenantAwareCacheService
+            // (Scoped), que prefixa chaves com "tenant:{id}:" automaticamente
+            // quando ha tenant resolvido. Sem isso, dois tenants compartilhariam
+            // chaves identicas (ex: "dashboard") e haveria vazamento.
             services.AddMemoryCache();
-            services.AddSingleton<ICacheService, MemoryCacheService>();
+            services.AddSingleton<MemoryCacheService>();
+            services.AddScoped<ICacheService, TenantAwareCacheService>();
 
             // ===== Tenancy infrastructure (criada na Fase 2 do multi-tenant)
             // Componentes registrados aqui mas o middleware ainda nao esta ativo
@@ -172,9 +178,13 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.AddHttpClient<IWebhookService, WebhookService>();
 
             // SignalR Hub Services
-            services.AddSingleton<NotificacaoHubService>();
-            services.AddSingleton<INotificacaoHubService>(sp => sp.GetRequiredService<NotificacaoHubService>());
-            services.AddSingleton<INotificacaoService>(sp => sp.GetRequiredService<NotificacaoHubService>());
+            // NotificacaoHubService agora eh Scoped — depende de ITenantContext (Scoped).
+            // IHubContext<T> continua Singleton internamente no SignalR; o servico
+            // wrapper apenas o usa pra broadcast. Cada request/job-scope cria a sua
+            // instancia com tenant context resolvido.
+            services.AddScoped<NotificacaoHubService>();
+            services.AddScoped<INotificacaoHubService>(sp => sp.GetRequiredService<NotificacaoHubService>());
+            services.AddScoped<INotificacaoService>(sp => sp.GetRequiredService<NotificacaoHubService>());
             services.AddSingleton<ICatalogoHubService, CatalogoHubService>();
 
             // Operations
