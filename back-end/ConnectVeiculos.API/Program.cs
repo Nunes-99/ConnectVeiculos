@@ -188,7 +188,7 @@ builder.Services.AddAuthentication(options =>
         RoleClaimType = System.Security.Claims.ClaimTypes.Role
     };
 
-    // Permitir token via query string para SignalR
+    // Permitir token via query string para SignalR + validar tenant cross-request
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = context =>
@@ -198,6 +198,29 @@ builder.Services.AddAuthentication(options =>
             if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
             {
                 context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        },
+
+        // Multi-tenant: bloqueia uso de token emitido em tenant A num request
+        // que veio pelo subdomain de tenant B. Sem isso, alguem com login em
+        // acme.X poderia usar o token em demo.X — request seria authenticated
+        // mas operaria no banco do tenant errado (vetor de cross-tenant access).
+        OnTokenValidated = context =>
+        {
+            var tenantContext = context.HttpContext.RequestServices
+                .GetService<ConnectVeiculos.Core.Interfaces.Tenancy.ITenantContext>();
+            if (tenantContext == null || !tenantContext.IsResolved)
+                return Task.CompletedTask;
+
+            var tokenTenantClaim = context.Principal?.FindFirst("tenant_id")?.Value;
+            if (string.IsNullOrEmpty(tokenTenantClaim))
+                return Task.CompletedTask; // token legado sem claim — compat
+
+            if (!int.TryParse(tokenTenantClaim, out var tokenTenantId)
+                || tokenTenantId != tenantContext.TenantId)
+            {
+                context.Fail($"Token emitido para tenant {tokenTenantClaim}, request no tenant {tenantContext.TenantId}");
             }
             return Task.CompletedTask;
         }
