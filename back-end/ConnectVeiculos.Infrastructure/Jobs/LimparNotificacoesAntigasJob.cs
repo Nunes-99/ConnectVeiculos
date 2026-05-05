@@ -1,39 +1,52 @@
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Notificacoes;
+using ConnectVeiculos.Core.Interfaces.Tenancy;
+using ConnectVeiculos.Infrastructure.Tenancy;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace ConnectVeiculos.Infrastructure.Jobs
 {
+    /// <summary>
+    /// Limpa notificacoes lidas com mais de 30 dias em cada tenant.
+    /// </summary>
     public class LimparNotificacoesAntigasJob : IBackgroundJob
     {
-        private readonly INotificacaoRepository _notificacaoRepository;
+        private readonly IServiceScopeFactory _scopeFactory;
+        private readonly ITenantStore _tenantStore;
         private readonly ILogger<LimparNotificacoesAntigasJob> _logger;
         private const int DiasRetencao = 30;
 
         public string JobName => "LimparNotificacoesAntigas";
-        public string CronExpression => "0 4 * * 0"; // Domingos as 4h da manha
+        public string CronExpression => "0 4 * * 0";
 
         public LimparNotificacoesAntigasJob(
-            INotificacaoRepository notificacaoRepository,
+            IServiceScopeFactory scopeFactory,
+            ITenantStore tenantStore,
             ILogger<LimparNotificacoesAntigasJob> logger)
         {
-            _notificacaoRepository = notificacaoRepository;
+            _scopeFactory = scopeFactory;
+            _tenantStore = tenantStore;
             _logger = logger;
         }
 
         public async Task ExecuteAsync()
         {
-            _logger.LogInformation("Iniciando limpeza de notificacoes lidas com mais de {Dias} dias...", DiasRetencao);
+            var tenants = await _tenantStore.ListActiveAsync();
+            var dataLimite = DateTime.UtcNow.AddDays(-DiasRetencao);
 
-            try
+            foreach (var tenant in tenants)
             {
-                var dataLimite = DateTime.UtcNow.AddDays(-DiasRetencao);
-                await _notificacaoRepository.DeleteAntigasLidasAsync(dataLimite);
-                _logger.LogInformation("Limpeza de notificacoes antigas concluida.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao limpar notificacoes antigas.");
-                throw;
+                try
+                {
+                    using var ts = new TenantScope(_scopeFactory, tenant);
+                    var repo = ts.Services.GetRequiredService<INotificacaoRepository>();
+                    await repo.DeleteAntigasLidasAsync(dataLimite);
+                    _logger.LogInformation("[{Tenant}] notificacoes antigas limpas.", tenant.TenSlug);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "[{Tenant}] erro limpando notificacoes", tenant.TenSlug);
+                }
             }
         }
     }
