@@ -143,6 +143,26 @@ namespace ConnectVeiculos.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Invalida o cache em memoria do TenantStore. Util quando voce alterou
+        /// algum tenant via SQL direto no master (ex: suspender/reativar) e quer
+        /// que o middleware passe a refletir a mudanca sem reiniciar o backend.
+        /// </summary>
+        [HttpPost("_invalidate-cache")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public IActionResult InvalidateCache()
+        {
+            if (string.IsNullOrEmpty(_adminToken))
+                return StatusCode(503, new { message = "ADMIN_API_TOKEN nao configurado." });
+            if (!Request.Headers.TryGetValue("X-Admin-Token", out var sent) || sent != _adminToken)
+                return Unauthorized(new { message = "Token administrativo invalido ou ausente." });
+
+            _store.InvalidateCache();
+            _logger.LogInformation("TenantStore cache invalidado via endpoint admin");
+            return Ok(new { mensagem = "Cache do TenantStore invalidado. Proxima request fara releitura do master." });
+        }
+
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
