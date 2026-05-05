@@ -90,6 +90,43 @@ docker compose restart
 git pull
 docker compose up -d --build
 
-# Backup
-cp data/*.db backups/
+# Backup manual (alem do cron diario)
+sudo bash scripts/backup-sqlite.sh
 ```
+
+## Monitoring / Status
+
+### Health check publico
+- `GET https://<seu-dominio>/health` → `{"status":"healthy"}` (200 OK)
+- Apenas esse endpoint eh exposto. Os endpoints detalhados ficam internos:
+  - `/health/ready` (todas as checks: memoria, FIPE, etc)
+  - `/health/db`
+  - `/health/external`
+
+Pra acessar os internos via VM:
+```bash
+sudo docker exec <nginx-container> wget -qO- http://backend-cliente:8080/health/ready
+```
+
+### Cron jobs ativos na VM (root crontab)
+| Schedule | Script | Acao |
+|---|---|---|
+| `30 3 * * *` | `scripts/backup-sqlite.sh` | Backup diario do SQLite (retencao 7 dias) |
+| `0 8 * * *` | `scripts/check-cert-expiry.sh` | Alerta no Discord se cert SSL < 7 dias |
+
+### Renovacao automatica do cert SSL
+- `certbot.timer` (systemd) renova 2x ao dia automaticamente.
+- Se a renovacao falhar silenciosamente, `check-cert-expiry.sh` avisa via Discord webhook
+  pelo menos 7 dias antes do vencimento.
+- DISCORD_WEBHOOK_URL fica no `.env` da VM (nao no repo).
+
+### Monitoring externo (UptimeRobot)
+- Plano free, 50 monitores, check 5/5min, alerta por email + Discord webhook.
+- Configure um monitor HTTP apontando para `https://<seu-dominio>/health` com keyword
+  `healthy` (protege contra falso positivo se backend cair mas frontend responder 200).
+- Status page publica fica em `stats.uptimerobot.com/<id>` apos criada.
+
+### Logs operacionais na VM
+- `/home/ubuntu/backups/backup.log` → output do backup diario
+- `/home/ubuntu/backups/cert-check.log` → output do check de cert
+- `docker compose logs <servico>` → logs runtime dos containers
