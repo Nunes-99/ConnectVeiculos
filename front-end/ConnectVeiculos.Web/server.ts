@@ -13,8 +13,8 @@ export function app(): express.Express {
 
   const commonEngine = new CommonEngine();
 
-  server.set('view engine', 'html');
-  server.set('views', browserDistFolder);
+  // Hardening: esconde o header "X-Powered-By: Express" das responses.
+  server.disable('x-powered-by');
 
   // Sitemap dinâmico
   server.get('/sitemap.xml', async (req, res) => {
