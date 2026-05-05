@@ -5,6 +5,7 @@ using ConnectVeiculos.Core.Interfaces.Tenancy;
 using ConnectVeiculos.Infrastructure.Database.EntityFramework;
 using ConnectVeiculos.Infrastructure.Database.Interceptors;
 using ConnectVeiculos.Infrastructure.IoC;
+using Microsoft.Data.Sqlite;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -217,9 +218,26 @@ namespace ConnectVeiculos.API.Controllers
             string? archivedPath = null;
             if (System.IO.File.Exists(dbPath))
             {
+                // SQLite mantem file lock via connection pool. Antes de mover o
+                // arquivo, fechar conexoes pooled (do EF Core e Dapper). Sem isso,
+                // File.Move falha com IOException "file in use by another process"
+                // se alguma request recente tocou esse banco.
+                SqliteConnection.ClearAllPools();
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+
                 var stamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss");
                 archivedPath = Path.Combine(dataDir, $"_arquivado_{tenant.TenSlug}_{stamp}.db");
+
+                // SQLite WAL: junto com o .db tem -shm e -wal. Move os 3 (best
+                // effort — se nao existirem, ignora). Apos o move, o banco fica
+                // como _arquivado_X_*.db (e _shm/_wal correspondentes).
                 System.IO.File.Move(dbPath, archivedPath);
+                if (System.IO.File.Exists(dbPath + "-shm"))
+                    System.IO.File.Move(dbPath + "-shm", archivedPath + "-shm");
+                if (System.IO.File.Exists(dbPath + "-wal"))
+                    System.IO.File.Move(dbPath + "-wal", archivedPath + "-wal");
+
                 _logger.LogInformation("Tenant '{Slug}': banco {File} arquivado em {Archived}",
                     tenant.TenSlug, tenant.TenDatabaseFile, archivedPath);
             }
