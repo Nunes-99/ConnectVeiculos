@@ -23,6 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\ConnectVeiculos.API\ConnectVeiculos.API.csproj" />
     <ProjectReference Include="..\ConnectVeiculos.Application\ConnectVeiculos.Application.csproj" />
     <ProjectReference Include="..\ConnectVeiculos.Core\ConnectVeiculos.Core.csproj" />
     <ProjectReference Include="..\ConnectVeiculos.Infrastructure\ConnectVeiculos.Infrastructure.csproj" />

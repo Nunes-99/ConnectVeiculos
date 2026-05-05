@@ -79,8 +79,9 @@ namespace ConnectVeiculos.API.Middlewares
         ///   connectveiculos.dev.br             -> "default"
         ///   136.248.77.154 (IP nu)             -> "default"
         ///   localhost                          -> "default" (dev)
+        /// Public para permitir testes unitarios.
         /// </summary>
-        internal static string ExtractTenantSlug(string host)
+        public static string ExtractTenantSlug(string host)
         {
             if (string.IsNullOrEmpty(host)) return DefaultTenantSlug;
 
