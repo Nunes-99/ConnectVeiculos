@@ -182,8 +182,25 @@ sudo docker compose -f /home/ubuntu/ConnectVeiculos/docker-compose.yml up -d --f
 
 `TenantStore` faz cache em memória. Quando criar tenant via API, o controller invalida o cache automaticamente. Mas se você inserir tenant via SQL direto no master, precisa restart do backend ou (futuro) chamar endpoint de invalidação.
 
+## Integrações por tenant
+
+`ConfiguracaoSistema` é uma tabela **dentro do banco do tenant** — significa que cada tenant tem suas próprias configurações de integração. **Cada cliente operador deve criar contas/apps próprios e configurar via UI `/integracoes`**:
+
+| Integração | O que cada cliente precisa |
+|---|---|
+| **Mercado Livre** | Criar app em `developers.mercadolivre.com.br`. Redirect URI configurado lá: `https://{slug}.connectveiculos.dev.br/api/integracoes/mercadolivre/callback`. App ID e Client Secret colados na UI `/integracoes`. |
+| **Facebook Catalog** | Conta Meta Business + Catalog ID + Access Token na UI |
+| **Google Merchant** | Merchant ID + OAuth do Google na UI |
+| **WhatsApp Business** | Conta Meta Business + número verificado + tokens na UI |
+| **SMTP** | Credenciais Gmail App Password (ou outro provider) na UI |
+
+⚠️ **Atenção**: as env vars `ML_*`, `WHATSAPP_*`, `FB_*`, `GOOGLE_MERCHANT_*` no `docker-compose.yml` são **fallbacks globais** (compartilhados entre todos tenants). Se você configurar elas, valem para tenants que ainda não cadastraram credenciais próprias. Em produção real com vários clientes, cada um configura via UI — assim cada tenant tem suas próprias contas/credenciais corporativas.
+
 ## Limites conhecidos
 
-- Postgres como banco backend: hoje suporte parcial — fallback funciona, mas multi-tenant via banco-por-tenant exige SQLite. Adaptação para Postgres (schema-per-tenant ou database-per-tenant) é refatoração separada.
-- Migrations EF formais: o sistema usa `EnsureCreated`, não `dotnet ef migrations`. Funciona porque toda mudança de schema vai via `ApplySchemaUpdates` no startup. Para multi-tenant, esse `ApplySchemaUpdates` roda só no banco do tenant default no startup — tenants novos via API recebem schema atual via `EnsureCreated`. Quando houver mudança de schema futura, lembrar de aplicar em todos os tenants (loop sobre `data/*.db`).
-- Hangfire jobs: hoje rodam num único contexto. Para jobs por tenant, precisa enriquecer o job com `tenant_id` e o handler resolver o contexto manualmente. Fora de escopo desta iteração.
+- **Postgres como banco backend**: hoje suporte parcial — fallback funciona, mas multi-tenant via banco-por-tenant exige SQLite. Adaptação para Postgres (schema-per-tenant ou database-per-tenant) é refatoração separada.
+- **Migrations EF formais**: o sistema usa `EnsureCreated` + `ApplySchemaUpdates` (raw SQL idempotente). `TenantsMigrationsRunner` aplica os schema updates em cada tenant no startup. Mudanças aditivas (novas colunas/tabelas) funcionam; renames/changes de tipo exigiriam migrations EF formais — fora de escopo.
+- **Hangfire jobs (refatorados em 2026-05-05)**: jobs recurring iteram sobre todos os tenants ativos via `MultiTenantJobExecutor`. Falha isolada num tenant não interrompe os outros (apenas logada); job só é marcado Failed no Hangfire dashboard se TODOS os tenants falharem.
+- **AtualizarCacheFipeJob**: único job que NÃO é tenant-aware — ele só popula um cache em memória da API FIPE pública, sem dado de cliente. Compartilhado entre todos os tenants intencionalmente.
+- **CORS**: aceita qualquer subdomain de `connectveiculos.dev.br` automaticamente (via `ALLOWED_ROOT_DOMAINS`). Para adicionar outros domínios raiz no futuro, atualizar a env var.
+- **SignalR Hubs**: conexão SignalR começa via HTTP request, então o middleware resolve o tenant. `INotificacaoService` injetado no hub recebe `ConnectVeiculosDbContext` do scope com tenant correto. Quando enviado a partir de Hangfire job, `MultiTenantJobExecutor` cuida do scope.

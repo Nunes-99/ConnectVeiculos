@@ -287,12 +287,43 @@ app.UseRouting();
 // pra que claims tenham acesso ao tenant resolvido.
 app.UseTenantResolution();
 
-// CORS configuravel via variavel de ambiente (ALLOWED_ORIGINS)
-var allowedOrigins = Environment.GetEnvironmentVariable("ALLOWED_ORIGINS")?.Split(',')
-    ?? new[] { "http://localhost:4200", "http://localhost:5173" };
+// CORS — multi-tenant aware.
+// ALLOWED_ROOT_DOMAINS (env, comma-separated) lista os dominios raiz aceitos.
+// Qualquer subdomain de um dominio raiz lista esta permitido (ex: acme.connectveiculos.dev.br
+// passa se "connectveiculos.dev.br" estiver listado).
+// Default: connectveiculos.dev.br + connectveiculos.com.br (futuro) + localhost para dev.
+//
+// Var legacy ALLOWED_ORIGINS (URLs explicitas) continua suportada como complemento —
+// adicionada a lista de origens explicitas alem do match por root domain.
+var rootDomains = (Environment.GetEnvironmentVariable("ALLOWED_ROOT_DOMAINS")
+    ?? "connectveiculos.dev.br,connectveiculos.com.br")
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    .Select(d => d.ToLowerInvariant())
+    .ToHashSet();
+
+var explicitOrigins = (Environment.GetEnvironmentVariable("ALLOWED_ORIGINS")?
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    ?? new[] { "http://localhost:4200", "http://localhost:5173" })
+    .Select(o => o.ToLowerInvariant())
+    .ToHashSet();
+
+bool IsOriginAllowed(string origin)
+{
+    if (string.IsNullOrEmpty(origin)) return false;
+    if (explicitOrigins.Contains(origin.ToLowerInvariant())) return true;
+    if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri)) return false;
+    var host = uri.Host.ToLowerInvariant();
+    if (host == "localhost" || host == "127.0.0.1") return true;
+    foreach (var root in rootDomains)
+    {
+        if (host == root || host.EndsWith("." + root))
+            return true;
+    }
+    return false;
+}
 
 app.UseCors(options => options
-    .WithOrigins(allowedOrigins)
+    .SetIsOriginAllowed(IsOriginAllowed)
     .AllowAnyMethod()
     .AllowAnyHeader()
     .AllowCredentials());

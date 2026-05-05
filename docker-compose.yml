@@ -24,7 +24,11 @@ services:
       - JwtSettings__Issuer=ConnectVeiculos
       - JwtSettings__Audience=ConnectVeiculosApp
       - JwtSettings__ExpirationInHours=8
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://connectveiculos.dev.br}
+      # CORS multi-tenant: ALLOWED_ROOT_DOMAINS aceita qualquer subdomain do dominio
+      # listado (acme.connectveiculos.dev.br, etc). ALLOWED_ORIGINS continua
+      # suportado como complemento (URLs explicitas adicionais).
+      - ALLOWED_ROOT_DOMAINS=${ALLOWED_ROOT_DOMAINS:-connectveiculos.dev.br,connectveiculos.com.br}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-}
       - ML_APP_ID=${ML_APP_ID:-}
       - ML_CLIENT_SECRET=${ML_CLIENT_SECRET:-}
       - ML_REDIRECT_URI=${ML_REDIRECT_URI:-https://connectveiculos.dev.br/api/integracoes/mercadolivre/callback}
@@ -58,7 +62,12 @@ services:
       - NODE_ENV=production
       - PORT=4000
       - API_BASE_URL=http://backend-cliente:8080
-      - SITE_BASE_URL=${SITE_BASE_URL:-https://connectveiculos.dev.br}
+      # SITE_BASE_URL deliberadamente NAO setado aqui — server.ts faz fallback
+      # para `${req.protocol}://${req.get('host')}` (Host header), que naturalmente
+      # reflete o subdomain do tenant atual no SSR. Setar valor fixo aqui geraria
+      # URLs canonicas erradas (sitemap, OG tags) para tenants nao-default.
+      # Override explicito via env var SITE_BASE_URL ainda eh respeitado se definido.
+      - SITE_BASE_URL=${SITE_BASE_URL:-}
     depends_on:
       - backend-cliente
     restart: unless-stopped

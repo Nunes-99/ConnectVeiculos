@@ -6,9 +6,6 @@ using Microsoft.Extensions.Logging;
 
 namespace ConnectVeiculos.Infrastructure.Jobs
 {
-    /// <summary>
-    /// Limpa notificacoes lidas com mais de 30 dias em cada tenant.
-    /// </summary>
     public class LimparNotificacoesAntigasJob : IBackgroundJob
     {
         private readonly IServiceScopeFactory _scopeFactory;
@@ -29,25 +26,15 @@ namespace ConnectVeiculos.Infrastructure.Jobs
             _logger = logger;
         }
 
-        public async Task ExecuteAsync()
+        public Task ExecuteAsync()
         {
-            var tenants = await _tenantStore.ListActiveAsync();
             var dataLimite = DateTime.UtcNow.AddDays(-DiasRetencao);
-
-            foreach (var tenant in tenants)
-            {
-                try
+            return MultiTenantJobExecutor.RunAsync(JobName, _tenantStore, _scopeFactory, _logger,
+                async (ts, tenant) =>
                 {
-                    using var ts = new TenantScope(_scopeFactory, tenant);
                     var repo = ts.Services.GetRequiredService<INotificacaoRepository>();
                     await repo.DeleteAntigasLidasAsync(dataLimite);
-                    _logger.LogInformation("[{Tenant}] notificacoes antigas limpas.", tenant.TenSlug);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "[{Tenant}] erro limpando notificacoes", tenant.TenSlug);
-                }
-            }
+                });
         }
     }
 }

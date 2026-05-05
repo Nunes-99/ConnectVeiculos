@@ -9,8 +9,7 @@ namespace ConnectVeiculos.Infrastructure.Jobs
 {
     /// <summary>
     /// Remove tokens de recuperacao de senha expirados (mais antigos que 24h)
-    /// para evitar acumulo na tabela. Multi-tenant: itera sobre todos os
-    /// tenants ativos e roda a limpeza no banco de cada um.
+    /// para evitar acumulo na tabela. Roda em todos os tenants ativos.
     /// </summary>
     public class LimparTokensRecuperacaoJob : IBackgroundJob
     {
@@ -31,34 +30,23 @@ namespace ConnectVeiculos.Infrastructure.Jobs
             _logger = logger;
         }
 
-        public async Task ExecuteAsync()
+        public Task ExecuteAsync()
         {
-            var tenants = await _tenantStore.ListActiveAsync();
-            foreach (var tenant in tenants)
-            {
-                try
+            return MultiTenantJobExecutor.RunAsync(JobName, _tenantStore, _scopeFactory, _logger,
+                async (ts, tenant) =>
                 {
-                    using var ts = new TenantScope(_scopeFactory, tenant);
                     var ctx = ts.Services.GetRequiredService<ConnectVeiculosDbContext>();
-
                     var limite = DateTime.Now.AddHours(-24);
                     var antigos = await ctx.RecuperacoesSenha
                         .Where(r => r.RecDataCriacao < limite || r.RecUtilizado)
                         .ToListAsync();
-
-                    if (antigos.Count == 0) continue;
+                    if (antigos.Count == 0) return;
 
                     ctx.RecuperacoesSenha.RemoveRange(antigos);
                     await ctx.SaveChangesAsync();
-                    _logger.LogInformation("[{Tenant}] {Count} tokens de recuperacao removidos.",
+                    _logger.LogInformation("[{Tenant}] {Count} tokens removidos.",
                         tenant.TenSlug, antigos.Count);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "[{Tenant}] erro limpando tokens de recuperacao", tenant.TenSlug);
-                    // nao throw — nao interromper outros tenants
-                }
-            }
+                });
         }
     }
 }

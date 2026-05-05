@@ -32,61 +32,48 @@ namespace ConnectVeiculos.Infrastructure.Jobs
             _logger = logger;
         }
 
-        public async Task ExecuteAsync()
+        public Task ExecuteAsync()
         {
-            var tenants = await _tenantStore.ListActiveAsync();
-            foreach (var tenant in tenants)
-            {
-                try
+            return MultiTenantJobExecutor.RunAsync(JobName, _tenantStore, _scopeFactory, _logger,
+                async (ts, tenant) =>
                 {
-                    await ProcessarTenantAsync(tenant);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "[{Tenant}] erro alertando documentos vencendo", tenant.TenSlug);
-                }
-            }
-        }
+                    var ctx = ts.Services.GetRequiredService<ConnectVeiculosDbContext>();
+                    var notificacaoService = ts.Services.GetRequiredService<INotificacaoService>();
+                    var pushService = ts.Services.GetRequiredService<IPushNotificationService>();
 
-        private async Task ProcessarTenantAsync(Core.Entities.Tenants.Tenant tenant)
-        {
-            using var ts = new TenantScope(_scopeFactory, tenant);
-            var ctx = ts.Services.GetRequiredService<ConnectVeiculosDbContext>();
-            var notificacaoService = ts.Services.GetRequiredService<INotificacaoService>();
-            var pushService = ts.Services.GetRequiredService<IPushNotificationService>();
+                    var hoje = DateTime.Today;
+                    var limite = hoje.AddDays(7);
 
-            var hoje = DateTime.Today;
-            var limite = hoje.AddDays(7);
+                    var documentos = await ctx.VeiculosDocumentos.AsNoTracking()
+                        .Where(d => d.DocStatus != "CONCLUIDO"
+                                 && d.DocDtVencimento != null
+                                 && d.DocDtVencimento <= limite)
+                        .ToListAsync();
 
-            var documentos = await ctx.VeiculosDocumentos.AsNoTracking()
-                .Where(d => d.DocStatus != "CONCLUIDO"
-                         && d.DocDtVencimento != null
-                         && d.DocDtVencimento <= limite)
-                .ToListAsync();
+                    if (!documentos.Any()) return;
 
-            if (!documentos.Any()) return;
+                    var vencidos = documentos.Count(d => d.DocDtVencimento < hoje);
+                    var proximos = documentos.Count - vencidos;
 
-            var vencidos = documentos.Count(d => d.DocDtVencimento < hoje);
-            var proximos = documentos.Count - vencidos;
+                    var titulo = "Documentos com vencimento proximo";
+                    var corpo = vencidos > 0
+                        ? $"{vencidos} documento(s) vencido(s) e {proximos} vencendo nos proximos 7 dias."
+                        : $"{proximos} documento(s) vencendo nos proximos 7 dias.";
 
-            var titulo = "Documentos com vencimento proximo";
-            var corpo = vencidos > 0
-                ? $"{vencidos} documento(s) vencido(s) e {proximos} vencendo nos proximos 7 dias."
-                : $"{proximos} documento(s) vencendo nos proximos 7 dias.";
+                    await notificacaoService.EnviarParaTodosAsync("DOCUMENTOS_VENCENDO", new
+                    {
+                        titulo, corpo, vencidos, proximos, total = documentos.Count
+                    });
 
-            await notificacaoService.EnviarParaTodosAsync("DOCUMENTOS_VENCENDO", new
-            {
-                titulo, corpo, vencidos, proximos, total = documentos.Count
-            });
+                    try { await pushService.EnviarParaTodosAdminAsync(titulo, corpo, "/documentos"); }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "[{Tenant}] push falhou (provavelmente VAPID nao configurado)", tenant.TenSlug);
+                    }
 
-            try { await pushService.EnviarParaTodosAdminAsync(titulo, corpo, "/documentos"); }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "[{Tenant}] push falhou (provavelmente VAPID nao configurado)", tenant.TenSlug);
-            }
-
-            _logger.LogInformation("[{Tenant}] alertas: {Vencidos} vencidos, {Proximos} proximos",
-                tenant.TenSlug, vencidos, proximos);
+                    _logger.LogInformation("[{Tenant}] alertas: {Vencidos} vencidos, {Proximos} proximos",
+                        tenant.TenSlug, vencidos, proximos);
+                });
         }
     }
 }
