@@ -1,3 +1,4 @@
+using ConnectVeiculos.Core.Entities.Tenants;
 using ConnectVeiculos.Core.Interfaces.Tenancy;
 using ConnectVeiculos.Infrastructure.Database.EntityFramework;
 using Microsoft.EntityFrameworkCore;
@@ -34,14 +35,28 @@ namespace ConnectVeiculos.Infrastructure.Tenancy
             var master = sp.GetRequiredService<MasterDbContext>();
             await master.Database.EnsureCreatedAsync(ct);
 
-            // 2) Itera tenants ativos do master e roda EnsureCreated em cada banco.
+            // 2) Auto-seed do tenant "default" se o master estiver vazio.
+            //    Aponta para o arquivo configurado em DEFAULT_TENANT_DATABASE_FILE
+            //    (default: "cliente.db", preservando o banco existente em prod).
+            //    Isso elimina passo manual de migracao no primeiro deploy do
+            //    multi-tenant — o sistema se auto-configura.
+            if (!await master.Tenants.AnyAsync(ct))
+            {
+                var defaultDbFile = Environment.GetEnvironmentVariable("DEFAULT_TENANT_DATABASE_FILE") ?? "cliente.db";
+                var defaultTenant = new Tenant("default", "Tenant Padrão", defaultDbFile);
+                master.Tenants.Add(defaultTenant);
+                await master.SaveChangesAsync(ct);
+                _logger.LogInformation("Master vazio: tenant 'default' criado automaticamente, banco {File}", defaultDbFile);
+            }
+
+            // 3) Itera tenants ativos do master e roda EnsureCreated em cada banco.
             var store = sp.GetRequiredService<ITenantStore>();
             store.InvalidateCache(); // forca releitura caso tenha sido populado por outra instancia
             var tenants = await store.ListActiveAsync(ct);
 
             if (tenants.Count == 0)
             {
-                _logger.LogInformation("Master nao tem tenants registrados. Sistema operara em modo single-tenant (fallback DefaultConnection) ate o primeiro tenant ser criado via scripts/criar-tenant.sh");
+                _logger.LogWarning("Nenhum tenant ativo apos seed — algo errado");
                 return;
             }
 
