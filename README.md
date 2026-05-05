@@ -1,13 +1,14 @@
 # ConnectVeiculos
 
-Sistema de gestao para revendas de veiculos: catalogo publico SEO + admin (RBAC) + integracoes com Mercado Livre, Facebook Catalog, Google Merchant e WhatsApp Business.
+Sistema **multi-tenant** de gestao para revendas de veiculos: catalogo publico SEO + admin (RBAC) + integracoes com Mercado Livre, Facebook Catalog, Google Merchant e WhatsApp Business.
 
 ## Stack
 
 - **Backend:** .NET 8 (API + Entity Framework Core + SignalR + Hangfire + Serilog)
 - **Frontend:** Angular 18 (PWA + SSR + SignalR Client + Chart.js)
-- **Banco:** SQLite em dev / PostgreSQL em prod (auto-migracoes idempotentes no startup)
-- **Deploy:** Docker Compose + Nginx + Let's Encrypt
+- **Banco:** SQLite — **um banco por tenant** (ver [MULTI_TENANT.md](./MULTI_TENANT.md)). Postgres como fallback single-tenant.
+- **Deploy:** Docker Compose + Nginx + Let's Encrypt + Oracle Cloud Always Free
+- **Multi-tenancy:** subdomain routing (`acme.connectveiculos.dev.br` → tenant `acme`), banco isolado em `data/{slug}.db`
 
 ## Pre-requisitos (local)
 
@@ -85,17 +86,43 @@ npx playwright test
 Veja [DEPLOY_ORACLE.md](./DEPLOY_ORACLE.md) para o passo-a-passo completo. Resumo:
 
 1. VM Ubuntu 22.04+ com Docker
-2. DNS apontando pro IP da VM
+2. DNS apontando pro IP da VM (recomenda **wildcard** `*.dominio` para multi-tenant)
 3. Portas 80/443 abertas no firewall
 4. `cp .env.example .env` + preencher credenciais
 5. `docker compose up -d --build`
 6. `bash scripts/setup-https.sh` para HTTPS via Let's Encrypt
+
+## Multi-tenant
+
+O sistema serve **N clientes (concessionarias)** numa mesma instalacao Docker, cada um com banco SQLite isolado. Resolucao por subdomain:
+
+```
+connectveiculos.dev.br        -> tenant "default" (banco data/cliente.db)
+acme.connectveiculos.dev.br   -> tenant "acme"    (banco data/acme.db)
+motorsbr.connectveiculos.dev.br -> tenant "motorsbr"  (banco data/motorsbr.db)
+```
+
+Onboarding em ~2 min via script:
+
+```bash
+bash scripts/criar-tenant.sh \
+    --slug acme \
+    --nome "Acme Veiculos LTDA" \
+    --admin-email contato@acme.com.br \
+    --admin-senha SenhaForte123
+```
+
+Detalhes:
+- [MULTI_TENANT.md](./MULTI_TENANT.md) — plano arquitetural completo (entities, factories, middleware)
+- [GUIA-OPERACAO-MULTI-TENANT.md](./GUIA-OPERACAO-MULTI-TENANT.md) — playbook operacional (criar/suspender/restaurar tenants, troubleshooting)
 
 ## Documentacao
 
 - [MANUAL_USUARIO.md](./MANUAL_USUARIO.md) — manual nao tecnico para o dono da loja
 - [GUIA-INTEGRACOES.md](./GUIA-INTEGRACOES.md) — passo-a-passo de cada integracao (ML, Facebook, Google, WhatsApp)
 - [DEPLOY_ORACLE.md](./DEPLOY_ORACLE.md) — guia completo de deploy
+- [MULTI_TENANT.md](./MULTI_TENANT.md) — arquitetura multi-tenant
+- [GUIA-OPERACAO-MULTI-TENANT.md](./GUIA-OPERACAO-MULTI-TENANT.md) — operar multi-tenant
 - [GUIA-SEO-GOOGLE.md](./GUIA-SEO-GOOGLE.md) — Search Console + sitemap
 - [PRODUCAO_CHECKLIST.md](./PRODUCAO_CHECKLIST.md) — checklist pre-deploy
 - [PENDENCIAS.md](./PENDENCIAS.md) — historico de melhorias
@@ -108,9 +135,12 @@ Veja [DEPLOY_ORACLE.md](./DEPLOY_ORACLE.md) para o passo-a-passo completo. Resum
 | Frontend builda | ✅ |
 | Testes unitarios | ✅ 197/197 |
 | Testes E2E | ✅ 17/17 |
-| Codigo pronto pra producao | ✅ |
-| Deploy realizado | ⏳ pendente (humano) |
-| Credenciais ML/Meta | ⏳ pendente (humano) |
+| Multi-tenant | ✅ ativo em producao com tenant `default` |
+| Deploy em producao | ✅ https://connectveiculos.dev.br (Oracle Free Tier) |
+| Cert SSL Lets Encrypt | ✅ renovacao automatica + alerta no Discord se < 7 dias |
+| Backup off-site | ✅ daily SQLite -> Object Storage Oracle (retencao 30 dias) |
+| Health check + monitoring externo | ✅ UptimeRobot + status page |
+| Credenciais ML/Meta/Google/WhatsApp | ⏳ cliente operador configura via /integracoes |
 
 ## Estrutura
 

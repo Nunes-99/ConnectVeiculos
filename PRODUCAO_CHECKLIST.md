@@ -484,6 +484,42 @@ jobs:
 
 ---
 
+## 10. Multi-tenant (provisionamento de novos clientes)
+
+Sistema serve N clientes na mesma instalacao, cada um isolado em
+`data/{slug}.db`. Detalhes em [GUIA-OPERACAO-MULTI-TENANT.md](./GUIA-OPERACAO-MULTI-TENANT.md).
+
+### Pre-requisitos uma vez por instalacao
+
+- [ ] DNS wildcard `*.dominio` -> IP da VM
+- [ ] `ADMIN_API_TOKEN` no `.env` (gerar com `openssl rand -base64 36`)
+- [ ] `TENANTS_DATA_DIR=/app/data` e `DEFAULT_TENANT_DATABASE_FILE=cliente.db` no `.env`
+
+### Criar tenant para cliente novo
+
+```bash
+bash scripts/criar-tenant.sh \
+    --slug acme \
+    --nome "Acme Veiculos" \
+    --admin-email contato@acme.com.br \
+    --admin-senha SenhaForte123
+```
+
+- [ ] Tenant aparece em `GET /api/admin/tenants`
+- [ ] Cert SSL expandido para incluir `<slug>.dominio` (`certbot --expand`)
+- [ ] Reload do nginx (`docker compose exec nginx nginx -s reload`)
+- [ ] Cliente acessa `https://<slug>.dominio` e loga
+- [ ] Cliente troca senha admin no primeiro login
+- [ ] Cliente cadastra suas lojas, usuarios, veiculos
+- [ ] Cliente configura suas integracoes em `/integracoes` (ML, WhatsApp, etc — credenciais corporativas dele)
+
+### Backup multi-tenant
+
+- [ ] Backup automatico cobre TODOS os tenants (verificar `data/*.db` no diretorio de backup)
+- [ ] Restore por tenant testado (descompacta o `.db.gz` especifico no diretorio data e restart backend)
+
+---
+
 ## Contatos e Suporte
 
 - Desenvolvedor: [Seu nome]
@@ -493,4 +529,5 @@ jobs:
 ---
 
 *Documento gerado em: 31/12/2025*
-*Versao: 1.0*
+*Atualizacao multi-tenant: 2026-05-05*
+*Versao: 1.1*

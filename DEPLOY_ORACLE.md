@@ -130,3 +130,47 @@ sudo docker exec <nginx-container> wget -qO- http://backend-cliente:8080/health/
 - `/home/ubuntu/backups/backup.log` → output do backup diario
 - `/home/ubuntu/backups/cert-check.log` → output do check de cert
 - `docker compose logs <servico>` → logs runtime dos containers
+
+## Multi-tenant
+
+O sistema serve N clientes na mesma VM, cada um com banco isolado.
+Para detalhes arquiteturais ver [MULTI_TENANT.md](./MULTI_TENANT.md);
+para operacao ver [GUIA-OPERACAO-MULTI-TENANT.md](./GUIA-OPERACAO-MULTI-TENANT.md).
+
+### Pre-requisitos no provider DNS
+
+Adicionar wildcard A record:
+```
+A    *    ->    <IP da VM>    TTL 300
+```
+
+Sem isso, cada tenant novo exige A record especifico.
+
+### Pre-requisitos no .env da VM
+
+```bash
+ADMIN_API_TOKEN=<gerar com `openssl rand -base64 36`>
+TENANTS_DATA_DIR=/app/data
+DEFAULT_TENANT_DATABASE_FILE=cliente.db   # banco do tenant default
+```
+
+### Cert SSL para subdomains
+
+Cada subdomain de tenant precisa estar coberto pelo cert. Apos criar
+o tenant via script:
+```bash
+sudo certbot certonly --webroot --webroot-path /var/www/certbot \
+    --email contato@<dominio> --agree-tos --no-eff-email \
+    --non-interactive --expand \
+    -d <dominio> -d www.<dominio> -d <slug>.<dominio>
+
+sudo docker compose -f /home/ubuntu/ConnectVeiculos/docker-compose.yml \
+    exec nginx nginx -s reload
+```
+
+### Endpoints administrativos
+
+| Metodo | Caminho | Auth | Acao |
+|---|---|---|---|
+| GET | /api/admin/tenants | X-Admin-Token | listar tenants |
+| POST | /api/admin/tenants | X-Admin-Token | criar tenant + admin user |
