@@ -4,6 +4,7 @@ using ConnectVeiculos.Core.Entities.Usuarios;
 using ConnectVeiculos.Core.Interfaces.Tenancy;
 using ConnectVeiculos.Infrastructure.Database.EntityFramework;
 using ConnectVeiculos.Infrastructure.Database.Interceptors;
+using ConnectVeiculos.Infrastructure.IoC;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -103,6 +104,10 @@ namespace ConnectVeiculos.API.Controllers
             using (var ctx = new ConnectVeiculosDbContext(optionsBuilder.Options))
             {
                 await ctx.Database.EnsureCreatedAsync(ct);
+
+                // Popula tabelas de referencia (Acessos, Categorias) que toda
+                // instancia do sistema espera ter pre-existentes.
+                DependencyInjectionExtensions.SeedSystemReferences(ctx);
 
                 var senhaHash = BCrypt.Net.BCrypt.HashPassword(req.AdminSenha);
                 var admin = new Usuario(

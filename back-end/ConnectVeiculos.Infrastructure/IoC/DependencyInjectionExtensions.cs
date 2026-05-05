@@ -537,6 +537,35 @@ namespace ConnectVeiculos.Infrastructure.IoC
 
         private static void SeedInitialData(ConnectVeiculosDbContext dbContext)
         {
+            SeedSystemReferences(dbContext);
+
+            // Admin padrao do tenant default — so seedado no startup do app, nao em
+            // tenants criados via TenantsAdminController (que recebem admin proprio).
+            if (!dbContext.Usuarios.Any(u => u.UsuEmail == "admin@connectveiculos.com.br"))
+            {
+                var adminUser = new Core.Entities.Usuarios.Usuario(
+                    0,
+                    "Administrador",
+                    "",
+                    "",
+                    "admin@connectveiculos.com.br",
+                    BCrypt.Net.BCrypt.HashPassword("admin123"),
+                    "Administrador",
+                    true
+                );
+                dbContext.Usuarios.Add(adminUser);
+                dbContext.SaveChanges();
+            }
+        }
+
+        /// <summary>
+        /// Seed reutilizavel das tabelas de referencia (Acessos, Categorias) que
+        /// todo tenant precisa ter populadas. Idempotente. Chamado no startup do
+        /// app (para o tenant default) e tambem pelo TenantsAdminController quando
+        /// um tenant novo eh criado.
+        /// </summary>
+        public static void SeedSystemReferences(ConnectVeiculosDbContext dbContext)
+        {
             // Seed de niveis de acesso (insere apenas os que não existem)
             var acessosSeed = new[]
             {
@@ -576,23 +605,6 @@ namespace ConnectVeiculos.Infrastructure.IoC
                 }
             }
             dbContext.SaveChanges();
-
-            // Verificar se já existe usuario admin
-            if (!dbContext.Usuarios.Any(u => u.UsuEmail == "admin@connectveiculos.com.br"))
-            {
-                var adminUser = new Core.Entities.Usuarios.Usuario(
-                    0,
-                    "Administrador",
-                    "",
-                    "",
-                    "admin@connectveiculos.com.br",
-                    BCrypt.Net.BCrypt.HashPassword("admin123"),
-                    "Administrador",
-                    true
-                );
-                dbContext.Usuarios.Add(adminUser);
-                dbContext.SaveChanges();
-            }
         }
     }
 }
