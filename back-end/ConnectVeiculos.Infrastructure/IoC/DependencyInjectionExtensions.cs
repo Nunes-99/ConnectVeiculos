@@ -1,5 +1,7 @@
 using ConnectVeiculos.Application.Interfaces.Acessos;
 using ConnectVeiculos.Application.Interfaces.Auth;
+using ConnectVeiculos.Core.Interfaces.Tenancy;
+using ConnectVeiculos.Infrastructure.Tenancy;
 using ConnectVeiculos.Application.Interfaces.Catalogo;
 using ConnectVeiculos.Application.Interfaces.Categorias;
 using ConnectVeiculos.Application.Interfaces.Dashboard;
@@ -82,6 +84,23 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.AddMemoryCache();
             services.AddSingleton<ICacheService, MemoryCacheService>();
 
+            // ===== Tenancy infrastructure (criada na Fase 2 do multi-tenant)
+            // Componentes registrados aqui mas o middleware ainda nao esta ativo
+            // no pipeline (ver Program.cs). Sistema continua single-tenant ate
+            // a Fase 5 ativar o middleware e migrar o banco atual para tenant
+            // "default".
+            //
+            // Master DbContext — registry de tenants em data/_master.db
+            var dataDir = Environment.GetEnvironmentVariable("TENANTS_DATA_DIR") ?? "/app/data";
+            var masterDbPath = Path.Combine(dataDir, "_master.db");
+            services.AddDbContext<MasterDbContext>(options =>
+                options.UseSqlite($"Data Source={masterDbPath}"));
+            services.AddSingleton<ITenantStore, TenantStore>();
+            services.AddScoped<ITenantContext, TenantContext>();
+            services.AddScoped<ITenantConnectionFactory, TenantConnectionFactory>();
+            services.AddSingleton<TenantsMigrationsRunner>();
+            // ===== fim tenancy
+
             // Email Service
             services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
             services.AddTransient<IEmailService, SmtpEmailService>();
@@ -90,28 +109,37 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.AddHttpClient<Core.Interfaces.Services.IWhatsAppService, Services.WhatsApp.WhatsAppService>()
                 .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(10));
 
-            // DbSession para Dapper (usa a connection string apropriada)
-            var dapperConnectionString = usePostgres ? postgresConnection! : connectionString;
-            services.AddScoped(sp => new DbSession(dapperConnectionString, usePostgres));
+            // DbSession para Dapper — agora tenant-aware via TenantConnectionFactory.
+            // Em request HTTP com tenant resolvido, usa data/{slug}.db; senao
+            // (startup, jobs, testes) usa a connection string padrao do appsettings.
+            services.AddScoped(sp =>
+            {
+                var factory = sp.GetRequiredService<ITenantConnectionFactory>();
+                return new DbSession(factory.GetConnectionString(), usePostgres);
+            });
             services.AddScoped<IUnitOfWork, Database.UnitOfWork.UnitOfWork>();
 
             // Registrar interceptors
             services.AddSingleton<SoftDeleteInterceptor>();
             services.AddScoped<AuditInterceptor>();
 
-            // DbContext para Entity Framework (PostgreSQL em produção, SQLite em desenvolvimento)
+            // DbContext para Entity Framework — tambem tenant-aware via factory.
+            // Mesma logica do DbSession acima: tenant resolvido na request usa
+            // banco do tenant; sem tenant resolvido cai no fallback.
             services.AddDbContext<ConnectVeiculosDbContext>((serviceProvider, options) =>
             {
                 var softDeleteInterceptor = serviceProvider.GetRequiredService<SoftDeleteInterceptor>();
                 var auditInterceptor = serviceProvider.GetRequiredService<AuditInterceptor>();
+                var tenantFactory = serviceProvider.GetRequiredService<ITenantConnectionFactory>();
+                var connStr = tenantFactory.GetConnectionString();
 
                 if (usePostgres)
                 {
-                    options.UseNpgsql(postgresConnection);
+                    options.UseNpgsql(connStr);
                 }
                 else
                 {
-                    options.UseSqlite(connectionString);
+                    options.UseSqlite(connStr);
                 }
 
                 options.AddInterceptors(softDeleteInterceptor, auditInterceptor);
@@ -509,6 +537,35 @@ namespace ConnectVeiculos.Infrastructure.IoC
 
         private static void SeedInitialData(ConnectVeiculosDbContext dbContext)
         {
+            SeedSystemReferences(dbContext);
+
+            // Admin padrao do tenant default — so seedado no startup do app, nao em
+            // tenants criados via TenantsAdminController (que recebem admin proprio).
+            if (!dbContext.Usuarios.Any(u => u.UsuEmail == "admin@connectveiculos.com.br"))
+            {
+                var adminUser = new Core.Entities.Usuarios.Usuario(
+                    0,
+                    "Administrador",
+                    "",
+                    "",
+                    "admin@connectveiculos.com.br",
+                    BCrypt.Net.BCrypt.HashPassword("admin123"),
+                    "Administrador",
+                    true
+                );
+                dbContext.Usuarios.Add(adminUser);
+                dbContext.SaveChanges();
+            }
+        }
+
+        /// <summary>
+        /// Seed reutilizavel das tabelas de referencia (Acessos, Categorias) que
+        /// todo tenant precisa ter populadas. Idempotente. Chamado no startup do
+        /// app (para o tenant default) e tambem pelo TenantsAdminController quando
+        /// um tenant novo eh criado.
+        /// </summary>
+        public static void SeedSystemReferences(ConnectVeiculosDbContext dbContext)
+        {
             // Seed de niveis de acesso (insere apenas os que não existem)
             var acessosSeed = new[]
             {
@@ -548,23 +605,6 @@ namespace ConnectVeiculos.Infrastructure.IoC
                 }
             }
             dbContext.SaveChanges();
-
-            // Verificar se já existe usuario admin
-            if (!dbContext.Usuarios.Any(u => u.UsuEmail == "admin@connectveiculos.com.br"))
-            {
-                var adminUser = new Core.Entities.Usuarios.Usuario(
-                    0,
-                    "Administrador",
-                    "",
-                    "",
-                    "admin@connectveiculos.com.br",
-                    BCrypt.Net.BCrypt.HashPassword("admin123"),
-                    "Administrador",
-                    true
-                );
-                dbContext.Usuarios.Add(adminUser);
-                dbContext.SaveChanges();
-            }
         }
     }
 }
