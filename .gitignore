@@ -61,3 +61,4 @@ scripts/deploy-stack.sh
 # Documentacao operacional local (snapshots de status do projeto fora do repo)
 GUIA-DEPLOY-GITHUB.md
 STATUS-PROJETO.md
+.claude/
