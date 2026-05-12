@@ -2,6 +2,8 @@ import { Component, inject, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, NgForm } from '@angular/forms';
 import { UsuarioService, LojaService, AcessoService } from '../../core/services';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 import { Usuario, UsuarioInput, Loja, Acesso, PagedResult } from '../../core/models';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal.component';
@@ -19,6 +21,34 @@ export class UsuariosComponent implements OnInit {
   private usuarioService = inject(UsuarioService);
   private lojaService = inject(LojaService);
   private acessoService = inject(AcessoService);
+  private http = inject(HttpClient);
+
+  // Verificacao de e-mail em tempo real (consulta master cross-tenant)
+  emailStatus: 'idle' | 'verificando' | 'livre' | 'em-uso' = 'idle';
+  emailMensagem = '';
+
+  verificarDisponibilidadeEmail(): void {
+    if (this.editMode) { this.emailStatus = 'idle'; return; }
+    const email = (this.formData.usuEmail || '').trim().toLowerCase();
+    if (!email || !email.includes('@')) { this.emailStatus = 'idle'; return; }
+
+    this.emailStatus = 'verificando';
+    this.http.get<any>(`${environment.apiUrl}/usuarios/check-email?email=${encodeURIComponent(email)}`).subscribe({
+      next: (resp) => {
+        if (resp?.disponivel) {
+          this.emailStatus = 'livre';
+        } else {
+          this.emailStatus = 'em-uso';
+          this.emailMensagem = resp?.motivo === 'ja-cadastrado-nesta-empresa'
+            ? 'Este e-mail já está cadastrado para outro usuário desta empresa.'
+            : resp?.motivo === 'ja-cadastrado-em-outra-empresa'
+              ? 'Este e-mail já está em uso em outra empresa do sistema.'
+              : 'E-mail inválido.';
+        }
+      },
+      error: () => { this.emailStatus = 'idle'; }
+    });
+  }
 
   @ViewChild('usuarioForm') usuarioForm!: NgForm;
 

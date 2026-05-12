@@ -10,6 +10,7 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
     public sealed class MasterDbContext : DbContext
     {
         public DbSet<Tenant> Tenants => Set<Tenant>();
+        public DbSet<UserEmailMap> UserEmailMaps => Set<UserEmailMap>();
 
         public MasterDbContext(DbContextOptions<MasterDbContext> options) : base(options) { }
 
@@ -25,6 +26,15 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
             t.Property(x => x.TenDatabaseFile).IsRequired().HasMaxLength(255);
             t.Property(x => x.TenStatus).HasConversion<int>();
             t.Property(x => x.TenDtCriacao);
+
+            var u = modelBuilder.Entity<UserEmailMap>();
+            u.ToTable("UserEmailMap");
+            u.HasKey(x => x.Id);
+            u.Property(x => x.Id).ValueGeneratedOnAdd();
+            u.Property(x => x.Email).IsRequired().HasMaxLength(255);
+            u.HasIndex(x => x.Email).IsUnique();
+            u.Property(x => x.TenantSlug).IsRequired().HasMaxLength(64);
+            u.HasIndex(x => x.TenantId);
         }
     }
 }

@@ -4,7 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { LojaService, ImagemService } from '../../core/services';
+import { LojaService, ImagemService, AuthService } from '../../core/services';
 import { Loja } from '../../core/models';
 import { MaskDirective } from '../../shared/directives';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
@@ -24,6 +24,13 @@ export class LojasComponent implements OnInit {
   private http = inject(HttpClient);
   private imagemService = inject(ImagemService);
   private sanitizer = inject(DomSanitizer);
+  private authService = inject(AuthService);
+
+  urlCatalogoPublico(): string {
+    const slug = this.authService.getTenantSlug() || '';
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://connectveiculos.dev.br';
+    return slug ? `${origin}/catalogo/${slug}` : `${origin}/catalogo`;
+  }
 
   lojas: Loja[] = [];
   loading = false;

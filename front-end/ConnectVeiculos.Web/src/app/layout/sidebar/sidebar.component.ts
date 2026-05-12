@@ -4,7 +4,10 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { AuthService, ThemeService, LojaService, ToastService } from '../../core/services';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 import { NotificationsComponent } from '../../shared/components/notifications/notifications.component';
+import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal.component';
 import { Loja } from '../../core/models';
 
 interface MenuItem {
@@ -16,7 +19,7 @@ interface MenuItem {
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, NotificationsComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, NotificationsComponent, ConfirmModalComponent],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.scss'
 })
@@ -36,6 +39,38 @@ export class SidebarComponent {
 
   mostrarTrocarSenha = signal(false);
   salvandoSenha = signal(false);
+  mostrarConfirmaTrocaEmpresa = signal(false);
+
+  // Contagem de documentos vencendo nos proximos 30 dias (badge no menu)
+  private http = inject(HttpClient);
+  docsVencendo = signal(0);
+
+  private carregarDocsVencendo(): void {
+    if (!this.authService.isAuthenticated()) return;
+    this.http.get<any[]>(`${environment.apiUrl}/veiculos-documentos/vencendo?diasAFrente=30`).subscribe({
+      next: (docs) => this.docsVencendo.set(Array.isArray(docs) ? docs.length : 0),
+      error: () => this.docsVencendo.set(0)
+    });
+  }
+
+  trocarEmpresa(): void {
+    this.mostrarConfirmaTrocaEmpresa.set(true);
+  }
+
+  confirmarTrocaEmpresa(): void {
+    this.mostrarConfirmaTrocaEmpresa.set(false);
+    // Limpa TODO o estado local — inclusive tenant slug (que normalmente
+    // logout preserva). Usuario tem que escolher nova empresa no proximo login.
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('connectveiculos_user');
+      localStorage.removeItem('connectveiculos_token');
+      localStorage.removeItem('connectveiculos_refresh_token');
+      localStorage.removeItem('connectveiculos_tenant_slug');
+    }
+    this.authService.currentUser.set(null);
+    this.authService.isAuthenticated.set(false);
+    window.location.href = '/login';
+  }
 
   formSenha: FormGroup = this.fb.group({
     senhaAtual: ['', Validators.required],
@@ -94,26 +129,29 @@ export class SidebarComponent {
     this.lojaService.getAll().subscribe({
       next: (lojas) => this.lojas = lojas
     });
+    this.carregarDocsVencendo();
   }
 
   private platformId = inject(PLATFORM_ID);
 
   abrirCatalogo(loja?: Loja): void {
     if (!isPlatformBrowser(this.platformId)) return;
-    const param = loja?.lojSlug || loja?.lojId;
-    const url = param ? `/catalogo/${param}` : '/catalogo';
-    window.open(url, '_blank');
+    window.open(this.getUrlCatalogo(), '_blank');
   }
 
   copiarLinkCatalogo(loja?: Loja): void {
     if (!isPlatformBrowser(this.platformId)) return;
     const baseUrl = window.location.origin;
-    const param = loja?.lojSlug || loja?.lojId;
-    const url = param ? `${baseUrl}/catalogo/${param}` : `${baseUrl}/catalogo`;
+    const url = `${baseUrl}${this.getUrlCatalogo()}`;
     navigator.clipboard.writeText(url).then(() => {
       this.linkCopiado = true;
       setTimeout(() => this.linkCopiado = false, 2000);
     });
+  }
+
+  private getUrlCatalogo(): string {
+    const tenant = this.authService.getTenantSlug();
+    return tenant ? `/catalogo/${tenant}` : '/catalogo';
   }
 
   getInitials(): string {

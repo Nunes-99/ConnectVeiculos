@@ -42,6 +42,26 @@ namespace ConnectVeiculos.API.Middlewares
 
             var slug = ExtractTenantSlug(context.Request.Host.Host);
 
+            // Override por query string (?tenant=slug). Usado pelas paginas
+            // publicas (catalogo) onde o tenant vai como parametro de URL ao
+            // inves de subdomain. Vence header + subdomain.
+            var querySlug = context.Request.Query["tenant"].ToString();
+            if (!string.IsNullOrWhiteSpace(querySlug))
+            {
+                slug = querySlug.Trim().ToLowerInvariant();
+            }
+            // Override por header explicito (X-Tenant-Slug). Util para:
+            //  - desenvolvimento local em http://localhost sem DNS wildcard
+            //  - clientes auto-cadastrados antes do DNS wildcard estar configurado
+            // Seguranca: o header so altera roteamento. Endpoints protegidos
+            // continuam exigindo JWT valido. JWT forjado e rejeitado pelo auth
+            // middleware (assinado com secret), entao nao ha leak de dados.
+            else if (context.Request.Headers.TryGetValue("X-Tenant-Slug", out var headerSlug)
+                && !string.IsNullOrWhiteSpace(headerSlug))
+            {
+                slug = headerSlug.ToString().Trim().ToLowerInvariant();
+            }
+
             var tenant = await store.GetBySlugAsync(slug, context.RequestAborted);
             if (tenant == null)
             {

@@ -17,7 +17,8 @@ export class CatalogoService {
     anoMax?: number,
     precoMin?: number,
     precoMax?: number,
-    lojaId?: number
+    lojaId?: number,
+    tenantSlug?: string
   ): Observable<CatalogoResultado> {
     let params = new HttpParams();
 
@@ -27,6 +28,7 @@ export class CatalogoService {
     if (precoMin) params = params.set('precoMin', precoMin.toString());
     if (precoMax) params = params.set('precoMax', precoMax.toString());
     if (lojaId) params = params.set('lojaId', lojaId.toString());
+    if (tenantSlug) params = params.set('tenant', tenantSlug);
 
     return this.http.get<CatalogoResultado>(this.baseUrl, { params });
   }
@@ -37,7 +39,8 @@ export class CatalogoService {
     anoMin?: number,
     anoMax?: number,
     precoMin?: number,
-    precoMax?: number
+    precoMax?: number,
+    tenantSlug?: string
   ): Observable<CatalogoResultado> {
     let params = new HttpParams();
 
@@ -46,11 +49,14 @@ export class CatalogoService {
     if (anoMax) params = params.set('anoMax', anoMax.toString());
     if (precoMin) params = params.set('precoMin', precoMin.toString());
     if (precoMax) params = params.set('precoMax', precoMax.toString());
+    if (tenantSlug) params = params.set('tenant', tenantSlug);
 
     return this.http.get<CatalogoResultado>(`${this.baseUrl}/slug/${slug}`, { params });
   }
 
-  getVeiculo(veiculoId: number): Observable<any> {
-    return this.http.get(`${this.baseUrl}/veiculo/${veiculoId}`);
+  getVeiculo(veiculoId: number, tenantSlug?: string): Observable<any> {
+    let params = new HttpParams();
+    if (tenantSlug) params = params.set('tenant', tenantSlug);
+    return this.http.get(`${this.baseUrl}/veiculo/${veiculoId}`, { params });
   }
 }

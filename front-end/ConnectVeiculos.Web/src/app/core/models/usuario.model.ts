@@ -20,6 +20,10 @@ export interface LoginResponse {
   usuFuncao: string;
   token: string;
   expiration: string;
+  refreshToken?: string;
+  refreshExpiration?: string;
+  tenantSlug?: string;
+  tenantNome?: string;
 }
 
 export interface UsuarioInput {

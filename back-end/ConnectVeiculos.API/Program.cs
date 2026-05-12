@@ -134,6 +134,10 @@ builder.Services.AddRateLimiter(options =>
 // Configurar SignalR
 builder.Services.AddSignalR();
 
+// Response caching — respeita [ResponseCache] dos controllers e popula Cache-Control / Vary headers.
+// Sem isso, [ResponseCache(VaryByQueryKeys=...)] e ignorado e o catalogo nao envia Cache-Control.
+builder.Services.AddResponseCaching();
+
 // Configurar Swagger com suporte a JWT e documentacao XML
 builder.Services.AddSwaggerGen(c =>
 {
@@ -298,6 +302,9 @@ app.UseHttpsRedirection();
 
 // Response Compression (antes de qualquer middleware que gere conteudo)
 app.UseResponseCompression();
+
+// Response Caching — ativa o pipeline pra os atributos [ResponseCache] funcionarem.
+app.UseResponseCaching();
 
 app.UseRouting();
 

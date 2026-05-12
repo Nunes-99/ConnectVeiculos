@@ -5,13 +5,14 @@ import { VeiculoService, LojaService, CategoriaService, ImagemService, VeiculoIm
 import { Veiculo, Loja, Categoria } from '../../core/models';
 import { MaskDirective, CurrencyMaskDirective } from '../../shared/directives';
 import { PaginationComponent, ConfirmModalComponent } from '../../shared/components';
+import { ScannerDocumentoComponent, CrlvExtraido } from '../../shared/components/scanner-documento/scanner-documento.component';
 import { getDetranLink, DetranLink } from '../../shared/utils/detran-links.util';
 import * as XLSX from 'xlsx';
 
 @Component({
   selector: 'app-veiculos',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaskDirective, CurrencyMaskDirective, PaginationComponent, ConfirmModalComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaskDirective, CurrencyMaskDirective, PaginationComponent, ConfirmModalComponent, ScannerDocumentoComponent],
   templateUrl: './veiculos.component.html',
   styleUrl: './veiculos.component.scss'
 })
@@ -44,6 +45,28 @@ export class VeiculosComponent implements OnInit {
   // Modal de confirmacao
   showConfirmModal = false;
   veiculoParaExcluir: number | null = null;
+
+  // Scanner CRLV
+  showScanner = false;
+
+  abrirScanner(): void { this.showScanner = true; }
+  fecharScanner(): void { this.showScanner = false; }
+
+  aplicarCrlvExtraido(dados: CrlvExtraido): void {
+    const patch: any = {};
+    if (dados.placa) patch.veiPlaca = dados.placa.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+    if (dados.chassi) patch.veiChassi = dados.chassi.toUpperCase();
+    if (dados.marca) patch.veiMarca = dados.marca;
+    if (dados.modelo) patch.veiModelo = dados.modelo;
+    if (dados.anoModelo || dados.anoFabricacao) patch.veiAno = dados.anoModelo || dados.anoFabricacao;
+    if (dados.cor) patch.veiCor = dados.cor.charAt(0).toUpperCase() + dados.cor.slice(1).toLowerCase();
+    if (dados.proprietarioNome) patch.veiDonoAtual = dados.proprietarioNome;
+    this.form.patchValue(patch);
+    if (dados.marca) (this as any).buscaMarca = dados.marca;
+    if (dados.modelo) (this as any).buscaModelo = dados.modelo;
+    this.toast.success('Dados do CRLV preenchidos. Revise e ajuste se necessário.');
+    this.showScanner = false;
+  }
   showConfirmImagemModal = false;
   imagemParaExcluir: VeiculoImagem | null = null;
 

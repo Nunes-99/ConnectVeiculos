@@ -20,6 +20,9 @@
           <a [routerLink]="item.route" routerLinkActive="active" class="nav-item">
             <span class="material-icons">{{ item.icon }}</span>
             <span class="nav-label">{{ item.label }}</span>
+            @if (item.route === '/documentos' && docsVencendo() > 0) {
+              <span class="nav-badge" [title]="docsVencendo() + ' documento(s) vencendo em 30 dias'">{{ docsVencendo() }}</span>
+            }
           </a>
         }
       </div>
@@ -61,12 +64,25 @@
       <button class="btn-footer" (click)="abrirTrocarSenha()" title="Trocar senha">
         <span class="material-icons">lock</span>
       </button>
+      <button class="btn-footer" (click)="trocarEmpresa()" title="Trocar empresa">
+        <span class="material-icons">swap_horiz</span>
+      </button>
       <button class="btn-footer btn-logout" (click)="logout()" title="Sair">
         <span class="material-icons">logout</span>
       </button>
     </div>
   </div>
 </aside>
+
+<app-confirm-modal
+  [show]="mostrarConfirmaTrocaEmpresa()"
+  titulo="Trocar de empresa?"
+  mensagem="Você será desconectado e levado para a tela de login. Lá poderá entrar com outra conta ou criar uma nova empresa. O tenant atual será desvinculado deste navegador."
+  textoBotaoConfirmar="Sim, trocar"
+  textoBotaoCancelar="Cancelar"
+  tipo="warning"
+  (confirmar)="confirmarTrocaEmpresa()"
+  (cancelar)="mostrarConfirmaTrocaEmpresa.set(false)" />
 
 @if (mostrarTrocarSenha()) {
   <div class="modal-overlay" (click)="fecharTrocarSenha()">

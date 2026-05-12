@@ -105,3 +105,18 @@
     }
   }
 }
+
+.field-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  margin-top: 0.3rem;
+  color: #666;
+
+  &.ok {
+    color: #2e7d32;
+    font-weight: 600;
+    .material-icons { font-size: 1rem; }
+  }
+}

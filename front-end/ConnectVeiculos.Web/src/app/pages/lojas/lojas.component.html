@@ -99,16 +99,12 @@
               <span class="error-message">Nome deve ter no mínimo 3 caracteres</span>
             }
           </div>
+          <!-- lojSlug eh mantido no form como hidden — preenchido automaticamente pelo backend e nao mais usado em URLs publicas. -->
+          <input type="hidden" formControlName="lojSlug" />
           <div class="form-group">
-            <label>Slug (identificador da loja)</label>
-            <input type="text" formControlName="lojSlug" placeholder="auto-center-sp" maxlength="100" />
-            <small class="slug-hint">Identificador: {{ form.get('lojSlug')?.value || 'slug-da-loja' }}</small>
-          </div>
-          <div class="form-group">
-            <label>URL do Catálogo</label>
-            <input type="text" formControlName="lojUrlCatalogo" placeholder="https://www.meusite.com.br" maxlength="500" />
-            <small class="slug-hint">Link do catálogo: {{ (form.get('lojUrlCatalogo')?.value || 'https://www.meusite.com.br') }}/catalogo/{{ form.get('lojSlug')?.value || 'slug-da-loja' }}</small>
-            <small class="url-hint-global">Esta URL é compartilhada entre todas as lojas. Ao alterar, será replicada para as demais.</small>
+            <label>URL pública do catálogo</label>
+            <input type="text" [value]="urlCatalogoPublico()" readonly class="readonly-input" />
+            <small class="slug-hint">É a URL que seus clientes acessam pra ver os veículos. Compartilhe esse link no Instagram, WhatsApp, etc.</small>
           </div>
           <div class="form-row">
             <div class="form-group">

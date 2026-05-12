@@ -38,6 +38,9 @@ services:
       - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
       - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-}
       - VAPID_SUBJECT=${VAPID_SUBJECT:-mailto:contato@connectveiculos.dev.br}
+      # OCR de CRLV via Google Gemini (tier gratuito 1500 req/dia).
+      # Tambem pode ser configurado por tenant via UI em /integracoes.
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       # Multi-tenant
       - ADMIN_API_TOKEN=${ADMIN_API_TOKEN:-}
       - TENANTS_DATA_DIR=${TENANTS_DATA_DIR:-/app/data}
@@ -49,7 +52,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 4G
 
   # ============================
   # FRONTEND - Angular SSR (Node Express)
@@ -74,7 +77,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256M
+          memory: 1G
 
   # ============================
   # NGINX - reverse proxy + HTTPS

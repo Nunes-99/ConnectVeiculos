@@ -26,16 +26,34 @@ namespace ConnectVeiculos.API.Controllers
             if (string.IsNullOrWhiteSpace(request.Email))
                 return BadRequest("E-mail e obrigatorio para favoritar.");
 
-            // Verificar se ja favoritou este veiculo
+            // Validacao de formato
+            var email = request.Email.Trim().ToLowerInvariant();
+            if (!email.Contains('@') || email.Length > 255)
+                return BadRequest("E-mail invalido.");
+
+            // Verificar se ja favoritou este veiculo (lookup case-insensitive)
             var existente = await _context.Favoritos
-                .FirstOrDefaultAsync(f => f.FavEmail == request.Email && f.R_VeiId == request.VeiculoId);
+                .FirstOrDefaultAsync(f => f.FavEmail == email && f.R_VeiId == request.VeiculoId);
 
             if (existente != null)
                 return Ok(new { id = existente.FavId, mensagem = "Veiculo ja esta nos favoritos." });
 
-            var favorito = new Favorito(0, request.VeiculoId, request.Email, request.Nome, request.Telefone);
+            var favorito = new Favorito(0, request.VeiculoId, email, request.Nome, request.Telefone);
             _context.Favoritos.Add(favorito);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                // Race condition: UNIQUE INDEX UX_Favorito_Email_Veiculo pegou duplicate.
+                _context.ChangeTracker.Clear();
+                var jaExistia = await _context.Favoritos
+                    .FirstOrDefaultAsync(f => f.FavEmail == email && f.R_VeiId == request.VeiculoId);
+                if (jaExistia != null)
+                    return Ok(new { id = jaExistia.FavId, mensagem = "Veiculo ja esta nos favoritos." });
+                throw;
+            }
 
             return Ok(new { id = favorito.FavId, mensagem = "Veiculo adicionado aos favoritos!" });
         }

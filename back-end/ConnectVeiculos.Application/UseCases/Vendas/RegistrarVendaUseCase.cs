@@ -6,6 +6,7 @@ using ConnectVeiculos.Core.Interfaces.Database.Repositories.Vendas;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Email;
 using ConnectVeiculos.Core.Interfaces.Services;
+using ConnectVeiculos.Core.Interfaces.Tenancy;
 
 namespace ConnectVeiculos.Application.UseCases.Vendas
 {
@@ -16,19 +17,22 @@ namespace ConnectVeiculos.Application.UseCases.Vendas
         private readonly IEmailService _emailService;
         private readonly INotificacaoService _notificacaoService;
         private readonly ICatalogoHubService _catalogoHubService;
+        private readonly ITenantContext _tenantContext;
 
         public RegistrarVendaUseCase(
             IVendaRepository vendaRepository,
             IVeiculoRepository veiculoRepository,
             IEmailService emailService,
             INotificacaoService notificacaoService,
-            ICatalogoHubService catalogoHubService)
+            ICatalogoHubService catalogoHubService,
+            ITenantContext tenantContext)
         {
             _vendaRepository = vendaRepository;
             _veiculoRepository = veiculoRepository;
             _emailService = emailService;
             _notificacaoService = notificacaoService;
             _catalogoHubService = catalogoHubService;
+            _tenantContext = tenantContext;
         }
 
         public async Task<int> Execute(VendaInputModel inputModel)
@@ -97,7 +101,7 @@ namespace ConnectVeiculos.Application.UseCases.Vendas
             });
 
             // Notificar catalogo publico que veiculo foi vendido
-            await _catalogoHubService.NotificarAtualizacaoCatalogo(veiculo.R_LojId, "VEICULO_VENDIDO", new
+            await _catalogoHubService.NotificarAtualizacaoCatalogo(_tenantContext.TenantSlug, veiculo.R_LojId, "VEICULO_VENDIDO", new
             {
                 veiculoId = veiculo.VeiId,
                 marca = veiculo.VeiMarca,

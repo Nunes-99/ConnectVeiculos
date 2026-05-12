@@ -3,6 +3,7 @@ using ConnectVeiculos.Core.Interfaces.Database.Common;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Publicacoes;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Services;
+using ConnectVeiculos.Core.Interfaces.Tenancy;
 using Microsoft.Extensions.Logging;
 
 namespace ConnectVeiculos.Application.UseCases.Veiculos
@@ -16,6 +17,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
         private readonly IFacebookCatalogService _facebookService;
         private readonly IGoogleMerchantService _googleService;
         private readonly IVeiculoPublicacaoRepository _publicacaoRepository;
+        private readonly ITenantContext _tenantContext;
         private readonly ILogger<InativarVeiculoUseCase> _logger;
 
         public InativarVeiculoUseCase(
@@ -26,6 +28,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             IFacebookCatalogService facebookService,
             IGoogleMerchantService googleService,
             IVeiculoPublicacaoRepository publicacaoRepository,
+            ITenantContext tenantContext,
             ILogger<InativarVeiculoUseCase> logger)
         {
             _veiculoRepository = veiculoRepository;
@@ -35,6 +38,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             _facebookService = facebookService;
             _googleService = googleService;
             _publicacaoRepository = publicacaoRepository;
+            _tenantContext = tenantContext;
             _logger = logger;
         }
 
@@ -56,7 +60,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                 _unitOfWork.Commit();
 
                 // Notificar catalogo publico
-                await _catalogoHubService.NotificarAtualizacaoCatalogo(lojaId, "VEICULO_REMOVIDO", new
+                await _catalogoHubService.NotificarAtualizacaoCatalogo(_tenantContext.TenantSlug, lojaId, "VEICULO_REMOVIDO", new
                 {
                     veiculoId = id
                 });

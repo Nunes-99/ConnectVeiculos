@@ -63,6 +63,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   total = 0;
   lojaId: number | null = null;
   lojaSlug: string | null = null;
+  tenantSlug: string | null = null;
 
   // Subscriptions
   private routeSubscription: Subscription | null = null;
@@ -167,7 +168,11 @@ export class CatalogoComponent implements OnInit, OnDestroy {
       this.loadFavoritos();
     }
     this.routeSubscription = this.route.params.subscribe(params => {
-      if (params['lojaId']) {
+      if (params['tenantSlug']) {
+        this.tenantSlug = params['tenantSlug'];
+        this.lojaId = null;
+        this.lojaSlug = null;
+      } else if (params['lojaId']) {
         const param = params['lojaId'];
         if (/^\d+$/.test(param)) {
           this.lojaId = Number(param);
@@ -193,7 +198,10 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   }
 
   private iniciarSignalR(): void {
-    const hubUrl = `${environment.apiUrl.replace('/api', '')}/hubs/catalogo`;
+    // Inclui tenant no query string pra que o hub escope grupos por tenant
+    // (evita receber notificacoes de outras empresas usando o mesmo SaaS).
+    const tenantParam = this.tenantSlug ? `?tenant=${encodeURIComponent(this.tenantSlug)}` : '';
+    const hubUrl = `${environment.apiUrl.replace('/api', '')}/hubs/catalogo${tenantParam}`;
     this.hubConnection = new signalR.HubConnectionBuilder()
       .withUrl(hubUrl)
       .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
@@ -234,7 +242,8 @@ export class CatalogoComponent implements OnInit, OnDestroy {
           this.anoMinSelecionado || undefined,
           this.anoMaxSelecionado || undefined,
           this.precoMinSelecionado || undefined,
-          this.precoMaxSelecionado || undefined
+          this.precoMaxSelecionado || undefined,
+          this.tenantSlug || undefined
         )
       : this.catalogoService.getCatalogo(
           this.marcaSelecionada || undefined,
@@ -242,7 +251,8 @@ export class CatalogoComponent implements OnInit, OnDestroy {
           this.anoMaxSelecionado || undefined,
           this.precoMinSelecionado || undefined,
           this.precoMaxSelecionado || undefined,
-          this.filtroLojaId || this.lojaId || undefined
+          this.filtroLojaId || this.lojaId || undefined,
+          this.tenantSlug || undefined
         );
     request$.subscribe({
       next: (resultado) => {

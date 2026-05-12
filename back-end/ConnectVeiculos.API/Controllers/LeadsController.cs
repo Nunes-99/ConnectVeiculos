@@ -21,6 +21,13 @@ namespace ConnectVeiculos.API.Controllers
         [HttpPost]
         public async Task<IActionResult> Registrar([FromBody] RegistrarLeadRequest request)
         {
+            if (string.IsNullOrWhiteSpace(request.NomeCliente))
+                return BadRequest("Nome do cliente e obrigatorio.");
+            if (string.IsNullOrWhiteSpace(request.Telefone) && string.IsNullOrWhiteSpace(request.Email))
+                return BadRequest("Informe ao menos um contato (telefone ou e-mail).");
+            if (!string.IsNullOrWhiteSpace(request.Email) && !request.Email.Contains('@'))
+                return BadRequest("E-mail invalido.");
+
             var lead = new Lead(0, request.VeiculoId, request.LojaId, request.NomeCliente,
                 request.Telefone, request.Email, request.Origem, "NOVO", request.Observacao,
                 request.Cpf, request.Renda, request.Entrada, request.Parcelas);

@@ -33,13 +33,18 @@
 
         <div class="form-group">
           <label for="senha">Senha</label>
-          <input
-            type="password"
-            id="senha"
-            formControlName="senha"
-            placeholder="Digite sua senha"
-            [class.invalid]="loginForm.get('senha')?.invalid && loginForm.get('senha')?.touched"
-          />
+          <div class="password-wrapper">
+            <input
+              [type]="mostrarSenha ? 'text' : 'password'"
+              id="senha"
+              formControlName="senha"
+              placeholder="Digite sua senha"
+              [class.invalid]="loginForm.get('senha')?.invalid && loginForm.get('senha')?.touched"
+            />
+            <button type="button" class="btn-eye" (click)="mostrarSenha = !mostrarSenha" [attr.aria-label]="mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'">
+              <span class="material-icons">{{ mostrarSenha ? 'visibility_off' : 'visibility' }}</span>
+            </button>
+          </div>
           @if (loginForm.get('senha')?.invalid && loginForm.get('senha')?.touched) {
             <span class="field-error">Senha deve ter no mínimo 4 caracteres</span>
           }
@@ -54,9 +59,9 @@
           }
         </button>
 
-        <!-- <div class="login-footer">
-          <a routerLink="/recuperar-senha">Esqueci minha senha</a>
-        </div> -->
+        <div class="login-footer">
+          <a routerLink="/registro">Criar conta</a>
+        </div>
       </form>
 
       <div class="login-copyright">

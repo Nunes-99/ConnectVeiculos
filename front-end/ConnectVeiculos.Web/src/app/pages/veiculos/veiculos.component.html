@@ -154,6 +154,12 @@
       </div>
       <form [formGroup]="form" (ngSubmit)="save()">
         <div class="modal-body">
+          @if (!editMode) {
+            <button type="button" class="btn-scan-crlv" (click)="abrirScanner()">
+              <span class="material-icons">document_scanner</span>
+              Escanear CRLV para preencher automaticamente
+            </button>
+          }
           <div class="form-row">
             <div class="form-group">
               <label class="required">Loja</label>
@@ -701,3 +707,8 @@
     </div>
   </div>
 }
+
+<app-scanner-documento
+  [show]="showScanner"
+  (fechar)="fecharScanner()"
+  (extraido)="aplicarCrlvExtraido($event)"></app-scanner-documento>

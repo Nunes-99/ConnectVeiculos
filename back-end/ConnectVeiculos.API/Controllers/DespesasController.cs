@@ -45,6 +45,10 @@ namespace ConnectVeiculos.API.Controllers
         {
             if (string.IsNullOrWhiteSpace(request.Tipo))
                 return BadRequest("Tipo da despesa e obrigatorio.");
+            if (request.Valor <= 0)
+                return BadRequest("Valor da despesa deve ser maior que zero.");
+            if (request.VeiculoId <= 0)
+                return BadRequest("Veiculo invalido.");
 
             var despesa = new VeiculoDespesa(0, request.VeiculoId, request.Tipo, request.Descricao, request.Valor, request.DataDespesa);
             _context.VeiculosDespesas.Add(despesa);

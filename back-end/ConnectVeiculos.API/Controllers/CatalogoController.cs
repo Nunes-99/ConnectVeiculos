@@ -2,6 +2,7 @@ using ConnectVeiculos.Application.Interfaces.Catalogo;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Lojas;
 using ConnectVeiculos.Infrastructure.Cache;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace ConnectVeiculos.API.Controllers
 {
@@ -38,7 +39,10 @@ namespace ConnectVeiculos.API.Controllers
         /// <param name="lojaId">ID da loja para filtrar catalogo (opcional)</param>
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        [ResponseCache(Duration = 30)]
+        // Cache so no browser do cliente (private) para evitar que proxies/CDNs
+        // intermediarios sirvam resposta de um tenant pra outro quando o tenant
+        // e resolvido por header (e nao por subdomain/query).
+        [ResponseCache(Duration = 30, Location = ResponseCacheLocation.Client, VaryByQueryKeys = new[] { "tenant", "marca", "anoMin", "anoMax", "precoMin", "precoMax", "lojaId" })]
         public async Task<IActionResult> ConsultarCatalogo(
             [FromServices] IConsultarCatalogoUseCase consultarCatalogoUseCase,
             [FromQuery] string marca = "",
@@ -70,7 +74,7 @@ namespace ConnectVeiculos.API.Controllers
         [HttpGet("slug/{slug}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ResponseCache(Duration = 30)]
+        [ResponseCache(Duration = 30, Location = ResponseCacheLocation.Client, VaryByQueryKeys = new[] { "tenant", "marca", "anoMin", "anoMax", "precoMin", "precoMax" })]
         public async Task<IActionResult> ConsultarCatalogoPorSlug(
             [FromServices] IConsultarCatalogoUseCase consultarCatalogoUseCase,
             [FromServices] ILojaRepository lojaRepository,
@@ -114,6 +118,22 @@ namespace ConnectVeiculos.API.Controllers
             var baseUrl = $"{Request.Scheme}://{Request.Host}";
             var url = lojaId.HasValue ? $"{baseUrl}/catalogo/{lojaId}/veiculo/{veiculoId}" : $"{baseUrl}/catalogo?veiculo={veiculoId}";
             return Ok(new { url, veiculoId, lojaId });
+        }
+
+        /// <summary>
+        /// Lista os tenants publicos do SaaS — usado pelo sitemap.xml do SSR
+        /// para gerar URLs de catalogo multi-tenant.
+        /// </summary>
+        [HttpGet("public-tenants")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ResponseCache(Duration = 300, Location = ResponseCacheLocation.Any)]
+        public async Task<IActionResult> ListarTenantsPublicos([FromServices] ConnectVeiculos.Infrastructure.Database.EntityFramework.MasterDbContext master, CancellationToken ct)
+        {
+            var tenants = await master.Tenants
+                .Where(t => t.TenStatus == ConnectVeiculos.Core.Entities.Tenants.TenantStatus.Active)
+                .Select(t => new { slug = t.TenSlug, nome = t.TenNome })
+                .ToListAsync(ct);
+            return Ok(tenants);
         }
     }
 }

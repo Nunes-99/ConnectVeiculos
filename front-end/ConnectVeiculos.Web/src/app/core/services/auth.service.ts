@@ -6,12 +6,25 @@ import { Observable, tap } from 'rxjs';
 import { ApiService } from './api.service';
 import { Usuario, LoginResponse } from '../models';
 
+export interface RegistrarResponse {
+  tenantSlug: string;
+  tenantNome: string;
+  token: string;
+  expiration: string;
+  usuId: number;
+  usuNome: string;
+  usuEmail: string;
+  usuFuncao: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService extends ApiService {
   private readonly USER_STORAGE_KEY = 'connectveiculos_user';
   private readonly TOKEN_STORAGE_KEY = 'connectveiculos_token';
+  private readonly REFRESH_TOKEN_KEY = 'connectveiculos_refresh_token';
+  private readonly TENANT_SLUG_KEY = 'connectveiculos_tenant_slug';
   private platformId = inject(PLATFORM_ID);
 
   currentUser = signal<Usuario | null>(null);
@@ -57,17 +70,84 @@ export class AuthService extends ApiService {
         if (isPlatformBrowser(this.platformId)) {
           localStorage.setItem(this.USER_STORAGE_KEY, JSON.stringify(user));
           localStorage.setItem(this.TOKEN_STORAGE_KEY, response.token);
+          if (response.refreshToken) {
+            localStorage.setItem(this.REFRESH_TOKEN_KEY, response.refreshToken);
+          }
+          if (response.tenantSlug) {
+            localStorage.setItem(this.TENANT_SLUG_KEY, response.tenantSlug);
+          }
+        }
+      })
+    );
+  }
+
+  refreshSession(): Observable<LoginResponse> {
+    const refreshToken = this.getRefreshToken();
+    if (!refreshToken) {
+      throw new Error('Sem refresh token armazenado.');
+    }
+    return this.post<LoginResponse>('auth/refresh', { refreshToken }).pipe(
+      tap(response => {
+        if (isPlatformBrowser(this.platformId)) {
+          localStorage.setItem(this.TOKEN_STORAGE_KEY, response.token);
+          if (response.refreshToken) {
+            localStorage.setItem(this.REFRESH_TOKEN_KEY, response.refreshToken);
+          }
+        }
+      })
+    );
+  }
+
+  getRefreshToken(): string | null {
+    if (!isPlatformBrowser(this.platformId)) return null;
+    return localStorage.getItem(this.REFRESH_TOKEN_KEY);
+  }
+
+  registrar(input: { nomeEmpresa: string; email: string; senha: string; confirmacaoSenha: string; nomeAdmin?: string }): Observable<RegistrarResponse> {
+    return this.post<RegistrarResponse>('auth/registrar', input).pipe(
+      tap(response => {
+        const user: Usuario = {
+          usuId: response.usuId,
+          usuNome: response.usuNome,
+          usuEmail: response.usuEmail,
+          usuFuncao: response.usuFuncao,
+          r_LojId: 0,
+          r_AcsId: 0,
+          lojaNome: '',
+          acessoNome: '',
+          usuCPF: '',
+          usuRG: '',
+          usuSts: true
+        };
+        this.currentUser.set(user);
+        this.isAuthenticated.set(true);
+        if (isPlatformBrowser(this.platformId)) {
+          localStorage.setItem(this.USER_STORAGE_KEY, JSON.stringify(user));
+          localStorage.setItem(this.TOKEN_STORAGE_KEY, response.token);
+          localStorage.setItem(this.TENANT_SLUG_KEY, response.tenantSlug);
         }
       })
     );
   }
 
   logout(): void {
+    // Avisa o backend para revogar o refresh token (best-effort — nao bloqueia o logout).
+    const refreshToken = this.getRefreshToken();
+    if (refreshToken) {
+      this.post('auth/logout', { refreshToken }).subscribe({
+        next: () => {},
+        error: () => {} // ignore — logout local segue de qualquer jeito
+      });
+    }
+
     this.currentUser.set(null);
     this.isAuthenticated.set(false);
     if (isPlatformBrowser(this.platformId)) {
       localStorage.removeItem(this.USER_STORAGE_KEY);
       localStorage.removeItem(this.TOKEN_STORAGE_KEY);
+      localStorage.removeItem(this.REFRESH_TOKEN_KEY);
+      // Preserva TENANT_SLUG_KEY de proposito: o navegador fica "pinado" no
+      // tenant do usuario para que /login funcione mesmo apos logout.
     }
     this.router.navigate(['/login']);
   }
@@ -75,6 +155,11 @@ export class AuthService extends ApiService {
   getToken(): string | null {
     if (!isPlatformBrowser(this.platformId)) return null;
     return localStorage.getItem(this.TOKEN_STORAGE_KEY);
+  }
+
+  getTenantSlug(): string | null {
+    if (!isPlatformBrowser(this.platformId)) return null;
+    return localStorage.getItem(this.TENANT_SLUG_KEY);
   }
 
   getUser(): Usuario | null {

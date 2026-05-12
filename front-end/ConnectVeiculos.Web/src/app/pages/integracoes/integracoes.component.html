@@ -745,4 +745,66 @@
     tipo="danger"
     (confirmar)="confirmarDesconectarGoogle()"
     (cancelar)="cancelarDesconectarGoogle()" />
+
+  <!-- Google Gemini OCR (scanner de CRLV) -->
+  <div class="integracao-card">
+    <div class="card-header">
+      <div class="platform-info">
+        <span class="platform-icon" style="background: #4285f4">G</span>
+        <div>
+          <h3>Google Gemini (OCR de CRLV)</h3>
+          <p>Extração automática de dados do documento ao cadastrar veículo</p>
+        </div>
+      </div>
+      <span class="status-badge" [class.connected]="geminiConfigurado" [class.disconnected]="!geminiConfigurado">
+        {{ geminiConfigurado ? 'Configurado' : 'Não configurado' }}
+      </span>
+    </div>
+    <div class="card-body">
+      <p>
+        Use o tier <strong>gratuito</strong> do Google Gemini (1.500 escaneamentos/dia + 15/min por chave).
+        Obtenha sua chave em <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> (não precisa cartão).
+      </p>
+
+      @if (geminiConfigurado && geminiMascara) {
+        <div class="ml-conta-info">
+          <span class="material-icons">verified</span>
+          <div>
+            <strong>Chave salva: {{ geminiMascara }}</strong>
+            <small>Fonte: {{ geminiFonte === 'banco' ? 'banco (configurado via UI)' : 'variável de ambiente do servidor' }}</small>
+          </div>
+        </div>
+      }
+
+      <div class="form-group">
+        <label>Chave da API (cole aqui)</label>
+        <div class="token-input">
+          <input [type]="geminiMostrar ? 'text' : 'password'"
+                 [(ngModel)]="geminiNovaChave"
+                 [ngModelOptions]="{standalone: true}"
+                 placeholder="AIza..." />
+          <button type="button" class="btn-mini" (click)="geminiMostrar = !geminiMostrar">
+            <span class="material-icons">{{ geminiMostrar ? 'visibility_off' : 'visibility' }}</span>
+          </button>
+        </div>
+        <small>A chave fica salva no banco do seu tenant. Outros tenants do SaaS não veem.</small>
+      </div>
+
+      <div class="card-actions">
+        <button class="btn-primary" (click)="salvarGemini()" [disabled]="!geminiNovaChave || geminiSalvando">
+          <span class="material-icons">save</span>
+          {{ geminiSalvando ? 'Salvando...' : (geminiConfigurado ? 'Atualizar chave' : 'Salvar chave') }}
+        </button>
+        @if (geminiConfigurado && geminiFonte === 'banco') {
+          <button class="btn-danger-outline" (click)="removerGemini()">
+            <span class="material-icons">delete</span> Remover
+          </button>
+        }
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="material-icons">info</span>
+      <small>Custo: grátis até 1.500 scans/dia. Cada CRLV escaneado gasta ~1 request. Após o limite, OCR fica indisponível até o dia seguinte.</small>
+    </div>
+  </div>
 </div>

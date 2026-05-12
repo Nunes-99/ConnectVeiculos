@@ -5,6 +5,8 @@ import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } 
 import { IntegracaoService, MercadoLivreContaInfo, WhatsAppConfigInfo, EmailConfigInfo, FacebookConfigInfo, GoogleMerchantConfigInfo, TestIntegracaoResult } from '../../core/services/integracao.service';
 import { ToastService } from '../../core/services';
 import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal.component';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-integracoes',
@@ -18,6 +20,51 @@ export class IntegracoesComponent implements OnInit {
   private toast = inject(ToastService);
   private platformId = inject(PLATFORM_ID);
   private fb = inject(FormBuilder);
+  private http = inject(HttpClient);
+
+  // Gemini OCR
+  geminiConfigurado = false;
+  geminiMascara: string | null = null;
+  geminiFonte: string | null = null;
+  geminiNovaChave = '';
+  geminiMostrar = false;
+  geminiSalvando = false;
+
+  private carregarGeminiConfig(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    this.http.get<any>(`${environment.apiUrl}/ocr/config`).subscribe({
+      next: (resp) => {
+        this.geminiConfigurado = !!resp?.configurado;
+        this.geminiMascara = resp?.mascara || null;
+        this.geminiFonte = resp?.fonte || null;
+      },
+      error: () => { /* sem permissao ou erro — UI fica em "nao configurado" */ }
+    });
+  }
+
+  salvarGemini(): void {
+    if (!this.geminiNovaChave) return;
+    this.geminiSalvando = true;
+    this.http.post(`${environment.apiUrl}/ocr/config`, { chave: this.geminiNovaChave }).subscribe({
+      next: () => {
+        this.toast.success('Chave do Gemini salva com sucesso!');
+        this.geminiNovaChave = '';
+        this.carregarGeminiConfig();
+      },
+      error: (err) => this.toast.error(err.error?.message || 'Erro ao salvar chave.'),
+      complete: () => this.geminiSalvando = false
+    });
+  }
+
+  removerGemini(): void {
+    this.http.delete(`${environment.apiUrl}/ocr/config`).subscribe({
+      next: () => {
+        this.toast.success('Chave removida.');
+        this.carregarGeminiConfig();
+      },
+      error: (err) => this.toast.error(err.error?.message || 'Erro ao remover chave.')
+    });
+  }
 
   mlConectado = false;
   mlConta: MercadoLivreContaInfo | null = null;
@@ -110,6 +157,7 @@ export class IntegracoesComponent implements OnInit {
     this.checkSmtpStatus();
     this.checkFacebookStatus();
     this.checkGoogleStatus();
+    this.carregarGeminiConfig();
   }
 
   // ============================================================

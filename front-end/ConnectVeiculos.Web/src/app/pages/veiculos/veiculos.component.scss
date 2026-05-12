@@ -854,3 +854,29 @@ textarea {
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+.btn-scan-crlv {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1.25rem;
+  background: linear-gradient(135deg, #1a237e 0%, #303f9f 100%);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(26, 35, 126, 0.25);
+  transition: transform 0.1s, box-shadow 0.15s;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(26, 35, 126, 0.35);
+  }
+  &:active { transform: translateY(0); }
+  .material-icons { font-size: 1.3rem; }
+}

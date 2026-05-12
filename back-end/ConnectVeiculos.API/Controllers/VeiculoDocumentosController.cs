@@ -44,9 +44,18 @@ namespace ConnectVeiculos.API.Controllers
         {
             if (string.IsNullOrWhiteSpace(request.Tipo))
                 return BadRequest("Tipo do documento e obrigatorio.");
+            if (request.VeiculoId <= 0)
+                return BadRequest("Veiculo invalido.");
+            var tiposValidos = new[] { "CRLV", "IPVA", "LAUDO", "TRANSFERENCIA", "SEGURO", "MULTA", "FINANCIAMENTO", "OUTROS" };
+            if (!tiposValidos.Contains(request.Tipo.ToUpperInvariant()))
+                return BadRequest($"Tipo invalido. Use um destes: {string.Join(", ", tiposValidos)}.");
+            var statusValidos = new[] { "PENDENTE", "EM_DIA", "VENCIDO", "CONCLUIDO" };
+            var statusFinal = string.IsNullOrEmpty(request.Status) ? "PENDENTE" : request.Status.ToUpperInvariant();
+            if (!statusValidos.Contains(statusFinal))
+                return BadRequest($"Status invalido. Use um destes: {string.Join(", ", statusValidos)}.");
 
-            var doc = new VeiculoDocumento(0, request.VeiculoId, request.Tipo,
-                request.Status ?? "PENDENTE", request.Arquivo, request.Observacao, request.DataVencimento);
+            var doc = new VeiculoDocumento(0, request.VeiculoId, request.Tipo.ToUpperInvariant(),
+                statusFinal, request.Arquivo, request.Observacao, request.DataVencimento);
 
             _context.VeiculosDocumentos.Add(doc);
             await _context.SaveChangesAsync();

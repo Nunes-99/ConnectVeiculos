@@ -27,6 +27,8 @@ using ConnectVeiculos.Core.Entities.Negociacoes;
 using ConnectVeiculos.Core.Entities.Publicacoes;
 using ConnectVeiculos.Core.Entities.PushSubscriptions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using System.Globalization;
 
 namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
 {
@@ -132,6 +134,13 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
                 entity.Property(e => e.CatDesc).HasMaxLength(255);
             });
 
+            // ValueConverter para decimal? que trata "" (string vazia) como null ao ler do
+            // banco. Necessario porque SQLite armazena decimal como TEXT e dados legados
+            // (ou seeds via SQL direto) podem ter inserido '' que faz decimal.Parse falhar.
+            var nullableDecimalConverter = new ValueConverter<decimal?, string?>(
+                v => v.HasValue ? v.Value.ToString(CultureInfo.InvariantCulture) : null,
+                v => string.IsNullOrWhiteSpace(v) ? (decimal?)null : decimal.Parse(v, CultureInfo.InvariantCulture));
+
             // Veiculo
             modelBuilder.Entity<Veiculo>(entity =>
             {
@@ -150,7 +159,7 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
                 entity.Property(e => e.VeiObservacao).HasMaxLength(2000);
                 entity.Property(e => e.VeiDonoAtual).HasMaxLength(150);
                 entity.Property(e => e.VeiDonoCelular).HasMaxLength(20);
-                entity.Property(e => e.VeiPrecoFipe).HasPrecision(10, 2);
+                entity.Property(e => e.VeiPrecoFipe).HasPrecision(10, 2).HasConversion(nullableDecimalConverter);
                 entity.HasOne(e => e.Loja).WithMany().HasForeignKey(e => e.R_LojId);
                 entity.HasOne(e => e.Categoria).WithMany().HasForeignKey(e => e.R_CatId);
             });

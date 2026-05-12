@@ -8,16 +8,20 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/catalogo/catalogo.component').then(m => m.CatalogoComponent)
   },
   {
-    path: 'catalogo/:lojaId',
+    path: 'catalogo/:tenantSlug',
     loadComponent: () => import('./pages/catalogo/catalogo.component').then(m => m.CatalogoComponent)
   },
   {
-    path: 'catalogo/:lojaId/veiculo/:veiculoId',
+    path: 'catalogo/:tenantSlug/veiculo/:veiculoId',
     loadComponent: () => import('./pages/catalogo/catalogo.component').then(m => m.CatalogoComponent)
   },
   {
     path: 'login',
     loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent)
+  },
+  {
+    path: 'registro',
+    loadComponent: () => import('./pages/registro/registro.component').then(m => m.RegistroComponent)
   },
   {
     path: 'recuperar-senha',

@@ -16,27 +16,35 @@ export function app(): express.Express {
   // Hardening: esconde o header "X-Powered-By: Express" das responses.
   server.disable('x-powered-by');
 
-  // Sitemap dinâmico
+  // Sitemap dinâmico — multi-tenant: itera todos os tenants ativos e
+  // gera URLs no formato /catalogo/{tenantSlug} e /catalogo/{tenantSlug}/veiculo/{id}.
   server.get('/sitemap.xml', async (req, res) => {
     try {
       const apiBase = process.env['API_BASE_URL'] || 'http://localhost:5219';
       const siteBase = process.env['SITE_BASE_URL'] || `${req.protocol}://${req.get('host')}`;
 
-      const response = await fetch(`${apiBase}/api/catalogo`);
-      const data = await response.json();
+      // 1) Lista de tenants publicos
+      const tenantsResp = await fetch(`${apiBase}/api/catalogo/public-tenants`);
+      const tenants: Array<{ slug: string; nome: string }> = tenantsResp.ok ? await tenantsResp.json() : [];
 
       let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
       xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
 
-      xml += `  <url><loc>${siteBase}/catalogo</loc><changefreq>daily</changefreq><priority>0.8</priority></url>\n`;
+      // 2) Para cada tenant, busca seu catalogo e gera URLs especificas
+      for (const tenant of tenants) {
+        try {
+          const catResp = await fetch(`${apiBase}/api/catalogo?tenant=${encodeURIComponent(tenant.slug)}`);
+          if (!catResp.ok) continue;
+          const data = await catResp.json();
 
-      for (const loja of data.lojas || []) {
-        const slug = loja.lojSlug || loja.lojId;
-        xml += `  <url><loc>${siteBase}/catalogo/${slug}</loc><changefreq>daily</changefreq><priority>0.7</priority></url>\n`;
-      }
+          xml += `  <url><loc>${siteBase}/catalogo/${tenant.slug}</loc><changefreq>daily</changefreq><priority>0.8</priority></url>\n`;
 
-      for (const v of data.veiculos || []) {
-        xml += `  <url><loc>${siteBase}/catalogo/veiculo/${v.veiId}</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>\n`;
+          for (const v of data.veiculos || []) {
+            xml += `  <url><loc>${siteBase}/catalogo/${tenant.slug}/veiculo/${v.veiId}</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>\n`;
+          }
+        } catch {
+          // tenant individual falhou — continua os outros
+        }
       }
 
       xml += '</urlset>';
@@ -55,10 +63,11 @@ export function app(): express.Express {
     index: false,
   }));
 
-  // Rotas do catalogo: SSR (renderiza no servidor com dados)
+  // Rotas do catalogo: SSR (renderiza no servidor com dados).
+  // Path-based multi-tenancy: /catalogo/:tenantSlug e variantes.
   server.get('/catalogo', ssrHandler(commonEngine, indexHtml, browserDistFolder));
-  server.get('/catalogo/:lojaId', ssrHandler(commonEngine, indexHtml, browserDistFolder));
-  server.get('/catalogo/:lojaId/veiculo/:veiculoId', ssrHandler(commonEngine, indexHtml, browserDistFolder));
+  server.get('/catalogo/:tenantSlug', ssrHandler(commonEngine, indexHtml, browserDistFolder));
+  server.get('/catalogo/:tenantSlug/veiculo/:veiculoId', ssrHandler(commonEngine, indexHtml, browserDistFolder));
 
   // Demais rotas: servir o index estático (client-side only).
   // Angular 17+ gera o template CSR como `index.csr.html` (em vez de `index.html`).

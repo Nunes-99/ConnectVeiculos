@@ -5,6 +5,11 @@ namespace ConnectVeiculos.Core.Interfaces.Services
     /// </summary>
     public interface ICatalogoHubService
     {
-        Task NotificarAtualizacaoCatalogo(int lojaId, string tipoEvento, object dados);
+        /// <summary>
+        /// Notifica clients conectados ao hub. Grupos sao escopo por tenant —
+        /// somente clients do mesmo tenant recebem a notificacao.
+        /// </summary>
+        /// <param name="tenantSlug">Slug do tenant atual (ex: "inova-motor"). Vem do ITenantContext.</param>
+        Task NotificarAtualizacaoCatalogo(string tenantSlug, int lojaId, string tipoEvento, object dados);
     }
 }

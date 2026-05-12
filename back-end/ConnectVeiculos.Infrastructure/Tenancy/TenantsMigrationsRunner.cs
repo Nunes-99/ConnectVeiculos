@@ -35,6 +35,7 @@ namespace ConnectVeiculos.Infrastructure.Tenancy
             // 1) Master: cria se nao existe e popula tenant default na primeira vez.
             var master = sp.GetRequiredService<MasterDbContext>();
             await master.Database.EnsureCreatedAsync(ct);
+            ApplyMasterSchemaUpdates(master);
 
             // 2) Auto-seed do tenant "default" se o master estiver vazio.
             //    Aponta para o arquivo configurado em DEFAULT_TENANT_DATABASE_FILE
@@ -79,8 +80,89 @@ namespace ConnectVeiculos.Infrastructure.Tenancy
                 // as colunas via EnsureCreated, bancos antigos recebem o que falta.
                 DependencyInjectionExtensions.ApplySchemaUpdates(ctx);
 
+                // Reconcilia UserEmailMap no master a partir dos usuarios deste tenant.
+                // Idempotente: INSERT OR IGNORE pula e-mails ja registrados.
+                ReconcileUserEmailMap(master, ctx, tenant);
+
                 _logger.LogInformation("Tenant '{Slug}' ({Nome}): banco {File} pronto (schema atualizado)",
                     tenant.TenSlug, tenant.TenNome, tenant.TenDatabaseFile);
+            }
+        }
+
+        /// <summary>
+        /// Cria tabela UserEmailMap no master se ainda nao existir. Idempotente.
+        /// Usado para bancos master pre-existentes (criados antes desta feature).
+        /// </summary>
+        private static void ApplyMasterSchemaUpdates(MasterDbContext master)
+        {
+            var conn = master.Database.GetDbConnection();
+            if (conn.State != System.Data.ConnectionState.Open) conn.Open();
+
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"CREATE TABLE IF NOT EXISTS UserEmailMap (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                Email TEXT NOT NULL UNIQUE,
+                TenantId INTEGER NOT NULL,
+                TenantSlug TEXT NOT NULL,
+                CriadoEm TEXT NOT NULL
+            )";
+            cmd.ExecuteNonQuery();
+
+            using var idxCmd = conn.CreateCommand();
+            idxCmd.CommandText = "CREATE INDEX IF NOT EXISTS IX_UserEmailMap_TenantId ON UserEmailMap(TenantId)";
+            idxCmd.ExecuteNonQuery();
+        }
+
+        /// <summary>
+        /// Insere e-mails dos usuarios do tenant no UserEmailMap do master.
+        /// INSERT OR IGNORE — duplicados (mesmo email ja registrado por outro tenant)
+        /// sao silenciosamente ignorados. Util para auto-popular o registry quando
+        /// a feature foi adicionada em sistema com dados existentes.
+        /// </summary>
+        private void ReconcileUserEmailMap(MasterDbContext master, ConnectVeiculosDbContext tenantCtx, Tenant tenant)
+        {
+            try
+            {
+                var tenantConn = tenantCtx.Database.GetDbConnection();
+                if (tenantConn.State != System.Data.ConnectionState.Open) tenantConn.Open();
+
+                var emails = new List<string>();
+                using (var cmd = tenantConn.CreateCommand())
+                {
+                    cmd.CommandText = "SELECT UsuEmail FROM Usuario WHERE UsuSts=1";
+                    using var reader = cmd.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        var email = reader.GetString(0)?.Trim().ToLowerInvariant();
+                        if (!string.IsNullOrWhiteSpace(email)) emails.Add(email);
+                    }
+                }
+
+                if (emails.Count == 0) return;
+
+                var masterConn = master.Database.GetDbConnection();
+                if (masterConn.State != System.Data.ConnectionState.Open) masterConn.Open();
+                using var tx = masterConn.BeginTransaction();
+                using (var insCmd = masterConn.CreateCommand())
+                {
+                    insCmd.Transaction = tx;
+                    insCmd.CommandText = "INSERT OR IGNORE INTO UserEmailMap (Email, TenantId, TenantSlug, CriadoEm) VALUES ($email, $tenantId, $slug, $criadoEm)";
+                    var pEmail = insCmd.CreateParameter(); pEmail.ParameterName = "$email"; insCmd.Parameters.Add(pEmail);
+                    var pTid = insCmd.CreateParameter(); pTid.ParameterName = "$tenantId"; pTid.Value = tenant.TenId; insCmd.Parameters.Add(pTid);
+                    var pSlug = insCmd.CreateParameter(); pSlug.ParameterName = "$slug"; pSlug.Value = tenant.TenSlug; insCmd.Parameters.Add(pSlug);
+                    var pData = insCmd.CreateParameter(); pData.ParameterName = "$criadoEm"; pData.Value = DateTime.UtcNow.ToString("o"); insCmd.Parameters.Add(pData);
+
+                    foreach (var email in emails)
+                    {
+                        pEmail.Value = email;
+                        insCmd.ExecuteNonQuery();
+                    }
+                }
+                tx.Commit();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Falha ao reconciliar UserEmailMap para tenant '{Slug}'", tenant.TenSlug);
             }
         }
     }

@@ -23,6 +23,10 @@ namespace ConnectVeiculos.API.Controllers
         {
             if (string.IsNullOrWhiteSpace(request.NomeCliente) || string.IsNullOrWhiteSpace(request.Telefone))
                 return BadRequest("Nome e telefone sao obrigatorios.");
+            if (request.DataAgendamento < DateTime.Today)
+                return BadRequest("Data de agendamento nao pode ser no passado.");
+            if (!string.IsNullOrWhiteSpace(request.Email) && !request.Email.Contains('@'))
+                return BadRequest("E-mail invalido.");
 
             var testDrive = new TestDrive(0, request.VeiculoId, request.LojaId, request.NomeCliente,
                 request.Telefone, request.WhatsApp, request.Email, request.DataAgendamento, request.Horario, request.Observacao, "P");

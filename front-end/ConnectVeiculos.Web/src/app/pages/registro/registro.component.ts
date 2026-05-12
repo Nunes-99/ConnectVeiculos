@@ -1,26 +1,28 @@
-import { Component, inject, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services';
 
 @Component({
-  selector: 'app-login',
+  selector: 'app-registro',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterLink],
-  templateUrl: './login.component.html',
-  styleUrl: './login.component.scss'
+  templateUrl: './registro.component.html',
+  styleUrl: './registro.component.scss'
 })
-export class LoginComponent implements OnInit, OnDestroy {
+export class RegistroComponent implements OnInit, OnDestroy {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
   private router = inject(Router);
   private slideInterval: any;
 
-  loginForm: FormGroup;
+  form: FormGroup;
   loading = false;
   errorMessage = '';
+  successMessage = '';
   mostrarSenha = false;
+  mostrarConfirmacao = false;
 
   currentSlide = 0;
   slides = [
@@ -52,10 +54,16 @@ export class LoginComponent implements OnInit, OnDestroy {
   ];
 
   constructor() {
-    this.loginForm = this.fb.group({
-      email: ['', [Validators.required, Validators.email]],
-      senha: ['', [Validators.required, Validators.minLength(4)]]
-    });
+    this.form = this.fb.group(
+      {
+        nomeEmpresa: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(120)]],
+        nomeAdmin: ['', [Validators.maxLength(120)]],
+        email: ['', [Validators.required, Validators.email]],
+        senha: ['', [Validators.required, Validators.minLength(6)]],
+        confirmacaoSenha: ['', [Validators.required]]
+      },
+      { validators: this.senhasIguais }
+    );
   }
 
   ngOnInit(): void {
@@ -78,23 +86,30 @@ export class LoginComponent implements OnInit, OnDestroy {
     this.currentSlide = index;
   }
 
+  private senhasIguais(group: AbstractControl): ValidationErrors | null {
+    const senha = group.get('senha')?.value;
+    const conf = group.get('confirmacaoSenha')?.value;
+    return senha && conf && senha !== conf ? { senhasDiferentes: true } : null;
+  }
+
   onSubmit(): void {
-    if (this.loginForm.invalid) {
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
       return;
     }
 
     this.loading = true;
     this.errorMessage = '';
+    this.successMessage = '';
 
-    const { email, senha } = this.loginForm.value;
-
-    this.authService.login(email, senha).subscribe({
-      next: () => {
-        this.router.navigate(['/dashboard']);
+    this.authService.registrar(this.form.value).subscribe({
+      next: (resp) => {
+        this.successMessage = `Conta criada! Sua base: "${resp.tenantSlug}". Entrando...`;
+        setTimeout(() => this.router.navigate(['/dashboard']), 800);
       },
       error: (error) => {
         this.loading = false;
-        this.errorMessage = error.message || 'Erro ao realizar login';
+        this.errorMessage = error.error?.message || error.message || 'Erro ao criar conta.';
       }
     });
   }

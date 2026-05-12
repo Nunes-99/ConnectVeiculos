@@ -384,6 +384,26 @@ namespace ConnectVeiculos.Infrastructure.IoC
                 // Preco FIPE do veiculo (consulta automatica/manual)
                 AddColumnIfNotExists(connection, "Veiculo", "VeiPrecoFipe", "REAL");
 
+                // Limpa strings vazias em colunas decimais nullable. SQLite armazena
+                // decimal como TEXT, e EF Core lanca FormatException ao tentar
+                // decimal.Parse(''). Idempotente — converte '' para NULL para evitar o erro.
+                NormalizeEmptyDecimal(connection, "Veiculo", "VeiPrecoFipe");
+
+                // VeiPreco e VeiPrecoCompra sao NOT NULL decimal mas SQL legacy/seeds
+                // podem ter inserido '' (TEXT vazio). EF Core falha ao ler.
+                // Para colunas NOT NULL, '' nao pode virar NULL → seta '0'.
+                NormalizeEmptyDecimalNotNull(connection, "Veiculo", "VeiPreco");
+                NormalizeEmptyDecimalNotNull(connection, "Veiculo", "VeiPrecoCompra");
+
+                // Favorito: UNIQUE (email, veiculo) — bloqueia favoritos duplicados.
+                // Idempotente. SQLite cria indice composto se nao existir.
+                using (var idxCmd = connection.CreateCommand())
+                {
+                    idxCmd.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS UX_Favorito_Email_Veiculo ON Favorito(FavEmail, R_VeiId)";
+                    try { idxCmd.ExecuteNonQuery(); }
+                    catch { /* tabela ainda nao existe em bancos novos antes do EnsureCreated; ignora */ }
+                }
+
                 // Campos de financiamento no Lead
                 AddColumnIfNotExists(connection, "Lead", "LeaCpf", "TEXT");
                 AddColumnIfNotExists(connection, "Lead", "LeaRenda", "REAL");
@@ -538,6 +558,36 @@ namespace ConnectVeiculos.Infrastructure.IoC
                 alterCmd.CommandText = $"ALTER TABLE {tableName} ADD COLUMN {columnName} {columnType}";
                 alterCmd.ExecuteNonQuery();
             }
+        }
+
+        /// <summary>
+        /// Converte strings vazias em coluna decimal nullable para NULL. Bug do EF Core
+        /// SQLite: ao ler '' tenta decimal.Parse('') e lanca FormatException. Idempotente.
+        /// </summary>
+        private static void NormalizeEmptyDecimal(System.Data.Common.DbConnection connection, string tableName, string columnName)
+        {
+            using var checkCmd = connection.CreateCommand();
+            checkCmd.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('{tableName}') WHERE name='{columnName}'";
+            if (Convert.ToInt32(checkCmd.ExecuteScalar()) == 0) return;
+
+            using var updateCmd = connection.CreateCommand();
+            updateCmd.CommandText = $"UPDATE {tableName} SET {columnName}=NULL WHERE TRIM({columnName})=''";
+            updateCmd.ExecuteNonQuery();
+        }
+
+        /// <summary>
+        /// Mesmo problema do NormalizeEmptyDecimal, mas para colunas NOT NULL — seta '0'
+        /// em vez de NULL para nao violar constraint.
+        /// </summary>
+        private static void NormalizeEmptyDecimalNotNull(System.Data.Common.DbConnection connection, string tableName, string columnName)
+        {
+            using var checkCmd = connection.CreateCommand();
+            checkCmd.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('{tableName}') WHERE name='{columnName}'";
+            if (Convert.ToInt32(checkCmd.ExecuteScalar()) == 0) return;
+
+            using var updateCmd = connection.CreateCommand();
+            updateCmd.CommandText = $"UPDATE {tableName} SET {columnName}='0' WHERE TRIM({columnName})='' OR {columnName} IS NULL";
+            updateCmd.ExecuteNonQuery();
         }
 
         private static string GenerateSlug(string text)

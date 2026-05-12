@@ -5,6 +5,7 @@ using ConnectVeiculos.Core.Interfaces.Database.Common;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Publicacoes;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Services;
+using ConnectVeiculos.Core.Interfaces.Tenancy;
 using Microsoft.Extensions.Logging;
 
 namespace ConnectVeiculos.Application.UseCases.Veiculos
@@ -21,6 +22,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
         private readonly IVeiculoPublicacaoRepository _publicacaoRepository;
         private readonly ILogger<AtualizarVeiculoUseCase> _logger;
         private readonly IFavoritoNotificacaoService _favoritoNotificacaoService;
+        private readonly ITenantContext _tenantContext;
 
         public AtualizarVeiculoUseCase(
             IVeiculoRepository veiculoRepository,
@@ -32,7 +34,8 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             IGoogleMerchantService googleService,
             IVeiculoPublicacaoRepository publicacaoRepository,
             ILogger<AtualizarVeiculoUseCase> logger,
-            IFavoritoNotificacaoService favoritoNotificacaoService)
+            IFavoritoNotificacaoService favoritoNotificacaoService,
+            ITenantContext tenantContext)
         {
             _veiculoRepository = veiculoRepository;
             _unitOfWork = unitOfWork;
@@ -43,6 +46,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             _googleService = googleService;
             _publicacaoRepository = publicacaoRepository;
             _logger = logger;
+            _tenantContext = tenantContext;
             _favoritoNotificacaoService = favoritoNotificacaoService;
         }
 
@@ -107,7 +111,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                 else if (statusAnterior != "D" && inputModel.VeiSts == "D")
                     tipoEvento = "VEICULO_DISPONIVEL";
 
-                await _catalogoHubService.NotificarAtualizacaoCatalogo(inputModel.R_LojId, tipoEvento, new
+                await _catalogoHubService.NotificarAtualizacaoCatalogo(_tenantContext.TenantSlug, inputModel.R_LojId, tipoEvento, new
                 {
                     veiculoId = inputModel.VeiId,
                     marca = inputModel.VeiMarca,

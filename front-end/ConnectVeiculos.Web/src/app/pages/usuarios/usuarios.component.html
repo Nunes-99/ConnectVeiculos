@@ -137,12 +137,22 @@
                      email
                      maxlength="150"
                      #usuEmail="ngModel"
-                     [class.invalid]="isFieldInvalid('usuEmail')"
+                     [class.invalid]="isFieldInvalid('usuEmail') || emailStatus === 'em-uso'"
                      [readonly]="editMode"
                      [class.disabled]="editMode"
+                     (blur)="verificarDisponibilidadeEmail()"
                      placeholder="E-mail" />
               @if (isFieldInvalid('usuEmail')) {
                 <span class="field-error">E-mail é obrigatório e deve ser válido</span>
+              }
+              @if (!editMode && emailStatus === 'verificando') {
+                <span class="field-hint">Verificando disponibilidade...</span>
+              }
+              @if (!editMode && emailStatus === 'livre') {
+                <span class="field-hint ok"><span class="material-icons">check_circle</span> Disponível</span>
+              }
+              @if (!editMode && emailStatus === 'em-uso') {
+                <span class="field-error">{{ emailMensagem }}</span>
               }
             </div>
             <div class="form-group">

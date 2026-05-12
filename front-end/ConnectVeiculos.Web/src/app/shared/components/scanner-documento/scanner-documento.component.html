@@ -1,0 +1,127 @@
+@if (show) {
+<div class="scanner-overlay" (click)="cancelar()">
+  <div class="scanner-modal" (click)="$event.stopPropagation()">
+    <div class="scanner-header">
+      <h2><span class="material-icons">document_scanner</span> Escanear CRLV</h2>
+      <button class="btn-close" (click)="cancelar()" aria-label="Fechar">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+
+    @if (!resultado) {
+      <div class="tier-info">
+        <span class="material-icons">bolt</span>
+        <span>Powered by <strong>Google Gemini</strong> (grátis). Limite: 1.500 escaneamentos/dia + 15/min compartilhados pelo sistema todo. Após o limite, a função fica indisponível até o dia seguinte.</span>
+      </div>
+      <div class="scanner-tabs">
+        <button [class.active]="aba==='foto'" (click)="setAba('foto')">
+          <span class="material-icons">photo_camera</span> Tirar foto
+        </button>
+        <button [class.active]="aba==='arquivo'" (click)="setAba('arquivo')">
+          <span class="material-icons">upload_file</span> Arquivo
+        </button>
+        <button [class.active]="aba==='qr'" (click)="setAba('qr')">
+          <span class="material-icons">qr_code_scanner</span> QR ao vivo
+        </button>
+      </div>
+
+      <div class="scanner-body">
+        @if (aba === 'foto') {
+          <div class="acao-block">
+            <p>Tire uma foto do CRLV usando a câmera do celular ou webcam. A IA vai extrair placa, chassi, marca, modelo, ano, cor e proprietário.</p>
+            <button class="btn-primary big" (click)="abrirCamera()" [disabled]="loading">
+              <span class="material-icons">photo_camera</span>
+              {{ loading ? 'Processando...' : 'Abrir câmera' }}
+            </button>
+            <input type="file" #camInput accept="image/*" capture="environment" (change)="onArquivoSelecionado($event)" hidden />
+          </div>
+        }
+        @if (aba === 'arquivo') {
+          <div class="acao-block">
+            <p>Selecione um PDF/JPG/PNG do CRLV já salvo no seu dispositivo.</p>
+            <button class="btn-primary big" (click)="abrirArquivo()" [disabled]="loading">
+              <span class="material-icons">upload_file</span>
+              {{ loading ? 'Processando...' : 'Selecionar arquivo' }}
+            </button>
+            <input type="file" #fileInput accept="image/*,application/pdf" (change)="onArquivoSelecionado($event)" hidden />
+          </div>
+        }
+        @if (aba === 'qr') {
+          <div class="acao-block">
+            <p>Aponte para o QR code do CRLV-e (geralmente no canto superior direito).</p>
+            <div id="qr-reader-container" #qrReader class="qr-reader"></div>
+          </div>
+        }
+
+        @if (loading) {
+          <div class="loading-overlay">
+            <div class="spinner"></div>
+            <p>Extraindo dados do documento...</p>
+          </div>
+        }
+
+        @if (erro) {
+          <div class="erro-box">
+            <span class="material-icons">error_outline</span>
+            <span>{{ erro }}</span>
+          </div>
+        }
+      </div>
+    }
+
+    @if (resultado) {
+      <div class="resultado-body">
+        @if (fotoPreview) {
+          <img [src]="fotoPreview" class="foto-thumb" alt="Foto do CRLV" />
+        }
+
+        @if (resultado.aviso) {
+          <div class="aviso-box">
+            <span class="material-icons">info</span>
+            <span>{{ resultado.aviso }}</span>
+          </div>
+        }
+
+        @if (resultado.qrUrl) {
+          <div class="info-row">
+            <strong>Link de verificação (SERPRO):</strong>
+            <a [href]="resultado.qrUrl" target="_blank" rel="noopener">{{ resultado.qrUrl }}</a>
+          </div>
+        }
+
+        <div class="campos-grid">
+          @if (resultado.placa) { <div><span>Placa:</span> <strong>{{ resultado.placa }}</strong></div> }
+          @if (resultado.renavam) { <div><span>Renavam:</span> <strong>{{ resultado.renavam }}</strong></div> }
+          @if (resultado.chassi) { <div><span>Chassi:</span> <strong>{{ resultado.chassi }}</strong></div> }
+          @if (resultado.marca) { <div><span>Marca:</span> <strong>{{ resultado.marca }}</strong></div> }
+          @if (resultado.modelo) { <div><span>Modelo:</span> <strong>{{ resultado.modelo }}</strong></div> }
+          @if (resultado.anoFabricacao) { <div><span>Ano fabricação:</span> <strong>{{ resultado.anoFabricacao }}</strong></div> }
+          @if (resultado.anoModelo) { <div><span>Ano modelo:</span> <strong>{{ resultado.anoModelo }}</strong></div> }
+          @if (resultado.cor) { <div><span>Cor:</span> <strong>{{ resultado.cor }}</strong></div> }
+          @if (resultado.combustivel) { <div><span>Combustível:</span> <strong>{{ resultado.combustivel }}</strong></div> }
+          @if (resultado.proprietarioNome) { <div><span>Proprietário:</span> <strong>{{ resultado.proprietarioNome }}</strong></div> }
+          @if (resultado.proprietarioDoc) { <div><span>CPF/CNPJ:</span> <strong>{{ resultado.proprietarioDoc }}</strong></div> }
+          @if (resultado.categoria) { <div><span>Categoria:</span> <strong>{{ resultado.categoria }}</strong></div> }
+        </div>
+
+        @if (resultado.confianca) {
+          <div class="confianca" [class.alta]="resultado.confianca === 'ALTA'" [class.media]="resultado.confianca === 'MEDIA'" [class.baixa]="resultado.confianca === 'BAIXA'">
+            Confiança: <strong>{{ resultado.confianca }}</strong>
+          </div>
+        }
+      </div>
+    }
+
+    <div class="scanner-footer">
+      @if (resultado) {
+        <button class="btn-secondary" (click)="cancelar()">Descartar</button>
+        <button class="btn-primary" (click)="usarResultado()">
+          <span class="material-icons">check</span> Usar estes dados
+        </button>
+      } @else {
+        <button class="btn-secondary" (click)="cancelar()">Cancelar</button>
+      }
+    </div>
+  </div>
+</div>
+}
