@@ -86,7 +86,7 @@ namespace ConnectVeiculos.API.Controllers
             [FromQuery] decimal? precoMax = null)
         {
             var loja = await lojaRepository.GetBySlugAsync(slug);
-            if (loja == null) return NotFound(new { message = "Loja nao encontrada." });
+            if (loja == null) return NotFound(new { message = "Loja não encontrada." });
 
             var cacheKey = $"{CacheKeys.Catalogo}_slug_{slug}_{marca}_{anoMin}_{anoMax}_{precoMin}_{precoMax}";
 

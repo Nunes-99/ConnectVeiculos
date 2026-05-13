@@ -1,7 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TestDriveService, TestDrive } from '../../core/services';
+import { TestDriveService, TestDrive, ToastService } from '../../core/services';
 
 @Component({
   selector: 'app-test-drives',
@@ -12,6 +12,7 @@ import { TestDriveService, TestDrive } from '../../core/services';
 })
 export class TestDrivesComponent implements OnInit {
   private testDriveService = inject(TestDriveService);
+  private toast = inject(ToastService);
 
   testDrives: TestDrive[] = [];
   loading = false;
@@ -35,7 +36,27 @@ export class TestDrivesComponent implements OnInit {
 
   atualizarStatus(id: number, status: string): void {
     this.testDriveService.atualizarStatus(id, status).subscribe({
-      next: () => this.loadData()
+      next: (resp: any) => {
+        this.loadData();
+        const n = resp?.notificacao;
+        const acao = status === 'C' ? 'confirmado' : status === 'X' ? 'cancelado' : 'atualizado';
+        if (!n || !n.aplicavel) {
+          this.toast?.success(`Test drive ${acao}.`);
+          return;
+        }
+        if (n.enviada) {
+          this.toast?.success(`Test drive ${acao} — cliente notificado via WhatsApp.`);
+        } else if (n.motivo === 'nao-configurado') {
+          this.toast?.warning(`Test drive ${acao}. WhatsApp não integrado — só o status interno foi atualizado. Configure em /integracoes para enviar mensagens automáticas.`);
+        } else if (n.motivo === 'sem-telefone') {
+          this.toast?.warning(`Test drive ${acao}. Cliente sem WhatsApp cadastrado — contate manualmente.`);
+        } else if (n.motivo === 'falha-envio') {
+          this.toast?.warning(`Test drive ${acao}. Falha ao enviar WhatsApp — confira se os templates estão aprovados no Meta Business. Contate o cliente manualmente.`);
+        } else {
+          this.toast?.success(`Test drive ${acao}.`);
+        }
+      },
+      error: () => this.toast?.error('Erro ao atualizar status.')
     });
   }
 

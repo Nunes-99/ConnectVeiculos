@@ -57,7 +57,7 @@ namespace ConnectVeiculos.API.Controllers
                 webhook.WebUrl,
                 input.Eventos,
                 Secret = secret,
-                Mensagem = "Guarde o secret, ele nao sera exibido novamente."
+                Mensagem = "Guarde o secret, ele não será exibido novamente."
             });
         }
 
@@ -121,10 +121,10 @@ namespace ConnectVeiculos.API.Controllers
             {
                 new { Evento = WebhookEventos.VendaCriada, Descricao = "Disparado quando uma nova venda e registrada" },
                 new { Evento = WebhookEventos.VendaEstornada, Descricao = "Disparado quando uma venda e estornada" },
-                new { Evento = WebhookEventos.VeiculoCadastrado, Descricao = "Disparado quando um novo veiculo e cadastrado" },
-                new { Evento = WebhookEventos.VeiculoVendido, Descricao = "Disparado quando um veiculo e marcado como vendido" },
-                new { Evento = WebhookEventos.VeiculoPrecoAlterado, Descricao = "Disparado quando o preco de um veiculo e alterado" },
-                new { Evento = WebhookEventos.UsuarioCadastrado, Descricao = "Disparado quando um novo usuario e cadastrado" }
+                new { Evento = WebhookEventos.VeiculoCadastrado, Descricao = "Disparado quando um novo veículo é cadastrado" },
+                new { Evento = WebhookEventos.VeiculoVendido, Descricao = "Disparado quando um veículo é marcado como vendido" },
+                new { Evento = WebhookEventos.VeiculoPrecoAlterado, Descricao = "Disparado quando o preço de um veículo é alterado" },
+                new { Evento = WebhookEventos.UsuarioCadastrado, Descricao = "Disparado quando um novo usuário é cadastrado" }
             });
         }
     }

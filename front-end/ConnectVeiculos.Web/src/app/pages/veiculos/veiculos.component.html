@@ -264,6 +264,7 @@
             <div class="form-group">
               <label class="required">Ano</label>
               <input type="tel" formControlName="veiAno" maxlength="4"
+                     (blur)="buscarPrecoFipe()"
                      [class.invalid]="hasError('veiAno', 'required') || hasError('veiAno', 'min') || hasError('veiAno', 'max')" />
               @if (hasError('veiAno', 'required')) {
                 <span class="field-error">Ano é obrigatório</span>
@@ -325,9 +326,14 @@
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label>Preço FIPE (referência)</label>
+              <label>
+                Preço FIPE (referência)
+                @if (buscandoFipe) {
+                  <span style="color:#1a237e;font-size:11px;margin-left:0.5rem;">⟳ buscando FIPE...</span>
+                }
+              </label>
               <input formControlName="veiPrecoFipe" appCurrencyMask placeholder="0,00" />
-              <small style="color:#666;font-size:11px">Usado para exibir badge "abaixo/acima da FIPE" no catálogo público.</small>
+              <small style="color:#666;font-size:11px">Preenchido automaticamente ao selecionar Marca + Modelo + Ano (via API FIPE). Edite se quiser.</small>
             </div>
           </div>
           <div class="form-row">
@@ -370,7 +376,7 @@
                   Selecionar Imagens
                   <input type="file" accept="image/*" multiple (change)="onFilesSelected($event)" [disabled]="uploadingImage" />
                 </label>
-                <span class="upload-hint">JPG, PNG, GIF ou WEBP (max 5MB cada) - Sem limite de fotos</span>
+                <span class="upload-hint">JPG, PNG, GIF ou WEBP (máx 5MB cada) — limite de {{ MAX_IMAGENS }} imagens por veículo ({{ (imagens?.length || 0) + imagensPreview.length }}/{{ MAX_IMAGENS }} usadas)</span>
               </div>
 
               @if (imagensPreview.length > 0) {
@@ -443,7 +449,7 @@
             Selecionar Imagens
             <input type="file" accept="image/*" multiple (change)="onFilesSelected($event)" [disabled]="uploadingImage" />
           </label>
-          <span class="upload-hint">JPG, PNG, GIF ou WEBP (max 5MB cada) - Selecione múltiplas imagens</span>
+          <span class="upload-hint">JPG, PNG, GIF ou WEBP (máx 5MB cada) — limite de {{ MAX_IMAGENS }} imagens por veículo ({{ (imagens?.length || 0) + imagensPreview.length }}/{{ MAX_IMAGENS }} usadas)</span>
         </div>
 
         @if (imagensPreview.length > 0) {
@@ -518,15 +524,6 @@
   (cancelar)="cancelarExclusao()">
 </app-confirm-modal>
 
-<app-confirm-modal
-  [show]="showConfirmImagemModal"
-  titulo="Excluir Imagem"
-  mensagem="Deseja realmente excluir esta imagem?"
-  textoBotaoConfirmar="Excluir"
-  tipo="warning"
-  (confirmar)="confirmarExclusaoImagem()"
-  (cancelar)="cancelarExclusaoImagem()">
-</app-confirm-modal>
 
 @if (showImportResult && importResult) {
   <div class="modal-overlay">
@@ -571,8 +568,8 @@
 }
 
 @if (showModeloImport) {
-  <div class="modal-overlay" (click)="showModeloImport = false">
-    <div class="modal modal-lg" (click)="$event.stopPropagation()">
+  <div class="modal-overlay">
+    <div class="modal modal-lg">
       <div class="modal-header">
         <h2><span class="material-icons">table_chart</span> Modelo de Importação</h2>
         <button class="btn-close" (click)="showModeloImport = false">
@@ -594,8 +591,8 @@
                 <th>Chassi</th>
                 <th>Cor</th>
                 <th>KM</th>
-                <th>Preco Compra</th>
-                <th>Preco Venda</th>
+                <th>Preço Compra</th>
+                <th>Preço Venda</th>
                 <th>Status</th>
                 <th>Loja</th>
                 <th>Categoria</th>
@@ -612,7 +609,7 @@
                 <td>15000</td>
                 <td>95000</td>
                 <td>115000</td>
-                <td>Disponivel</td>
+                <td>Disponível</td>
                 <td>Minha Loja</td>
                 <td>Sedan</td>
               </tr>
@@ -626,7 +623,7 @@
                 <td>8000</td>
                 <td>120000</td>
                 <td>145000</td>
-                <td>Disponivel</td>
+                <td>Disponível</td>
                 <td>Minha Loja</td>
                 <td>Sedan</td>
               </tr>
@@ -640,7 +637,7 @@
                 <td>32000</td>
                 <td>55000</td>
                 <td>68000</td>
-                <td>Disponivel</td>
+                <td>Disponível</td>
                 <td>Minha Loja</td>
                 <td>Hatch</td>
               </tr>
@@ -651,7 +648,7 @@
           <strong>Observações:</strong>
           <ul style="margin: 8px 0 0 16px; padding: 0;">
             <li><strong>Marca</strong> e <strong>Modelo</strong> são obrigatórios</li>
-            <li><strong>Status</strong>: Disponivel, Vendido ou Reservado</li>
+            <li><strong>Status</strong>: Disponível, Vendido ou Reservado</li>
             <li><strong>Loja</strong> e <strong>Categoria</strong>: use o nome exato cadastrado no sistema</li>
             <li>Preços devem ser numéricos, sem "R$" ou pontos de milhar</li>
           </ul>
@@ -669,8 +666,8 @@
 
 <!-- Modal: Consultar Detran -->
 @if (showDetranModal && detranVeiculo) {
-  <div class="modal-overlay" (click)="fecharConsultaDetran()">
-    <div class="modal" (click)="$event.stopPropagation()">
+  <div class="modal-overlay">
+    <div class="modal">
       <div class="modal-header">
         <h2><span class="material-icons">gavel</span> Consultar débitos no Detran</h2>
         <button class="modal-close" (click)="fecharConsultaDetran()"><span class="material-icons">close</span></button>

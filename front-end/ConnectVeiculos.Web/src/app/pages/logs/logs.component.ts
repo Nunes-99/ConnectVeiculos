@@ -29,8 +29,15 @@ export class LogsComponent implements OnInit {
   // Filtros
   filtroTabela = '';
   filtroAcao = '';
-  filtroDataInicio = '';
-  filtroDataFim = '';
+  // Default: ultimos 30 dias ate hoje. Formato YYYY-MM-DD pra <input type="date">.
+  filtroDataInicio = this.calcularDataInicioPadrao();
+  filtroDataFim = new Date().toISOString().slice(0, 10);
+
+  private calcularDataInicioPadrao(): string {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().slice(0, 10);
+  }
 
   tabelas: string[] = [];
   acoes: string[] = [];
@@ -92,8 +99,9 @@ export class LogsComponent implements OnInit {
   limparFiltros(): void {
     this.filtroTabela = '';
     this.filtroAcao = '';
-    this.filtroDataInicio = '';
-    this.filtroDataFim = '';
+    // Volta pro default de 30 dias em vez de limpar — usuario raramente quer ver TUDO o historico.
+    this.filtroDataInicio = this.calcularDataInicioPadrao();
+    this.filtroDataFim = new Date().toISOString().slice(0, 10);
     this.page = 1;
     this.loadData();
   }

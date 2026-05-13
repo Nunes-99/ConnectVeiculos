@@ -29,6 +29,7 @@ namespace ConnectVeiculos.API.Extensions
             services.AddScoped<LimparNotificacoesAntigasJob>();
             services.AddScoped<AtualizarCacheFipeJob>();
             services.AddScoped<AlertarDocumentosVencendoJob>();
+            services.AddScoped<LembreteTestDriveJob>();
             services.AddScoped<LimparTokensRecuperacaoJob>();
 
             return services;
@@ -74,6 +75,12 @@ namespace ConnectVeiculos.API.Extensions
                 "alertar-documentos-vencendo",
                 job => job.ExecuteAsync(),
                 Cron.Daily(8));
+
+            // Lembrete WhatsApp de test drives confirmados pra amanha - Diariamente as 9h
+            RecurringJob.AddOrUpdate<LembreteTestDriveJob>(
+                "lembrete-testdrive",
+                job => job.ExecuteAsync(),
+                Cron.Daily(9));
 
             // Limpar tokens de recuperacao expirados - Diariamente as 4h
             RecurringJob.AddOrUpdate<LimparTokensRecuperacaoJob>(

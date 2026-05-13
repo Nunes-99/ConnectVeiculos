@@ -53,6 +53,10 @@ export class ScannerDocumentoComponent implements OnDestroy {
   qrScanner: Html5Qrcode | null = null;
   qrAtivo = false;
 
+  limiteAtingido = false;
+  limiteMensagem: string | null = null;
+  limiteProximoReset: string | null = null;
+
   setAba(a: Aba): void {
     if (this.aba === a) return;
     this.pararQr();
@@ -91,7 +95,16 @@ export class ScannerDocumentoComponent implements OnDestroy {
         this.resultado = resp;
       }
     } catch (err: any) {
-      this.erro = err?.error?.message || err?.message || 'Falha ao processar a imagem.';
+      if (err?.status === 429 || err?.error?.codigo === 'limite_diario') {
+        this.limiteAtingido = true;
+        this.limiteMensagem = err?.error?.message || 'Limite diario de scans atingido. Por favor, preencha os dados manualmente.';
+        this.limiteProximoReset = err?.error?.proximoResetBr || err?.error?.proximoResetUtc || null;
+        this.fotoPreview = null;
+        this.erro = null;
+        this.pararQr();
+      } else {
+        this.erro = err?.error?.message || err?.message || 'Falha ao processar a imagem.';
+      }
     } finally {
       this.loading = false;
     }
@@ -139,24 +152,51 @@ export class ScannerDocumentoComponent implements OnDestroy {
     await this.pararQr();
     this.erro = null;
 
-    // QR do CRLV-e geralmente e uma URL para validacao no SERPRO.
-    // Tentamos parsear como JSON estruturado primeiro (alguns sistemas exportam assim).
+    // 1) Tenta parsear como JSON estruturado (alguns sistemas exportam assim)
     try {
       const parsed = JSON.parse(texto);
       this.resultado = { ...parsed, confianca: 'ALTA' };
       return;
     } catch { /* nao e JSON */ }
 
-    // URL → so guarda como verificacao e avisa que precisa OCR pra extrair campos
+    // 2) URL HTTP — link de validacao no SERPRO
+    if (/^https?:\/\//i.test(texto)) {
+      this.resultado = {
+        qrUrl: texto,
+        confianca: 'ALTA',
+        aviso: 'QR contém apenas link de verificação no SERPRO. Use a aba "Foto" para extrair os dados do veículo.'
+      };
+      return;
+    }
+
+    // 3) Payload binário/assinado (caso típico do QR GRANDE do CRLV-e)
+    //    Detectado por presença de bytes não-imprimíveis ou caractere de substituição
+    const bytesInvalidos = /[\x00-\x08\x0e-\x1f�]/.test(texto);
+    if (bytesInvalidos || texto.length > 500) {
+      this.resultado = {
+        confianca: 'ALTA',
+        aviso: 'QR detectado, mas é o QR grande do CRLV-e (contém assinatura digital binária do SERPRO, não legível como texto). Volte na aba "Foto" e tire uma foto do CRLV — a IA extrai placa, chassi, marca e modelo automaticamente.'
+      };
+      return;
+    }
+
+    // 4) Texto curto/legível mas desconhecido — pode ser identificador interno
     this.resultado = {
       qrUrl: texto,
-      confianca: 'ALTA',
-      aviso: 'QR contem apenas link de verificacao no SERPRO. Use a aba "Foto" para extrair os dados do veiculo.'
+      confianca: 'BAIXA',
+      aviso: 'QR detectado mas formato não reconhecido. Use a aba "Foto" para extrair os dados do CRLV.'
     };
   }
 
+  temDadosUteis(): boolean {
+    if (!this.resultado) return false;
+    return !!(this.resultado.placa || this.resultado.chassi || this.resultado.marca
+           || this.resultado.modelo || this.resultado.anoFabricacao || this.resultado.anoModelo
+           || this.resultado.cor || this.resultado.proprietarioNome);
+  }
+
   usarResultado(): void {
-    if (this.resultado) {
+    if (this.resultado && this.temDadosUteis()) {
       this.extraido.emit(this.resultado);
       this.fechar.emit();
       this.reset();
@@ -174,5 +214,18 @@ export class ScannerDocumentoComponent implements OnDestroy {
     this.fotoPreview = null;
     this.erro = null;
     this.aba = 'foto';
+    this.limiteAtingido = false;
+    this.limiteMensagem = null;
+    this.limiteProximoReset = null;
+  }
+
+  formatarReset(): string {
+    if (!this.limiteProximoReset) return '';
+    try {
+      const d = new Date(this.limiteProximoReset);
+      return d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    } catch {
+      return this.limiteProximoReset;
+    }
   }
 }

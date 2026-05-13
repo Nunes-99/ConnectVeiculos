@@ -20,7 +20,7 @@ namespace ConnectVeiculos.Application.UseCases.Categorias
             var categoria = await _categoriaRepository.GetByIdAsync(id);
 
             if (categoria == null)
-                throw new Exception("Categoria nao encontrada.");
+                throw new Exception("Categoria não encontrada.");
 
             _unitOfWork.BeginTransaction();
 

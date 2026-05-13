@@ -105,19 +105,19 @@ namespace ConnectVeiculos.API.Controllers
 
             if (request == null)
             {
-                erro = "Dados de simulacao sao obrigatorios.";
+                erro = "Dados de simulação são obrigatórios.";
                 return false;
             }
 
             if (request.ValorVeiculo <= 0)
             {
-                erro = "O valor do veiculo deve ser maior que zero.";
+                erro = "O valor do veículo deve ser maior que zero.";
                 return false;
             }
 
             if (request.Entrada < 0 || request.Entrada >= request.ValorVeiculo)
             {
-                erro = "A entrada deve ser maior ou igual a zero e menor que o valor do veiculo.";
+                erro = "A entrada deve ser maior ou igual a zero e menor que o valor do veículo.";
                 return false;
             }
 

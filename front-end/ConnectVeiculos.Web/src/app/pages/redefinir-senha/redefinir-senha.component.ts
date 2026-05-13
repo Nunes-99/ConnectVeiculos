@@ -37,7 +37,7 @@ export class RedefinirSenhaComponent implements OnInit {
     this.erro = '';
 
     if (!this.token) {
-      this.erro = 'Token e obrigatorio';
+      this.erro = 'Token é obrigatório';
       return;
     }
 
@@ -47,7 +47,7 @@ export class RedefinirSenhaComponent implements OnInit {
     }
 
     if (this.novaSenha !== this.confirmarSenha) {
-      this.erro = 'As senhas nao conferem';
+      this.erro = 'As senhas não conferem';
       return;
     }
 

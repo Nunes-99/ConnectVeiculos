@@ -68,6 +68,19 @@ export class RegistroComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.slideInterval = setInterval(() => this.nextSlide(), 5000);
+    // Reset explicito — browsers podem ignorar autocomplete="off" e preencher
+    // o form com credenciais salvas anteriormente. Garantia adicional.
+    this.form.reset({
+      nomeEmpresa: '',
+      nomeAdmin: '',
+      email: '',
+      senha: '',
+      confirmacaoSenha: ''
+    });
+    this.errorMessage = '';
+    this.successMessage = '';
+    this.mostrarSenha = false;
+    this.mostrarConfirmacao = false;
   }
 
   ngOnDestroy(): void {

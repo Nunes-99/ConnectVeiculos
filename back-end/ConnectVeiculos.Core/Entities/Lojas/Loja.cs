@@ -28,6 +28,7 @@ namespace ConnectVeiculos.Core.Entities.Lojas
         public string LojInstagram { get; private set; }
         public string LojFacebook { get; private set; }
         public string LojUrlCatalogo { get; private set; }
+        public bool LojPadraoCatalogo { get; private set; }
 
         public Loja() { }
 
@@ -37,11 +38,12 @@ namespace ConnectVeiculos.Core.Entities.Lojas
             string lojWhatsApp, string lojImg, string lojCNPJ, string lojIE, bool lojSts,
             string lojCorPrimaria = null, string lojCorSecundaria = null,
             string lojInstagram = null, string lojFacebook = null,
-            string lojSlug = null, string lojUrlCatalogo = null)
+            string lojSlug = null, string lojUrlCatalogo = null,
+            bool lojPadraoCatalogo = false)
         {
             SetProperties(lojId, lojNome, lojLogradouro, lojNumero, lojBairro, lojCidade,
                 lojEstado, lojCEP, lojComplemento, lojEmail, lojTel1, lojTel2, lojWhatsApp, lojImg,
-                lojCNPJ, lojIE, lojSts, lojCorPrimaria, lojCorSecundaria, lojInstagram, lojFacebook, lojSlug, lojUrlCatalogo);
+                lojCNPJ, lojIE, lojSts, lojCorPrimaria, lojCorSecundaria, lojInstagram, lojFacebook, lojSlug, lojUrlCatalogo, lojPadraoCatalogo);
         }
 
         public void SetProperties(int lojId, string lojNome, string lojLogradouro, string lojNumero,
@@ -50,7 +52,8 @@ namespace ConnectVeiculos.Core.Entities.Lojas
             string lojWhatsApp, string lojImg, string lojCNPJ, string lojIE, bool lojSts,
             string lojCorPrimaria = null, string lojCorSecundaria = null,
             string lojInstagram = null, string lojFacebook = null,
-            string lojSlug = null, string lojUrlCatalogo = null)
+            string lojSlug = null, string lojUrlCatalogo = null,
+            bool lojPadraoCatalogo = false)
         {
             LojId = lojId;
             LojNome = lojNome;
@@ -75,6 +78,7 @@ namespace ConnectVeiculos.Core.Entities.Lojas
             LojInstagram = lojInstagram;
             LojFacebook = lojFacebook;
             LojUrlCatalogo = lojUrlCatalogo;
+            LojPadraoCatalogo = lojPadraoCatalogo;
 
             Validate();
         }
@@ -82,6 +86,11 @@ namespace ConnectVeiculos.Core.Entities.Lojas
         public void SetUrlCatalogo(string url)
         {
             LojUrlCatalogo = url;
+        }
+
+        public void DefinirComoPadraoCatalogo(bool padrao)
+        {
+            LojPadraoCatalogo = padrao;
         }
 
         private void Validate()

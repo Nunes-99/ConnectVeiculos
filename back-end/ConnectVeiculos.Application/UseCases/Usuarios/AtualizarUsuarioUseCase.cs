@@ -34,7 +34,7 @@ namespace ConnectVeiculos.Application.UseCases.Usuarios
             var usuario = await _usuarioRepository.GetByIdAsync(inputModel.UsuId);
 
             if (usuario == null)
-                throw new DomainException("Usuario nao encontrado.");
+                throw new DomainException("Usuário não encontrado.");
 
             // Verificar se email mudou e já existe em outro usuário
             if (usuario.UsuEmail != inputModel.UsuEmail)

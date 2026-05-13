@@ -6,12 +6,12 @@
 <div class="financiamento-layout">
   <!-- Formulario -->
   <div class="form-card">
-    <h3>Dados da Simulacao</h3>
+    <h3>Dados da Simulação</h3>
 
     <div class="form-group">
-      <label class="required">Veiculo</label>
+      <label class="required">Veículo</label>
       <select [(ngModel)]="veiculoSelecionadoId" (ngModelChange)="onVeiculoChange()">
-        <option [ngValue]="null">Selecione um veiculo</option>
+        <option [ngValue]="null">Selecione um veículo</option>
         @for (v of veiculos; track v.veiId) {
           <option [ngValue]="v.veiId">{{ v.veiMarca }} {{ v.veiModelo }} {{ v.veiAno }} - {{ formatarMoeda(v.veiPreco) }}</option>
         }
@@ -21,7 +21,7 @@
     @if (veiculoSelecionado) {
       <div class="veiculo-info">
         <div class="info-item">
-          <small>Valor do Veiculo</small>
+          <small>Valor do Veículo</small>
           <strong>{{ formatarMoeda(veiculoSelecionado.veiPreco) }}</strong>
         </div>
         <div class="info-item">
@@ -65,14 +65,14 @@
         <option value="TODOS">Todos os bancos</option>
         @for (banco of bancos; track banco.codigoBanco) {
           <option [value]="banco.codigoBanco" [disabled]="!banco.configurado">
-            {{ banco.nomeBanco }}{{ banco.configurado ? '' : ' (nao configurado)' }}
+            {{ banco.nomeBanco }}{{ banco.configurado ? '' : ' (não configurado)' }}
           </option>
         }
       </select>
       @if (bancos.length > 0 && !bancos.some(b => b.configurado)) {
         <small class="banco-aviso">
           <span class="material-icons">info</span>
-          Nenhum banco configurado. Configure as credenciais em Integracoes para ativar.
+          Nenhum banco configurado. Configure as credenciais em Integrações para ativar.
         </small>
       }
     </div>
@@ -107,7 +107,7 @@
             <div class="resultado-header">
               <strong>{{ r.banco }}</strong>
               <span class="status-chip" [class.approved]="r.aprovado">
-                {{ r.aprovado ? 'Pre-aprovado' : 'Nao aprovado' }}
+                {{ r.aprovado ? 'Pré-aprovado' : 'Não aprovado' }}
               </span>
             </div>
             @if (r.aprovado) {
@@ -138,7 +138,7 @@
     @if (simulado && resultados.length === 0) {
       <div class="empty-state">
         <span class="material-icons">sentiment_dissatisfied</span>
-        <p>Nenhum banco retornou proposta para esta simulacao.</p>
+        <p>Nenhum banco retornou proposta para esta simulação.</p>
       </div>
     }
   </div>

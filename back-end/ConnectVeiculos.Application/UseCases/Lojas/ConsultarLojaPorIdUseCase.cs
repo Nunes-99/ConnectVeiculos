@@ -44,7 +44,8 @@ namespace ConnectVeiculos.Application.UseCases.Lojas
                 LojInstagram = loja.LojInstagram,
                 LojFacebook = loja.LojFacebook,
                 LojSlug = loja.LojSlug,
-                LojUrlCatalogo = loja.LojUrlCatalogo
+                LojUrlCatalogo = loja.LojUrlCatalogo,
+                LojPadraoCatalogo = loja.LojPadraoCatalogo
             };
         }
     }

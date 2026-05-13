@@ -41,7 +41,7 @@ namespace ConnectVeiculos.API.Controllers
         {
             var categoria = await consultarCategoriaPorIdUseCase.Execute(id);
             if (categoria == null)
-                return NotFound("Categoria nao encontrada.");
+                return NotFound("Categoria não encontrada.");
             return Ok(categoria);
         }
 
@@ -55,7 +55,7 @@ namespace ConnectVeiculos.API.Controllers
             [FromBody] CategoriaInputModel inputModel)
         {
             if (inputModel == null)
-                return BadRequest("Dados da categoria nao informados.");
+                return BadRequest("Dados da categoria não informados.");
 
             var id = await cadastrarCategoriaUseCase.Execute(inputModel);
             return CreatedAtAction(nameof(ConsultarCategoriaPorId), new { id }, new { id });
@@ -72,7 +72,7 @@ namespace ConnectVeiculos.API.Controllers
             [FromBody] CategoriaInputModel inputModel)
         {
             if (inputModel == null)
-                return BadRequest("Dados da categoria nao informados.");
+                return BadRequest("Dados da categoria não informados.");
 
             inputModel.CatId = id;
             await atualizarCategoriaUseCase.Execute(inputModel);

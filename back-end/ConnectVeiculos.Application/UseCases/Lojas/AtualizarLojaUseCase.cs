@@ -21,7 +21,7 @@ namespace ConnectVeiculos.Application.UseCases.Lojas
             var loja = await _lojaRepository.GetByIdAsync(inputModel.LojId);
 
             if (loja == null)
-                throw new Exception("Loja nao encontrada.");
+                throw new Exception("Loja não encontrada.");
 
             loja.SetProperties(
                 inputModel.LojId,
@@ -46,7 +46,8 @@ namespace ConnectVeiculos.Application.UseCases.Lojas
                 inputModel.LojInstagram,
                 inputModel.LojFacebook,
                 inputModel.LojSlug,
-                inputModel.LojUrlCatalogo
+                inputModel.LojUrlCatalogo,
+                inputModel.LojPadraoCatalogo
             );
 
             _unitOfWork.BeginTransaction();
@@ -62,6 +63,18 @@ namespace ConnectVeiculos.Application.UseCases.Lojas
                     foreach (var outraLoja in todasLojas.Where(l => l.LojId != inputModel.LojId))
                     {
                         outraLoja.SetUrlCatalogo(inputModel.LojUrlCatalogo);
+                        await _lojaRepository.UpdateAsync(outraLoja);
+                    }
+                }
+
+                // Apenas uma loja pode ser a padrao do catalogo — ao marcar uma,
+                // desmarca todas as outras pra manter exclusividade.
+                if (inputModel.LojPadraoCatalogo)
+                {
+                    var todasLojas = await _lojaRepository.GetAllAsync();
+                    foreach (var outraLoja in todasLojas.Where(l => l.LojId != inputModel.LojId && l.LojPadraoCatalogo))
+                    {
+                        outraLoja.DefinirComoPadraoCatalogo(false);
                         await _lojaRepository.UpdateAsync(outraLoja);
                     }
                 }

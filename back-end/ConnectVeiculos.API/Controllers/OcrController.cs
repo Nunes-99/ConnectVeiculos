@@ -97,10 +97,10 @@ namespace ConnectVeiculos.API.Controllers
         {
             var geminiKey = await ResolverChaveAsync();
             if (string.IsNullOrEmpty(geminiKey))
-                return StatusCode(503, new { message = "OCR nao configurado. Cadastre a chave do Google Gemini em /integracoes (admin)." });
+                return StatusCode(503, new { message = "OCR não configurado. Cadastre a chave do Google Gemini em /integracoes (admin)." });
 
             if (req == null || string.IsNullOrWhiteSpace(req.ImagemBase64))
-                return BadRequest(new { message = "Imagem em base64 e obrigatoria." });
+                return BadRequest(new { message = "Imagem em base64 é obrigatória." });
 
             var (mediaType, base64Data) = SepararDataUrl(req.ImagemBase64);
 
@@ -167,19 +167,31 @@ REGRAS:
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro chamando Gemini API");
-                return StatusCode(502, new { message = "Falha na chamada ao servico de OCR.", detail = ex.Message });
+                return StatusCode(502, new { message = "Falha na chamada ao serviço de OCR.", detail = ex.Message });
             }
 
             var respBody = await resp.Content.ReadAsStringAsync(ct);
             if (!resp.IsSuccessStatusCode)
             {
                 _logger.LogWarning("Gemini API retornou {Status}: {Body}", (int)resp.StatusCode, respBody);
+
+                if ((int)resp.StatusCode == 429)
+                {
+                    var (resetUtc, resetLocalBr) = CalcularProximoResetGemini();
+                    return StatusCode(429, new
+                    {
+                        message = $"Limite diário de scans atingido. O sistema voltará a funcionar em {resetLocalBr:dd/MM/yyyy 'as' HH:mm} (horário de Brasília). Por favor, preencha os dados do veículo manualmente.",
+                        codigo = "limite_diario",
+                        proximoResetUtc = resetUtc.ToString("o"),
+                        proximoResetBr = resetLocalBr.ToString("o")
+                    });
+                }
+
                 var friendlyMsg = (int)resp.StatusCode switch
                 {
-                    429 => "Limite diario do Gemini atingido (1500 requests/dia). Tente amanha ou peca para o admin trocar a chave.",
                     400 => "Imagem invalida ou requisicao mal-formada.",
                     403 => "Chave do Gemini invalida ou sem permissao. Verifique no console do Google AI Studio.",
-                    _ => "Erro do servico de OCR."
+                    _ => "Erro do serviço de OCR."
                 };
                 return StatusCode((int)resp.StatusCode, new { message = friendlyMsg, detail = respBody });
             }
@@ -206,7 +218,7 @@ REGRAS:
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Falha ao parsear resposta do Gemini: {Body}", respBody);
-                return StatusCode(502, new { message = "Resposta invalida do OCR.", raw = respBody });
+                return StatusCode(502, new { message = "Resposta inválida do OCR.", raw = respBody });
             }
 
             if (string.IsNullOrWhiteSpace(extractedJson))
@@ -282,7 +294,7 @@ REGRAS:
         public async Task<IActionResult> SetConfig([FromBody] GeminiConfigRequest req)
         {
             if (req == null || string.IsNullOrWhiteSpace(req.Chave))
-                return BadRequest(new { message = "Chave e obrigatoria." });
+                return BadRequest(new { message = "Chave é obrigatória." });
             if (!req.Chave.StartsWith("AIza"))
                 return BadRequest(new { message = "Chave Gemini deve comecar com 'AIza'." });
 
@@ -300,6 +312,27 @@ REGRAS:
         {
             await _configRepo.SetValorAsync(ConfigKeyGemini, "");
             return Ok(new { mensagem = "Chave removida." });
+        }
+
+        // Quota gratuita do Gemini reseta a meia-noite no horario do Pacifico (PT).
+        // PT = UTC-8 (PST) no inverno, UTC-7 (PDT) no verao (DST).
+        private static (DateTime utc, DateTimeOffset brasilia) CalcularProximoResetGemini()
+        {
+            TimeZoneInfo pacific;
+            try { pacific = TimeZoneInfo.FindSystemTimeZoneById("America/Los_Angeles"); }
+            catch { pacific = TimeZoneInfo.FindSystemTimeZoneById("Pacific Standard Time"); }
+
+            var agoraPt = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, pacific);
+            var proximaMeiaNoitePt = new DateTime(agoraPt.Year, agoraPt.Month, agoraPt.Day, 0, 0, 0, DateTimeKind.Unspecified).AddDays(1);
+            var proximoResetUtc = TimeZoneInfo.ConvertTimeToUtc(proximaMeiaNoitePt, pacific);
+
+            TimeZoneInfo brasilia;
+            try { brasilia = TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo"); }
+            catch { brasilia = TimeZoneInfo.FindSystemTimeZoneById("E. South America Standard Time"); }
+
+            var brasiliaDt = TimeZoneInfo.ConvertTimeFromUtc(proximoResetUtc, brasilia);
+            var offset = brasilia.GetUtcOffset(proximoResetUtc);
+            return (proximoResetUtc, new DateTimeOffset(brasiliaDt, offset));
         }
 
         private static (string mediaType, string base64) SepararDataUrl(string input)

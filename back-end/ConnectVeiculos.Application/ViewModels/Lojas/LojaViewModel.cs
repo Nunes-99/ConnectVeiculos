@@ -25,5 +25,6 @@ namespace ConnectVeiculos.Application.ViewModels.Lojas
         public string LojFacebook { get; set; }
         public string LojSlug { get; set; }
         public string LojUrlCatalogo { get; set; }
+        public bool LojPadraoCatalogo { get; set; }
     }
 }

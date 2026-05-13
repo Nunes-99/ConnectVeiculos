@@ -71,7 +71,7 @@ namespace ConnectVeiculos.API.Controllers
             var preco = await _fipeService.GetPrecoAsync(tipoEnum, codigoMarca, codigoModelo, codigoAno);
 
             if (preco == null)
-                return NotFound("Preco nao encontrado na tabela FIPE.");
+                return NotFound("Preço não encontrado na tabela FIPE.");
 
             return Ok(preco);
         }

@@ -1,4 +1,5 @@
 using ConnectVeiculos.Core.Entities.TestDrives;
+using ConnectVeiculos.Core.Interfaces.Services;
 using ConnectVeiculos.Infrastructure.Database.EntityFramework;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -24,7 +25,7 @@ namespace ConnectVeiculos.API.Controllers
             if (string.IsNullOrWhiteSpace(request.NomeCliente) || string.IsNullOrWhiteSpace(request.Telefone))
                 return BadRequest("Nome e telefone sao obrigatorios.");
             if (request.DataAgendamento < DateTime.Today)
-                return BadRequest("Data de agendamento nao pode ser no passado.");
+                return BadRequest("Data de agendamento não pode ser no passado.");
             if (!string.IsNullOrWhiteSpace(request.Email) && !request.Email.Contains('@'))
                 return BadRequest("E-mail invalido.");
 
@@ -59,16 +60,34 @@ namespace ConnectVeiculos.API.Controllers
             return Ok(result);
         }
 
-        // PUT - atualizar status
+        // PUT - atualizar status. Dispara notificacao WhatsApp se aplicavel.
         [HttpPut("{id}/status")]
         [Authorize]
-        public async Task<IActionResult> AtualizarStatus(int id, [FromBody] AtualizarStatusRequest request)
+        public async Task<IActionResult> AtualizarStatus(
+            int id,
+            [FromBody] AtualizarStatusRequest request,
+            [FromServices] ITestDriveNotificacaoService notificacao)
         {
             var testDrive = await _context.TestDrives.FindAsync(id);
             if (testDrive == null) return NotFound();
             testDrive.AlterarStatus(request.Status);
             await _context.SaveChangesAsync();
-            return NoContent();
+
+            // Notifica cliente via WhatsApp apenas pra Confirmacao (C) e Cancelamento (X).
+            // Realizado (R) e Pendente (P) nao geram mensagem.
+            TestDriveNotificacaoResult? notif = null;
+            if (request.Status == "C")
+                notif = await notificacao.NotificarConfirmacaoAsync(testDrive);
+            else if (request.Status == "X")
+                notif = await notificacao.NotificarCancelamentoAsync(testDrive);
+
+            return Ok(new
+            {
+                statusAtualizado = true,
+                notificacao = notif == null
+                    ? new { aplicavel = false, enviada = false, motivo = "nao-aplicavel", erro = (string?)null }
+                    : new { aplicavel = true, enviada = notif.Enviada, motivo = notif.Motivo, erro = notif.MensagemErro }
+            });
         }
     }
 

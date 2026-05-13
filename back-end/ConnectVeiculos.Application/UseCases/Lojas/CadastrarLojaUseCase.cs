@@ -42,7 +42,8 @@ namespace ConnectVeiculos.Application.UseCases.Lojas
                 inputModel.LojInstagram,
                 inputModel.LojFacebook,
                 inputModel.LojSlug,
-                inputModel.LojUrlCatalogo
+                inputModel.LojUrlCatalogo,
+                inputModel.LojPadraoCatalogo
             );
 
             _unitOfWork.BeginTransaction();
@@ -58,6 +59,17 @@ namespace ConnectVeiculos.Application.UseCases.Lojas
                     foreach (var outraLoja in todasLojas.Where(l => l.LojId != id))
                     {
                         outraLoja.SetUrlCatalogo(inputModel.LojUrlCatalogo);
+                        await _lojaRepository.UpdateAsync(outraLoja);
+                    }
+                }
+
+                // Exclusividade da loja padrao do catalogo
+                if (inputModel.LojPadraoCatalogo)
+                {
+                    var todasLojas = await _lojaRepository.GetAllAsync();
+                    foreach (var outraLoja in todasLojas.Where(l => l.LojId != id && l.LojPadraoCatalogo))
+                    {
+                        outraLoja.DefinirComoPadraoCatalogo(false);
                         await _lojaRepository.UpdateAsync(outraLoja);
                     }
                 }

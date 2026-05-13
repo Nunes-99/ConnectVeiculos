@@ -27,7 +27,7 @@ namespace ConnectVeiculos.API.Controllers
         {
             var key = _pushService.GetPublicKey();
             if (string.IsNullOrEmpty(key))
-                return BadRequest(new { error = "Push notifications nao configurado (VAPID_PUBLIC_KEY ausente)." });
+                return BadRequest(new { error = "Push notifications não configurado (VAPID_PUBLIC_KEY ausente)." });
             return Ok(new { publicKey = key });
         }
 

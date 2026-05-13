@@ -25,12 +25,12 @@ namespace ConnectVeiculos.Application.UseCases.RecuperacaoSenha
 
             if (recuperacao == null)
             {
-                throw new InputModelException("Token invalido ou expirado.");
+                throw new InputModelException("Token inválido ou expirado.");
             }
 
             if (!recuperacao.IsValido())
             {
-                throw new InputModelException("Token invalido ou expirado.");
+                throw new InputModelException("Token inválido ou expirado.");
             }
 
             // Hash da nova senha com BCrypt

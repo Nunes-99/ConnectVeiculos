@@ -20,7 +20,7 @@ namespace ConnectVeiculos.Application.UseCases.Acessos
             var acesso = await _acessoRepository.GetByIdAsync(id);
 
             if (acesso == null)
-                throw new Exception("Acesso nao encontrado.");
+                throw new Exception("Acesso não encontrado.");
 
             _unitOfWork.BeginTransaction();
 

@@ -173,6 +173,8 @@ export class UsuariosComponent implements OnInit {
     } else {
       this.lojasSelecionadas = new Set();
       this.resetForm();
+      this.emailStatus = 'idle';
+      this.emailMensagem = '';
     }
     this.showModal = true;
   }

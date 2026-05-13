@@ -111,6 +111,7 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
                 entity.Property(e => e.LojSlug).HasMaxLength(100);
                 entity.HasIndex(e => e.LojSlug).IsUnique();
                 entity.Property(e => e.LojUrlCatalogo).HasMaxLength(500);
+                entity.Property(e => e.LojPadraoCatalogo).HasDefaultValue(false);
             });
 
             // LojaUsuario

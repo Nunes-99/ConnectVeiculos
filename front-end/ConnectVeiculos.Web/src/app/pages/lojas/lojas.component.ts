@@ -26,10 +26,22 @@ export class LojasComponent implements OnInit {
   private sanitizer = inject(DomSanitizer);
   private authService = inject(AuthService);
 
+  urlCopiada = false;
+
   urlCatalogoPublico(): string {
     const slug = this.authService.getTenantSlug() || '';
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://connectveiculos.dev.br';
     return slug ? `${origin}/catalogo/${slug}` : `${origin}/catalogo`;
+  }
+
+  copiarUrlCatalogo(): void {
+    const url = this.urlCatalogoPublico();
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(() => {
+        this.urlCopiada = true;
+        setTimeout(() => this.urlCopiada = false, 2500);
+      });
+    }
   }
 
   lojas: Loja[] = [];
@@ -77,7 +89,8 @@ export class LojasComponent implements OnInit {
     lojImg: [''],
     lojInstagram: [''],
     lojFacebook: [''],
-    lojUrlCatalogo: ['', Validators.maxLength(500)]
+    lojUrlCatalogo: ['', Validators.maxLength(500)],
+    lojPadraoCatalogo: [false]
   });
 
   ngOnInit(): void {
@@ -126,7 +139,8 @@ export class LojasComponent implements OnInit {
         lojImg: loja.lojImg || '',
         lojInstagram: loja.lojInstagram || '',
         lojFacebook: loja.lojFacebook || '',
-        lojUrlCatalogo: loja.lojUrlCatalogo || ''
+        lojUrlCatalogo: loja.lojUrlCatalogo || '',
+        lojPadraoCatalogo: loja.lojPadraoCatalogo ?? false
       });
       this.logoPreview = loja.lojImg ? (loja.lojImg.startsWith('data:') ? loja.lojImg : this.imagemService.getImageUrl(loja.lojImg)) : null;
       this.logoFile = null;
@@ -134,7 +148,7 @@ export class LojasComponent implements OnInit {
       this.editId = null;
       // Herdar URL do catálogo da primeira loja existente
       const urlCatalogo = this.lojas.find(l => l.lojUrlCatalogo)?.lojUrlCatalogo || '';
-      this.form.reset({ lojSts: true, lojSlug: '', lojCorPrimaria: '#1a237e', lojCorSecundaria: '#25d366', lojImg: '', lojInstagram: '', lojFacebook: '', lojUrlCatalogo: urlCatalogo });
+      this.form.reset({ lojSts: true, lojSlug: '', lojCorPrimaria: '#1a237e', lojCorSecundaria: '#25d366', lojImg: '', lojInstagram: '', lojFacebook: '', lojUrlCatalogo: urlCatalogo, lojPadraoCatalogo: false });
       this.logoPreview = null;
       this.logoFile = null;
     }
@@ -145,7 +159,7 @@ export class LojasComponent implements OnInit {
 
   closeModal(): void {
     this.showModal = false;
-    this.form.reset({ lojSts: true, lojSlug: '', lojCorPrimaria: '#1a237e', lojCorSecundaria: '#25d366', lojImg: '', lojInstagram: '', lojFacebook: '', lojUrlCatalogo: '' });
+    this.form.reset({ lojSts: true, lojSlug: '', lojCorPrimaria: '#1a237e', lojCorSecundaria: '#25d366', lojImg: '', lojInstagram: '', lojFacebook: '', lojUrlCatalogo: '', lojPadraoCatalogo: false });
     this.editId = null;
     this.logoPreview = null;
     this.logoFile = null;
@@ -180,25 +194,32 @@ export class LojasComponent implements OnInit {
   }
 
   abrirPreVisualizacao(): void {
-    const slug = this.form.get('lojSlug')?.value;
-    const id = this.editId;
-    const param = slug || id;
+    // Catalogo publico agora e path-based por TENANT (nao mais por loja).
+    const tenant = this.authService.getTenantSlug() || 'default';
     const urlCatalogo = this.form.get('lojUrlCatalogo')?.value;
-    if (param) {
-      if (urlCatalogo) {
-        const baseUrl = urlCatalogo.endsWith('/') ? urlCatalogo.slice(0, -1) : urlCatalogo;
-        window.open(`${baseUrl}/catalogo/${param}`, '_blank');
-      } else {
-        window.open(`/catalogo/${param}`, '_blank');
-      }
+    if (urlCatalogo) {
+      const baseUrl = urlCatalogo.endsWith('/') ? urlCatalogo.slice(0, -1) : urlCatalogo;
+      window.open(`${baseUrl}/catalogo/${tenant}`, '_blank');
+    } else {
+      window.open(`/catalogo/${tenant}`, '_blank');
     }
   }
 
+  private _previewUrlCache: { tenant: string; url: SafeResourceUrl } | null = null;
+
   getPreviewUrl(): SafeResourceUrl {
-    const slug = this.form.get('lojSlug')?.value;
-    const id = this.editId;
-    const param = slug || id;
-    return this.sanitizer.bypassSecurityTrustResourceUrl(`/catalogo/${param}`);
+    // Catalogo publico agora e path-based por TENANT (nao mais por loja).
+    // IMPORTANTE: memoizado — sanitizer.bypassSecurityTrustResourceUrl retorna
+    // novo objeto a cada chamada, e Angular compara [src] por referencia → sem
+    // memoize, o iframe recarrega a cada change detection cycle.
+    const tenant = this.authService.getTenantSlug() || 'default';
+    if (!this._previewUrlCache || this._previewUrlCache.tenant !== tenant) {
+      this._previewUrlCache = {
+        tenant,
+        url: this.sanitizer.bypassSecurityTrustResourceUrl(`/catalogo/${tenant}`)
+      };
+    }
+    return this._previewUrlCache.url;
   }
 
   save(): void {

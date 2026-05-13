@@ -49,7 +49,7 @@ const FALLBACK: DetranLink = {
   uf: '',
   nome: 'Sinesp Cidadao',
   url: 'https://www.gov.br/pt-br/servicos/consultar-veiculo-pelo-aplicativo-sinesp-cidadao',
-  observacao: 'UF nao identificada — direcionado ao consulta federal Sinesp'
+  observacao: 'UF não identificada — direcionado ao consulta federal Sinesp'
 };
 
 /** Retorna o link do Detran do estado informado, ou Sinesp como fallback. */

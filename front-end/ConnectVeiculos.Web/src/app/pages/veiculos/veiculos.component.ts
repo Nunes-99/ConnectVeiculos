@@ -62,13 +62,77 @@ export class VeiculosComponent implements OnInit {
     if (dados.cor) patch.veiCor = dados.cor.charAt(0).toUpperCase() + dados.cor.slice(1).toLowerCase();
     if (dados.proprietarioNome) patch.veiDonoAtual = dados.proprietarioNome;
     this.form.patchValue(patch);
-    if (dados.marca) (this as any).buscaMarca = dados.marca;
-    if (dados.modelo) (this as any).buscaModelo = dados.modelo;
+    if (dados.marca) this.buscaMarca = dados.marca;
+    if (dados.modelo) this.buscaModelo = dados.modelo;
     this.toast.success('Dados do CRLV preenchidos. Revise e ajuste se necessário.');
     this.showScanner = false;
+
+    // Tenta resolver codigos FIPE pra disparar busca de preço automaticamente.
+    if (dados.marca) {
+      this.resolverFipeAposCrlv(dados.marca, dados.modelo || '');
+    }
   }
-  showConfirmImagemModal = false;
-  imagemParaExcluir: VeiculoImagem | null = null;
+
+  /**
+   * Resolve marca/modelo do CRLV via API FIPE (string → códigos) e dispara busca de preço.
+   * Espera marcasFipe carregar se necessário (chamada async no ngOnInit pode não ter terminado).
+   */
+  private resolverFipeAposCrlv(marcaStr: string, modeloStr: string, tentativasRestantes = 10): void {
+    // Aguarda marcasFipe ser populado (carrega async no ngOnInit). Retenta até 5s.
+    if (this.marcasFipe.length === 0) {
+      if (tentativasRestantes <= 0) {
+        console.warn('FIPE: marcas não carregaram após 5s, abortando resolução automática');
+        return;
+      }
+      setTimeout(() => this.resolverFipeAposCrlv(marcaStr, modeloStr, tentativasRestantes - 1), 500);
+      return;
+    }
+
+    const marcaNorm = marcaStr.trim().toLowerCase();
+    const marcaFipe = this.marcasFipe.find(m => {
+      const n = m.nome.toLowerCase();
+      return n === marcaNorm || n.includes(marcaNorm) || marcaNorm.includes(n);
+    });
+    if (!marcaFipe) {
+      this.toast.warning(`FIPE: marca "${marcaStr}" não encontrada na tabela. Preço FIPE não preenchido.`);
+      return;
+    }
+
+    this.marcaCodigoSelecionado = marcaFipe.codigo;
+    this.outroMarca = false;
+    this.buscaMarca = marcaFipe.nome;
+
+    this.fipeService.getModelos(marcaFipe.codigo).subscribe({
+      next: (modelos) => {
+        this.modelosFipe = modelos;
+        if (!modeloStr) { this.buscarPrecoFipe(); return; }
+
+        // Match por palavras em comum — pega o que tem mais tokens em comum.
+        const tokensCrlv = modeloStr.toLowerCase().split(/[\s\-/.()]+/).filter(t => t.length > 1);
+        let melhor: { modelo: FipeModelo; score: number } | null = null;
+        for (const m of modelos) {
+          const nome = m.nome.toLowerCase();
+          const score = tokensCrlv.filter(t => nome.includes(t)).length;
+          if (score > 0 && (!melhor || score > melhor.score)) {
+            melhor = { modelo: m, score };
+          }
+        }
+
+        if (melhor) {
+          this.modeloCodigoSelecionado = melhor.modelo.codigo;
+          this.outroModelo = false;
+          this.buscaModelo = melhor.modelo.nome;
+          this.form.patchValue({ veiModelo: melhor.modelo.nome });
+          this.buscarPrecoFipe();
+        } else {
+          this.toast.warning(`FIPE: modelo "${modeloStr}" não bateu com nenhum da FIPE. Escolha manualmente no dropdown se quiser preço FIPE.`);
+        }
+      },
+      error: () => {
+        this.toast.warning('FIPE indisponível no momento (API externa fora do ar). Tente preencher manualmente.');
+      }
+    });
+  }
 
   // Importacao
   importando = false;
@@ -226,8 +290,10 @@ export class VeiculosComponent implements OnInit {
           next: (modelos) => {
             this.modelosFipe = modelos;
             this.carregandoModelos = false;
-            this.outroModelo = !modelos.some(m => m.nome.toLowerCase() === veiculo.veiModelo.toLowerCase());
+            const modeloMatch = modelos.find(m => m.nome.toLowerCase() === veiculo.veiModelo.toLowerCase());
+            this.outroModelo = !modeloMatch;
             this.buscaModelo = veiculo.veiModelo;
+            if (modeloMatch) this.modeloCodigoSelecionado = modeloMatch.codigo;
           },
           error: () => { this.carregandoModelos = false; this.outroModelo = true; this.buscaModelo = veiculo.veiModelo; }
         });
@@ -393,26 +459,44 @@ export class VeiculosComponent implements OnInit {
     });
   }
 
+  readonly MAX_IMAGENS = 20;
+
   onFilesSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
       const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
       const maxSize = 5 * 1024 * 1024; // 5MB
+      const jaExistentes = (this.imagens?.length || 0) + this.imagensPreview.length;
+      const disponivel = this.MAX_IMAGENS - jaExistentes;
 
+      if (disponivel <= 0) {
+        this.toast.warning(`Limite de ${this.MAX_IMAGENS} imagens por veículo atingido. Remova alguma antes de adicionar mais.`);
+        input.value = '';
+        return;
+      }
+
+      let adicionadas = 0;
       for (let i = 0; i < input.files.length; i++) {
         const file = input.files[i];
 
+        if (adicionadas >= disponivel) {
+          this.toast.warning(`Limite de ${this.MAX_IMAGENS} imagens atingido. As demais não foram adicionadas.`);
+          break;
+        }
+
         // Validar tipo de arquivo
         if (!allowedTypes.includes(file.type)) {
-          this.toast.warning(`Arquivo "${file.name}" nao permitido. Use JPG, PNG, GIF ou WEBP.`);
+          this.toast.warning(`Arquivo "${file.name}" não permitido. Use JPG, PNG, GIF ou WEBP.`);
           continue;
         }
 
         // Validar tamanho (max 5MB)
         if (file.size > maxSize) {
-          this.toast.warning(`Arquivo "${file.name}" muito grande. Maximo 5MB.`);
+          this.toast.warning(`Arquivo "${file.name}" muito grande. Máximo 5MB.`);
           continue;
         }
+
+        adicionadas++;
 
         // Criar preview
         const reader = new FileReader();
@@ -461,27 +545,14 @@ export class VeiculosComponent implements OnInit {
   }
 
   removeImagem(imagem: VeiculoImagem): void {
-    this.imagemParaExcluir = imagem;
-    this.showConfirmImagemModal = true;
-  }
-
-  confirmarExclusaoImagem(): void {
-    if (this.imagemParaExcluir) {
-      this.imagemService.delete(this.imagemParaExcluir.imgId).subscribe({
-        next: () => {
-          const veiculoId = this.selectedVeiculo?.veiId || this.editId;
-          if (veiculoId) {
-            this.loadImagens(veiculoId);
-          }
-          this.cancelarExclusaoImagem();
+    this.imagemService.delete(imagem.imgId).subscribe({
+      next: () => {
+        const veiculoId = this.selectedVeiculo?.veiId || this.editId;
+        if (veiculoId) {
+          this.loadImagens(veiculoId);
         }
-      });
-    }
-  }
-
-  cancelarExclusaoImagem(): void {
-    this.showConfirmImagemModal = false;
-    this.imagemParaExcluir = null;
+      }
+    });
   }
 
   definirPrincipal(imagem: VeiculoImagem): void {
@@ -634,6 +705,7 @@ export class VeiculosComponent implements OnInit {
     this.outroModelo = false;
     this.marcaSelecionada = marca.nome;
     this.marcaCodigoSelecionado = marca.codigo;
+    this.modeloCodigoSelecionado = null;
     this.buscaMarca = marca.nome;
     this.buscaModelo = '';
     this.showDropdownMarca = false;
@@ -661,11 +733,58 @@ export class VeiculosComponent implements OnInit {
     this.form.patchValue({ veiMarca: '', veiModelo: '' });
   }
 
+  modeloCodigoSelecionado: number | null = null;
+  buscandoFipe = false;
+
   selecionarModelo(modelo: FipeModelo): void {
     this.outroModelo = false;
     this.buscaModelo = modelo.nome;
     this.showDropdownModelo = false;
+    this.modeloCodigoSelecionado = modelo.codigo;
     this.form.patchValue({ veiModelo: modelo.nome });
+    this.buscarPrecoFipe();
+  }
+
+  /**
+   * Busca o preço FIPE quando temos marca + modelo + ano selecionados.
+   * Chamado quando muda modelo OU ano. Best-effort — falha silencioso se não achar.
+   */
+  buscarPrecoFipe(): void {
+    const marcaCod = this.marcaCodigoSelecionado;
+    const modeloCod = this.modeloCodigoSelecionado;
+    const ano = this.form.get('veiAno')?.value;
+    if (!marcaCod || !modeloCod || !ano) return;
+
+    this.buscandoFipe = true;
+    this.fipeService.getAnos(marcaCod, modeloCod).subscribe({
+      next: (anos) => {
+        const anoMatch = anos.find(a => a.codigo.startsWith(`${ano}-`) || a.nome.startsWith(`${ano} `));
+        if (!anoMatch) {
+          this.buscandoFipe = false;
+          this.toast.warning(`FIPE: ano ${ano} não disponível para esse modelo na tabela FIPE.`);
+          return;
+        }
+
+        this.fipeService.getPreco(marcaCod, modeloCod, anoMatch.codigo).subscribe({
+          next: (preco) => {
+            const valorNumerico = this.fipeService.parseValorFipe(preco.valor);
+            if (valorNumerico) {
+              this.form.patchValue({ veiPrecoFipe: valorNumerico });
+              this.toast.success(`FIPE: ${preco.valor} (${preco.mesReferencia})`);
+            }
+            this.buscandoFipe = false;
+          },
+          error: () => {
+            this.buscandoFipe = false;
+            this.toast.warning('FIPE: falha ao buscar preço (API externa indisponível).');
+          }
+        });
+      },
+      error: () => {
+        this.buscandoFipe = false;
+        this.toast.warning('FIPE: falha ao buscar anos disponíveis (API externa indisponível).');
+      }
+    });
   }
 
   selecionarOutroModelo(): void {
@@ -703,7 +822,7 @@ export class VeiculosComponent implements OnInit {
         const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
         if (rows.length < 2) {
-          this.toast.warning('O arquivo esta vazio ou nao possui dados alem do cabecalho.');
+          this.toast.warning('O arquivo está vazio ou não possui dados além do cabeçalho.');
           this.importando = false;
           return;
         }
@@ -896,7 +1015,7 @@ export class VeiculosComponent implements OnInit {
   // ============================================================
   abrirConsultaDetran(veiculo: Veiculo): void {
     if (!veiculo.veiPlaca) {
-      this.toast.warning('Veiculo sem placa cadastrada.');
+      this.toast.warning('Veículo sem placa cadastrada.');
       return;
     }
     this.detranVeiculo = veiculo;

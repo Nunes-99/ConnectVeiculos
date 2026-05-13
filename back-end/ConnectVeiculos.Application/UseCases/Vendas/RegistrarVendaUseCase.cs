@@ -40,7 +40,7 @@ namespace ConnectVeiculos.Application.UseCases.Vendas
             var veiculo = await _veiculoRepository.GetByIdAsync(inputModel.R_VeiId);
 
             if (veiculo == null)
-                throw new DomainException("Veiculo nao encontrado.");
+                throw new DomainException("Veículo não encontrado.");
 
             if (veiculo.VeiSts == "V")
                 throw new DomainException("Este veiculo ja foi vendido.");

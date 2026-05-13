@@ -68,16 +68,16 @@ namespace ConnectVeiculos.API.Controllers
                 || string.IsNullOrWhiteSpace(input.NomeEmpresa)
                 || string.IsNullOrWhiteSpace(input.Email)
                 || string.IsNullOrWhiteSpace(input.Senha))
-                return BadRequest(new { message = "Nome da empresa, e-mail e senha sao obrigatorios." });
+                return BadRequest(new { message = "Nome da empresa, e-mail e senha são obrigatórios." });
 
             if (input.Senha.Length < 6)
                 return BadRequest(new { message = "Senha deve ter no minimo 6 caracteres." });
 
             if (input.Senha != input.ConfirmacaoSenha)
-                return BadRequest(new { message = "Senha e confirmacao nao conferem." });
+                return BadRequest(new { message = "Senha e confirmação não conferem." });
 
             if (!input.Email.Contains('@') || input.Email.Length > 255)
-                return BadRequest(new { message = "E-mail invalido." });
+                return BadRequest(new { message = "E-mail inválido." });
 
             var emailNormalizadoRegistrar = input.Email.Trim().ToLowerInvariant();
             var emailJaUsado = await master.UserEmailMaps.AnyAsync(u => u.Email == emailNormalizadoRegistrar, ct);
@@ -258,7 +258,7 @@ namespace ConnectVeiculos.API.Controllers
             CancellationToken ct)
         {
             if (req == null || string.IsNullOrWhiteSpace(req.RefreshToken))
-                return BadRequest(new { message = "Refresh token e obrigatorio." });
+                return BadRequest(new { message = "Refresh token é obrigatório." });
 
             var tenants = await master.Tenants
                 .Where(t => t.TenStatus == TenantStatus.Active)
@@ -316,7 +316,7 @@ namespace ConnectVeiculos.API.Controllers
                 });
             }
 
-            return Unauthorized(new { message = "Refresh token invalido ou expirado." });
+            return Unauthorized(new { message = "Refresh token inválido ou expirado." });
         }
 
         /// <summary>
@@ -341,7 +341,7 @@ namespace ConnectVeiculos.API.Controllers
 
             var tenant = await master.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.TenSlug == tenantSlug, ct);
             if (tenant == null)
-                return Ok(new { mensagem = "Logout concluido (tenant nao encontrado)." });
+                return Ok(new { mensagem = "Logout concluído (tenant não encontrado)." });
 
             var connStr = connFactory.GetConnectionStringForTenant(tenant.TenSlug, tenant.TenDatabaseFile);
             var optsBuilder = new DbContextOptionsBuilder<ConnectVeiculosDbContext>()
@@ -501,14 +501,14 @@ namespace ConnectVeiculos.API.Controllers
             [FromBody] SolicitarRecuperacaoInputModel input)
         {
             if (input == null || string.IsNullOrEmpty(input.Email))
-                return BadRequest(new { message = "E-mail e obrigatorio." });
+                return BadRequest(new { message = "E-mail é obrigatório." });
 
             try
             {
                 var token = await useCase.ExecutarAsync(input);
                 // Sempre retorna sucesso por seguranca (nao revela se e-mail existe)
                 return Ok(new {
-                    mensagem = "Se o e-mail estiver cadastrado, voce recebera as instrucoes para recuperacao.",
+                    mensagem = "Se o e-mail estiver cadastrado, você receberá as instruções para recuperação.",
                     token // Remover em producao
                 });
             }
@@ -588,7 +588,7 @@ namespace ConnectVeiculos.API.Controllers
                 await useCase.ExecutarAsync(usuarioId, input);
                 return Ok(new
                 {
-                    mensagem = "Senha alterada com sucesso. A nova senha sera exigida no proximo login.",
+                    mensagem = "Senha alterada com sucesso. A nova senha será exigida no próximo login.",
                 });
             }
             catch (InputModelException ex)

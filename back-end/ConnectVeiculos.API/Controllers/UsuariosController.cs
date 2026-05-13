@@ -94,7 +94,7 @@ namespace ConnectVeiculos.API.Controllers
             [FromBody] UsuarioInputModel inputModel)
         {
             if (inputModel == null)
-                return BadRequest("Dados do usuario nao informados.");
+                return BadRequest("Dados do usuário não informados.");
 
             // Bloqueia e-mail duplicado em qualquer tenant (registry global no master).
             var emailNorm = (inputModel.UsuEmail ?? string.Empty).Trim().ToLowerInvariant();
@@ -104,7 +104,7 @@ namespace ConnectVeiculos.API.Controllers
                 if (existente != null)
                 {
                     if (tenantContext.IsResolved && existente.TenantId == tenantContext.TenantId)
-                        return Conflict(new { message = "Este e-mail ja esta cadastrado para um usuario nesta empresa." });
+                        return Conflict(new { message = "Este e-mail já está cadastrado para um usuário nesta empresa." });
                     return Conflict(new { message = "Este e-mail ja esta em uso em outra empresa do sistema." });
                 }
             }
@@ -133,7 +133,7 @@ namespace ConnectVeiculos.API.Controllers
             [FromBody] UsuarioInputModel inputModel)
         {
             if (inputModel == null)
-                return BadRequest("Dados do usuario nao informados.");
+                return BadRequest("Dados do usuário não informados.");
 
             inputModel.UsuId = id;
             await atualizarUsuarioUseCase.Execute(inputModel);

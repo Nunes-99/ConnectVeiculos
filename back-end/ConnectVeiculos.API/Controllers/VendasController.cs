@@ -80,10 +80,33 @@ namespace ConnectVeiculos.API.Controllers
             [FromBody] VendaInputModel inputModel)
         {
             if (inputModel == null)
-                return BadRequest("Dados da venda nao informados.");
+                return BadRequest("Dados da venda não informados.");
 
             var id = await registrarVendaUseCase.Execute(inputModel);
             return CreatedAtAction(nameof(ConsultarVendaPorId), new { id }, new { id });
+        }
+
+        /// <summary>
+        /// Atualiza dados nao-financeiros de uma venda (comprador, forma de pagamento, observacao).
+        /// Valor, comissao, veiculo e data sao imutaveis.
+        /// </summary>
+        /// <response code="204">Venda atualizada com sucesso</response>
+        /// <response code="400">Dados invalidos ou venda estornada</response>
+        /// <response code="404">Venda nao encontrada</response>
+        [HttpPut("{id}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> AtualizarVenda(
+            [FromServices] IAtualizarVendaUseCase atualizarVendaUseCase,
+            int id,
+            [FromBody] VendaInputModel inputModel)
+        {
+            if (inputModel == null)
+                return BadRequest("Dados da venda não informados.");
+
+            await atualizarVendaUseCase.Execute(id, inputModel);
+            return NoContent();
         }
 
         /// <summary>

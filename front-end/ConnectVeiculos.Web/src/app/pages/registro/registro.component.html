@@ -10,7 +10,7 @@
         <p>Criar conta — você ganha uma instância isolada do sistema</p>
       </div>
 
-      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" autocomplete="off">
         @if (errorMessage) {
           <div class="error-message">{{ errorMessage }}</div>
         }
@@ -24,6 +24,7 @@
             type="text"
             id="nomeEmpresa"
             formControlName="nomeEmpresa"
+            autocomplete="off"
             [class.invalid]="form.get('nomeEmpresa')?.invalid && form.get('nomeEmpresa')?.touched"
           />
           @if (form.get('nomeEmpresa')?.invalid && form.get('nomeEmpresa')?.touched) {
@@ -37,6 +38,7 @@
             type="text"
             id="nomeAdmin"
             formControlName="nomeAdmin"
+            autocomplete="off"
           />
         </div>
 
@@ -46,6 +48,7 @@
             type="email"
             id="email"
             formControlName="email"
+            autocomplete="new-email"
             placeholder="Digite seu e-mail"
             [class.invalid]="form.get('email')?.invalid && form.get('email')?.touched"
           />
@@ -61,6 +64,7 @@
               [type]="mostrarSenha ? 'text' : 'password'"
               id="senha"
               formControlName="senha"
+              autocomplete="new-password"
               placeholder="Digite sua senha"
               [class.invalid]="form.get('senha')?.invalid && form.get('senha')?.touched"
             />
@@ -80,6 +84,7 @@
               [type]="mostrarConfirmacao ? 'text' : 'password'"
               id="confirmacaoSenha"
               formControlName="confirmacaoSenha"
+              autocomplete="new-password"
               placeholder="Repita sua senha"
               [class.invalid]="form.errors?.['senhasDiferentes'] && form.get('confirmacaoSenha')?.touched"
             />

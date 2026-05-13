@@ -31,11 +31,11 @@ namespace ConnectVeiculos.Application.UseCases.Lojas
             var loja = await _lojaRepository.GetByIdAsync(id);
 
             if (loja == null)
-                throw new LojaException("Loja nao encontrada.");
+                throw new LojaException("Loja não encontrada.");
 
             var veiculos = await _veiculoRepository.GetByLojaIdAsync(id);
             if (veiculos != null && veiculos.Any())
-                throw new LojaException($"Nao e possivel excluir a loja: existem {veiculos.Count()} veiculo(s) vinculado(s).");
+                throw new LojaException($"Não é possível excluir a loja: existem {veiculos.Count()} veículo(s) vinculado(s).");
 
             _unitOfWork.BeginTransaction();
 

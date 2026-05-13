@@ -100,31 +100,41 @@ namespace ConnectVeiculos.Application.UseCases.Catalogo
                 Total = veiculosDisponiveis.Count
             };
 
-            // Dados da loja (quando filtrado por loja)
+            // Dados da loja:
+            //  - quando filtrado por loja, usa a loja do filtro;
+            //  - quando consulta geral, usa a loja marcada como padrao do catalogo (se houver).
+            // Sem fallback: se nenhuma loja foi marcada como padrao, o header/footer do
+            // catalogo geral fica sem contatos (comportamento antigo).
+            Core.Entities.Lojas.Loja lojaInfo = null;
             if (lojaId.HasValue && lojaId.Value > 0)
             {
-                var lojaInfo = lojas.FirstOrDefault(l => l.LojId == lojaId.Value);
-                if (lojaInfo != null)
+                lojaInfo = lojas.FirstOrDefault(l => l.LojId == lojaId.Value);
+            }
+            else
+            {
+                lojaInfo = lojas.FirstOrDefault(l => l.LojPadraoCatalogo && l.LojSts);
+            }
+
+            if (lojaInfo != null)
+            {
+                resultado.Loja = new CatalogoLojaViewModel
                 {
-                    resultado.Loja = new CatalogoLojaViewModel
-                    {
-                        LojId = lojaInfo.LojId,
-                        LojNome = lojaInfo.LojNome,
-                        LojSlug = lojaInfo.LojSlug,
-                        LojCidade = lojaInfo.LojCidade,
-                        LojEstado = lojaInfo.LojEstado,
-                        LojTel1 = lojaInfo.LojTel1,
-                        LojWhatsApp = lojaInfo.LojWhatsApp,
-                        LojEmail = lojaInfo.LojEmail,
-                        LojImg = lojaInfo.LojImg,
-                        LojEndereco = $"{lojaInfo.LojLogradouro}, {lojaInfo.LojNumero} - {lojaInfo.LojBairro}, {lojaInfo.LojCidade}/{lojaInfo.LojEstado}",
-                        LojCorPrimaria = lojaInfo.LojCorPrimaria ?? "#1a237e",
-                        LojCorSecundaria = lojaInfo.LojCorSecundaria ?? "#25d366",
-                        LojInstagram = lojaInfo.LojInstagram,
-                        LojFacebook = lojaInfo.LojFacebook,
-                        LojUrlCatalogo = lojaInfo.LojUrlCatalogo
-                    };
-                }
+                    LojId = lojaInfo.LojId,
+                    LojNome = lojaInfo.LojNome,
+                    LojSlug = lojaInfo.LojSlug,
+                    LojCidade = lojaInfo.LojCidade,
+                    LojEstado = lojaInfo.LojEstado,
+                    LojTel1 = lojaInfo.LojTel1,
+                    LojWhatsApp = lojaInfo.LojWhatsApp,
+                    LojEmail = lojaInfo.LojEmail,
+                    LojImg = lojaInfo.LojImg,
+                    LojEndereco = $"{lojaInfo.LojLogradouro}, {lojaInfo.LojNumero} - {lojaInfo.LojBairro}, {lojaInfo.LojCidade}/{lojaInfo.LojEstado}",
+                    LojCorPrimaria = lojaInfo.LojCorPrimaria ?? "#1a237e",
+                    LojCorSecundaria = lojaInfo.LojCorSecundaria ?? "#25d366",
+                    LojInstagram = lojaInfo.LojInstagram,
+                    LojFacebook = lojaInfo.LojFacebook,
+                    LojUrlCatalogo = lojaInfo.LojUrlCatalogo
+                };
             }
 
             // Lojas disponíveis para filtro

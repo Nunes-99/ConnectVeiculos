@@ -148,7 +148,7 @@ namespace ConnectVeiculos.API.Controllers
             [FromBody] VeiculoInputModel inputModel)
         {
             if (inputModel == null)
-                return BadRequest("Dados do veiculo nao informados.");
+                return BadRequest("Dados do veículo não informados.");
 
             var id = await cadastrarVeiculoUseCase.Execute(inputModel);
             return CreatedAtAction(nameof(ConsultarVeiculoPorId), new { id }, new { id });
@@ -189,14 +189,14 @@ namespace ConnectVeiculos.API.Controllers
             [FromForm] int lojaId)
         {
             if (arquivo == null || arquivo.Length == 0)
-                return BadRequest("Arquivo nao enviado ou vazio.");
+                return BadRequest("Arquivo não enviado ou vazio.");
 
             if (lojaId <= 0)
-                return BadRequest("ID da loja e obrigatorio.");
+                return BadRequest("ID da loja é obrigatório.");
 
             var extensao = Path.GetExtension(arquivo.FileName).ToLowerInvariant();
             if (extensao != ".csv" && extensao != ".xml")
-                return BadRequest("Formato de arquivo nao suportado. Use CSV ou XML.");
+                return BadRequest("Formato de arquivo não suportado. Use CSV ou XML.");
 
             var resultado = await importarVeiculosUseCase.Execute(arquivo, lojaId);
             return Ok(resultado);
@@ -228,7 +228,7 @@ namespace ConnectVeiculos.API.Controllers
             [FromBody] VeiculoInputModel inputModel)
         {
             if (inputModel == null)
-                return BadRequest("Dados do veiculo nao informados.");
+                return BadRequest("Dados do veículo não informados.");
 
             inputModel.VeiId = id;
             await atualizarVeiculoUseCase.Execute(inputModel);

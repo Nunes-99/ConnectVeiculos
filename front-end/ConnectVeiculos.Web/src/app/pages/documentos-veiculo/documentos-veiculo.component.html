@@ -48,7 +48,7 @@
     <tbody>
       @for (d of documentos; track d.docId) {
         <tr [class.vencido]="(diasParaVencer(d.docDtVencimento) ?? 999) < 0"
-            [class.proximo]="(diasParaVencer(d.docDtVencimento) ?? 999) >= 0 && (diasParaVencer(d.docDtVencimento) ?? 999) <= 7">
+            [class.próximo]="(diasParaVencer(d.docDtVencimento) ?? 999) >= 0 && (diasParaVencer(d.docDtVencimento) ?? 999) <= 7">
           <td>{{ veiculoNome(d.r_VeiId) }}</td>
           <td>{{ tipoLabel(d.docTipo) }}</td>
           <td>
@@ -81,8 +81,8 @@
 }
 
 @if (showModal) {
-  <div class="modal-overlay" (click)="fecharModal()">
-    <div class="modal" (click)="$event.stopPropagation()">
+  <div class="modal-overlay">
+    <div class="modal">
       <div class="modal-header">
         <h2>{{ editId ? 'Editar Documento' : 'Novo Documento' }}</h2>
         <button class="modal-close" (click)="fecharModal()"><span class="material-icons">close</span></button>

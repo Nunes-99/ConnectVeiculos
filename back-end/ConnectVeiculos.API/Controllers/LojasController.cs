@@ -42,7 +42,7 @@ namespace ConnectVeiculos.API.Controllers
             var loja = await consultarLojaPorIdUseCase.Execute(id);
 
             if (loja == null)
-                return NotFound("Loja nao encontrada.");
+                return NotFound("Loja não encontrada.");
 
             return Ok(loja);
         }
@@ -58,7 +58,7 @@ namespace ConnectVeiculos.API.Controllers
             [FromBody] LojaInputModel inputModel)
         {
             if (inputModel == null)
-                return BadRequest("Dados da loja nao informados.");
+                return BadRequest("Dados da loja não informados.");
 
             var id = await cadastrarLojaUseCase.Execute(inputModel);
             return CreatedAtAction(nameof(ConsultarLojaPorId), new { id }, new { id });
@@ -76,7 +76,7 @@ namespace ConnectVeiculos.API.Controllers
             [FromBody] LojaInputModel inputModel)
         {
             if (inputModel == null)
-                return BadRequest("Dados da loja nao informados.");
+                return BadRequest("Dados da loja não informados.");
 
             inputModel.LojId = id;
             await atualizarLojaUseCase.Execute(inputModel);

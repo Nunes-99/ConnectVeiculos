@@ -44,8 +44,8 @@ export class SeoService {
       ? `${loja.lojNome} - Catalogo de Veiculos`
       : 'Catalogo de Veiculos';
     const description = loja
-      ? `Veja os veiculos disponiveis em ${loja.lojNome}, ${loja.lojCidade}/${loja.lojaEstado}. Carros, motos e muito mais.`
-      : 'Encontre o veiculo ideal. Catalogo completo com fotos, precos e detalhes.';
+      ? `Veja os veículos disponíveis em ${loja.lojNome}, ${loja.lojCidade}/${loja.lojaEstado}. Carros, motos e muito mais.`
+      : 'Encontre o veículo ideal. Catálogo completo com fotos, preços e detalhes.';
 
     this.title.setTitle(titleText);
     this.meta.updateTag({ name: 'description', content: description });

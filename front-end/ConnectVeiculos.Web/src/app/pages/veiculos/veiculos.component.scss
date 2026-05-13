@@ -625,9 +625,12 @@ textarea {
 
 .filtro-texto {
   position: relative;
-  flex: 1;
+  flex: 2 1 400px;
+  min-width: 320px;
 
   input {
+    width: 100%;
+    min-width: 320px !important;
     padding-right: 2.5rem !important;
   }
 }

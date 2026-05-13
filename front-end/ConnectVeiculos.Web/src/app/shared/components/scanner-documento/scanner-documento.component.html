@@ -1,6 +1,6 @@
 @if (show) {
-<div class="scanner-overlay" (click)="cancelar()">
-  <div class="scanner-modal" (click)="$event.stopPropagation()">
+<div class="scanner-overlay">
+  <div class="scanner-modal">
     <div class="scanner-header">
       <h2><span class="material-icons">document_scanner</span> Escanear CRLV</h2>
       <button class="btn-close" (click)="cancelar()" aria-label="Fechar">
@@ -8,7 +8,22 @@
       </button>
     </div>
 
-    @if (!resultado) {
+    @if (limiteAtingido) {
+      <div class="limite-bloqueio">
+        <span class="material-icons">block</span>
+        <h3>Scanner indisponível no momento</h3>
+        <p>{{ limiteMensagem }}</p>
+        @if (limiteProximoReset) {
+          <div class="limite-reset">
+            <span class="material-icons">schedule</span>
+            <span>Disponível novamente em <strong>{{ formatarReset() }}</strong></span>
+          </div>
+        }
+        <small>O limite diário do serviço de OCR foi atingido. Preencha os dados do veículo manualmente nos campos abaixo.</small>
+      </div>
+    }
+
+    @if (!resultado && !limiteAtingido) {
       <div class="tier-info">
         <span class="material-icons">bolt</span>
         <span>Powered by <strong>Google Gemini</strong> (grátis). Limite: 1.500 escaneamentos/dia + 15/min compartilhados pelo sistema todo. Após o limite, a função fica indisponível até o dia seguinte.</span>
@@ -115,9 +130,15 @@
     <div class="scanner-footer">
       @if (resultado) {
         <button class="btn-secondary" (click)="cancelar()">Descartar</button>
-        <button class="btn-primary" (click)="usarResultado()">
-          <span class="material-icons">check</span> Usar estes dados
-        </button>
+        @if (temDadosUteis()) {
+          <button class="btn-primary" (click)="usarResultado()">
+            <span class="material-icons">check</span> Usar estes dados
+          </button>
+        } @else {
+          <button class="btn-primary" (click)="setAba('foto'); resultado = null">
+            <span class="material-icons">photo_camera</span> Ir para "Foto"
+          </button>
+        }
       } @else {
         <button class="btn-secondary" (click)="cancelar()">Cancelar</button>
       }

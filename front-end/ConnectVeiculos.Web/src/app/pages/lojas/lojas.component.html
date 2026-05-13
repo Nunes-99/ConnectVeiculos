@@ -34,6 +34,7 @@
             <th>E-mail</th>
             <th>Status</th>
             <th>Ações</th>
+            <th>Padrão</th>
           </tr>
         </thead>
         <tbody>
@@ -56,10 +57,17 @@
                   <span class="material-icons">delete</span>
                 </button>
               </td>
+              <td data-label="Padrão" class="col-padrao">
+                @if (loja.lojPadraoCatalogo) {
+                  <span class="texto-padrao">Sim</span>
+                } @else {
+                  <span class="texto-vazio">—</span>
+                }
+              </td>
             </tr>
           } @empty {
             <tr>
-              <td colspan="6" class="empty">Nenhuma loja encontrada</td>
+              <td colspan="7" class="empty">Nenhuma loja encontrada</td>
             </tr>
           }
         </tbody>
@@ -99,12 +107,17 @@
               <span class="error-message">Nome deve ter no mínimo 3 caracteres</span>
             }
           </div>
-          <!-- lojSlug eh mantido no form como hidden — preenchido automaticamente pelo backend e nao mais usado em URLs publicas. -->
+          <!-- lojSlug é mantido no form como hidden — preenchido automaticamente pelo backend e não mais usado em URLs públicas. -->
           <input type="hidden" formControlName="lojSlug" />
           <div class="form-group">
             <label>URL pública do catálogo</label>
-            <input type="text" [value]="urlCatalogoPublico()" readonly class="readonly-input" />
-            <small class="slug-hint">É a URL que seus clientes acessam pra ver os veículos. Compartilhe esse link no Instagram, WhatsApp, etc.</small>
+            <div class="url-copy-row">
+              <input type="text" [value]="urlCatalogoPublico()" readonly class="readonly-input" />
+              <button type="button" class="btn-copy-url" (click)="copiarUrlCatalogo()" [title]="urlCopiada ? 'Copiado!' : 'Copiar link'">
+                <span class="material-icons">{{ urlCopiada ? 'check' : 'content_copy' }}</span>
+              </button>
+            </div>
+            <small class="slug-hint">{{ urlCopiada ? '✓ Link copiado!' : 'É a URL que seus clientes acessam pra ver os veículos. Compartilhe esse link no Instagram, WhatsApp, etc.' }}</small>
           </div>
           <div class="form-row">
             <div class="form-group">
@@ -165,19 +178,15 @@
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label>Telefone 1</label>
+              <label>Telefone fixo</label>
               <input type="text" formControlName="lojTel1" appMask="telefone" placeholder="(00) 0000-0000" maxlength="14" />
             </div>
             <div class="form-group">
-              <label>Telefone 2</label>
-              <input type="text" formControlName="lojTel2" appMask="celular" placeholder="(00) 00000-0000" maxlength="15" />
+              <label>WhatsApp</label>
+              <input type="text" formControlName="lojWhatsApp" appMask="celular" placeholder="(00) 00000-0000" maxlength="15" />
             </div>
           </div>
           <div class="form-row">
-            <div class="form-group">
-              <label>WhatsApp (para catálogo)</label>
-              <input type="text" formControlName="lojWhatsApp" appMask="celular" placeholder="(00) 00000-0000" maxlength="15" />
-            </div>
             <div class="form-group">
               <label>E-mail</label>
               <input type="email" formControlName="lojEmail" maxlength="150"
@@ -265,6 +274,15 @@
               }
             </div>
           </div>
+          <div class="form-row">
+            <div class="form-group form-group-check" style="grid-column: 1/-1;">
+              <label class="check-label">
+                <input type="checkbox" formControlName="lojPadraoCatalogo" />
+                <span>Loja padrão do catálogo público</span>
+              </label>
+              <small class="check-help">Quando marcada, os dados desta loja (logo, telefone, endereço, redes sociais, cores) aparecem no topo e no rodapé do catálogo público quando o cliente visualiza todas as lojas. Apenas uma loja pode ser a padrão por vez.</small>
+            </div>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn-secondary" (click)="closeModal()">Cancelar</button>
@@ -276,8 +294,8 @@
 }
 
 @if (showPreview) {
-  <div class="modal-overlay preview-overlay" (click)="showPreview = false">
-    <div class="preview-modal" (click)="$event.stopPropagation()">
+  <div class="modal-overlay preview-overlay">
+    <div class="preview-modal">
       <div class="preview-modal-header">
         <span class="preview-title">
           <span class="material-icons">devices</span>

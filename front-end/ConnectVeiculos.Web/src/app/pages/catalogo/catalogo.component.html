@@ -132,7 +132,7 @@
         <label>Ano</label>
         <div class="filtro-range">
           <input type="tel" [(ngModel)]="anoMinSelecionado" [placeholder]="'Min: ' + filtros.anoMin" />
-          <span>ate</span>
+          <span>até</span>
           <input type="tel" [(ngModel)]="anoMaxSelecionado" [placeholder]="'Max: ' + filtros.anoMax" />
         </div>
       </div>
@@ -149,7 +149,7 @@
         <label>Preço (R$)</label>
         <div class="filtro-range">
           <input [(ngModel)]="precoMinSelecionado" appCurrencyMask placeholder="Min" />
-          <span>ate</span>
+          <span>até</span>
           <input [(ngModel)]="precoMaxSelecionado" appCurrencyMask placeholder="Max" />
         </div>
       </div>
@@ -235,8 +235,8 @@
           } @empty {
             <div class="sem-veiculos">
               <span class="material-icons">search_off</span>
-              <p>Nenhum veiculo disponivel no momento</p>
-              <p class="sub-text">Novos veiculos aparecerao automaticamente aqui</p>
+              <p>Nenhum veículo disponível no momento</p>
+              <p class="sub-text">Novos veículos aparecerão automaticamente aqui</p>
             </div>
           }
         </div>
@@ -292,7 +292,7 @@
   </footer>
 }
 
-<!-- Botao flutuante WhatsApp -->
+<!-- Botão flutuante WhatsApp -->
 @if (loja?.lojWhatsApp) {
   <button class="fab-whatsapp" (click)="abrirWhatsAppGeral()" title="Falar com vendedor">
     <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
@@ -301,7 +301,7 @@
   </button>
 }
 
-<!-- Modal Detalhes do Veiculo -->
+<!-- Modal Detalhes do Veículo -->
 @if (showDetalhes && veiculoSelecionado) {
   <div class="detalhes-overlay" (click)="fecharDetalhes()">
     <div class="detalhes-modal" (click)="$event.stopPropagation()">
@@ -354,7 +354,7 @@
           }
         </div>
 
-        <!-- Informacoes do veiculo -->
+        <!-- Informações do veículo -->
         <div class="detalhes-info">
           @if (veiculoSelecionado.categoriaNome) {
             <span class="det-categoria">{{ veiculoSelecionado.categoriaNome }}</span>
@@ -412,7 +412,7 @@
             </div>
           }
 
-          <!-- Observacoes -->
+          <!-- Observações -->
           @if (veiculoSelecionado.veiObservacao) {
             <div class="det-observacao">
               <h4><span class="material-icons">description</span> Observações</h4>
@@ -448,7 +448,7 @@
             <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
               <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
             </svg>
-            Tenho interesse neste veiculo
+            Tenho interesse neste veículo
           </button>
         </div>
       </div>
@@ -461,7 +461,7 @@
   <div class="detalhes-overlay" (click)="fecharComparador()">
     <div class="comparador-modal" (click)="$event.stopPropagation()">
       <div class="comparador-header">
-        <h2>Comparar Veiculos</h2>
+        <h2>Comparar Veículos</h2>
         <button class="detalhes-close" style="position:static" (click)="fecharComparador()"><span class="material-icons">close</span></button>
       </div>
       <div class="comparador-grid" [style.gridTemplateColumns]="'minmax(80px, 150px) repeat(' + comparando.length + ', 1fr)'">
@@ -473,7 +473,7 @@
             <button class="comp-remove" (click)="removerComparacao(v.veiId)"><span class="material-icons">close</span></button>
           </div>
         }
-        <div class="comp-label">Preco</div>
+        <div class="comp-label">Preço</div>
         @for (v of comparando; track v.veiId) { <div class="comp-value highlight">{{ formatarPreco(v.veiPreco) }}</div> }
         <div class="comp-label">Ano</div>
         @for (v of comparando; track v.veiId) { <div class="comp-value">{{ v.veiAno }}</div> }
@@ -497,7 +497,7 @@
   <div class="detalhes-overlay" (click)="fecharFinanciamento()">
     <div class="finance-modal" (click)="$event.stopPropagation()">
       <button class="detalhes-close" style="position:static;float:right" (click)="fecharFinanciamento()"><span class="material-icons">close</span></button>
-      <h2><span class="material-icons">calculate</span> Simulacao de Financiamento</h2>
+      <h2><span class="material-icons">calculate</span> Simulação de Financiamento</h2>
       <p class="finance-veiculo">{{ finVeiculo.veiMarca }} {{ finVeiculo.veiModelo }} - {{ formatarPreco(finVeiculo.veiPreco) }}</p>
       <div class="finance-form">
         <div class="finance-field">
@@ -524,24 +524,24 @@
         <div class="finance-item destaque"><small>Parcela estimada</small><strong>{{ formatarPreco(finValorParcela) }}</strong></div>
         <div class="finance-item"><small>Total a pagar</small><strong>{{ formatarPreco(finEntrada + (finValorParcela * finParcelas)) }}</strong></div>
       </div>
-      <p class="finance-disclaimer">* Simulacao meramente ilustrativa. Consulte as condicoes reais com a loja.</p>
-      <button class="btn-solicitar-credito" (click)="abrirSolicitacaoCredito()">
+      <p class="finance-disclaimer">* Simulação meramente ilustrativa. Consulte as condições reais com a loja.</p>
+      <button class="btn-solicitar-crédito" (click)="abrirSolicitacaoCredito()">
         <span class="material-icons">request_quote</span>
-        Solicitar Analise de Credito
+        Solicitar Análise de Crédito
       </button>
     </div>
   </div>
 }
 
-<!-- Modal Solicitacao de Financiamento (Lead) -->
+<!-- Modal Solicitação de Financiamento (Lead) -->
 @if (showSolicitacaoCredito && finVeiculo) {
   <div class="detalhes-overlay" (click)="fecharSolicitacaoCredito()">
     <div class="testdrive-modal" (click)="$event.stopPropagation()">
       <button class="detalhes-close" style="position:static;float:right" (click)="fecharSolicitacaoCredito()"><span class="material-icons">close</span></button>
       @if (!solicitacaoEnviada) {
-        <h2><span class="material-icons">request_quote</span> Solicitar Analise de Credito</h2>
+        <h2><span class="material-icons">request_quote</span> Solicitar Análise de Crédito</h2>
         <p class="td-veiculo">{{ finVeiculo.veiMarca }} {{ finVeiculo.veiModelo }} {{ finVeiculo.veiAno }} - {{ formatarPreco(finVeiculo.veiPreco) }}</p>
-        <p class="solicitacao-info">Preencha os dados abaixo e nosso vendedor entrara em contato para apresentar as melhores condicoes de financiamento.</p>
+        <p class="solicitacao-info">Preencha os dados abaixo e nosso vendedor entrará em contato para apresentar as melhores condições de financiamento.</p>
         <div class="td-form">
           <input type="text" [(ngModel)]="solNome" placeholder="Nome completo *" class="required-input" />
           <input type="tel" [(ngModel)]="solTelefone" placeholder="WhatsApp *" class="required-input" (input)="formatarSolTelefone()" maxlength="15" />
@@ -559,18 +559,18 @@
             <option [ngValue]="48">48x</option>
             <option [ngValue]="60">60x</option>
           </select>
-          <textarea [(ngModel)]="solObservacao" placeholder="Observacoes (opcional)" rows="2"></textarea>
+          <textarea [(ngModel)]="solObservacao" placeholder="Observações (opcional)" rows="2"></textarea>
           <button class="btn-enviar-solicitacao" (click)="enviarSolicitacaoCredito()" [disabled]="!solNome || !solTelefone || !solCpf || !solRenda">
             <span class="material-icons">send</span>
-            Enviar Solicitacao
+            Enviar Solicitação
           </button>
         </div>
-        <p class="finance-disclaimer">Seus dados estao seguros e serao usados apenas para a analise de credito.</p>
+        <p class="finance-disclaimer">Seus dados estão seguros e serão usados apenas para a análise de crédito.</p>
       } @else {
         <div class="td-sucesso">
           <span class="material-icons">check_circle</span>
-          <h2>Solicitacao enviada!</h2>
-          <p>Em breve nosso vendedor entrara em contato pelo telefone/WhatsApp informado.</p>
+          <h2>Solicitação enviada!</h2>
+          <p>Em breve nosso vendedor entrará em contato pelo telefone/WhatsApp informado.</p>
           <button class="btn-fechar-sucesso" (click)="fecharSolicitacaoCredito()">Fechar</button>
         </div>
       }
@@ -655,7 +655,7 @@
         <span class="material-icons fav-icon">favorite</span>
         <h2>Salvar nos Favoritos</h2>
       </div>
-      <p class="fav-desc">Para favoritar veiculos e nao perder suas escolhas, informe seu e-mail. Assim voce pode acessar seus favoritos de qualquer dispositivo!</p>
+      <p class="fav-desc">Para favoritar veículos e não perder suas escolhas, informe seu e-mail. Assim você pode acessar seus favoritos de qualquer dispositivo!</p>
       <div class="fav-form">
         <div class="fav-field">
           <label class="required">E-mail</label>
@@ -673,7 +673,7 @@
           <span class="material-icons">favorite</span>
           Confirmar e Favoritar
         </button>
-        <p class="fav-privacy">Seus dados estao seguros e nao serao compartilhados.</p>
+        <p class="fav-privacy">Seus dados estão seguros e não serão compartilhados.</p>
       </div>
     </div>
   </div>

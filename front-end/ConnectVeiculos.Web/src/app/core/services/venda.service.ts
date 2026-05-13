@@ -19,6 +19,10 @@ export class VendaService extends ApiService {
     return this.post<{ id: number }>('vendas', venda);
   }
 
+  update(id: number, venda: VendaInput): Observable<void> {
+    return this.put<void>(`vendas/${id}`, venda);
+  }
+
   estornar(id: number): Observable<{ message: string }> {
     return this.post<{ message: string }>(`vendas/${id}/estornar`, {});
   }

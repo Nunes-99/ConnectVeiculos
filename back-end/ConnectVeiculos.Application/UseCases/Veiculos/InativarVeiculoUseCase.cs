@@ -47,7 +47,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             var veiculo = await _veiculoRepository.GetByIdAsync(id);
 
             if (veiculo == null)
-                throw new Exception("Veiculo nao encontrado.");
+                throw new Exception("Veículo não encontrado.");
 
             var lojaId = veiculo.R_LojId;
             veiculo.AlterarStatus("I");

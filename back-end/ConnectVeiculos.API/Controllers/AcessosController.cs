@@ -42,7 +42,7 @@ namespace ConnectVeiculos.API.Controllers
             var acesso = await consultarAcessoPorIdUseCase.Execute(id);
 
             if (acesso == null)
-                return NotFound("Acesso nao encontrado.");
+                return NotFound("Acesso não encontrado.");
 
             return Ok(acesso);
         }
@@ -57,7 +57,7 @@ namespace ConnectVeiculos.API.Controllers
             [FromBody] AcessoInputModel inputModel)
         {
             if (inputModel == null)
-                return BadRequest("Dados do acesso nao informados.");
+                return BadRequest("Dados do acesso não informados.");
 
             var id = await cadastrarAcessoUseCase.Execute(inputModel);
             return CreatedAtAction(nameof(ConsultarAcessoPorId), new { id }, new { id });
@@ -74,7 +74,7 @@ namespace ConnectVeiculos.API.Controllers
             [FromBody] AcessoInputModel inputModel)
         {
             if (inputModel == null)
-                return BadRequest("Dados do acesso nao informados.");
+                return BadRequest("Dados do acesso não informados.");
 
             inputModel.AcsId = id;
             await atualizarAcessoUseCase.Execute(inputModel);

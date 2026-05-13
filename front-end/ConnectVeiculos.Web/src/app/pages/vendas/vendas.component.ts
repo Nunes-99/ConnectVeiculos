@@ -1,6 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { VendaService, VeiculoService, UsuarioService, ToastService } from '../../core/services';
 import { Venda, Veiculo, Usuario } from '../../core/models';
@@ -29,6 +30,17 @@ export class VendasComponent implements OnInit {
   loading = false;
   loadingCep = false;
   showModal = false;
+  editId: number | null = null;
+
+  /**
+   * Lista de veiculos pro select do modal:
+   * - Novo cadastro: so disponiveis (nao vender carro ja vendido)
+   * - Edicao: todos (o veiculo da venda esta com status V, precisa aparecer)
+   */
+  get veiculosParaSelect(): any[] {
+    if (this.editId !== null) return this.veiculos;
+    return this.veiculos.filter(v => v.veiSts === 'D');
+  }
   showConfirmEstorno = false;
   vendaParaEstornar: Venda | null = null;
 
@@ -89,8 +101,9 @@ export class VendasComponent implements OnInit {
 
     this.veiculoService.getAll().subscribe({
       next: (data) => {
-        // Filtrar apenas veiculos disponiveis (status D)
-        this.veiculos = data.filter(v => v.veiSts === 'D');
+        // Disponiveis (cadastro novo) + todos os outros (necessario para edicao
+        // mostrar o veiculo da venda mesmo apos ele virar Vendido).
+        this.veiculos = data;
       }
     });
 
@@ -124,7 +137,34 @@ export class VendasComponent implements OnInit {
 
   closeModal(): void {
     this.showModal = false;
+    this.editId = null;
     this.form.reset();
+  }
+
+  editar(venda: Venda): void {
+    this.editId = venda.venId;
+    // Parse do endereço se for string concatenada — best-effort.
+    const partes = (venda.venCompradorEndereco || '').split(',').map(s => s.trim());
+    this.form.reset({
+      r_VeiId: venda.r_VeiId,
+      r_UsuId: venda.r_UsuId,
+      venDtVenda: venda.venDtVenda ? new Date(venda.venDtVenda).toISOString().split('T')[0] : '',
+      venValor: venda.venValor,
+      venComissaoPorc: venda.venComissaoPorc,
+      venCompradorNome: venda.venCompradorNome || '',
+      venCompradorCpf: venda.venCompradorCpf || '',
+      venCompradorTelefone: venda.venCompradorTelefone || '',
+      venCompradorEmail: venda.venCompradorEmail || '',
+      cep: partes[5] || '',
+      logradouro: partes[0] || '',
+      numero: partes[1] || '',
+      bairro: partes[2] || '',
+      cidade: partes[3] || '',
+      uf: partes[4] || '',
+      venFormaPagamento: venda.venFormaPagamento || '',
+      venObservacao: venda.venObservacao || ''
+    });
+    this.showModal = true;
   }
 
   buscarCep(): void {
@@ -136,7 +176,7 @@ export class VendasComponent implements OnInit {
       next: (data) => {
         this.loadingCep = false;
         if (data.erro) {
-          this.toast.warning('CEP nao encontrado.');
+          this.toast.warning('CEP não encontrado.');
           return;
         }
         this.form.patchValue({
@@ -187,14 +227,19 @@ export class VendasComponent implements OnInit {
     delete data.uf;
     delete data.numero;
 
-    this.vendaService.create(data).subscribe({
+    const isEdit = this.editId !== null;
+    const obs$: Observable<unknown> = isEdit
+      ? this.vendaService.update(this.editId!, data)
+      : this.vendaService.create(data);
+
+    obs$.subscribe({
       next: () => {
         this.loadData();
         this.closeModal();
-        this.toast.success('Venda registrada com sucesso!');
+        this.toast.success(isEdit ? 'Venda atualizada!' : 'Venda registrada com sucesso!');
       },
-      error: (err) => {
-        this.toast.error(err.error?.message || 'Erro ao registrar venda');
+      error: (err: any) => {
+        this.toast.error(err.error?.message || (isEdit ? 'Erro ao atualizar venda' : 'Erro ao registrar venda'));
       }
     });
   }
@@ -214,7 +259,7 @@ export class VendasComponent implements OnInit {
 
   estornar(venda: Venda): void {
     if (venda.venStatus === 'E') {
-      this.toast.warning('Esta venda ja foi estornada.');
+      this.toast.warning('Esta venda já foi estornada.');
       return;
     }
 

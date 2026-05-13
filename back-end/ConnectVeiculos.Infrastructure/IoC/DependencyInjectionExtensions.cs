@@ -111,6 +111,7 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
             services.AddTransient<IEmailService, SmtpEmailService>();
             services.AddTransient<Core.Interfaces.Services.IFavoritoNotificacaoService, Services.Notificacao.FavoritoNotificacaoService>();
+            services.AddTransient<Core.Interfaces.Services.ITestDriveNotificacaoService, Services.Notificacao.TestDriveNotificacaoService>();
             services.AddTransient<Core.Interfaces.Services.IPushNotificationService, Services.Push.PushNotificationService>();
             services.AddHttpClient<Core.Interfaces.Services.IWhatsAppService, Services.WhatsApp.WhatsAppService>()
                 .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(10));
@@ -258,6 +259,7 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.AddTransient<IConsultarVendaPorIdUseCase, ConsultarVendaPorIdUseCase>();
             services.AddTransient<IRegistrarVendaUseCase, RegistrarVendaUseCase>();
             services.AddTransient<IEstornarVendaUseCase, EstornarVendaUseCase>();
+            services.AddTransient<IAtualizarVendaUseCase, AtualizarVendaUseCase>();
 
             // Repositories - Configuracoes
             services.AddTransient<Core.Interfaces.Database.Repositories.Configuracoes.IConfiguracaoSistemaRepository, Database.EntityFramework.Repositories.ConfiguracaoSistemaRepository>();
@@ -380,6 +382,9 @@ namespace ConnectVeiculos.Infrastructure.IoC
 
                 // URL do catalogo compartilhada entre lojas
                 AddColumnIfNotExists(connection, "Loja", "LojUrlCatalogo", "TEXT");
+
+                // Marca uma loja como padrao para exibicao dos dados de contato no catalogo publico
+                AddColumnIfNotExists(connection, "Loja", "LojPadraoCatalogo", "INTEGER DEFAULT 0");
 
                 // Preco FIPE do veiculo (consulta automatica/manual)
                 AddColumnIfNotExists(connection, "Veiculo", "VeiPrecoFipe", "REAL");

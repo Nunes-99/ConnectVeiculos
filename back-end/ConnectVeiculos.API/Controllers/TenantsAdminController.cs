@@ -68,9 +68,9 @@ namespace ConnectVeiculos.API.Controllers
         {
             // 1) Auth
             if (string.IsNullOrEmpty(_adminToken))
-                return StatusCode(503, new { message = "ADMIN_API_TOKEN nao configurado no servidor." });
+                return StatusCode(503, new { message = "ADMIN_API_TOKEN não configurado no servidor." });
             if (!Request.Headers.TryGetValue("X-Admin-Token", out var sent) || sent != _adminToken)
-                return Unauthorized(new { message = "Token administrativo invalido ou ausente." });
+                return Unauthorized(new { message = "Token administrativo inválido ou ausente." });
 
             // 2) Validacao
             if (req == null || string.IsNullOrWhiteSpace(req.Slug) || string.IsNullOrWhiteSpace(req.Nome)
@@ -79,7 +79,7 @@ namespace ConnectVeiculos.API.Controllers
 
             var slug = req.Slug.Trim().ToLowerInvariant();
             if (!SlugRegex.IsMatch(slug))
-                return BadRequest(new { message = "Slug invalido. Use 3-31 caracteres minusculos, comecando com letra (ex: 'acme', 'minha-loja')." });
+                return BadRequest(new { message = "Slug inválido. Use 3-31 caracteres minúsculos, começando com letra (ex: 'acme', 'minha-loja')." });
 
             if (req.AdminSenha.Length < 6)
                 return BadRequest(new { message = "Senha do admin deve ter no minimo 6 caracteres." });
@@ -155,9 +155,9 @@ namespace ConnectVeiculos.API.Controllers
         public IActionResult InvalidateCache()
         {
             if (string.IsNullOrEmpty(_adminToken))
-                return StatusCode(503, new { message = "ADMIN_API_TOKEN nao configurado." });
+                return StatusCode(503, new { message = "ADMIN_API_TOKEN não configurado." });
             if (!Request.Headers.TryGetValue("X-Admin-Token", out var sent) || sent != _adminToken)
-                return Unauthorized(new { message = "Token administrativo invalido ou ausente." });
+                return Unauthorized(new { message = "Token administrativo inválido ou ausente." });
 
             _store.InvalidateCache();
             _logger.LogInformation("TenantStore cache invalidado via endpoint admin");
@@ -170,9 +170,9 @@ namespace ConnectVeiculos.API.Controllers
         public async Task<IActionResult> List(CancellationToken ct)
         {
             if (string.IsNullOrEmpty(_adminToken))
-                return StatusCode(503, new { message = "ADMIN_API_TOKEN nao configurado." });
+                return StatusCode(503, new { message = "ADMIN_API_TOKEN não configurado." });
             if (!Request.Headers.TryGetValue("X-Admin-Token", out var sent) || sent != _adminToken)
-                return Unauthorized(new { message = "Token administrativo invalido ou ausente." });
+                return Unauthorized(new { message = "Token administrativo inválido ou ausente." });
 
             var tenants = await _master.Tenants.AsNoTracking().OrderBy(t => t.TenId).ToListAsync(ct);
             return Ok(tenants.Select(t => new
@@ -200,17 +200,17 @@ namespace ConnectVeiculos.API.Controllers
         public async Task<IActionResult> Delete(string slug, CancellationToken ct)
         {
             if (string.IsNullOrEmpty(_adminToken))
-                return StatusCode(503, new { message = "ADMIN_API_TOKEN nao configurado." });
+                return StatusCode(503, new { message = "ADMIN_API_TOKEN não configurado." });
             if (!Request.Headers.TryGetValue("X-Admin-Token", out var sent) || sent != _adminToken)
-                return Unauthorized(new { message = "Token administrativo invalido ou ausente." });
+                return Unauthorized(new { message = "Token administrativo inválido ou ausente." });
 
             slug = slug.Trim().ToLowerInvariant();
             if (slug == "default")
-                return BadRequest(new { message = "Tenant 'default' nao pode ser excluido (protecao)." });
+                return BadRequest(new { message = "Tenant 'default' não pode ser excluído (proteção)." });
 
             var tenant = await _master.Tenants.FirstOrDefaultAsync(t => t.TenSlug == slug, ct);
             if (tenant == null)
-                return NotFound(new { message = $"Tenant '{slug}' nao encontrado." });
+                return NotFound(new { message = $"Tenant '{slug}' não encontrado." });
 
             // 1) Arquiva o banco do tenant (rename, nao delete — recuperavel)
             var dataDir = Environment.GetEnvironmentVariable("TENANTS_DATA_DIR") ?? "/app/data";
@@ -263,7 +263,7 @@ namespace ConnectVeiculos.API.Controllers
                 arquivado = archivedPath,
                 mensagem = archivedPath != null
                     ? $"Tenant '{slug}' removido. Banco arquivado em {archivedPath} — para restaurar, mova de volta e reinsira no master."
-                    : $"Tenant '{slug}' removido do master (banco ja nao existia)."
+                    : $"Tenant '{slug}' removido do master (banco já não existia)."
             });
         }
     }

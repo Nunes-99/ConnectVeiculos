@@ -25,7 +25,7 @@ namespace ConnectVeiculos.Application.UseCases.Auth
 
             if (usuario == null)
             {
-                throw new InputModelException("Usuario nao encontrado.");
+                throw new InputModelException("Usuário não encontrado.");
             }
 
             if (!BCrypt.Net.BCrypt.Verify(input.SenhaAtual, usuario.UsuSenha))

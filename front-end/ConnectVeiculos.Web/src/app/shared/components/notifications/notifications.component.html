@@ -9,7 +9,7 @@
   @if (showDropdown) {
     <div class="notifications-dropdown">
       <div class="dropdown-header">
-        <h4>Notificacoes</h4>
+        <h4>Notificações</h4>
         <div class="header-actions">
           @if (naoLidas > 0) {
             <button class="btn-text" (click)="marcarTodasComoLidas()">
@@ -28,7 +28,7 @@
         @if (notificacoes.length === 0) {
           <div class="empty-state">
             <span class="material-icons">notifications_none</span>
-            <p>Nenhuma notificacao</p>
+            <p>Nenhuma notificação</p>
           </div>
         } @else {
           <div class="notifications-list">

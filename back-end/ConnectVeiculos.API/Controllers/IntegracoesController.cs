@@ -44,7 +44,7 @@ namespace ConnectVeiculos.API.Controllers
                 return Content(BuildCallbackHtml(false, $"{oauthError}: {oauthErrorDesc}"), "text/html");
 
             if (string.IsNullOrEmpty(code))
-                return Content(BuildCallbackHtml(false, "Codigo de autorizacao nao fornecido."), "text/html");
+                return Content(BuildCallbackHtml(false, "Código de autorização não fornecido."), "text/html");
 
             try
             {
@@ -300,7 +300,7 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
 
             var ok = await whatsApp.EnviarMensagemAsync(request.Telefone, request.Mensagem);
             return ok ? Ok(new { mensagem = "Mensagem enviada." })
-                      : StatusCode(502, new { error = "Falha ao enviar mensagem (verifique configuracao e logs)." });
+                      : StatusCode(502, new { error = "Falha ao enviar mensagem (verifique configuração e logs)." });
         }
 
         // ==========================================

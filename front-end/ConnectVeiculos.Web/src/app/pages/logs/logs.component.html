@@ -93,8 +93,8 @@
 </div>
 
 @if (showDetalheModal && logSelecionado) {
-  <div class="modal-overlay" (click)="fecharDetalheModal()">
-    <div class="modal modal-lg" (click)="$event.stopPropagation()">
+  <div class="modal-overlay">
+    <div class="modal modal-lg">
       <div class="modal-header">
         <h2>Detalhes do Log #{{ logSelecionado.logId }}</h2>
         <button class="btn-close" (click)="fecharDetalheModal()">

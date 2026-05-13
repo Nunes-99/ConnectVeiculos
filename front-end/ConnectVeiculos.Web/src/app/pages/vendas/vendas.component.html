@@ -46,6 +46,10 @@
               </td>
               <td class="actions" data-label="Ações">
                 @if (venda.venStatus === 'A') {
+                  <button class="btn-icon-text" (click)="editar(venda)" title="Editar dados do comprador">
+                    <span class="material-icons">edit</span>
+                    <span>Editar</span>
+                  </button>
                   <button class="btn-icon-text delete" (click)="estornar(venda)" title="Estornar Venda">
                     <span class="material-icons">undo</span>
                     <span>Estornar</span>
@@ -75,19 +79,24 @@
   <div class="modal-overlay">
     <div class="modal">
       <div class="modal-header">
-        <h2>Registrar Venda</h2>
+        <h2>{{ editId ? 'Editar Venda' : 'Registrar Venda' }}</h2>
         <button class="btn-close" (click)="closeModal()">
           <span class="material-icons">close</span>
         </button>
       </div>
       <form [formGroup]="form" (ngSubmit)="save()">
         <div class="modal-body">
+          @if (editId) {
+            <div style="background:#fff3e0;border:1px solid #ffd699;color:#c66800;padding:0.7rem 1rem;border-radius:8px;margin-bottom:1rem;font-size:0.85rem;line-height:1.4;">
+              <strong>Edição limitada:</strong> apenas dados do comprador, forma de pagamento e observação são editáveis. Para alterar veículo, valor, data ou comissão, é necessário <strong>estornar a venda</strong> e registrá-la novamente.
+            </div>
+          }
           <div class="form-group">
             <label class="required">Veículo</label>
-            <select formControlName="r_VeiId" (change)="onVeiculoChange()"
+            <select formControlName="r_VeiId" (change)="onVeiculoChange()" [attr.disabled]="editId ? true : null"
                     [class.invalid]="hasError('r_VeiId', 'min')">
               <option [value]="0">Selecione um veículo...</option>
-              @for (veiculo of veiculos; track veiculo.veiId) {
+              @for (veiculo of veiculosParaSelect; track veiculo.veiId) {
                 <option [value]="veiculo.veiId">
                   {{ veiculo.veiMarca }} {{ veiculo.veiModelo }} {{ veiculo.veiAno }} - {{ formatarPreco(veiculo.veiPreco) }}
                 </option>
@@ -99,7 +108,7 @@
           </div>
           <div class="form-group">
             <label class="required">Vendedor</label>
-            <select formControlName="r_UsuId" [class.invalid]="hasError('r_UsuId', 'min')">
+            <select formControlName="r_UsuId" [attr.disabled]="editId ? true : null" [class.invalid]="hasError('r_UsuId', 'min')">
               <option [value]="0">Selecione um vendedor...</option>
               @for (usuario of usuarios; track usuario.usuId) {
                 <option [value]="usuario.usuId">{{ usuario.usuNome }}</option>
@@ -111,7 +120,7 @@
           </div>
           <div class="form-group">
             <label class="required">Data da Venda</label>
-            <input type="date" formControlName="venDtVenda" [class.invalid]="hasError('venDtVenda', 'required')" />
+            <input type="date" formControlName="venDtVenda" [readonly]="editId !== null" [class.invalid]="hasError('venDtVenda', 'required')" />
             @if (hasError('venDtVenda', 'required')) {
               <span class="error-message">Data é obrigatória</span>
             }
@@ -119,14 +128,14 @@
           <div class="form-row">
             <div class="form-group">
               <label class="required">Valor da Venda</label>
-              <input formControlName="venValor" appCurrencyMask [class.invalid]="hasError('venValor', 'required')" />
+              <input formControlName="venValor" appCurrencyMask [readonly]="editId !== null" [class.invalid]="hasError('venValor', 'required')" />
               @if (hasError('venValor', 'required')) {
                 <span class="error-message">Valor é obrigatório</span>
               }
             </div>
             <div class="form-group">
               <label class="required">Comissão (%)</label>
-              <input type="tel" formControlName="venComissaoPorc"
+              <input type="tel" formControlName="venComissaoPorc" [readonly]="editId !== null"
                      [class.invalid]="hasError('venComissaoPorc', 'required')" />
               @if (hasError('venComissaoPorc', 'required')) {
                 <span class="error-message">Comissão é obrigatória</span>
@@ -217,7 +226,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn-secondary" (click)="closeModal()">Cancelar</button>
-          <button type="submit" class="btn-primary" [disabled]="form.invalid">Registrar Venda</button>
+          <button type="submit" class="btn-primary" [disabled]="form.invalid">{{ editId ? 'Salvar alterações' : 'Registrar Venda' }}</button>
         </div>
       </form>
     </div>

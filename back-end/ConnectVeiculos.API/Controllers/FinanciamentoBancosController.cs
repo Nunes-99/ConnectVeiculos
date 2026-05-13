@@ -33,7 +33,7 @@ namespace ConnectVeiculos.API.Controllers
         {
             var banco = _bancos.FirstOrDefault(b => b.CodigoBanco.Equals(codigoBanco, StringComparison.OrdinalIgnoreCase) && b.IsConfigured());
             if (banco == null)
-                return NotFound($"Banco '{codigoBanco}' nao encontrado ou nao configurado.");
+                return NotFound($"Banco '{codigoBanco}' não encontrado ou não configurado.");
 
             var resultado = await banco.SimularAsync(request);
             return Ok(resultado);
@@ -57,7 +57,7 @@ namespace ConnectVeiculos.API.Controllers
         {
             var banco = _bancos.FirstOrDefault(b => b.CodigoBanco.Equals(codigoBanco, StringComparison.OrdinalIgnoreCase) && b.IsConfigured());
             if (banco == null)
-                return NotFound($"Banco '{codigoBanco}' nao encontrado ou nao configurado.");
+                return NotFound($"Banco '{codigoBanco}' não encontrado ou não configurado.");
 
             var resultado = await banco.EnviarPropostaAsync(request);
             return Ok(resultado);
@@ -68,7 +68,7 @@ namespace ConnectVeiculos.API.Controllers
         {
             var banco = _bancos.FirstOrDefault(b => b.CodigoBanco.Equals(codigoBanco, StringComparison.OrdinalIgnoreCase));
             if (banco == null)
-                return NotFound($"Banco '{codigoBanco}' nao encontrado.");
+                return NotFound($"Banco '{codigoBanco}' não encontrado.");
 
             var status = await banco.ConsultarStatusAsync(propostaExternaId);
             return Ok(status);

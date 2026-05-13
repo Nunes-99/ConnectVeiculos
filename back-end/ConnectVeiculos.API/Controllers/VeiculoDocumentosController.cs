@@ -43,7 +43,7 @@ namespace ConnectVeiculos.API.Controllers
         public async Task<IActionResult> Criar([FromBody] CriarDocumentoRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Tipo))
-                return BadRequest("Tipo do documento e obrigatorio.");
+                return BadRequest("Tipo do documento é obrigatório.");
             if (request.VeiculoId <= 0)
                 return BadRequest("Veiculo invalido.");
             var tiposValidos = new[] { "CRLV", "IPVA", "LAUDO", "TRANSFERENCIA", "SEGURO", "MULTA", "FINANCIAMENTO", "OUTROS" };

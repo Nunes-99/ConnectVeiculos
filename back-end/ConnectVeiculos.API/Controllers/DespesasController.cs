@@ -44,7 +44,7 @@ namespace ConnectVeiculos.API.Controllers
         public async Task<IActionResult> Criar([FromBody] CriarDespesaRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Tipo))
-                return BadRequest("Tipo da despesa e obrigatorio.");
+                return BadRequest("Tipo da despesa é obrigatório.");
             if (request.Valor <= 0)
                 return BadRequest("Valor da despesa deve ser maior que zero.");
             if (request.VeiculoId <= 0)

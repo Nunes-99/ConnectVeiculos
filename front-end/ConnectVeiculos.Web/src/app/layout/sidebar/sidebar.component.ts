@@ -40,6 +40,9 @@ export class SidebarComponent {
   mostrarTrocarSenha = signal(false);
   salvandoSenha = signal(false);
   mostrarConfirmaTrocaEmpresa = signal(false);
+  mostrarSenhaAtual = false;
+  mostrarNovaSenha = false;
+  mostrarConfirmarSenha = false;
 
   // Contagem de documentos vencendo nos proximos 30 dias (badge no menu)
   private http = inject(HttpClient);
@@ -90,26 +93,26 @@ export class SidebarComponent {
       title: 'Principal',
       items: [
         { label: 'Painel Geral', icon: 'dashboard', route: '/dashboard' },
+        { label: 'Lojas', icon: 'store', route: '/lojas' },
         { label: 'Veículos', icon: 'directions_car', route: '/veiculos' },
-        { label: 'Vendas', icon: 'point_of_sale', route: '/vendas' },
         { label: 'Documentos', icon: 'description', route: '/documentos' },
+        { label: 'Vendas', icon: 'point_of_sale', route: '/vendas' },
         // { label: 'Financiamento', icon: 'account_balance', route: '/financiamentos' }, // TODO: ativar quando tiver parceria com bancos (BV, Pan, etc)
-        { label: 'Relatórios', icon: 'assessment', route: '/relatorios' },
       ]
     },
     {
       title: 'Gestão',
       items: [
         { label: 'Usuários', icon: 'people', route: '/usuarios' },
-        { label: 'Lojas', icon: 'store', route: '/lojas' },
         { label: 'Categorias', icon: 'category', route: '/categorias' },
+        { label: 'Relatórios', icon: 'assessment', route: '/relatorios' },
       ]
     },
     {
       title: 'Comercial',
       items: [
         { label: 'Captação de Clientes', icon: 'people_outline', route: '/leads' },
-        { label: 'Negociações', icon: 'handshake', route: '/negociacoes' },
+        // { label: 'Negociações', icon: 'handshake', route: '/negociacoes' }, // TODO: reabilitar quando feature estiver pronta
         { label: 'Test Drives', icon: 'event', route: '/test-drives' },
         { label: 'Favoritos', icon: 'favorite', route: '/favoritos' },
       ]
@@ -117,7 +120,7 @@ export class SidebarComponent {
     {
       title: 'Sistema',
       items: [
-        { label: 'Integracoes', icon: 'hub', route: '/integracoes' },
+        { label: 'Integrações', icon: 'hub', route: '/integracoes' },
         { label: 'Logs', icon: 'history', route: '/logs' },
       ]
     }
@@ -170,6 +173,9 @@ export class SidebarComponent {
 
   abrirTrocarSenha(): void {
     this.formSenha.reset({ senhaAtual: '', novaSenha: '', confirmarSenha: '' });
+    this.mostrarSenhaAtual = false;
+    this.mostrarNovaSenha = false;
+    this.mostrarConfirmarSenha = false;
     this.mostrarTrocarSenha.set(true);
   }
 
@@ -188,14 +194,14 @@ export class SidebarComponent {
     this.salvandoSenha.set(true);
     this.authService.trocarSenha(senhaAtual, novaSenha, confirmarSenha).subscribe({
       next: (res) => {
-        this.toast.success(res?.mensagem ?? 'Senha alterada. Sera exigida no proximo login.');
+        this.toast.success(res?.mensagem ?? 'Senha alterada. Será exigida no próximo login.');
         this.salvandoSenha.set(false);
         this.mostrarTrocarSenha.set(false);
         this.formSenha.reset({ senhaAtual: '', novaSenha: '', confirmarSenha: '' });
       },
       error: (err) => {
-        const msg = err?.error?.message ?? err?.error?.mensagem ?? 'Nao foi possivel trocar a senha.';
-        this.toast.error(typeof msg === 'string' ? msg : 'Nao foi possivel trocar a senha.');
+        const msg = err?.error?.message ?? err?.error?.mensagem ?? 'Não foi possível trocar a senha.';
+        this.toast.error(typeof msg === 'string' ? msg : 'Não foi possível trocar a senha.');
         this.salvandoSenha.set(false);
       }
     });

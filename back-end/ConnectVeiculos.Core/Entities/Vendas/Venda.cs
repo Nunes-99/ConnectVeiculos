@@ -92,19 +92,47 @@ namespace ConnectVeiculos.Core.Entities.Vendas
             VenDtEstorno = DateTime.Now;
         }
 
+        /// <summary>
+        /// Atualiza somente os dados do comprador, forma de pagamento e observacao.
+        /// Campos financeiros (valor, comissao, veiculo, data) sao imutaveis — pra mudar
+        /// isso e preciso estornar a venda e criar uma nova.
+        /// </summary>
+        public void AtualizarDadosComprador(
+            string compradorNome,
+            string compradorCpf,
+            string compradorTelefone,
+            string compradorEmail,
+            string compradorEndereco,
+            string formaPagamento,
+            string observacao)
+        {
+            if (VenStatus == "E")
+                throw new DomainException("Não é possível editar uma venda estornada.");
+            if (string.IsNullOrWhiteSpace(compradorNome))
+                throw new DomainException("O nome do comprador é obrigatório.");
+
+            VenCompradorNome = compradorNome;
+            VenCompradorCpf = compradorCpf;
+            VenCompradorTelefone = compradorTelefone;
+            VenCompradorEmail = compradorEmail;
+            VenCompradorEndereco = compradorEndereco;
+            VenFormaPagamento = formaPagamento;
+            VenObservacao = observacao;
+        }
+
         private void Validate()
         {
             if (R_VeiId <= 0)
-                throw new DomainException("O veiculo e obrigatorio para a venda.");
+                throw new DomainException("O veículo é obrigatório para a venda.");
 
             if (R_UsuId <= 0)
-                throw new DomainException("O vendedor e obrigatorio para a venda.");
+                throw new DomainException("O vendedor é obrigatório para a venda.");
 
             if (VenValor < 0)
-                throw new DomainException("O valor da venda nao pode ser negativo.");
+                throw new DomainException("O valor da venda não pode ser negativo.");
 
             if (string.IsNullOrWhiteSpace(VenCompradorNome))
-                throw new DomainException("O nome do comprador e obrigatorio.");
+                throw new DomainException("O nome do comprador é obrigatório.");
         }
     }
 }

@@ -22,48 +22,56 @@ export class IntegracoesComponent implements OnInit {
   private fb = inject(FormBuilder);
   private http = inject(HttpClient);
 
-  // Gemini OCR
-  geminiConfigurado = false;
-  geminiMascara: string | null = null;
-  geminiFonte: string | null = null;
-  geminiNovaChave = '';
-  geminiMostrar = false;
-  geminiSalvando = false;
+  // WhatsApp templates modal
+  showWaTemplatesModal = false;
 
-  private carregarGeminiConfig(): void {
-    if (!isPlatformBrowser(this.platformId)) return;
-    this.http.get<any>(`${environment.apiUrl}/ocr/config`).subscribe({
-      next: (resp) => {
-        this.geminiConfigurado = !!resp?.configurado;
-        this.geminiMascara = resp?.mascara || null;
-        this.geminiFonte = resp?.fonte || null;
-      },
-      error: () => { /* sem permissao ou erro — UI fica em "nao configurado" */ }
-    });
-  }
+  templateConfirmado = `Olá {{1}}, tudo bem?
 
-  salvarGemini(): void {
-    if (!this.geminiNovaChave) return;
-    this.geminiSalvando = true;
-    this.http.post(`${environment.apiUrl}/ocr/config`, { chave: this.geminiNovaChave }).subscribe({
-      next: () => {
-        this.toast.success('Chave do Gemini salva com sucesso!');
-        this.geminiNovaChave = '';
-        this.carregarGeminiConfig();
-      },
-      error: (err) => this.toast.error(err.error?.message || 'Erro ao salvar chave.'),
-      complete: () => this.geminiSalvando = false
-    });
-  }
+Seu test drive está CONFIRMADO! ✅
 
-  removerGemini(): void {
-    this.http.delete(`${environment.apiUrl}/ocr/config`).subscribe({
-      next: () => {
-        this.toast.success('Chave removida.');
-        this.carregarGeminiConfig();
-      },
-      error: (err) => this.toast.error(err.error?.message || 'Erro ao remover chave.')
-    });
+📅 Data: {{2}} às {{3}}
+🚗 Veículo: {{4}}
+📍 Local: {{5}}
+
+Lembre-se de trazer um documento de identificação com foto (CNH ou RG).
+Se precisar reagendar, é só responder esta mensagem.
+
+Te esperamos!
+_{{6}}_`;
+
+  templateCancelado = `Olá {{1}},
+
+Infelizmente precisamos CANCELAR seu test drive ❌
+
+📅 Data: {{2}} às {{3}}
+🚗 Veículo: {{4}}
+
+Quer reagendar para outro horário? Responda esta mensagem ou nos chame que organizamos uma nova data.
+
+Pedimos desculpas pelo transtorno.
+_{{5}}_`;
+
+  templateLembrete = `Olá {{1}}, tudo bem?
+
+Passando pra LEMBRAR do seu test drive AMANHÃ! ⏰
+
+📅 Data: {{2}} às {{3}}
+🚗 Veículo: {{4}}
+📍 Local: {{5}}
+
+Não esqueça:
+✅ Documento com foto (CNH ou RG)
+✅ Chegue 10 minutos antes
+
+Se precisar remarcar, é só responder esta mensagem.
+
+Te esperamos!
+_{{6}}_`;
+
+  copiarTexto(texto: string): void {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(texto).then(() => this.toast.success('Texto copiado!'));
+    }
   }
 
   mlConectado = false;
@@ -157,7 +165,6 @@ export class IntegracoesComponent implements OnInit {
     this.checkSmtpStatus();
     this.checkFacebookStatus();
     this.checkGoogleStatus();
-    this.carregarGeminiConfig();
   }
 
   // ============================================================
@@ -199,7 +206,7 @@ export class IntegracoesComponent implements OnInit {
           }
         }, 500);
       },
-      error: () => this.toast.error('Erro ao obter URL de autorizacao do Mercado Livre.')
+      error: () => this.toast.error('Erro ao obter URL de autorização do Mercado Livre.')
     });
   }
 
@@ -230,9 +237,15 @@ export class IntegracoesComponent implements OnInit {
     });
   }
 
+  // Nonce regenerado a cada abertura de modal — usado no atributo `name` dos inputs
+  // pra impedir que o navegador identifique campos de credenciais e dispare autofill
+  // (Chrome estava enchendo Access Token com a senha salva e Phone ID com o email).
+  inputNonce = Math.random().toString(36).slice(2, 10);
+
   abrirConfigWhatsApp(): void {
     this.waAbaTutorial = !this.waConfig.configurado;
     this.waMostrarToken = false;
+    this.inputNonce = Math.random().toString(36).slice(2, 10);
     this.waForm.reset({
       accessToken: '',
       phoneId: this.waConfig.phoneId || '',
@@ -311,7 +324,7 @@ export class IntegracoesComponent implements OnInit {
     this.smtpSalvando = true;
     this.integracaoService.saveSmtpConfig(this.smtpForm.value).subscribe({
       next: () => {
-        this.toast.success('Configuracao SMTP salva.');
+        this.toast.success('Configuração SMTP salva.');
         this.smtpSalvando = false;
         this.showSmtpConfigModal = false;
         this.checkSmtpStatus();
@@ -322,7 +335,7 @@ export class IntegracoesComponent implements OnInit {
 
   testarSmtp(): void {
     if (!this.smtpEmailTeste || !this.smtpEmailTeste.includes('@')) {
-      this.toast.warning('Informe um e-mail valido para o teste.');
+      this.toast.warning('Informe um e-mail válido para o teste.');
       return;
     }
     this.smtpTestando = true;
@@ -364,6 +377,7 @@ export class IntegracoesComponent implements OnInit {
     this.fbAbaTutorial = !this.fbConfig.configurado;
     this.fbMostrarToken = false;
     this.fbTesteResultado = null;
+    this.inputNonce = Math.random().toString(36).slice(2, 10);
     this.fbForm.reset({
       accessToken: '',
       catalogId: this.fbConfig.catalogId || '',
@@ -435,6 +449,7 @@ export class IntegracoesComponent implements OnInit {
     this.gmMostrarSecret = false;
     this.gmMostrarRefresh = false;
     this.gmTesteResultado = null;
+    this.inputNonce = Math.random().toString(36).slice(2, 10);
     this.gmForm.reset({
       clientId: this.gmConfig.clientId || '',
       clientSecret: '',

@@ -471,7 +471,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     const telefone = v.lojaWhatsApp?.replace(/\D/g, '') || this.loja?.lojWhatsApp?.replace(/\D/g, '') || this.loja?.lojTel1?.replace(/\D/g, '') || '';
     if (!telefone) return;
     const mensagem = encodeURIComponent(
-      `Ola! Tenho interesse no veiculo ${v.veiMarca} ${v.veiModelo} ${v.veiAno} - ${this.formatarPreco(v.veiPreco)}`
+      `Olá! Tenho interesse no veículo ${v.veiMarca} ${v.veiModelo} ${v.veiAno} - ${this.formatarPreco(v.veiPreco)}`
     );
     window.open(`https://wa.me/55${telefone}?text=${mensagem}`, '_blank');
     this.leadService.registrar({
@@ -487,7 +487,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     if (!telefone && this.veiculos.length > 0) {
       const tel = this.veiculos[0].lojaWhatsApp?.replace(/\D/g, '') || '';
       if (!tel) return;
-      window.open(`https://wa.me/55${tel}?text=${encodeURIComponent('Ola! Gostaria de saber mais sobre os veiculos disponiveis.')}`, '_blank');
+      window.open(`https://wa.me/55${tel}?text=${encodeURIComponent('Olá! Gostaria de saber mais sobre os veículos disponíveis.')}`, '_blank');
       this.leadService.registrar({
         veiculoId: null,
         lojaId: this.lojaId,
@@ -496,7 +496,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
       return;
     }
     if (!telefone) return;
-    window.open(`https://wa.me/55${telefone}?text=${encodeURIComponent('Ola! Gostaria de saber mais sobre os veiculos disponiveis.')}`, '_blank');
+    window.open(`https://wa.me/55${telefone}?text=${encodeURIComponent('Olá! Gostaria de saber mais sobre os veículos disponíveis.')}`, '_blank');
     this.leadService.registrar({
       veiculoId: null,
       lojaId: this.lojaId,
@@ -721,7 +721,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
         this.solicitacaoEnviada = true;
       },
       error: () => {
-        this.toast.error('Erro ao enviar solicitacao. Tente novamente.');
+        this.toast.error('Erro ao enviar solicitação. Tente novamente.');
       }
     });
   }

@@ -55,7 +55,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             var veiculo = await _veiculoRepository.GetByIdAsync(inputModel.VeiId);
 
             if (veiculo == null)
-                throw new Exception("Veiculo nao encontrado.");
+                throw new Exception("Veículo não encontrado.");
 
             var statusAnterior = veiculo.VeiSts;
             var precoAnterior = veiculo.VeiPreco;

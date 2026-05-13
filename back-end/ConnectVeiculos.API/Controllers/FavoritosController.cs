@@ -24,7 +24,7 @@ namespace ConnectVeiculos.API.Controllers
         public async Task<IActionResult> Favoritar([FromBody] FavoritarRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Email))
-                return BadRequest("E-mail e obrigatorio para favoritar.");
+                return BadRequest("E-mail é obrigatório para favoritar.");
 
             // Validacao de formato
             var email = request.Email.Trim().ToLowerInvariant();
@@ -81,7 +81,7 @@ namespace ConnectVeiculos.API.Controllers
         public async Task<IActionResult> MeusFavoritos([FromQuery] string email)
         {
             if (string.IsNullOrWhiteSpace(email))
-                return BadRequest("E-mail e obrigatorio.");
+                return BadRequest("E-mail é obrigatório.");
 
             var favoritos = await _context.Favoritos
                 .Where(f => f.FavEmail == email)

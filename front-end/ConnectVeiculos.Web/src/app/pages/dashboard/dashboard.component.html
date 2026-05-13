@@ -17,7 +17,7 @@
       </div>
 
       <div class="stat-card highlight-green">
-        <div class="stat-icon disponivel">
+        <div class="stat-icon disponível">
           <span class="material-icons">check_circle</span>
         </div>
         <div class="stat-info">
@@ -386,17 +386,15 @@
         }
       </div>
 
-      <!-- Gráfico Lojas (Barras) -->
-      <div class="chart-card full-width">
-        <h3>Veículos por Loja</h3>
-        @if (dashboard.veiculosPorLoja.length > 0) {
+      <!-- Gráfico Lojas (Barras) — só faz sentido com 2+ lojas pra comparar -->
+      @if (dashboard.veiculosPorLoja.length > 1) {
+        <div class="chart-card full-width">
+          <h3>Veículos por Loja</h3>
           <div class="chart-container-wide">
             <canvas #chartLojas></canvas>
           </div>
-        } @else {
-          <p class="empty-message">Nenhuma loja cadastrada</p>
-        }
-      </div>
+        </div>
+      }
 
       <!-- Top Veículos Vendidos -->
       @if (topVeiculos && topVeiculos.veiculos.length > 0) {
@@ -443,54 +441,6 @@
         </div>
       }
 
-      <!-- Veículos Recentes -->
-      <div class="chart-card full-width">
-        <h3>Veículos Recentes</h3>
-        @if (dashboard.veiculosRecentes.length > 0) {
-          <div class="recent-list">
-            <table>
-              <thead>
-                <tr>
-                  <th>Veículo</th>
-                  <th>Ano</th>
-                  <th>Preço</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (veiculo of recentesPaginados; track veiculo.veiId) {
-                  <tr>
-                    <td data-label="Veículo">
-                      <strong>{{ veiculo.modelo }}</strong>
-                      <span class="text-muted">{{ veiculo.marca }}</span>
-                    </td>
-                    <td data-label="Ano">{{ veiculo.ano }}</td>
-                    <td data-label="Preço">{{ formatarPreco(veiculo.preco) }}</td>
-                    <td data-label="Status">
-                      <span class="badge" [class]="getStatusClass(veiculo.status)">
-                        {{ getStatusLabel(veiculo.status) }}
-                      </span>
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-            @if (recentesTotalPages > 1) {
-              <div class="table-pagination">
-                <button [disabled]="recentesPage === 1" (click)="recentesPage = recentesPage - 1">
-                  <span class="material-icons">chevron_left</span>
-                </button>
-                <span class="page-info">{{ recentesPage }} / {{ recentesTotalPages }}</span>
-                <button [disabled]="recentesPage === recentesTotalPages" (click)="recentesPage = recentesPage + 1">
-                  <span class="material-icons">chevron_right</span>
-                </button>
-              </div>
-            }
-          </div>
-        } @else {
-          <p class="empty-message">Nenhum veículo cadastrado</p>
-        }
-      </div>
     </div>
   }
 </div>

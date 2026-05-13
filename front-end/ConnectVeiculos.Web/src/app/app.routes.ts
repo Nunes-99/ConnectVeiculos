@@ -93,10 +93,11 @@ export const routes: Routes = [
         path: 'leads',
         loadComponent: () => import('./pages/leads/leads.component').then(m => m.LeadsComponent)
       },
-      {
-        path: 'negociacoes',
-        loadComponent: () => import('./pages/negociacoes/negociacoes.component').then(m => m.NegociacoesComponent)
-      },
+      // Negociações desabilitada temporariamente — feature em desenvolvimento.
+      // {
+      //   path: 'negociacoes',
+      //   loadComponent: () => import('./pages/negociacoes/negociacoes.component').then(m => m.NegociacoesComponent)
+      // },
       {
         path: 'documentos',
         loadComponent: () => import('./pages/documentos-veiculo/documentos-veiculo.component').then(m => m.DocumentosVeiculoComponent)

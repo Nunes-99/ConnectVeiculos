@@ -58,7 +58,7 @@ namespace ConnectVeiculos.API.Controllers
         public IActionResult GerarQrCode([FromBody] QrCodeRequest request)
         {
             if (string.IsNullOrWhiteSpace(request?.Conteudo))
-                return BadRequest("O conteudo e obrigatorio.");
+                return BadRequest("O conteúdo é obrigatório.");
 
             var tamanho = request.Tamanho > 0 ? request.Tamanho : 250;
             var qrCode = _qrCodeService.GerarQrCode(request.Conteudo, tamanho);

@@ -85,7 +85,7 @@
   (cancelar)="mostrarConfirmaTrocaEmpresa.set(false)" />
 
 @if (mostrarTrocarSenha()) {
-  <div class="modal-overlay" (click)="fecharTrocarSenha()">
+  <div class="modal-overlay">
     <div class="modal" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2>Trocar senha</h2>
@@ -96,13 +96,18 @@
       <form [formGroup]="formSenha" (ngSubmit)="salvarTrocarSenha()">
         <div class="modal-body">
           <p style="margin: 0 0 16px; font-size: 14px; opacity: 0.75;">
-            Informe a senha atual e escolha uma nova. A nova senha sera exigida no proximo login.
+            Informe a senha atual e escolha uma nova. A nova senha será exigida no próximo login.
           </p>
 
           <div class="form-group">
             <label class="required">Senha atual</label>
-            <input type="password" formControlName="senhaAtual" autocomplete="current-password"
-                   [class.invalid]="hasErrorSenha('senhaAtual', 'required')" />
+            <div class="password-wrapper">
+              <input [type]="mostrarSenhaAtual ? 'text' : 'password'" formControlName="senhaAtual" autocomplete="current-password"
+                     [class.invalid]="hasErrorSenha('senhaAtual', 'required')" />
+              <button type="button" class="btn-eye" (click)="mostrarSenhaAtual = !mostrarSenhaAtual" [attr.aria-label]="mostrarSenhaAtual ? 'Ocultar senha' : 'Mostrar senha'">
+                <span class="material-icons">{{ mostrarSenhaAtual ? 'visibility_off' : 'visibility' }}</span>
+              </button>
+            </div>
             @if (hasErrorSenha('senhaAtual', 'required')) {
               <span class="field-error">Senha atual é obrigatória</span>
             }
@@ -110,8 +115,13 @@
 
           <div class="form-group">
             <label class="required">Nova senha</label>
-            <input type="password" formControlName="novaSenha" autocomplete="new-password"
-                   [class.invalid]="hasErrorSenha('novaSenha', 'required') || hasErrorSenha('novaSenha', 'minlength')" />
+            <div class="password-wrapper">
+              <input [type]="mostrarNovaSenha ? 'text' : 'password'" formControlName="novaSenha" autocomplete="new-password"
+                     [class.invalid]="hasErrorSenha('novaSenha', 'required') || hasErrorSenha('novaSenha', 'minlength')" />
+              <button type="button" class="btn-eye" (click)="mostrarNovaSenha = !mostrarNovaSenha" [attr.aria-label]="mostrarNovaSenha ? 'Ocultar senha' : 'Mostrar senha'">
+                <span class="material-icons">{{ mostrarNovaSenha ? 'visibility_off' : 'visibility' }}</span>
+              </button>
+            </div>
             @if (hasErrorSenha('novaSenha', 'required')) {
               <span class="field-error">Nova senha é obrigatória</span>
             }
@@ -122,8 +132,13 @@
 
           <div class="form-group">
             <label class="required">Confirmar nova senha</label>
-            <input type="password" formControlName="confirmarSenha" autocomplete="new-password"
-                   [class.invalid]="hasErrorSenha('confirmarSenha', 'required') || (formSenha.hasError('mismatch') && formSenha.get('confirmarSenha')?.touched)" />
+            <div class="password-wrapper">
+              <input [type]="mostrarConfirmarSenha ? 'text' : 'password'" formControlName="confirmarSenha" autocomplete="new-password"
+                     [class.invalid]="hasErrorSenha('confirmarSenha', 'required') || (formSenha.hasError('mismatch') && formSenha.get('confirmarSenha')?.touched)" />
+              <button type="button" class="btn-eye" (click)="mostrarConfirmarSenha = !mostrarConfirmarSenha" [attr.aria-label]="mostrarConfirmarSenha ? 'Ocultar senha' : 'Mostrar senha'">
+                <span class="material-icons">{{ mostrarConfirmarSenha ? 'visibility_off' : 'visibility' }}</span>
+              </button>
+            </div>
             @if (hasErrorSenha('confirmarSenha', 'required')) {
               <span class="field-error">Confirme a nova senha</span>
             }

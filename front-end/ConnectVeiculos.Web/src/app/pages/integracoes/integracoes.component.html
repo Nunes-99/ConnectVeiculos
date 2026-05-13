@@ -1,6 +1,6 @@
 <div class="page-header">
-  <h1><span class="material-icons">hub</span> Integracoes</h1>
-  <p>Gerencie as integracoes com plataformas externas para publicacao automatica de veiculos.</p>
+  <h1><span class="material-icons">hub</span> Integrações</h1>
+  <p>Gerencie as integrações com plataformas externas para publicação automática de veículos.</p>
 </div>
 
 <div class="integracoes-grid">
@@ -11,7 +11,7 @@
         <span class="platform-icon ml-icon">ML</span>
         <div>
           <h3>Mercado Livre</h3>
-          <p>Publicacao automatica de anuncios</p>
+          <p>Publicação automática de anúncios</p>
         </div>
       </div>
       <span class="status-badge" [class.connected]="mlConectado" [class.disconnected]="!mlConectado">
@@ -19,7 +19,7 @@
       </span>
     </div>
     <div class="card-body">
-      <p>Ao conectar, os veiculos com status <strong>Disponivel</strong> serao publicados automaticamente no Mercado Livre. Quando o status mudar (vendido, reservado ou inativo), o anuncio sera removido automaticamente.</p>
+      <p>Ao conectar, os veículos com status <strong>Disponível</strong> serão publicados automaticamente no Mercado Livre. Quando o status mudar (vendido, reservado ou inativo), o anúncio será removido automaticamente.</p>
 
       @if (mlConectado && mlConta) {
         <div class="ml-conta-info">
@@ -54,7 +54,7 @@
     </div>
     <div class="card-footer">
       <span class="material-icons">info</span>
-      <small>Custo: Gratis (taxas do ML aplicam-se apenas em vendas realizadas pela plataforma)</small>
+      <small>Custo: Grátis (taxas do ML aplicam-se apenas em vendas realizadas pela plataforma)</small>
     </div>
   </div>
 
@@ -67,17 +67,17 @@
         </span>
         <div>
           <h3>WhatsApp Business</h3>
-          <p>Receber leads e enviar mensagens automaticas</p>
+          <p>Receber leads e enviar mensagens automáticas</p>
         </div>
       </div>
       <span class="status-badge" [class.connected]="waConfig.configurado" [class.disconnected]="!waConfig.configurado">
-        {{ waConfig.configurado ? 'Configurado' : 'Nao configurado' }}
+        {{ waConfig.configurado ? 'Configurado' : 'Não configurado' }}
       </span>
     </div>
     <div class="card-body">
       <p>
-        Quando configurado, mensagens recebidas no seu numero WhatsApp Business viram <strong>Leads</strong>
-        automaticamente no admin. Voce tambem pode <strong>responder</strong> e disparar <strong>templates</strong>
+        Quando configurado, mensagens recebidas no seu número WhatsApp Business viram <strong>Leads</strong>
+        automaticamente no admin. Você também pode <strong>responder</strong> e disparar <strong>templates</strong>
         aprovados pelo Meta para confirmar test drives, recepcionar contatos etc.
       </p>
 
@@ -85,7 +85,7 @@
         <div class="ml-conta-info">
           <span class="material-icons">verified</span>
           <div>
-            <strong>Numero conectado</strong>
+            <strong>Número conectado</strong>
             @if (waConfig.phoneId) { <small>Phone ID: {{ waConfig.phoneId }}</small> }
           </div>
         </div>
@@ -105,18 +105,21 @@
             <span class="material-icons">link_off</span> Desconectar
           </button>
         }
+        <button class="btn-outline" (click)="showWaTemplatesModal = true" title="Templates de mensagem para criar no Meta Business">
+          <span class="material-icons">help_outline</span> Ver templates
+        </button>
       </div>
     </div>
     <div class="card-footer">
       <span class="material-icons">info</span>
-      <small>Custo: 1.000 conversas/mes gratis (iniciadas pelo cliente). Conversas adicionais ~R$0,06 (utility) ou ~R$0,30 (marketing). Pago direto ao Meta com o cartao da sua conta Business.</small>
+      <small>Custo: 1.000 conversas/mês grátis (iniciadas pelo cliente). Conversas adicionais ~R$0,06 (utility) ou ~R$0,30 (marketing). Pago direto ao Meta com o cartão da sua conta Business.</small>
     </div>
   </div>
 
-  <!-- Modal de configuracao WhatsApp -->
+  <!-- Modal de configuração WhatsApp -->
   @if (showWaConfigModal) {
-    <div class="modal-overlay" (click)="fecharConfigWhatsApp()">
-      <div class="modal modal-lg" (click)="$event.stopPropagation()">
+    <div class="modal-overlay">
+      <div class="modal modal-lg">
         <div class="modal-header">
           <h2><span class="material-icons">chat</span> Configurar WhatsApp Business</h2>
           <button class="modal-close" (click)="fecharConfigWhatsApp()"><span class="material-icons">close</span></button>
@@ -134,37 +137,45 @@
         <div class="modal-body">
           @if (waAbaTutorial) {
             <div class="wa-tutorial">
-              <p><strong>Voce precisa fazer no Meta Business antes de plugar aqui:</strong></p>
+              <p><strong>Você precisa fazer no Meta Business antes de plugar aqui:</strong></p>
               <ol>
-                <li>Criar conta em <a href="https://business.facebook.com" target="_blank" rel="noopener">business.facebook.com</a> (gratis, 5 min)</li>
+                <li>Criar conta em <a href="https://business.facebook.com" target="_blank" rel="noopener">business.facebook.com</a> (grátis, 5 min)</li>
                 <li>Criar um <strong>WhatsApp Business Account (WABA)</strong> dentro dela</li>
-                <li>Cadastrar e <strong>verificar via SMS</strong> um numero empresarial (nao pode estar em uso no WhatsApp comum)</li>
+                <li>Cadastrar e <strong>verificar via SMS</strong> um número empresarial (não pode estar em uso no WhatsApp comum)</li>
                 <li>Em <a href="https://developers.facebook.com" target="_blank" rel="noopener">developers.facebook.com</a> criar uma app tipo <strong>Business</strong> e ativar o produto <strong>WhatsApp</strong></li>
-                <li>Gerar um <strong>System User Token permanente</strong> (nao expira)</li>
+                <li>Gerar um <strong>System User Token permanente</strong> (não expira)</li>
                 <li>Submeter ao Meta os primeiros <strong>templates de mensagem</strong> (~24h pra aprovar): ex. "lead_recebido", "testdrive_confirmado"</li>
                 <li>No painel Meta, configurar o <strong>Webhook</strong> com:
                   <ul>
                     <li>URL: <code>{{ webhookUrl }}</code> <button class="btn-mini" (click)="copiarUrl(webhookUrl)" title="Copiar"><span class="material-icons">content_copy</span></button></li>
-                    <li>Verify Token: o que voce escolher na proxima aba (default: <code>connectveiculos-verify</code>)</li>
+                    <li>Verify Token: o que você escolher na próxima aba (default: <code>connectveiculos-verify</code>)</li>
                     <li>Subscribed fields: <strong>messages</strong></li>
                   </ul>
                 </li>
               </ol>
               <p class="wa-aviso">
                 <span class="material-icons">warning</span>
-                Guia detalhado em <strong>GUIA-INTEGRACOES.md</strong> &gt; secao 4. Quem paga as conversas e voce (Meta cobra direto no cartao da sua conta Business). 1.000 conversas iniciadas pelo cliente sao gratuitas todo mes.
+                Guia detalhado em <strong>GUIA-INTEGRACOES.md</strong> &gt; seção 4. Quem paga as conversas é você (Meta cobra direto no cartão da sua conta Business). 1.000 conversas iniciadas pelo cliente são gratuitas todo mês.
               </p>
               <button class="btn-primary" (click)="waAbaTutorial = false">
-                Ja fiz tudo, vou colar as credenciais
+                Já fiz tudo, vou colar as credenciais
                 <span class="material-icons">arrow_forward</span>
               </button>
             </div>
           } @else {
-            <form [formGroup]="waForm" (ngSubmit)="salvarWhatsApp()" class="wa-form">
+            <form [formGroup]="waForm" (ngSubmit)="salvarWhatsApp()" class="wa-form" autocomplete="off">
+              <!-- Honeypot para enganar autofill do Chrome (esconde os campos reais) -->
+              <input type="text" name="fakeusernameremembered" style="display:none" autocomplete="username" tabindex="-1" aria-hidden="true" />
+              <input type="password" name="fakepasswordremembered" style="display:none" autocomplete="new-password" tabindex="-1" aria-hidden="true" />
+
               <div class="form-group">
                 <label class="required">Access Token (System User Token permanente)</label>
                 <div class="token-input">
-                  <input [type]="waMostrarToken ? 'text' : 'password'" formControlName="accessToken" placeholder="EAAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
+                  <input [type]="waMostrarToken ? 'text' : 'password'" formControlName="accessToken"
+                         placeholder="EAAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                         name="wa-token-{{ inputNonce }}"
+                         autocomplete="new-password"
+                         data-lpignore="true" data-form-type="other" />
                   <button type="button" class="btn-mini" (click)="waMostrarToken = !waMostrarToken">
                     <span class="material-icons">{{ waMostrarToken ? 'visibility_off' : 'visibility' }}</span>
                   </button>
@@ -174,14 +185,20 @@
 
               <div class="form-group">
                 <label class="required">Phone Number ID</label>
-                <input type="text" formControlName="phoneId" placeholder="123456789012345" />
-                <small>Numero ID que aparece em <em>WhatsApp &gt; API Setup &gt; From phone number</em>. Nao e o telefone, e o ID.</small>
+                <input type="text" formControlName="phoneId" placeholder="123456789012345"
+                       name="wa-phoneid-{{ inputNonce }}"
+                       autocomplete="off"
+                       data-lpignore="true" data-form-type="other" />
+                <small>Número ID que aparece em <em>WhatsApp &gt; API Setup &gt; From phone number</em>. Não é o telefone, é o ID.</small>
               </div>
 
               <div class="form-group">
-                <label class="required">Verify Token (voce define)</label>
-                <input type="text" formControlName="verifyToken" placeholder="connectveiculos-verify" />
-                <small>Qualquer string secreta. Tem que ser EXATAMENTE igual a que voce coloca no campo <em>Verify Token</em> do webhook do Meta.</small>
+                <label class="required">Verify Token (você define)</label>
+                <input type="text" formControlName="verifyToken" placeholder="connectveiculos-verify"
+                       name="wa-verify-{{ inputNonce }}"
+                       autocomplete="off"
+                       data-lpignore="true" data-form-type="other" />
+                <small>Qualquer string secreta. Tem que ser EXATAMENTE igual à que você coloca no campo <em>Verify Token</em> do webhook do Meta.</small>
               </div>
 
               <div class="wa-aviso">
@@ -207,7 +224,7 @@
   <app-confirm-modal
     [show]="showWaDesconectarModal"
     titulo="Desconectar WhatsApp Business?"
-    mensagem="Apos desconectar, novas mensagens recebidas NAO geram mais Leads automaticamente. As mensagens ja recebidas continuam visiveis em Leads. O sistema parara de enviar mensagens via WhatsApp ate uma conta ser reconectada."
+    mensagem="Após desconectar, novas mensagens recebidas NÃO geram mais Leads automaticamente. As mensagens já recebidas continuam visíveis em Leads. O sistema parará de enviar mensagens via WhatsApp até uma conta ser reconectada."
     textoBotaoConfirmar="Sim, desconectar"
     textoBotaoCancelar="Cancelar"
     tipo="danger"
@@ -223,17 +240,17 @@
         </span>
         <div>
           <h3>E-mail / SMTP</h3>
-          <p>Notificacoes para clientes (preco caiu, veiculo similar, recuperar senha)</p>
+          <p>Notificações para clientes (preço caiu, veículo similar, recuperar senha)</p>
         </div>
       </div>
       <span class="status-badge" [class.connected]="smtpConfig.configurado" [class.disconnected]="!smtpConfig.configurado">
-        {{ smtpConfig.configurado ? 'Configurado' : 'Nao configurado' }}
+        {{ smtpConfig.configurado ? 'Configurado' : 'Não configurado' }}
       </span>
     </div>
     <div class="card-body">
       <p>
-        Quando configurado, o sistema envia e-mails automaticos: queda de preco para quem favoritou um veiculo, novo veiculo similar disponivel, recuperacao de senha do admin, confirmacao de venda.
-        O remetente sera o e-mail da sua loja (nao da plataforma) — voce paga apenas se usar servico pago como SendGrid.
+        Quando configurado, o sistema envia e-mails automáticos: queda de preço para quem favoritou um veículo, novo veículo similar disponível, recuperação de senha do admin, confirmação de venda.
+        O remetente será o e-mail da sua loja (não da plataforma) — você paga apenas se usar serviço pago como SendGrid.
       </p>
 
       @if (smtpConfig.configurado && smtpConfig.senderEmail) {
@@ -264,14 +281,14 @@
     </div>
     <div class="card-footer">
       <span class="material-icons">info</span>
-      <small>Custo: gratis se usar e-mail proprio (Locaweb, UOL, KingHost, Gmail). Pago se usar servico dedicado tipo SendGrid (free 100/dia, depois ~R$100/mes para 50k).</small>
+      <small>Custo: grátis se usar e-mail próprio (Locaweb, UOL, KingHost, Gmail). Pago se usar serviço dedicado tipo SendGrid (free 100/dia, depois ~R$100/mês para 50k).</small>
     </div>
   </div>
 
   <!-- Modal config SMTP -->
   @if (showSmtpConfigModal) {
-    <div class="modal-overlay" (click)="fecharConfigSmtp()">
-      <div class="modal modal-lg" (click)="$event.stopPropagation()">
+    <div class="modal-overlay">
+      <div class="modal modal-lg">
         <div class="modal-header">
           <h2><span class="material-icons">mail</span> Configurar E-mail / SMTP</h2>
           <button class="modal-close" (click)="fecharConfigSmtp()"><span class="material-icons">close</span></button>
@@ -299,15 +316,15 @@
               </div>
               <div class="form-group">
                 <label class="required">Nome remetente</label>
-                <input type="text" formControlName="senderName" placeholder="Diamante Veiculos" />
+                <input type="text" formControlName="senderName" placeholder="Diamante Veículos" />
                 <small>Aparece como "De:" antes do e-mail.</small>
               </div>
             </div>
 
             <div class="form-group">
-              <label class="required">Usuario SMTP</label>
+              <label class="required">Usuário SMTP</label>
               <input type="text" formControlName="username" placeholder="contato@minhaloja.com.br ou apikey" />
-              <small>Geralmente igual ao e-mail. Para SendGrid, e a string "apikey".</small>
+              <small>Geralmente igual ao e-mail. Para SendGrid, é a string "apikey".</small>
             </div>
 
             <div class="form-group">
@@ -321,15 +338,16 @@
               <small>Para Gmail: gere App Password em myaccount.google.com/apppasswords (precisa 2-Step Verification ativo).</small>
             </div>
 
-            <div class="form-group">
-              <label>
-                <input type="checkbox" formControlName="enableSsl" /> Usar SSL/TLS (recomendado)
+            <div class="form-group form-check">
+              <label class="check-label">
+                <input type="checkbox" formControlName="enableSsl" />
+                <span>Usar SSL/TLS (recomendado)</span>
               </label>
             </div>
 
             <div class="wa-aviso">
               <span class="material-icons">warning</span>
-              Sempre TESTE antes de salvar — credencial errada faz notificacoes silenciarem sem aviso.
+              Sempre TESTE antes de salvar — credencial errada faz notificações silenciarem sem aviso.
             </div>
 
             <div class="smtp-test-block">
@@ -346,7 +364,7 @@
                   {{ smtpTesteResultado.mensagem }}
                 </div>
               }
-              <small>O teste usa as credenciais ATUALMENTE SALVAS. Se acabou de mexer no formulario, salve antes de testar.</small>
+              <small>O teste usa as credenciais ATUALMENTE SALVAS. Se acabou de mexer no formulário, salve antes de testar.</small>
             </div>
 
             <div class="modal-footer">
@@ -364,7 +382,7 @@
   <app-confirm-modal
     [show]="showSmtpDesconectarModal"
     titulo="Desconectar SMTP?"
-    mensagem="Apos desconectar, e-mails de notificacao (preco caiu, veiculo similar, recuperar senha) deixam de ser enviados. Configure novamente quando quiser reativar."
+    mensagem="Após desconectar, e-mails de notificação (preço caiu, veículo similar, recuperar senha) deixam de ser enviados. Configure novamente quando quiser reativar."
     textoBotaoConfirmar="Sim, desconectar"
     textoBotaoCancelar="Cancelar"
     tipo="danger"
@@ -378,21 +396,21 @@
         <span class="platform-icon fb-icon">f</span>
         <div>
           <h3>Facebook / Instagram</h3>
-          <p>Catalogo de produtos para Marketplace e Ads</p>
+          <p>Catálogo de produtos para Marketplace e Ads</p>
         </div>
       </div>
       <span class="status-badge" [class.connected]="fbConfig.configurado" [class.disconnected]="!fbConfig.configurado">
-        {{ fbConfig.configurado ? 'Conectado' : 'Nao configurado' }}
+        {{ fbConfig.configurado ? 'Conectado' : 'Não configurado' }}
       </span>
     </div>
     <div class="card-body">
-      <p>O Facebook pode importar veiculos de duas formas: <strong>Feed XML</strong> (atualiza ~3x ao dia) e <strong>Push API</strong> (atualiza em segundos quando voce cadastra/vende um veiculo). Use as duas em paralelo para ter o melhor dos dois mundos.</p>
+      <p>O Facebook pode importar veículos de duas formas: <strong>Feed XML</strong> (atualiza ~3x ao dia) e <strong>Push API</strong> (atualiza em segundos quando você cadastra/vende um veículo). Use as duas em paralelo para ter o melhor dos dois mundos.</p>
 
       @if (fbConfig.configurado) {
         <div class="ml-conta-info">
           <span class="material-icons">verified</span>
           <div>
-            <strong>Catalogo conectado</strong>
+            <strong>Catálogo conectado</strong>
             @if (fbConfig.catalogId) { <small>Catalog ID: {{ fbConfig.catalogId }} • API {{ fbConfig.apiVersion }}</small> }
           </div>
         </div>
@@ -406,7 +424,7 @@
             <span class="material-icons">content_copy</span>
           </button>
         </div>
-        <small>Configure no Meta Business Suite &gt; Catalogo &gt; Fontes de dados.</small>
+        <small>Configure no Meta Business Suite &gt; Catálogo &gt; Fontes de dados.</small>
       </div>
 
       <div class="card-actions">
@@ -431,14 +449,14 @@
     </div>
     <div class="card-footer">
       <span class="material-icons">info</span>
-      <small>Custo: Gratis para listagem organica. Para impulsionar com Ads, o cliente define o orcamento.</small>
+      <small>Custo: Grátis para listagem orgânica. Para impulsionar com Ads, o cliente define o orçamento.</small>
     </div>
   </div>
 
   <!-- Modal config Facebook Catalog -->
   @if (showFbConfigModal) {
-    <div class="modal-overlay" (click)="fecharConfigFacebook()">
-      <div class="modal modal-lg" (click)="$event.stopPropagation()">
+    <div class="modal-overlay">
+      <div class="modal modal-lg">
         <div class="modal-header">
           <h2><span class="material-icons">storefront</span> Configurar Facebook Catalog</h2>
           <button class="modal-close" (click)="fecharConfigFacebook()"><span class="material-icons">close</span></button>
@@ -456,52 +474,65 @@
         <div class="modal-body">
           @if (fbAbaTutorial) {
             <div class="wa-tutorial">
-              <p><strong>Voce precisa fazer no Meta Business antes de plugar aqui:</strong></p>
+              <p><strong>Você precisa fazer no Meta Business antes de plugar aqui:</strong></p>
               <ol>
-                <li>Acesse <a href="https://business.facebook.com" target="_blank" rel="noopener">business.facebook.com</a> e crie um <strong>Catalogo</strong> (tipo: Veiculos).</li>
-                <li>Anote o <strong>Catalog ID</strong> que aparece em <em>Configuracoes do catalogo</em> (numero longo).</li>
+                <li>Acesse <a href="https://business.facebook.com" target="_blank" rel="noopener">business.facebook.com</a> e crie um <strong>Catálogo</strong> (tipo: Veículos).</li>
+                <li>Anote o <strong>Catalog ID</strong> que aparece em <em>Configurações do catálogo</em> (número longo).</li>
                 <li>Em <a href="https://developers.facebook.com" target="_blank" rel="noopener">developers.facebook.com</a> crie uma app tipo <strong>Business</strong> (ou reuse a do WhatsApp).</li>
-                <li>Em <em>App &gt; System Users</em> crie um System User com permissao <strong>Catalog Management</strong> sobre seu catalogo.</li>
+                <li>Em <em>App &gt; System Users</em> crie um System User com permissão <strong>Catalog Management</strong> sobre seu catálogo.</li>
                 <li>Gere um <strong>Token Permanente</strong> (System User Token) com escopo <code>catalog_management</code> e <code>business_management</code>.</li>
-                <li>Cole AccessToken e Catalog ID na proxima aba e clique em <strong>Testar</strong> antes de salvar.</li>
+                <li>Cole AccessToken e Catalog ID na próxima aba e clique em <strong>Testar</strong> antes de salvar.</li>
               </ol>
               <p class="wa-aviso">
                 <span class="material-icons">warning</span>
-                O System User Token e <strong>permanente</strong> (nao expira) — guarde com cuidado e use SEMPRE este aqui, nao tokens de usuario que expiram em 60 dias. Detalhes em <strong>GUIA-INTEGRACOES.md &gt; secao 2</strong>.
+                O System User Token é <strong>permanente</strong> (não expira) — guarde com cuidado e use SEMPRE este aqui, não tokens de usuário que expiram em 60 dias. Detalhes em <strong>GUIA-INTEGRACOES.md &gt; seção 2</strong>.
               </p>
               <button class="btn-primary" (click)="fbAbaTutorial = false">
-                Ja fiz tudo, vou colar as credenciais
+                Já fiz tudo, vou colar as credenciais
                 <span class="material-icons">arrow_forward</span>
               </button>
             </div>
           } @else {
-            <form [formGroup]="fbForm" (ngSubmit)="salvarFacebook()" class="wa-form">
+            <form [formGroup]="fbForm" (ngSubmit)="salvarFacebook()" class="wa-form" autocomplete="off">
+              <input type="text" name="fakeusernameremembered" style="display:none" autocomplete="username" tabindex="-1" aria-hidden="true" />
+              <input type="password" name="fakepasswordremembered" style="display:none" autocomplete="new-password" tabindex="-1" aria-hidden="true" />
+
               <div class="form-group">
                 <label class="required">Access Token (System User Token permanente)</label>
                 <div class="token-input">
-                  <input [type]="fbMostrarToken ? 'text' : 'password'" formControlName="accessToken" placeholder="EAAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
+                  <input [type]="fbMostrarToken ? 'text' : 'password'" formControlName="accessToken"
+                         placeholder="EAAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                         name="fb-token-{{ inputNonce }}"
+                         autocomplete="new-password"
+                         data-lpignore="true" data-form-type="other" />
                   <button type="button" class="btn-mini" (click)="fbMostrarToken = !fbMostrarToken">
                     <span class="material-icons">{{ fbMostrarToken ? 'visibility_off' : 'visibility' }}</span>
                   </button>
                 </div>
-                <small>Token gerado no painel <em>System User</em> com permissao <code>catalog_management</code>.</small>
+                <small>Token gerado no painel <em>System User</em> com permissão <code>catalog_management</code>.</small>
               </div>
 
               <div class="form-row">
                 <div class="form-group">
                   <label class="required">Catalog ID</label>
-                  <input type="text" formControlName="catalogId" placeholder="1234567890123456" />
-                  <small>Numero exibido em Catalogo &gt; Configuracoes.</small>
+                  <input type="text" formControlName="catalogId" placeholder="1234567890123456"
+                         name="fb-catalog-{{ inputNonce }}"
+                         autocomplete="off"
+                         data-lpignore="true" data-form-type="other" />
+                  <small>Número exibido em Catálogo &gt; Configurações.</small>
                 </div>
                 <div class="form-group">
-                  <label class="required">Versao da API</label>
-                  <input type="text" formControlName="apiVersion" placeholder="v18.0" />
-                  <small>Padrao: v18.0. Atualize se Meta mudar a versao recomendada.</small>
+                  <label class="required">Versão da API</label>
+                  <input type="text" formControlName="apiVersion" placeholder="v18.0"
+                         name="fb-apiver-{{ inputNonce }}"
+                         autocomplete="off"
+                         data-lpignore="true" data-form-type="other" />
+                  <small>Padrão: v18.0. Atualize se Meta mudar a versão recomendada.</small>
                 </div>
               </div>
 
               <div class="smtp-test-block">
-                <label>Testar conexao com o catalogo:</label>
+                <label>Testar conexão com o catálogo:</label>
                 <div class="token-input">
                   <button type="button" class="btn-mini btn-test" (click)="testarFacebook()" [disabled]="fbTestando">
                     <span class="material-icons">science</span> {{ fbTestando ? 'Testando...' : 'Testar agora' }}
@@ -513,7 +544,7 @@
                     {{ fbTesteResultado.mensagem }}
                   </div>
                 }
-                <small>O teste usa as credenciais ATUALMENTE SALVAS. Salve antes de testar se acabou de mexer no formulario.</small>
+                <small>O teste usa as credenciais ATUALMENTE SALVAS. Salve antes de testar se acabou de mexer no formulário.</small>
               </div>
 
               <div class="modal-footer">
@@ -532,18 +563,18 @@
   <app-confirm-modal
     [show]="showFbDesconectarModal"
     titulo="Desconectar Facebook Catalog?"
-    mensagem="Apos desconectar, novos veiculos nao serao mais publicados/atualizados via Push API no catalogo do Facebook. O feed XML continua funcionando se voce o configurou no Meta. Configure novamente quando quiser reativar o push instantaneo."
+    mensagem="Após desconectar, novos veículos não serão mais publicados/atualizados via Push API no catálogo do Facebook. O feed XML continua funcionando se você o configurou no Meta. Configure novamente quando quiser reativar o push instantâneo."
     textoBotaoConfirmar="Sim, desconectar"
     textoBotaoCancelar="Cancelar"
     tipo="danger"
     (confirmar)="confirmarDesconectarFacebook()"
     (cancelar)="cancelarDesconectarFacebook()" />
 
-  <!-- Modais de confirmacao do ML -->
+  <!-- Modais de confirmação do ML -->
   <app-confirm-modal
     [show]="showSubstituirModal"
     titulo="Substituir conta Mercado Livre?"
-    [mensagem]="'Ja existe uma conta ML conectada' + (mlConta ? ' (' + mlConta.nickname + ')' : '') + '. Conectar uma nova conta vai SUBSTITUIR a atual e os anuncios futuros irao para a nova conta. Continuar?'"
+    [mensagem]="'Já existe uma conta ML conectada' + (mlConta ? ' (' + mlConta.nickname + ')' : '') + '. Conectar uma nova conta vai SUBSTITUIR a atual e os anúncios futuros irão para a nova conta. Continuar?'"
     textoBotaoConfirmar="Sim, substituir"
     textoBotaoCancelar="Cancelar"
     tipo="warning"
@@ -553,7 +584,7 @@
   <app-confirm-modal
     [show]="showDesconectarModal"
     titulo="Desconectar Mercado Livre?"
-    mensagem="Apos desconectar, novos veiculos cadastrados NAO serao publicados automaticamente no ML ate uma nova conta ser conectada. Os anuncios ja publicados continuam ativos no ML."
+    mensagem="Após desconectar, novos veículos cadastrados NÃO serão publicados automaticamente no ML até uma nova conta ser conectada. Os anúncios já publicados continuam ativos no ML."
     textoBotaoConfirmar="Sim, desconectar"
     textoBotaoCancelar="Cancelar"
     tipo="danger"
@@ -571,11 +602,11 @@
         </div>
       </div>
       <span class="status-badge" [class.connected]="gmConfig.configurado" [class.disconnected]="!gmConfig.configurado">
-        {{ gmConfig.configurado ? 'Conectado' : 'Nao configurado' }}
+        {{ gmConfig.configurado ? 'Conectado' : 'Não configurado' }}
       </span>
     </div>
     <div class="card-body">
-      <p>O Google pode importar veiculos via <strong>Feed XML</strong> (atualiza ~3x ao dia) ou via <strong>Content API</strong> (atualiza em segundos quando voce cadastra/vende). Para reduzir o tempo entre a publicacao e o anuncio aparecer, configure a Content API.</p>
+      <p>O Google pode importar veículos via <strong>Feed XML</strong> (atualiza ~3x ao dia) ou via <strong>Content API</strong> (atualiza em segundos quando você cadastra/vende). Para reduzir o tempo entre a publicação e o anúncio aparecer, configure a Content API.</p>
 
       @if (gmConfig.configurado) {
         <div class="ml-conta-info">
@@ -620,14 +651,14 @@
     </div>
     <div class="card-footer">
       <span class="material-icons">info</span>
-      <small>Custo: Listagem gratis. Para Google Ads (Vehicle Ads), o cliente define o orcamento (min ~R$5/dia).</small>
+      <small>Custo: Listagem grátis. Para Google Ads (Vehicle Ads), o cliente define o orçamento (mín ~R$5/dia).</small>
     </div>
   </div>
 
   <!-- Modal config Google Merchant -->
   @if (showGmConfigModal) {
-    <div class="modal-overlay" (click)="fecharConfigGoogle()">
-      <div class="modal modal-lg" (click)="$event.stopPropagation()">
+    <div class="modal-overlay">
+      <div class="modal modal-lg">
         <div class="modal-header">
           <h2><span class="material-icons">shopping_cart</span> Configurar Google Merchant</h2>
           <button class="modal-close" (click)="fecharConfigGoogle()"><span class="material-icons">close</span></button>
@@ -645,42 +676,51 @@
         <div class="modal-body">
           @if (gmAbaTutorial) {
             <div class="wa-tutorial">
-              <p><strong>Voce precisa fazer no Google antes de plugar aqui:</strong></p>
+              <p><strong>Você precisa fazer no Google antes de plugar aqui:</strong></p>
               <ol>
                 <li>Crie uma conta no <a href="https://merchants.google.com" target="_blank" rel="noopener">Google Merchant Center</a> e anote o <strong>Merchant ID</strong> (canto superior).</li>
                 <li>Acesse <a href="https://console.cloud.google.com" target="_blank" rel="noopener">Google Cloud Console</a> e crie um projeto.</li>
-                <li>Em <em>APIs e Servicos &gt; Biblioteca</em>, ative a <strong>Content API for Shopping</strong>.</li>
-                <li>Em <em>APIs e Servicos &gt; Credenciais</em>, crie credenciais tipo <strong>OAuth 2.0 Client ID</strong> (tipo "Desktop app"). Copie o <strong>Client ID</strong> e o <strong>Client Secret</strong>.</li>
+                <li>Em <em>APIs e Serviços &gt; Biblioteca</em>, ative a <strong>Content API for Shopping</strong>.</li>
+                <li>Em <em>APIs e Serviços &gt; Credenciais</em>, crie credenciais tipo <strong>OAuth 2.0 Client ID</strong> (tipo "Desktop app"). Copie o <strong>Client ID</strong> e o <strong>Client Secret</strong>.</li>
                 <li>Use o <a href="https://developers.google.com/oauthplayground/" target="_blank" rel="noopener">OAuth Playground</a> para gerar o <strong>Refresh Token</strong>:
                   <ul>
-                    <li>No icone de engrenagem, marque <em>"Use your own OAuth credentials"</em> e cole Client ID + Secret.</li>
+                    <li>No ícone de engrenagem, marque <em>"Use your own OAuth credentials"</em> e cole Client ID + Secret.</li>
                     <li>Em <em>Step 1</em>, selecione o escopo <code>https://www.googleapis.com/auth/content</code>.</li>
                     <li>Autorize com a conta Google que tem acesso ao Merchant Center.</li>
                     <li>Em <em>Step 2</em>, clique em <em>Exchange authorization code for tokens</em> e copie o <strong>refresh_token</strong>.</li>
                   </ul>
                 </li>
-                <li>Cole tudo na proxima aba e clique em <strong>Testar</strong>.</li>
+                <li>Cole tudo na próxima aba e clique em <strong>Testar</strong>.</li>
               </ol>
               <p class="wa-aviso">
                 <span class="material-icons">warning</span>
-                O Refresh Token nao expira (a menos que seja revogado manualmente). Guarde com cuidado. Detalhes em <strong>GUIA-INTEGRACOES.md &gt; secao 3</strong>.
+                O Refresh Token não expira (a menos que seja revogado manualmente). Guarde com cuidado. Detalhes em <strong>GUIA-INTEGRACOES.md &gt; seção 3</strong>.
               </p>
               <button class="btn-primary" (click)="gmAbaTutorial = false">
-                Ja fiz tudo, vou colar as credenciais
+                Já fiz tudo, vou colar as credenciais
                 <span class="material-icons">arrow_forward</span>
               </button>
             </div>
           } @else {
-            <form [formGroup]="gmForm" (ngSubmit)="salvarGoogle()" class="wa-form">
+            <form [formGroup]="gmForm" (ngSubmit)="salvarGoogle()" class="wa-form" autocomplete="off">
+              <input type="text" name="fakeusernameremembered" style="display:none" autocomplete="username" tabindex="-1" aria-hidden="true" />
+              <input type="password" name="fakepasswordremembered" style="display:none" autocomplete="new-password" tabindex="-1" aria-hidden="true" />
+
               <div class="form-row">
                 <div class="form-group">
                   <label class="required">Merchant ID</label>
-                  <input type="text" formControlName="merchantId" placeholder="123456789" />
-                  <small>Numero exibido no canto superior do Merchant Center.</small>
+                  <input type="text" formControlName="merchantId" placeholder="123456789"
+                         name="gm-merchant-{{ inputNonce }}"
+                         autocomplete="off"
+                         data-lpignore="true" data-form-type="other" />
+                  <small>Número exibido no canto superior do Merchant Center.</small>
                 </div>
                 <div class="form-group">
                   <label class="required">Client ID</label>
-                  <input type="text" formControlName="clientId" placeholder="xxxxx.apps.googleusercontent.com" />
+                  <input type="text" formControlName="clientId" placeholder="xxxxx.apps.googleusercontent.com"
+                         name="gm-clientid-{{ inputNonce }}"
+                         autocomplete="off"
+                         data-lpignore="true" data-form-type="other" />
                   <small>Gerado em Cloud Console &gt; Credenciais &gt; OAuth 2.0.</small>
                 </div>
               </div>
@@ -688,18 +728,26 @@
               <div class="form-group">
                 <label class="required">Client Secret</label>
                 <div class="token-input">
-                  <input [type]="gmMostrarSecret ? 'text' : 'password'" formControlName="clientSecret" placeholder="GOCSPX-xxxxxxxxxxxxxxxx" />
+                  <input [type]="gmMostrarSecret ? 'text' : 'password'" formControlName="clientSecret"
+                         placeholder="GOCSPX-xxxxxxxxxxxxxxxx"
+                         name="gm-secret-{{ inputNonce }}"
+                         autocomplete="new-password"
+                         data-lpignore="true" data-form-type="other" />
                   <button type="button" class="btn-mini" (click)="gmMostrarSecret = !gmMostrarSecret">
                     <span class="material-icons">{{ gmMostrarSecret ? 'visibility_off' : 'visibility' }}</span>
                   </button>
                 </div>
-                <small>Acompanha o Client ID — disponivel apenas no momento da criacao da credencial.</small>
+                <small>Acompanha o Client ID — disponível apenas no momento da criação da credencial.</small>
               </div>
 
               <div class="form-group">
                 <label class="required">Refresh Token</label>
                 <div class="token-input">
-                  <input [type]="gmMostrarRefresh ? 'text' : 'password'" formControlName="refreshToken" placeholder="1//0gxxxxxxxxxxxxxxxxxxxxxxx" />
+                  <input [type]="gmMostrarRefresh ? 'text' : 'password'" formControlName="refreshToken"
+                         placeholder="1//0gxxxxxxxxxxxxxxxxxxxxxxx"
+                         name="gm-refresh-{{ inputNonce }}"
+                         autocomplete="new-password"
+                         data-lpignore="true" data-form-type="other" />
                   <button type="button" class="btn-mini" (click)="gmMostrarRefresh = !gmMostrarRefresh">
                     <span class="material-icons">{{ gmMostrarRefresh ? 'visibility_off' : 'visibility' }}</span>
                   </button>
@@ -708,7 +756,7 @@
               </div>
 
               <div class="smtp-test-block">
-                <label>Testar conexao com o Merchant Center:</label>
+                <label>Testar conexão com o Merchant Center:</label>
                 <div class="token-input">
                   <button type="button" class="btn-mini btn-test" (click)="testarGoogle()" [disabled]="gmTestando">
                     <span class="material-icons">science</span> {{ gmTestando ? 'Testando...' : 'Testar agora' }}
@@ -720,7 +768,7 @@
                     {{ gmTesteResultado.mensagem }}
                   </div>
                 }
-                <small>O teste usa as credenciais ATUALMENTE SALVAS. Salve antes de testar se acabou de mexer no formulario.</small>
+                <small>O teste usa as credenciais ATUALMENTE SALVAS. Salve antes de testar se acabou de mexer no formulário.</small>
               </div>
 
               <div class="modal-footer">
@@ -739,72 +787,120 @@
   <app-confirm-modal
     [show]="showGmDesconectarModal"
     titulo="Desconectar Google Merchant?"
-    mensagem="Apos desconectar, novos veiculos nao serao mais publicados/atualizados via Content API. O feed XML continua funcionando se voce o configurou no Merchant Center. Configure novamente quando quiser reativar o push instantaneo."
+    mensagem="Após desconectar, novos veículos não serão mais publicados/atualizados via Content API. O feed XML continua funcionando se você o configurou no Merchant Center. Configure novamente quando quiser reativar o push instantâneo."
     textoBotaoConfirmar="Sim, desconectar"
     textoBotaoCancelar="Cancelar"
     tipo="danger"
     (confirmar)="confirmarDesconectarGoogle()"
     (cancelar)="cancelarDesconectarGoogle()" />
 
-  <!-- Google Gemini OCR (scanner de CRLV) -->
-  <div class="integracao-card">
-    <div class="card-header">
-      <div class="platform-info">
-        <span class="platform-icon" style="background: #4285f4">G</span>
-        <div>
-          <h3>Google Gemini (OCR de CRLV)</h3>
-          <p>Extração automática de dados do documento ao cadastrar veículo</p>
-        </div>
-      </div>
-      <span class="status-badge" [class.connected]="geminiConfigurado" [class.disconnected]="!geminiConfigurado">
-        {{ geminiConfigurado ? 'Configurado' : 'Não configurado' }}
-      </span>
-    </div>
-    <div class="card-body">
-      <p>
-        Use o tier <strong>gratuito</strong> do Google Gemini (1.500 escaneamentos/dia + 15/min por chave).
-        Obtenha sua chave em <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> (não precisa cartão).
-      </p>
+  <!-- Google Gemini OCR (scanner de CRLV) - card oculto.
+       Todos os tenants usam a chave configurada via variavel de ambiente GEMINI_API_KEY no servidor. -->
 
-      @if (geminiConfigurado && geminiMascara) {
-        <div class="ml-conta-info">
-          <span class="material-icons">verified</span>
-          <div>
-            <strong>Chave salva: {{ geminiMascara }}</strong>
-            <small>Fonte: {{ geminiFonte === 'banco' ? 'banco (configurado via UI)' : 'variável de ambiente do servidor' }}</small>
+  @if (showWaTemplatesModal) {
+    <div class="modal-overlay">
+      <div class="modal modal-lg">
+        <div class="modal-header">
+          <h2><span class="material-icons">help_outline</span> Templates WhatsApp — passo a passo</h2>
+          <button class="modal-close" (click)="showWaTemplatesModal = false"><span class="material-icons">close</span></button>
+        </div>
+        <div class="modal-body">
+          <p>Pra enviar mensagens automáticas (confirmação, cancelamento, lembrete de test drive), o Meta exige que você <strong>crie e submeta 3 templates</strong> no seu Meta Business Manager. Eles aprovam em ~24h e a partir daí o sistema dispara automaticamente.</p>
+
+          <h3 style="margin-top:1.5rem;color:#1a237e;">Passo a passo</h3>
+          <ol style="line-height:1.7;padding-left:1.75rem;margin:0.5rem 0;">
+            <li style="margin-bottom:0.35rem;">Acesse <a href="https://business.facebook.com" target="_blank" rel="noopener">business.facebook.com</a> e entre na sua conta Meta Business</li>
+            <li style="margin-bottom:0.35rem;">No menu lateral, vá em <strong>WhatsApp Manager</strong> (ou <em>Gerenciador do WhatsApp</em>)</li>
+            <li style="margin-bottom:0.35rem;">Clique em <strong>Templates de mensagem</strong> (no menu lateral do WhatsApp Manager)</li>
+            <li style="margin-bottom:0.35rem;">Clique em <strong>Criar template</strong></li>
+            <li style="margin-bottom:0.35rem;">Para CADA um dos 3 templates abaixo, configure:
+              <ul style="padding-left:1.5rem;margin:0.5rem 0;line-height:1.6;">
+                <li style="margin-bottom:0.2rem;"><strong>Categoria:</strong> Utility (Utilitário) — NÃO marketing!</li>
+                <li style="margin-bottom:0.2rem;"><strong>Nome:</strong> use exatamente o nome indicado em cada bloco abaixo (em minúsculas e com underscore)</li>
+                <li style="margin-bottom:0.2rem;"><strong>Idioma:</strong> Portuguese (BR)</li>
+                <li style="margin-bottom:0.2rem;">Cole o texto do bloco "Corpo da mensagem" no campo <em>Body</em></li>
+                <li style="margin-bottom:0.2rem;">Não adicione header/footer/buttons (não são necessários)</li>
+              </ul>
+            </li>
+            <li style="margin-bottom:0.35rem;">Salve e submeta. Meta aprova em ~24h (templates Utility passam fácil)</li>
+            <li style="margin-bottom:0.35rem;">Depois de aprovado, volte aqui, clique em <strong>Configurar</strong> e cole seu Access Token + Phone Number ID</li>
+          </ol>
+
+          <h3 style="margin-top:2rem;color:#1a237e;">Template 1 — Confirmação</h3>
+          <div class="template-box">
+            <p><strong>Nome:</strong> <code>testdrive_confirmado</code></p>
+            <p><strong>Idioma:</strong> Portuguese (BR) · <strong>Categoria:</strong> Utility</p>
+            <p><strong>Corpo da mensagem:</strong></p>
+            <pre>Olá &#123;&#123;1&#125;&#125;, tudo bem?
+
+Seu test drive está CONFIRMADO! ✅
+
+📅 Data: &#123;&#123;2&#125;&#125; às &#123;&#123;3&#125;&#125;
+🚗 Veículo: &#123;&#123;4&#125;&#125;
+📍 Local: &#123;&#123;5&#125;&#125;
+
+Lembre-se de trazer um documento de identificação com foto (CNH ou RG).
+Se precisar reagendar, é só responder esta mensagem.
+
+Te esperamos!
+_&#123;&#123;6&#125;&#125;_</pre>
+            <button class="btn-mini" (click)="copiarTexto(templateConfirmado)" title="Copiar texto"><span class="material-icons">content_copy</span> Copiar texto</button>
+          </div>
+
+          <h3 style="margin-top:2rem;color:#1a237e;">Template 2 — Cancelamento</h3>
+          <div class="template-box">
+            <p><strong>Nome:</strong> <code>testdrive_cancelado</code></p>
+            <p><strong>Idioma:</strong> Portuguese (BR) · <strong>Categoria:</strong> Utility</p>
+            <p><strong>Corpo da mensagem:</strong></p>
+            <pre>Olá &#123;&#123;1&#125;&#125;,
+
+Infelizmente precisamos CANCELAR seu test drive ❌
+
+📅 Data: &#123;&#123;2&#125;&#125; às &#123;&#123;3&#125;&#125;
+🚗 Veículo: &#123;&#123;4&#125;&#125;
+
+Quer reagendar para outro horário? Responda esta mensagem ou nos chame que organizamos uma nova data.
+
+Pedimos desculpas pelo transtorno.
+_&#123;&#123;5&#125;&#125;_</pre>
+            <button class="btn-mini" (click)="copiarTexto(templateCancelado)" title="Copiar texto"><span class="material-icons">content_copy</span> Copiar texto</button>
+          </div>
+
+          <h3 style="margin-top:2rem;color:#1a237e;">Template 3 — Lembrete (24h antes)</h3>
+          <div class="template-box">
+            <p><strong>Nome:</strong> <code>testdrive_lembrete</code></p>
+            <p><strong>Idioma:</strong> Portuguese (BR) · <strong>Categoria:</strong> Utility</p>
+            <p><strong>Corpo da mensagem:</strong></p>
+            <pre>Olá &#123;&#123;1&#125;&#125;, tudo bem?
+
+Passando pra LEMBRAR do seu test drive AMANHÃ! ⏰
+
+📅 Data: &#123;&#123;2&#125;&#125; às &#123;&#123;3&#125;&#125;
+🚗 Veículo: &#123;&#123;4&#125;&#125;
+📍 Local: &#123;&#123;5&#125;&#125;
+
+Não esqueça:
+✅ Documento com foto (CNH ou RG)
+✅ Chegue 10 minutos antes
+
+Se precisar remarcar, é só responder esta mensagem.
+
+Te esperamos!
+_&#123;&#123;6&#125;&#125;_</pre>
+            <button class="btn-mini" (click)="copiarTexto(templateLembrete)" title="Copiar texto"><span class="material-icons">content_copy</span> Copiar texto</button>
+          </div>
+
+          <div style="background:#fff3e0;border:1px solid #ffd699;color:#c66800;padding:0.9rem 1rem;border-radius:8px;margin-top:1.5rem;font-size:0.85rem;">
+            <strong>⚠️ Importante:</strong>
+            <ul style="margin:0.5rem 0 0;padding-left:1.2rem;">
+              <li>Use exatamente os nomes <code>testdrive_confirmado</code>, <code>testdrive_cancelado</code> e <code>testdrive_lembrete</code> — o sistema busca por esses nomes</li>
+              <li>Mantenha as variáveis <code>&#123;&#123;1&#125;&#125;</code>, <code>&#123;&#123;2&#125;&#125;</code>, etc. na ordem indicada</li>
+              <li>Categoria deve ser <strong>Utility</strong> (utilitário/transacional). Marketing não funciona pra avisos automáticos</li>
+              <li>Aprovado o template, no card "WhatsApp Business" desta página clique em "Configurar" e cole Access Token + Phone Number ID</li>
+            </ul>
           </div>
         </div>
-      }
-
-      <div class="form-group">
-        <label>Chave da API (cole aqui)</label>
-        <div class="token-input">
-          <input [type]="geminiMostrar ? 'text' : 'password'"
-                 [(ngModel)]="geminiNovaChave"
-                 [ngModelOptions]="{standalone: true}"
-                 placeholder="AIza..." />
-          <button type="button" class="btn-mini" (click)="geminiMostrar = !geminiMostrar">
-            <span class="material-icons">{{ geminiMostrar ? 'visibility_off' : 'visibility' }}</span>
-          </button>
-        </div>
-        <small>A chave fica salva no banco do seu tenant. Outros tenants do SaaS não veem.</small>
-      </div>
-
-      <div class="card-actions">
-        <button class="btn-primary" (click)="salvarGemini()" [disabled]="!geminiNovaChave || geminiSalvando">
-          <span class="material-icons">save</span>
-          {{ geminiSalvando ? 'Salvando...' : (geminiConfigurado ? 'Atualizar chave' : 'Salvar chave') }}
-        </button>
-        @if (geminiConfigurado && geminiFonte === 'banco') {
-          <button class="btn-danger-outline" (click)="removerGemini()">
-            <span class="material-icons">delete</span> Remover
-          </button>
-        }
       </div>
     </div>
-    <div class="card-footer">
-      <span class="material-icons">info</span>
-      <small>Custo: grátis até 1.500 scans/dia. Cada CRLV escaneado gasta ~1 request. Após o limite, OCR fica indisponível até o dia seguinte.</small>
-    </div>
-  </div>
+  }
 </div>

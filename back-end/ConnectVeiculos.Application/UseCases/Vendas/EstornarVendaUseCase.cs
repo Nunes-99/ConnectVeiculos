@@ -27,7 +27,7 @@ namespace ConnectVeiculos.Application.UseCases.Vendas
             var venda = await _vendaRepository.GetByIdAsync(vendaId);
 
             if (venda == null)
-                throw new DomainException("Venda nao encontrada.");
+                throw new DomainException("Venda não encontrada.");
 
             // Guardar dados para email antes do estorno
             var compradorEmail = venda.VenCompradorEmail;

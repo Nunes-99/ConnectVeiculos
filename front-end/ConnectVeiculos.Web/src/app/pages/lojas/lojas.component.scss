@@ -4,6 +4,21 @@
   max-width: 700px;
 }
 
+.col-padrao {
+  text-align: center;
+
+  .texto-padrao {
+    color: var(--primary, #1a237e);
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .texto-vazio {
+    color: var(--text-secondary, #b0b0b0);
+    font-size: 13px;
+  }
+}
+
 input.cep-auto:disabled {
   background-color: #e0e0e0;
   color: #333;
@@ -34,6 +49,41 @@ input.cep-auto:disabled {
   border-top: 1px solid var(--border-secondary, #e0e0e0);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.form-group-check {
+  .check-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+    margin: 0;
+
+    input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      padding: 0;
+      margin: 0;
+      flex-shrink: 0;
+      accent-color: var(--primary, #1a237e);
+      cursor: pointer;
+    }
+
+    span {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+  }
+
+  .check-help {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-secondary, #666);
+    margin-top: 6px;
+    line-height: 1.4;
+  }
 }
 
 .logo-upload-area {
@@ -310,5 +360,31 @@ input.cep-auto:disabled {
   .form-row {
     flex-direction: column;
     gap: 0;
+  }
+}
+
+.url-copy-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+
+  input { flex: 1; }
+
+  .btn-copy-url {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.85rem;
+    background: #1a237e;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.05s;
+
+    &:hover { background: #0d1853; }
+    &:active { transform: translateY(1px); }
+    .material-icons { font-size: 1.2rem; }
   }
 }

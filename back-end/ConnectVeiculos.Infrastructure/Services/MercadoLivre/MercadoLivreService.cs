@@ -172,7 +172,7 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
             await EnsureTokenAsync();
 
             var veiculo = await _veiculoRepository.GetByIdAsync(veiculoId);
-            if (veiculo == null) throw new Exception("Veiculo nao encontrado.");
+            if (veiculo == null) throw new Exception("Veículo não encontrado.");
 
             var imagens = await _imagemRepository.GetByVeiculoIdAsync(veiculoId);
             var loja = await _lojaRepository.GetByIdAsync(veiculo.R_LojId);
@@ -318,7 +318,7 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
                 throw new Exception("Mercado Livre nao esta conectado. Configure a integracao primeiro.");
 
             if (!await IsConnectedAsync())
-                throw new Exception("Token do Mercado Livre expirado e nao foi possivel renovar.");
+                throw new Exception("Token do Mercado Livre expirado e não foi possível renovar.");
         }
 
         private static string MontarDescricao(Veiculo veiculo, Loja loja)

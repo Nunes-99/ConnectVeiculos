@@ -22,7 +22,7 @@ namespace ConnectVeiculos.API.Controllers
         public async Task<IActionResult> Registrar([FromBody] RegistrarLeadRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.NomeCliente))
-                return BadRequest("Nome do cliente e obrigatorio.");
+                return BadRequest("Nome do cliente é obrigatório.");
             if (string.IsNullOrWhiteSpace(request.Telefone) && string.IsNullOrWhiteSpace(request.Email))
                 return BadRequest("Informe ao menos um contato (telefone ou e-mail).");
             if (!string.IsNullOrWhiteSpace(request.Email) && !request.Email.Contains('@'))

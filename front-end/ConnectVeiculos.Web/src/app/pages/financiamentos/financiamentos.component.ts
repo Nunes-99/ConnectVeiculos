@@ -60,7 +60,7 @@ export class FinanciamentosComponent implements OnInit {
 
   simular(): void {
     if (!this.veiculoSelecionado || !this.cpfCliente || !this.rendaMensal) {
-      this.toast.warning('Preencha todos os campos obrigatorios.');
+      this.toast.warning('Preencha todos os campos obrigatórios.');
       return;
     }
 

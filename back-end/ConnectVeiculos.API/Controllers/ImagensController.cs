@@ -35,14 +35,14 @@ namespace ConnectVeiculos.API.Controllers
             IFormFile arquivo)
         {
             if (arquivo == null || arquivo.Length == 0)
-                return BadRequest("Arquivo nao enviado.");
+                return BadRequest("Arquivo não enviado.");
 
             // Validar tipo de arquivo
             var extensoesPermitidas = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
             var extensao = Path.GetExtension(arquivo.FileName).ToLowerInvariant();
 
             if (!extensoesPermitidas.Contains(extensao))
-                return BadRequest("Tipo de arquivo nao permitido. Use JPG, PNG, GIF ou WEBP.");
+                return BadRequest("Tipo de arquivo não permitido. Use JPG, PNG, GIF ou WEBP.");
 
             // Criar pasta se nao existir
             var uploadPath = Path.Combine(_environment.ContentRootPath, "uploads", "veiculos", veiculoId.ToString());
