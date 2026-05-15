@@ -137,6 +137,9 @@ _{{6}}_`;
   fbMostrarToken = false;
   fbTestando = false;
   fbTesteResultado: TestIntegracaoResult | null = null;
+  fbVerifCode = '';
+  fbVerifSalvando = false;
+  fbVerifMensagem: { sucesso: boolean; texto: string } | null = null;
 
   // Google Merchant (Push API)
   gmConfig: GoogleMerchantConfigInfo = { configurado: false, clientSecretDefinido: false, refreshTokenDefinido: false };
@@ -155,6 +158,9 @@ _{{6}}_`;
   gmMostrarRefresh = false;
   gmTestando = false;
   gmTesteResultado: TestIntegracaoResult | null = null;
+  gmVerifCode = '';
+  gmVerifSalvando = false;
+  gmVerifMensagem: { sucesso: boolean; texto: string } | null = null;
 
   ngOnInit(): void {
     if (isPlatformBrowser(this.platformId)) {
@@ -169,6 +175,61 @@ _{{6}}_`;
     this.checkSmtpStatus();
     this.checkFacebookStatus();
     this.checkGoogleStatus();
+    this.loadVerificationCodes();
+  }
+
+  // ============================================================
+  // Verificacao de dominio (Google + Facebook)
+  // ============================================================
+  loadVerificationCodes(): void {
+    this.integracaoService.getFacebookVerificationCode().subscribe({
+      next: (r) => { this.fbVerifCode = r.code ?? ''; },
+      error: () => { /* silencioso — usuario sem permissao ou tenant nao resolvido */ }
+    });
+    this.integracaoService.getGoogleVerificationCode().subscribe({
+      next: (r) => { this.gmVerifCode = r.code ?? ''; },
+      error: () => { /* silencioso */ }
+    });
+  }
+
+  salvarFbVerifCode(): void {
+    if (this.fbVerifSalvando) return;
+    this.fbVerifSalvando = true;
+    this.fbVerifMensagem = null;
+    const code = (this.fbVerifCode || '').trim();
+    this.integracaoService.saveFacebookVerificationCode(code).subscribe({
+      next: () => {
+        this.fbVerifSalvando = false;
+        this.fbVerifMensagem = { sucesso: true, texto: code ? 'Codigo salvo. Aguarde ate 5 minutos para o site refletir e clique em Verificar no Meta.' : 'Codigo removido.' };
+        this.toast.success('Codigo Facebook salvo.');
+      },
+      error: (err) => {
+        this.fbVerifSalvando = false;
+        const msg = err?.error?.error || 'Erro ao salvar codigo Facebook.';
+        this.fbVerifMensagem = { sucesso: false, texto: msg };
+        this.toast.error(msg);
+      }
+    });
+  }
+
+  salvarGmVerifCode(): void {
+    if (this.gmVerifSalvando) return;
+    this.gmVerifSalvando = true;
+    this.gmVerifMensagem = null;
+    const code = (this.gmVerifCode || '').trim();
+    this.integracaoService.saveGoogleVerificationCode(code).subscribe({
+      next: () => {
+        this.gmVerifSalvando = false;
+        this.gmVerifMensagem = { sucesso: true, texto: code ? 'Codigo salvo. Aguarde ate 5 minutos para o site refletir e clique em Verificar no Google.' : 'Codigo removido.' };
+        this.toast.success('Codigo Google salvo.');
+      },
+      error: (err) => {
+        this.gmVerifSalvando = false;
+        const msg = err?.error?.error || 'Erro ao salvar codigo Google.';
+        this.gmVerifMensagem = { sucesso: false, texto: msg };
+        this.toast.error(msg);
+      }
+    });
   }
 
   // ============================================================

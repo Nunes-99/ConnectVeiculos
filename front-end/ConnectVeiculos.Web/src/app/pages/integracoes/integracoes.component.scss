@@ -91,6 +91,74 @@
   }
 }
 
+.verif-section {
+  margin: 12px 0;
+  padding: 10px 12px;
+  background: #f3f4f6;
+  border-radius: 8px;
+
+  > label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 6px;
+  }
+
+  > small {
+    display: block;
+    margin-top: 6px;
+    font-size: 11px;
+    color: #666;
+    line-height: 1.5;
+    a { color: #1a237e; text-decoration: underline; }
+    code { background: rgba(0,0,0,0.06); padding: 1px 4px; border-radius: 3px; font-size: 11px; }
+  }
+
+  .verif-row {
+    display: flex;
+    gap: 6px;
+    align-items: stretch;
+
+    input {
+      flex: 1;
+      padding: 9px 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+  }
+
+  .btn-verif {
+    padding: 8px 16px !important;
+    border-radius: 6px !important;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    .material-icons { font-size: 16px; }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  }
+
+  .verif-result {
+    display: flex; align-items: center; gap: 6px;
+    margin-top: 8px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+
+    .material-icons { font-size: 16px; }
+
+    &.sucesso { background: #d1fae5; color: #065f46;
+      .material-icons { color: #16a34a; }
+    }
+    &.falha { background: #fee2e2; color: #991b1b;
+      .material-icons { color: #dc2626; }
+    }
+  }
+}
+
 .feed-url-section {
   margin-bottom: 1rem;
 

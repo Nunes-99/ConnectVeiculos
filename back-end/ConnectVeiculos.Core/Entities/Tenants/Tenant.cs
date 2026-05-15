@@ -21,6 +21,21 @@ namespace ConnectVeiculos.Core.Entities.Tenants
 
         public DateTime TenDtCriacao { get; private set; } = DateTime.UtcNow;
 
+        /// <summary>
+        /// Codigo de verificacao do Google Search Console para este tenant.
+        /// Apenas o "content" da meta tag (ex: "ABC123XYZ"), sem aspas nem tag.
+        /// O SSR injeta no &lt;head&gt; uma &lt;meta name="google-site-verification"&gt;
+        /// para CADA tenant que tenha codigo cadastrado, permitindo que o Google
+        /// valide multiplas contas Merchant Center sobre o mesmo dominio raiz.
+        /// </summary>
+        public string? TenGoogleVerifCode { get; private set; }
+
+        /// <summary>
+        /// Codigo de verificacao de dominio do Meta/Facebook para este tenant.
+        /// Apenas o "content" da meta tag, mesma logica do TenGoogleVerifCode.
+        /// </summary>
+        public string? TenFacebookVerifCode { get; private set; }
+
         public Tenant() { }
 
         public Tenant(string slug, string nome, string? databaseFile = null)
@@ -36,5 +51,11 @@ namespace ConnectVeiculos.Core.Entities.Tenants
         public void Reativar() => TenStatus = TenantStatus.Active;
 
         public void Renomear(string novoNome) => TenNome = novoNome;
+
+        public void SetGoogleVerifCode(string? code)
+            => TenGoogleVerifCode = string.IsNullOrWhiteSpace(code) ? null : code.Trim();
+
+        public void SetFacebookVerifCode(string? code)
+            => TenFacebookVerifCode = string.IsNullOrWhiteSpace(code) ? null : code.Trim();
     }
 }

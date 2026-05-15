@@ -457,6 +457,28 @@
         <small>Configure no Meta Business Suite &gt; Catálogo &gt; Fontes de dados.</small>
       </div>
 
+      <div class="verif-section">
+        <label>Código de verificação de domínio (Meta):</label>
+        <div class="verif-row">
+          <input type="text" [(ngModel)]="fbVerifCode" [ngModelOptions]="{standalone: true}"
+                 placeholder="cole apenas o conteúdo da meta tag (ex: abc123xyz)" />
+          <button class="btn-primary btn-verif" (click)="salvarFbVerifCode()" [disabled]="fbVerifSalvando">
+            <span class="material-icons">save</span> {{ fbVerifSalvando ? 'Salvando...' : 'Salvar' }}
+          </button>
+        </div>
+        <small>
+          1. Em <a href="https://business.facebook.com/business_locations" target="_blank" rel="noopener">Meta Business &gt; Brand Safety &gt; Verificação de domínio</a>, adicione <code>connectveiculos.dev.br</code>.
+          2. Escolha "Meta-tag", copie só o <strong>content</strong> e cole acima.
+          3. Clique Salvar e aguarde 5 min, depois volte ao Meta e clique "Verificar".
+        </small>
+        @if (fbVerifMensagem) {
+          <div class="verif-result" [class.sucesso]="fbVerifMensagem.sucesso" [class.falha]="!fbVerifMensagem.sucesso">
+            <span class="material-icons">{{ fbVerifMensagem.sucesso ? 'check_circle' : 'error' }}</span>
+            {{ fbVerifMensagem.texto }}
+          </div>
+        }
+      </div>
+
       <div class="card-actions">
         @if (!fbConfig.configurado) {
           <button class="btn-primary" (click)="abrirConfigFacebook()" [disabled]="fbLoading">
@@ -657,6 +679,28 @@
           </button>
         </div>
         <small>Configure no Google Merchant Center &gt; Produtos &gt; Feeds.</small>
+      </div>
+
+      <div class="verif-section">
+        <label>Código de verificação de domínio (Google):</label>
+        <div class="verif-row">
+          <input type="text" [(ngModel)]="gmVerifCode" [ngModelOptions]="{standalone: true}"
+                 placeholder="cole apenas o conteúdo da meta tag (ex: ABCxyz123)" />
+          <button class="btn-primary btn-verif" (click)="salvarGmVerifCode()" [disabled]="gmVerifSalvando">
+            <span class="material-icons">save</span> {{ gmVerifSalvando ? 'Salvando...' : 'Salvar' }}
+          </button>
+        </div>
+        <small>
+          1. No <a href="https://search.google.com/search-console" target="_blank" rel="noopener">Search Console</a> adicione propriedade <strong>"Prefixo do URL"</strong> apontando para <code>https://connectveiculos.dev.br</code>.
+          2. Escolha "Tag HTML", copie só o <strong>content</strong> e cole acima.
+          3. Salve, aguarde 5 min, depois clique "Verificar" no Google.
+        </small>
+        @if (gmVerifMensagem) {
+          <div class="verif-result" [class.sucesso]="gmVerifMensagem.sucesso" [class.falha]="!gmVerifMensagem.sucesso">
+            <span class="material-icons">{{ gmVerifMensagem.sucesso ? 'check_circle' : 'error' }}</span>
+            {{ gmVerifMensagem.texto }}
+          </div>
+        }
       </div>
 
       <div class="card-actions">

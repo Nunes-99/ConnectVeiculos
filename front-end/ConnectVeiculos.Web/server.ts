@@ -1,9 +1,73 @@
 import { APP_BASE_HREF } from '@angular/common';
 import { CommonEngine } from '@angular/ssr';
 import express from 'express';
+import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import bootstrap from './src/main.server';
+
+// =====================================================================
+// Verification meta tags (Google Search Console + Facebook Domain Verif)
+// ---------------------------------------------------------------------
+// Cada tenant cadastra seu proprio "content" via admin (Sistema > Integracoes).
+// O SSR busca a lista agregada de TODOS os tenants ativos e injeta uma meta
+// tag por codigo no <head> de QUALQUER URL servida (admin e catalogo).
+// Cache de 5 min reduz pressao no backend; novos codigos aparecem na proxima
+// requisicao apos esse intervalo.
+// =====================================================================
+const VERIFICATION_CACHE_TTL_MS = 5 * 60 * 1000;
+let verificationCacheTags = '';
+let verificationCacheExpiresAt = 0;
+
+async function getVerificationMetaTags(): Promise<string> {
+  const now = Date.now();
+  if (now < verificationCacheExpiresAt) return verificationCacheTags;
+
+  try {
+    const apiBase = process.env['API_BASE_URL'] || 'http://localhost:5219';
+    const resp = await fetch(`${apiBase}/api/integracoes/verification-codes`);
+    if (!resp.ok) {
+      verificationCacheExpiresAt = now + 30_000; // backoff curto em caso de erro
+      return verificationCacheTags;
+    }
+    const data = (await resp.json()) as { google?: string[]; facebook?: string[] };
+    const tags: string[] = [];
+    for (const code of data.google || []) {
+      tags.push(`    <meta name="google-site-verification" content="${escapeAttr(code)}" />`);
+    }
+    for (const code of data.facebook || []) {
+      tags.push(`    <meta name="facebook-domain-verification" content="${escapeAttr(code)}" />`);
+    }
+    verificationCacheTags = tags.join('\n');
+    verificationCacheExpiresAt = now + VERIFICATION_CACHE_TTL_MS;
+    return verificationCacheTags;
+  } catch {
+    verificationCacheExpiresAt = now + 30_000;
+    return verificationCacheTags;
+  }
+}
+
+function escapeAttr(value: string): string {
+  return value.replace(/[&<>"']/g, (ch) => {
+    switch (ch) {
+      case '&': return '&amp;';
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case '"': return '&quot;';
+      case "'": return '&#39;';
+      default: return ch;
+    }
+  });
+}
+
+function injectVerificationTags(html: string, tags: string): string {
+  if (!tags) return html;
+  // Idempotente: se ja injetou nesta string, nao injeta de novo.
+  if (html.includes('google-site-verification') || html.includes('facebook-domain-verification')) {
+    // Pode haver tags estaticas no template; mesmo assim concatenamos as dinamicas.
+  }
+  return html.replace('</head>', `${tags}\n  </head>`);
+}
 
 export function app(): express.Express {
   const server = express();
@@ -71,8 +135,20 @@ export function app(): express.Express {
 
   // Demais rotas: servir o index estático (client-side only).
   // Angular 17+ gera o template CSR como `index.csr.html` (em vez de `index.html`).
-  server.get('**', (req, res) => {
-    res.sendFile(join(browserDistFolder, 'index.csr.html'));
+  // Lemos o arquivo, injetamos meta tags de verificacao e enviamos a string.
+  // Cache do conteudo do arquivo em memoria (template nao muda em runtime).
+  let csrTemplateCache: string | null = null;
+  server.get('**', async (req, res, next) => {
+    try {
+      if (csrTemplateCache === null) {
+        csrTemplateCache = await readFile(join(browserDistFolder, 'index.csr.html'), 'utf-8');
+      }
+      const tags = await getVerificationMetaTags();
+      res.set('Content-Type', 'text/html; charset=utf-8');
+      res.send(injectVerificationTags(csrTemplateCache, tags));
+    } catch (err) {
+      next(err);
+    }
   });
 
   return server;
@@ -90,7 +166,10 @@ function ssrHandler(commonEngine: CommonEngine, indexHtml: string, browserDistFo
         publicPath: browserDistFolder,
         providers: [{ provide: APP_BASE_HREF, useValue: baseUrl }],
       })
-      .then((html) => res.send(html))
+      .then(async (html) => {
+        const tags = await getVerificationMetaTags();
+        res.send(injectVerificationTags(html, tags));
+      })
       .catch((err) => next(err));
   };
 }

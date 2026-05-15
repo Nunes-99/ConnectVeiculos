@@ -51,6 +51,25 @@ namespace ConnectVeiculos.Infrastructure.Tenancy
             _byId.Clear();
         }
 
+        public async Task UpdateVerificationCodesAsync(int tenantId, string? googleCode, string? facebookCode, CancellationToken ct = default)
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var master = scope.ServiceProvider.GetRequiredService<MasterDbContext>();
+
+            var tenant = await master.Tenants.FirstOrDefaultAsync(x => x.TenId == tenantId, ct)
+                ?? throw new InvalidOperationException($"Tenant {tenantId} nao encontrado.");
+
+            // null = nao alterar; string vazia = limpar; valor = setar.
+            if (googleCode != null) tenant.SetGoogleVerifCode(googleCode);
+            if (facebookCode != null) tenant.SetFacebookVerifCode(facebookCode);
+
+            await master.SaveChangesAsync(ct);
+
+            // Atualiza o cache in-place sem precisar invalidar tudo.
+            _bySlug[tenant.TenSlug] = tenant;
+            _byId[tenant.TenId] = tenant;
+        }
+
         private async Task EnsureLoadedAsync(CancellationToken ct)
         {
             if (_loaded) return;

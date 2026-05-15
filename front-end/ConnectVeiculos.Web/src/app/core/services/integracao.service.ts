@@ -185,6 +185,22 @@ export class IntegracaoService {
     return this.http.post<TestIntegracaoResult>(`${this.baseUrl}/integracoes/facebook/test`, {});
   }
 
+  getFacebookVerificationCode(): Observable<{ code: string | null }> {
+    return this.http.get<{ code: string | null }>(`${this.baseUrl}/integracoes/facebook/verification-code`);
+  }
+
+  saveFacebookVerificationCode(code: string): Observable<{ mensagem: string }> {
+    return this.http.put<{ mensagem: string }>(`${this.baseUrl}/integracoes/facebook/verification-code`, { code });
+  }
+
+  getGoogleVerificationCode(): Observable<{ code: string | null }> {
+    return this.http.get<{ code: string | null }>(`${this.baseUrl}/integracoes/google/verification-code`);
+  }
+
+  saveGoogleVerificationCode(code: string): Observable<{ mensagem: string }> {
+    return this.http.put<{ mensagem: string }>(`${this.baseUrl}/integracoes/google/verification-code`, { code });
+  }
+
   // Google Merchant
   getGoogleConfig(): Observable<GoogleMerchantConfigInfo> {
     return this.http.get<GoogleMerchantConfigInfo>(`${this.baseUrl}/integracoes/google/config`);

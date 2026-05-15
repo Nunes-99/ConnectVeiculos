@@ -3,6 +3,7 @@ using ConnectVeiculos.Core.Interfaces.Database.Repositories.Publicacoes;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Email;
 using ConnectVeiculos.Core.Interfaces.Services;
+using ConnectVeiculos.Core.Interfaces.Tenancy;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -452,6 +453,36 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
             return result.Sucesso ? Ok(result) : StatusCode(502, result);
         }
 
+        [HttpGet("facebook/verification-code")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> GetFacebookVerificationCode(
+            [FromServices] ITenantContext tenantContext,
+            [FromServices] ITenantStore store)
+        {
+            if (!tenantContext.IsResolved) return BadRequest(new { error = "Tenant nao resolvido." });
+            var tenant = await store.GetByIdAsync(tenantContext.TenantId);
+            return Ok(new { code = tenant?.TenFacebookVerifCode });
+        }
+
+        [HttpPut("facebook/verification-code")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> SetFacebookVerificationCode(
+            [FromServices] ITenantContext tenantContext,
+            [FromServices] ITenantStore store,
+            [FromBody] VerificationCodeRequest request)
+        {
+            if (!tenantContext.IsResolved) return BadRequest(new { error = "Tenant nao resolvido." });
+            // Sanitizacao basica: aceita apenas o "content" da meta tag.
+            // Strings vazias limpam o codigo. Tudo que nao bate com o padrao esperado eh rejeitado.
+            var code = (request.Code ?? string.Empty).Trim();
+            if (code.Length > 128) return BadRequest(new { error = "Codigo muito longo." });
+            if (!string.IsNullOrEmpty(code) && !System.Text.RegularExpressions.Regex.IsMatch(code, @"^[A-Za-z0-9_\-]+$"))
+                return BadRequest(new { error = "Codigo invalido. Cole apenas o valor do atributo content da meta tag." });
+
+            await store.UpdateVerificationCodesAsync(tenantContext.TenantId, googleCode: null, facebookCode: code);
+            return Ok(new { mensagem = string.IsNullOrEmpty(code) ? "Codigo Facebook removido." : "Codigo Facebook salvo." });
+        }
+
         // ==========================================
         // GOOGLE MERCHANT CENTER
         // ==========================================
@@ -497,6 +528,62 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
         {
             var result = await gm.TestarAsync();
             return result.Sucesso ? Ok(result) : StatusCode(502, result);
+        }
+
+        [HttpGet("google/verification-code")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> GetGoogleVerificationCode(
+            [FromServices] ITenantContext tenantContext,
+            [FromServices] ITenantStore store)
+        {
+            if (!tenantContext.IsResolved) return BadRequest(new { error = "Tenant nao resolvido." });
+            var tenant = await store.GetByIdAsync(tenantContext.TenantId);
+            return Ok(new { code = tenant?.TenGoogleVerifCode });
+        }
+
+        [HttpPut("google/verification-code")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> SetGoogleVerificationCode(
+            [FromServices] ITenantContext tenantContext,
+            [FromServices] ITenantStore store,
+            [FromBody] VerificationCodeRequest request)
+        {
+            if (!tenantContext.IsResolved) return BadRequest(new { error = "Tenant nao resolvido." });
+            var code = (request.Code ?? string.Empty).Trim();
+            if (code.Length > 128) return BadRequest(new { error = "Codigo muito longo." });
+            if (!string.IsNullOrEmpty(code) && !System.Text.RegularExpressions.Regex.IsMatch(code, @"^[A-Za-z0-9_\-]+$"))
+                return BadRequest(new { error = "Codigo invalido. Cole apenas o valor do atributo content da meta tag." });
+
+            await store.UpdateVerificationCodesAsync(tenantContext.TenantId, googleCode: code, facebookCode: null);
+            return Ok(new { mensagem = string.IsNullOrEmpty(code) ? "Codigo Google removido." : "Codigo Google salvo." });
+        }
+
+        // ==========================================
+        // VERIFICATION CODES PUBLIC (consumido pelo SSR)
+        // ==========================================
+
+        /// <summary>
+        /// Lista agregada de codigos de verificacao de TODOS os tenants ativos.
+        /// Usado pelo Angular SSR para injetar meta tags no &lt;head&gt; — cada
+        /// tenant que tiver codigo cadastrado contribui com uma meta tag, permitindo
+        /// que multiplas contas Google/Meta verifiquem o mesmo dominio raiz.
+        /// </summary>
+        [HttpGet("verification-codes")]
+        [AllowAnonymous]
+        [ResponseCache(Duration = 300)]
+        public async Task<IActionResult> ListVerificationCodes([FromServices] ITenantStore store)
+        {
+            var tenants = await store.ListActiveAsync(HttpContext.RequestAborted);
+            var google = tenants.Where(t => !string.IsNullOrWhiteSpace(t.TenGoogleVerifCode))
+                                .Select(t => t.TenGoogleVerifCode!).ToList();
+            var facebook = tenants.Where(t => !string.IsNullOrWhiteSpace(t.TenFacebookVerifCode))
+                                  .Select(t => t.TenFacebookVerifCode!).ToList();
+            return Ok(new { google, facebook });
+        }
+
+        public class VerificationCodeRequest
+        {
+            public string? Code { get; set; }
         }
 
         // ==========================================

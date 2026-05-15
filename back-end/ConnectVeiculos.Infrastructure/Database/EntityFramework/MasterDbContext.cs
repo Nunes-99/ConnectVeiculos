@@ -26,6 +26,8 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
             t.Property(x => x.TenDatabaseFile).IsRequired().HasMaxLength(255);
             t.Property(x => x.TenStatus).HasConversion<int>();
             t.Property(x => x.TenDtCriacao);
+            t.Property(x => x.TenGoogleVerifCode).HasMaxLength(128);
+            t.Property(x => x.TenFacebookVerifCode).HasMaxLength(128);
 
             var u = modelBuilder.Entity<UserEmailMap>();
             u.ToTable("UserEmailMap");

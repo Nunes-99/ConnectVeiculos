@@ -90,8 +90,11 @@ namespace ConnectVeiculos.Infrastructure.Tenancy
         }
 
         /// <summary>
-        /// Cria tabela UserEmailMap no master se ainda nao existir. Idempotente.
-        /// Usado para bancos master pre-existentes (criados antes desta feature).
+        /// Schema updates idempotentes no banco master (rodam todo startup).
+        /// - Cria tabela UserEmailMap se nao existir.
+        /// - Adiciona colunas TenGoogleVerifCode / TenFacebookVerifCode na tabela
+        ///   Tenants se ainda nao existirem (necessarias para verificacao de
+        ///   dominio multi-tenant em Google Merchant / Facebook Catalog).
         /// </summary>
         private static void ApplyMasterSchemaUpdates(MasterDbContext master)
         {
@@ -111,6 +114,31 @@ namespace ConnectVeiculos.Infrastructure.Tenancy
             using var idxCmd = conn.CreateCommand();
             idxCmd.CommandText = "CREATE INDEX IF NOT EXISTS IX_UserEmailMap_TenantId ON UserEmailMap(TenantId)";
             idxCmd.ExecuteNonQuery();
+
+            EnsureColumn(conn, "Tenants", "TenGoogleVerifCode", "TEXT NULL");
+            EnsureColumn(conn, "Tenants", "TenFacebookVerifCode", "TEXT NULL");
+        }
+
+        /// <summary>
+        /// ALTER TABLE ... ADD COLUMN idempotente para SQLite. Verifica via
+        /// PRAGMA table_info se a coluna ja existe antes de tentar criar.
+        /// </summary>
+        private static void EnsureColumn(System.Data.Common.DbConnection conn, string table, string column, string typeDef)
+        {
+            using (var pragma = conn.CreateCommand())
+            {
+                pragma.CommandText = $"PRAGMA table_info({table})";
+                using var reader = pragma.ExecuteReader();
+                while (reader.Read())
+                {
+                    var name = reader.GetString(1);
+                    if (string.Equals(name, column, StringComparison.OrdinalIgnoreCase)) return;
+                }
+            }
+
+            using var alter = conn.CreateCommand();
+            alter.CommandText = $"ALTER TABLE {table} ADD COLUMN {column} {typeDef}";
+            alter.ExecuteNonQuery();
         }
 
         /// <summary>
