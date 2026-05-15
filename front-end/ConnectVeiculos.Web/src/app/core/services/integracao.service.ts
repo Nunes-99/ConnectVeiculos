@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { AuthService } from './auth.service';
 
 export interface Publicacao {
   pubId: number;
@@ -92,6 +93,7 @@ export interface TestIntegracaoResult {
 })
 export class IntegracaoService {
   private http = inject(HttpClient);
+  private auth = inject(AuthService);
   private baseUrl = environment.apiUrl;
 
   // Mercado Livre
@@ -200,12 +202,19 @@ export class IntegracaoService {
     return this.http.post<TestIntegracaoResult>(`${this.baseUrl}/integracoes/google/test`, {});
   }
 
-  // Feeds
+  // Feeds — sempre incluem ?tenant=<slug> para que cada loja exponha
+  // somente os proprios veiculos no catalogo do Facebook/Google.
+  // Se o usuario ainda nao logou (slug indisponivel), cai no tenant default.
   getFacebookFeedUrl(): string {
-    return `${this.baseUrl}/feed/facebook`;
+    return `${this.baseUrl}/feed/facebook${this.tenantQuery()}`;
   }
 
   getGoogleFeedUrl(): string {
-    return `${this.baseUrl}/feed/google`;
+    return `${this.baseUrl}/feed/google${this.tenantQuery()}`;
+  }
+
+  private tenantQuery(): string {
+    const slug = this.auth.getTenantSlug();
+    return slug ? `?tenant=${encodeURIComponent(slug)}` : '';
   }
 }

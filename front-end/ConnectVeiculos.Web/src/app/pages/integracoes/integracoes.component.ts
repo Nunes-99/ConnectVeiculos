@@ -157,9 +157,11 @@ _{{6}}_`;
   gmTesteResultado: TestIntegracaoResult | null = null;
 
   ngOnInit(): void {
-    this.feedFacebookUrl = this.integracaoService.getFacebookFeedUrl();
-    this.feedGoogleUrl = this.integracaoService.getGoogleFeedUrl();
     if (isPlatformBrowser(this.platformId)) {
+      // Lidos no client porque dependem do tenant slug do localStorage,
+      // indisponivel durante SSR.
+      this.feedFacebookUrl = this.integracaoService.getFacebookFeedUrl();
+      this.feedGoogleUrl = this.integracaoService.getGoogleFeedUrl();
       this.webhookUrl = `${window.location.origin}/api/integracoes/whatsapp/webhook`;
     }
     this.checkMercadoLivreStatus();
