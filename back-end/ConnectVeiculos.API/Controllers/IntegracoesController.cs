@@ -1,5 +1,6 @@
 using ConnectVeiculos.Core.Entities.Publicacoes;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Publicacoes;
+using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Email;
 using ConnectVeiculos.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -111,6 +112,56 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
             await pubRepo.CreateAsync(publicacao);
 
             return Ok(new { externoId, url, mensagem = "Anuncio publicado com sucesso!" });
+        }
+
+        [HttpPost("mercadolivre/sincronizar-disponiveis")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> SincronizarDisponiveisMercadoLivre(
+            [FromServices] IMercadoLivreService mlService,
+            [FromServices] IVeiculoRepository veiculoRepo,
+            [FromServices] IVeiculoPublicacaoRepository pubRepo,
+            [FromServices] ILogger<IntegracoesController> logger)
+        {
+            if (!await mlService.IsConnectedAsync())
+                return BadRequest(new { error = "Mercado Livre nao esta conectado." });
+
+            var todos = await veiculoRepo.GetAllAsync();
+            var disponiveis = todos.Where(v => v.VeiSts == "D").ToList();
+
+            int novosPublicados = 0;
+            int jaPublicados = 0;
+            var falhas = new List<object>();
+
+            foreach (var veiculo in disponiveis)
+            {
+                try
+                {
+                    var existente = await pubRepo.GetAtivaByVeiculoEPlataformaAsync(veiculo.VeiId, "MercadoLivre");
+                    if (existente != null) { jaPublicados++; continue; }
+
+                    var (externoId, url) = await mlService.PublicarVeiculoAsync(veiculo.VeiId);
+                    await pubRepo.CreateAsync(new VeiculoPublicacao(veiculo.VeiId, "MercadoLivre", externoId, url));
+                    novosPublicados++;
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Erro ao publicar veiculo {Id} no ML em sincronizacao em massa", veiculo.VeiId);
+                    falhas.Add(new
+                    {
+                        veiculoId = veiculo.VeiId,
+                        descricao = $"{veiculo.VeiMarca} {veiculo.VeiModelo} {veiculo.VeiAno} ({veiculo.VeiPlaca})",
+                        erro = ex.Message
+                    });
+                }
+            }
+
+            return Ok(new
+            {
+                totalDisponiveis = disponiveis.Count,
+                novosPublicados,
+                jaPublicados,
+                falhas
+            });
         }
 
         [HttpPost("mercadolivre/notifications")]

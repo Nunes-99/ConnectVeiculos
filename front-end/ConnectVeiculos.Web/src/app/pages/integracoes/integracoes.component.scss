@@ -388,10 +388,24 @@
     font-size: 11px;
   }
 
+  .token-input {
+    align-items: stretch;
+    input {
+      flex: 1;
+      padding: 9px 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+  }
+
   .btn-test {
     background: #16a34a !important;
     color: #fff !important;
-    padding: 8px 14px !important;
+    padding: 8px 16px !important;
+    border-radius: 6px !important;
+    white-space: nowrap;
     .material-icons { color: #fff; font-size: 14px; }
     &:disabled { opacity: 0.5; cursor: not-allowed; }
   }
@@ -411,6 +425,28 @@
   }
   &.falha { background: #fee2e2; color: #991b1b;
     .material-icons { color: #dc2626; }
+  }
+}
+
+.ml-sync-result {
+  margin-top: 12px;
+  background: #f3f4f6;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #374151;
+
+  .ml-sync-summary {
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+    .sep { color: #9ca3af; }
+    .ok { color: #15803d; }
+    .fail { color: #b91c1c; }
+  }
+  .ml-sync-fails {
+    margin-top: 8px;
+    summary { cursor: pointer; font-size: 12px; color: #b91c1c; }
+    ul { margin: 6px 0 0; padding-left: 18px; font-size: 12px; }
+    li { margin-bottom: 4px; }
   }
 }
 

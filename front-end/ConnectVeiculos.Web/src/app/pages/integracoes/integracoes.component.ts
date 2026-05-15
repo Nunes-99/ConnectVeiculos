@@ -2,7 +2,7 @@ import { Component, inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { IntegracaoService, MercadoLivreContaInfo, WhatsAppConfigInfo, EmailConfigInfo, FacebookConfigInfo, GoogleMerchantConfigInfo, TestIntegracaoResult } from '../../core/services/integracao.service';
+import { IntegracaoService, MercadoLivreContaInfo, MercadoLivreSincronizacaoResult, WhatsAppConfigInfo, EmailConfigInfo, FacebookConfigInfo, GoogleMerchantConfigInfo, TestIntegracaoResult } from '../../core/services/integracao.service';
 import { ToastService } from '../../core/services';
 import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal.component';
 import { HttpClient } from '@angular/common/http';
@@ -77,6 +77,8 @@ _{{6}}_`;
   mlConectado = false;
   mlConta: MercadoLivreContaInfo | null = null;
   mlLoading = false;
+  mlSincronizando = false;
+  mlSincronizacaoResult: MercadoLivreSincronizacaoResult | null = null;
   feedFacebookUrl = '';
   feedGoogleUrl = '';
 
@@ -219,6 +221,31 @@ _{{6}}_`;
     });
   }
   cancelarDesconectar(): void { this.showDesconectarModal = false; }
+
+  sincronizarMlDisponiveis(): void {
+    if (this.mlSincronizando) return;
+    this.mlSincronizando = true;
+    this.mlSincronizacaoResult = null;
+    this.integracaoService.sincronizarMercadoLivreDisponiveis().subscribe({
+      next: (res) => {
+        this.mlSincronizacaoResult = res;
+        this.mlSincronizando = false;
+        if (res.novosPublicados > 0) {
+          this.toast.success(`${res.novosPublicados} veiculo(s) publicado(s) no Mercado Livre.`);
+        } else if (res.totalDisponiveis === 0) {
+          this.toast.success('Nenhum veiculo disponivel para publicar.');
+        } else if (res.falhas.length === 0) {
+          this.toast.success('Todos os veiculos disponiveis ja estao publicados.');
+        } else {
+          this.toast.error(`${res.falhas.length} veiculo(s) falharam ao publicar. Veja os detalhes.`);
+        }
+      },
+      error: (err) => {
+        this.mlSincronizando = false;
+        this.toast.error(err?.error?.error || 'Erro ao sincronizar veiculos no Mercado Livre.');
+      }
+    });
+  }
 
   // ============================================================
   // WhatsApp

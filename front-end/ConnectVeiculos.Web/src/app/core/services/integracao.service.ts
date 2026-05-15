@@ -21,6 +21,13 @@ export interface MercadoLivreContaInfo {
   urlPerfil?: string;
 }
 
+export interface MercadoLivreSincronizacaoResult {
+  totalDisponiveis: number;
+  novosPublicados: number;
+  jaPublicados: number;
+  falhas: { veiculoId: number; descricao: string; erro: string }[];
+}
+
 export interface WhatsAppConfigInfo {
   configurado: boolean;
   phoneId?: string;
@@ -144,6 +151,10 @@ export class IntegracaoService {
 
   publicarMercadoLivre(veiculoId: number): Observable<any> {
     return this.http.post(`${this.baseUrl}/integracoes/mercadolivre/publicar/${veiculoId}`, {});
+  }
+
+  sincronizarMercadoLivreDisponiveis(): Observable<MercadoLivreSincronizacaoResult> {
+    return this.http.post<MercadoLivreSincronizacaoResult>(`${this.baseUrl}/integracoes/mercadolivre/sincronizar-disponiveis`, {});
   }
 
   removerMercadoLivre(veiculoId: number): Observable<any> {

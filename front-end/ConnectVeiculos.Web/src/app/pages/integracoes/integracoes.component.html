@@ -43,6 +43,10 @@
             {{ mlLoading ? 'Verificando...' : 'Conectar Mercado Livre' }}
           </button>
         } @else {
+          <button class="btn-primary" (click)="sincronizarMlDisponiveis()" [disabled]="mlSincronizando" title="Publica no ML todos os veiculos com status Disponivel que ainda nao tem anuncio ativo">
+            <span class="material-icons">cloud_upload</span>
+            {{ mlSincronizando ? 'Publicando...' : 'Publicar veiculos disponiveis' }}
+          </button>
           <button class="btn-outline" (click)="conectarMercadoLivre()" title="Trocar para outra conta ML">
             <span class="material-icons">swap_horiz</span> Trocar conta
           </button>
@@ -51,6 +55,32 @@
           </button>
         }
       </div>
+
+      @if (mlSincronizacaoResult) {
+        <div class="ml-sync-result">
+          <div class="ml-sync-summary">
+            <span><strong>{{ mlSincronizacaoResult.totalDisponiveis }}</strong> disponiveis</span>
+            <span class="sep">·</span>
+            <span class="ok"><strong>{{ mlSincronizacaoResult.novosPublicados }}</strong> publicado(s) agora</span>
+            <span class="sep">·</span>
+            <span><strong>{{ mlSincronizacaoResult.jaPublicados }}</strong> ja estavam no ML</span>
+            @if (mlSincronizacaoResult.falhas.length > 0) {
+              <span class="sep">·</span>
+              <span class="fail"><strong>{{ mlSincronizacaoResult.falhas.length }}</strong> falha(s)</span>
+            }
+          </div>
+          @if (mlSincronizacaoResult.falhas.length > 0) {
+            <details class="ml-sync-fails">
+              <summary>Ver veiculos que falharam</summary>
+              <ul>
+                @for (f of mlSincronizacaoResult.falhas; track f.veiculoId) {
+                  <li><strong>{{ f.descricao }}</strong> — {{ f.erro }}</li>
+                }
+              </ul>
+            </details>
+          }
+        </div>
+      }
     </div>
     <div class="card-footer">
       <span class="material-icons">info</span>
