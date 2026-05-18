@@ -139,6 +139,7 @@ _{{6}}_`;
   fbTesteResultado: TestIntegracaoResult | null = null;
   fbVerifCode = '';
   fbVerifSalvando = false;
+  fbVerifEditando = false;
   fbVerifMensagem: { sucesso: boolean; texto: string } | null = null;
 
   // Google Merchant (Push API)
@@ -156,10 +157,13 @@ _{{6}}_`;
   gmSalvando = false;
   gmMostrarSecret = false;
   gmMostrarRefresh = false;
+  gmTrocarSecret = false;
+  gmTrocarRefresh = false;
   gmTestando = false;
   gmTesteResultado: TestIntegracaoResult | null = null;
   gmVerifCode = '';
   gmVerifSalvando = false;
+  gmVerifEditando = false;
   gmVerifMensagem: { sucesso: boolean; texto: string } | null = null;
 
   ngOnInit(): void {
@@ -200,6 +204,7 @@ _{{6}}_`;
     this.integracaoService.saveFacebookVerificationCode(code).subscribe({
       next: () => {
         this.fbVerifSalvando = false;
+        this.fbVerifEditando = false;
         this.fbVerifMensagem = { sucesso: true, texto: code ? 'Codigo salvo. Aguarde ate 5 minutos para o site refletir e clique em Verificar no Meta.' : 'Codigo removido.' };
         this.toast.success('Codigo Facebook salvo.');
       },
@@ -220,6 +225,7 @@ _{{6}}_`;
     this.integracaoService.saveGoogleVerificationCode(code).subscribe({
       next: () => {
         this.gmVerifSalvando = false;
+        this.gmVerifEditando = false;
         this.gmVerifMensagem = { sucesso: true, texto: code ? 'Codigo salvo. Aguarde ate 5 minutos para o site refletir e clique em Verificar no Google.' : 'Codigo removido.' };
         this.toast.success('Codigo Google salvo.');
       },
@@ -540,6 +546,27 @@ _{{6}}_`;
     this.gmMostrarRefresh = false;
     this.gmTesteResultado = null;
     this.inputNonce = Math.random().toString(36).slice(2, 10);
+
+    // Secret/Refresh sao required apenas quando ainda nao estao salvos no backend.
+    // Se ja salvos, exibimos campo travado com botao "Trocar" e o backend mantem o valor existente.
+    this.gmTrocarSecret = !this.gmConfig.clientSecretDefinido;
+    this.gmTrocarRefresh = !this.gmConfig.refreshTokenDefinido;
+
+    const secretCtrl = this.gmForm.get('clientSecret');
+    const refreshCtrl = this.gmForm.get('refreshToken');
+    if (this.gmConfig.clientSecretDefinido) {
+      secretCtrl?.clearValidators();
+    } else {
+      secretCtrl?.setValidators([Validators.required]);
+    }
+    if (this.gmConfig.refreshTokenDefinido) {
+      refreshCtrl?.clearValidators();
+    } else {
+      refreshCtrl?.setValidators([Validators.required]);
+    }
+    secretCtrl?.updateValueAndValidity();
+    refreshCtrl?.updateValueAndValidity();
+
     this.gmForm.reset({
       clientId: this.gmConfig.clientId || '',
       clientSecret: '',
@@ -547,6 +574,22 @@ _{{6}}_`;
       merchantId: this.gmConfig.merchantId || ''
     });
     this.showGmConfigModal = true;
+  }
+
+  trocarGmSecret(): void {
+    this.gmTrocarSecret = true;
+    const ctrl = this.gmForm.get('clientSecret');
+    ctrl?.setValidators([Validators.required]);
+    ctrl?.updateValueAndValidity();
+    ctrl?.setValue('');
+  }
+
+  trocarGmRefresh(): void {
+    this.gmTrocarRefresh = true;
+    const ctrl = this.gmForm.get('refreshToken');
+    ctrl?.setValidators([Validators.required]);
+    ctrl?.updateValueAndValidity();
+    ctrl?.setValue('');
   }
 
   fecharConfigGoogle(): void {

@@ -506,9 +506,16 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
             [FromServices] IGoogleMerchantService gm,
             [FromBody] GoogleMerchantConfigInput request)
         {
-            if (string.IsNullOrWhiteSpace(request.ClientId) || string.IsNullOrWhiteSpace(request.ClientSecret)
-                || string.IsNullOrWhiteSpace(request.RefreshToken) || string.IsNullOrWhiteSpace(request.MerchantId))
-                return BadRequest(new { error = "ClientId, ClientSecret, RefreshToken e MerchantId sao obrigatorios." });
+            if (string.IsNullOrWhiteSpace(request.ClientId) || string.IsNullOrWhiteSpace(request.MerchantId))
+                return BadRequest(new { error = "ClientId e MerchantId sao obrigatorios." });
+
+            // ClientSecret e RefreshToken sao obrigatorios apenas se ainda nao foram salvos;
+            // se ja existem no banco, omitir mantem o valor atual (suporte em SalvarConfigAsync).
+            var existente = await gm.GetConfigAsync();
+            if (string.IsNullOrWhiteSpace(request.ClientSecret) && !existente.ClientSecretDefinido)
+                return BadRequest(new { error = "ClientSecret e obrigatorio." });
+            if (string.IsNullOrWhiteSpace(request.RefreshToken) && !existente.RefreshTokenDefinido)
+                return BadRequest(new { error = "RefreshToken e obrigatorio." });
 
             await gm.SalvarConfigAsync(request);
             return Ok(new { mensagem = "Configuracao do Google Merchant salva." });

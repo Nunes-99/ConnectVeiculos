@@ -461,10 +461,17 @@
         <label>Código de verificação de domínio (Meta):</label>
         <div class="verif-row">
           <input type="text" [(ngModel)]="fbVerifCode" [ngModelOptions]="{standalone: true}"
+                 [readonly]="!!fbVerifCode && !fbVerifEditando"
                  placeholder="cole apenas o conteúdo da meta tag (ex: abc123xyz)" />
-          <button class="btn-primary btn-verif" (click)="salvarFbVerifCode()" [disabled]="fbVerifSalvando">
-            <span class="material-icons">save</span> {{ fbVerifSalvando ? 'Salvando...' : 'Salvar' }}
-          </button>
+          @if (!!fbVerifCode && !fbVerifEditando) {
+            <button class="btn-outline btn-verif" (click)="fbVerifEditando = true" title="Editar código">
+              <span class="material-icons">edit</span> Editar
+            </button>
+          } @else {
+            <button class="btn-primary btn-verif" (click)="salvarFbVerifCode()" [disabled]="fbVerifSalvando">
+              <span class="material-icons">save</span> {{ fbVerifSalvando ? 'Salvando...' : 'Salvar' }}
+            </button>
+          }
         </div>
         <small>
           1. Em <a href="https://business.facebook.com/business_locations" target="_blank" rel="noopener">Meta Business &gt; Brand Safety &gt; Verificação de domínio</a>, adicione <code>connectveiculos.dev.br</code>.
@@ -685,10 +692,17 @@
         <label>Código de verificação de domínio (Google):</label>
         <div class="verif-row">
           <input type="text" [(ngModel)]="gmVerifCode" [ngModelOptions]="{standalone: true}"
+                 [readonly]="!!gmVerifCode && !gmVerifEditando"
                  placeholder="cole apenas o conteúdo da meta tag (ex: ABCxyz123)" />
-          <button class="btn-primary btn-verif" (click)="salvarGmVerifCode()" [disabled]="gmVerifSalvando">
-            <span class="material-icons">save</span> {{ gmVerifSalvando ? 'Salvando...' : 'Salvar' }}
-          </button>
+          @if (!!gmVerifCode && !gmVerifEditando) {
+            <button class="btn-outline btn-verif" (click)="gmVerifEditando = true" title="Editar código">
+              <span class="material-icons">edit</span> Editar
+            </button>
+          } @else {
+            <button class="btn-primary btn-verif" (click)="salvarGmVerifCode()" [disabled]="gmVerifSalvando">
+              <span class="material-icons">save</span> {{ gmVerifSalvando ? 'Salvando...' : 'Salvar' }}
+            </button>
+          }
         </div>
         <small>
           1. No <a href="https://search.google.com/search-console" target="_blank" rel="noopener">Search Console</a> adicione propriedade <strong>"Prefixo do URL"</strong> apontando para <code>https://connectveiculos.dev.br</code>.
@@ -800,33 +814,53 @@
               </div>
 
               <div class="form-group">
-                <label class="required">Client Secret</label>
-                <div class="token-input">
-                  <input [type]="gmMostrarSecret ? 'text' : 'password'" formControlName="clientSecret"
-                         placeholder="GOCSPX-xxxxxxxxxxxxxxxx"
-                         name="gm-secret-{{ inputNonce }}"
-                         autocomplete="new-password"
-                         data-lpignore="true" data-form-type="other" />
-                  <button type="button" class="btn-mini" (click)="gmMostrarSecret = !gmMostrarSecret">
-                    <span class="material-icons">{{ gmMostrarSecret ? 'visibility_off' : 'visibility' }}</span>
-                  </button>
-                </div>
-                <small>Acompanha o Client ID — disponível apenas no momento da criação da credencial.</small>
+                <label [class.required]="gmTrocarSecret">Client Secret</label>
+                @if (!gmTrocarSecret) {
+                  <div class="token-input">
+                    <input type="password" value="••••••••••••••••••••" readonly />
+                    <button type="button" class="btn-mini" (click)="trocarGmSecret()" title="Trocar Client Secret">
+                      <span class="material-icons">edit</span> Trocar
+                    </button>
+                  </div>
+                  <small>Já salvo. Deixe como está para manter, ou clique em <strong>Trocar</strong> para substituir.</small>
+                } @else {
+                  <div class="token-input">
+                    <input [type]="gmMostrarSecret ? 'text' : 'password'" formControlName="clientSecret"
+                           placeholder="GOCSPX-xxxxxxxxxxxxxxxx"
+                           name="gm-secret-{{ inputNonce }}"
+                           autocomplete="new-password"
+                           data-lpignore="true" data-form-type="other" />
+                    <button type="button" class="btn-mini" (click)="gmMostrarSecret = !gmMostrarSecret">
+                      <span class="material-icons">{{ gmMostrarSecret ? 'visibility_off' : 'visibility' }}</span>
+                    </button>
+                  </div>
+                  <small>Acompanha o Client ID — disponível apenas no momento da criação da credencial.</small>
+                }
               </div>
 
               <div class="form-group">
-                <label class="required">Refresh Token</label>
-                <div class="token-input">
-                  <input [type]="gmMostrarRefresh ? 'text' : 'password'" formControlName="refreshToken"
-                         placeholder="1//0gxxxxxxxxxxxxxxxxxxxxxxx"
-                         name="gm-refresh-{{ inputNonce }}"
-                         autocomplete="new-password"
-                         data-lpignore="true" data-form-type="other" />
-                  <button type="button" class="btn-mini" (click)="gmMostrarRefresh = !gmMostrarRefresh">
-                    <span class="material-icons">{{ gmMostrarRefresh ? 'visibility_off' : 'visibility' }}</span>
-                  </button>
-                </div>
-                <small>Gerado pelo OAuth Playground com escopo <code>auth/content</code>.</small>
+                <label [class.required]="gmTrocarRefresh">Refresh Token</label>
+                @if (!gmTrocarRefresh) {
+                  <div class="token-input">
+                    <input type="password" value="••••••••••••••••••••" readonly />
+                    <button type="button" class="btn-mini" (click)="trocarGmRefresh()" title="Trocar Refresh Token">
+                      <span class="material-icons">edit</span> Trocar
+                    </button>
+                  </div>
+                  <small>Já salvo. Deixe como está para manter, ou clique em <strong>Trocar</strong> para substituir.</small>
+                } @else {
+                  <div class="token-input">
+                    <input [type]="gmMostrarRefresh ? 'text' : 'password'" formControlName="refreshToken"
+                           placeholder="1//0gxxxxxxxxxxxxxxxxxxxxxxx"
+                           name="gm-refresh-{{ inputNonce }}"
+                           autocomplete="new-password"
+                           data-lpignore="true" data-form-type="other" />
+                    <button type="button" class="btn-mini" (click)="gmMostrarRefresh = !gmMostrarRefresh">
+                      <span class="material-icons">{{ gmMostrarRefresh ? 'visibility_off' : 'visibility' }}</span>
+                    </button>
+                  </div>
+                  <small>Gerado pelo OAuth Playground com escopo <code>auth/content</code>.</small>
+                }
               </div>
 
               <div class="smtp-test-block">

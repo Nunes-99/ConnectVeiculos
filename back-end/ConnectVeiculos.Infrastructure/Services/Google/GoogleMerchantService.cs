@@ -164,13 +164,27 @@ namespace ConnectVeiculos.Infrastructure.Services.Google
 
             var imagens = await _imagemRepository.GetByVeiculoIdAsync(veiculoId);
             var loja = await _lojaRepository.GetByIdAsync(veiculo.R_LojId);
-            var baseUrl = loja?.LojUrlCatalogo?.TrimEnd('/') ?? "";
+            var baseUrl = NormalizeBaseUrl(loja?.LojUrlCatalogo);
+            if (baseUrl == null)
+            {
+                _logger.LogWarning(
+                    "Google publicar veiculo {VeiculoId} abortado: LojUrlCatalogo da loja {LojaId} invalida ('{Url}'). Configure como https://dominio.com em Lojas > Editar.",
+                    veiculoId, veiculo.R_LojId, loja?.LojUrlCatalogo);
+                return;
+            }
             var slug = loja?.LojSlug ?? veiculo.R_LojId.ToString();
 
             var imagemPrincipal = imagens.Where(i => i.ImgSts).OrderBy(i => i.ImgOrdem).FirstOrDefault();
             var imageUrl = imagemPrincipal != null
                 ? $"{baseUrl}/api/imagens/file?path={Uri.EscapeDataString(imagemPrincipal.ImgCaminho)}"
                 : "";
+
+            // Vehicle Ads (Performance Max for vehicles), nao Shopping comum.
+            // Shopping rejeita veiculos motorizados; precisamos excluir Shopping_ads/Free_listings
+            // e enviar os atributos vehicle_* via customAttributes pra elegibilidade em Vehicle Ads.
+            // Pre-requisitos no Merchant Center do cliente: programa Vehicle Ads habilitado + campanha
+            // Performance Max for Vehicle Ads no Google Ads vinculado.
+            var vehicleId = !string.IsNullOrWhiteSpace(veiculo.VeiChassi) ? veiculo.VeiChassi : veiculoId.ToString();
 
             var product = new
             {
@@ -185,7 +199,20 @@ namespace ConnectVeiculos.Infrastructure.Services.Google
                 availability = "in stock",
                 condition = "used",
                 brand = veiculo.VeiMarca,
-                price = new { value = veiculo.VeiPreco.ToString("F2"), currency = "BRL" }
+                price = new { value = veiculo.VeiPreco.ToString("F2"), currency = "BRL" },
+                productTypes = new[] { "Vehicles & Parts > Vehicles > Motor Vehicles > Cars & Trucks" },
+                excludedDestinations = new[] { "Shopping_ads", "Free_listings", "Free_local_listings" },
+                customAttributes = new object[]
+                {
+                    new { name = "vehicle_id", value = vehicleId },
+                    new { name = "vehicle_make", value = veiculo.VeiMarca },
+                    new { name = "vehicle_model", value = veiculo.VeiModelo },
+                    new { name = "vehicle_model_year", value = veiculo.VeiAno.ToString() },
+                    new { name = "vehicle_condition", value = "USED" },
+                    new { name = "vehicle_color", value = veiculo.VeiCor ?? "" },
+                    new { name = "mileage_value", value = veiculo.VeiKm.ToString() },
+                    new { name = "mileage_unit", value = "KM" }
+                }
             };
 
             try
@@ -243,6 +270,27 @@ namespace ConnectVeiculos.Infrastructure.Services.Google
             {
                 _logger.LogError(ex, "Erro ao remover veiculo {VeiculoId} do Google", veiculoId);
             }
+        }
+
+        // Sanitiza LojUrlCatalogo antes de enviar pro Google.
+        // Aceita "https://site.com", "site.com" (https auto), "http://localhost:5219".
+        // Rejeita vazio, "http:", "http:/" e qualquer URI sem host.
+        private static string? NormalizeBaseUrl(string? raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return null;
+            var trimmed = raw.Trim().TrimEnd('/');
+
+            if (!Uri.TryCreate(trimmed, UriKind.Absolute, out var uri))
+            {
+                if (!Uri.TryCreate("https://" + trimmed, UriKind.Absolute, out uri))
+                    return null;
+            }
+
+            if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) return null;
+            if (string.IsNullOrWhiteSpace(uri.Host)) return null;
+
+            var port = uri.IsDefaultPort ? "" : ":" + uri.Port;
+            return $"{uri.Scheme}://{uri.Host}{port}";
         }
 
         private async Task<string?> EnsureTokenAsync(string clientId, string clientSecret, string refreshToken)
