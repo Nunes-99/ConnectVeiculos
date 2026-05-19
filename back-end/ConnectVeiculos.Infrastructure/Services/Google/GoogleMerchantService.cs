@@ -164,12 +164,15 @@ namespace ConnectVeiculos.Infrastructure.Services.Google
 
             var imagens = await _imagemRepository.GetByVeiculoIdAsync(veiculoId);
             var loja = await _lojaRepository.GetByIdAsync(veiculo.R_LojId);
-            var baseUrl = NormalizeBaseUrl(loja?.LojUrlCatalogo);
+            // Tenta primeiro a URL especifica da loja; cai pro PublicSiteUrl global do appsettings/env
+            // (GoogleMerchantSettings__PublicSiteUrl) se ausente. Frontend nao expoe LojUrlCatalogo
+            // na UI atualmente, entao o fallback evita que o push aborte por configuracao de loja.
+            var baseUrl = NormalizeBaseUrl(loja?.LojUrlCatalogo) ?? NormalizeBaseUrl(_settings?.PublicSiteUrl);
             if (baseUrl == null)
             {
                 _logger.LogWarning(
-                    "Google publicar veiculo {VeiculoId} abortado: LojUrlCatalogo da loja {LojaId} invalida ('{Url}'). Configure como https://dominio.com em Lojas > Editar.",
-                    veiculoId, veiculo.R_LojId, loja?.LojUrlCatalogo);
+                    "Google publicar veiculo {VeiculoId} abortado: nem LojUrlCatalogo (loja {LojaId}: '{Url}') nem GoogleMerchantSettings.PublicSiteUrl ('{Fallback}') sao URLs validas. Configure uma das duas.",
+                    veiculoId, veiculo.R_LojId, loja?.LojUrlCatalogo, _settings?.PublicSiteUrl);
                 return;
             }
             var slug = loja?.LojSlug ?? veiculo.R_LojId.ToString();

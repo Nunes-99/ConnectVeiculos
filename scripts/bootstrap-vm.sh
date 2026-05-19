@@ -102,6 +102,10 @@ fi
 echo "==> [5/6] Clonando $GITHUB_USER/$GITHUB_REPO..."
 if [ -d "$INSTALL_DIR/.git" ]; then
     cd "$INSTALL_DIR"
+    # Injeta o token temporariamente pro pull, depois limpa abaixo. Necessario
+    # porque a linha de set-url final remove o token, entao em runs subsequentes
+    # o remote esta sem auth e o pull falha em "could not read Username".
+    git remote set-url origin "https://${GITHUB_TOKEN}@github.com/${GITHUB_USER}/${GITHUB_REPO}.git"
     git pull origin master
     echo "  ✓ Repo atualizado em $INSTALL_DIR"
 else

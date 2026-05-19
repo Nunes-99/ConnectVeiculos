@@ -45,6 +45,9 @@ services:
       - ADMIN_API_TOKEN=${ADMIN_API_TOKEN:-}
       - TENANTS_DATA_DIR=${TENANTS_DATA_DIR:-/app/data}
       - DEFAULT_TENANT_DATABASE_FILE=${DEFAULT_TENANT_DATABASE_FILE:-cliente.db}
+      # Fallback de URL publica usada para montar links de produtos enviados ao
+      # Google Merchant quando Loja.LojUrlCatalogo estiver vazio.
+      - GoogleMerchantSettings__PublicSiteUrl=${PUBLIC_SITE_URL:-https://connectveiculos.dev.br}
     volumes:
       - ./data:/app/data
       - ./uploads/cliente:/app/wwwroot/uploads
