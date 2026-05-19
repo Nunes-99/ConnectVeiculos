@@ -141,7 +141,17 @@ namespace ConnectVeiculos.Infrastructure.Services.Facebook
 
             var imagens = await _imagemRepository.GetByVeiculoIdAsync(veiculoId);
             var loja = await _lojaRepository.GetByIdAsync(veiculo.R_LojId);
-            var baseUrl = loja?.LojUrlCatalogo?.TrimEnd('/') ?? "";
+            // LojUrlCatalogo nao e expoe na UI atualmente (form control existe sem input
+            // correspondente), entao cai pra PublicSiteUrl do env var
+            // FacebookCatalogSettings__PublicSiteUrl. Sem fallback valido, aborta o push.
+            var baseUrl = NormalizeBaseUrl(loja?.LojUrlCatalogo) ?? NormalizeBaseUrl(_settings?.PublicSiteUrl);
+            if (baseUrl == null)
+            {
+                _logger.LogWarning(
+                    "Facebook publicar veiculo {VeiculoId} abortado: nem LojUrlCatalogo (loja {LojaId}: '{Url}') nem FacebookCatalogSettings.PublicSiteUrl ('{Fallback}') sao URLs validas.",
+                    veiculoId, veiculo.R_LojId, loja?.LojUrlCatalogo, _settings?.PublicSiteUrl);
+                return;
+            }
             var slug = loja?.LojSlug ?? veiculo.R_LojId.ToString();
 
             var imagemPrincipal = imagens.Where(i => i.ImgSts).OrderBy(i => i.ImgOrdem).FirstOrDefault();
@@ -202,6 +212,28 @@ namespace ConnectVeiculos.Infrastructure.Services.Facebook
             };
 
             await EnviarBatchAsync(batch, veiculoId, "remover", token, catalogId, apiVersion);
+        }
+
+        // Sanitiza LojUrlCatalogo / PublicSiteUrl antes de enviar pro Facebook.
+        // Aceita "https://site.com", "site.com" (https auto), "http://localhost:PORT".
+        // Rejeita vazio, "http:", "http:/" e qualquer URI sem host. Identica ao
+        // helper do GoogleMerchantService (manter em sync se mudar).
+        private static string? NormalizeBaseUrl(string? raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return null;
+            var trimmed = raw.Trim().TrimEnd('/');
+
+            if (!Uri.TryCreate(trimmed, UriKind.Absolute, out var uri))
+            {
+                if (!Uri.TryCreate("https://" + trimmed, UriKind.Absolute, out uri))
+                    return null;
+            }
+
+            if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) return null;
+            if (string.IsNullOrWhiteSpace(uri.Host)) return null;
+
+            var port = uri.IsDefaultPort ? "" : ":" + uri.Port;
+            return $"{uri.Scheme}://{uri.Host}{port}";
         }
 
         private async Task EnviarBatchAsync(object batch, int veiculoId, string operacao, string token, string catalogId, string apiVersion)
