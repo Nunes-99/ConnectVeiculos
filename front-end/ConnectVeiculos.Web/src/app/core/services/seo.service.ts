@@ -39,6 +39,44 @@ export class SeoService {
     }
   }
 
+  setLandingPage(): void {
+    const titleText = 'ConnectVeiculos — Sistema de Gestão para Revendas de Veículos';
+    const description = 'Plataforma SaaS completa para revendedores de veículos: estoque, catálogo online, leads, vendas, integrações com Google Merchant, Facebook Catalog, Mercado Livre e muito mais.';
+
+    this.title.setTitle(titleText);
+    this.meta.updateTag({ name: 'description', content: description });
+    this.meta.updateTag({ name: 'robots', content: 'index, follow' });
+    this.meta.updateTag({ name: 'keywords', content: 'connectveiculos, sistema revenda, gestão de veículos, catálogo online, crm automotivo, software para revendedor' });
+
+    // Open Graph
+    this.meta.updateTag({ property: 'og:title', content: titleText });
+    this.meta.updateTag({ property: 'og:description', content: description });
+    this.meta.updateTag({ property: 'og:type', content: 'website' });
+    this.meta.updateTag({ property: 'og:site_name', content: 'ConnectVeiculos' });
+    this.meta.updateTag({ property: 'og:locale', content: 'pt_BR' });
+
+    // Twitter Card
+    this.meta.updateTag({ name: 'twitter:card', content: 'summary_large_image' });
+    this.meta.updateTag({ name: 'twitter:title', content: titleText });
+    this.meta.updateTag({ name: 'twitter:description', content: description });
+
+    // JSON-LD SoftwareApplication para rich results
+    const jsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareApplication',
+      'name': 'ConnectVeiculos',
+      'description': description,
+      'applicationCategory': 'BusinessApplication',
+      'operatingSystem': 'Web',
+      'offers': {
+        '@type': 'Offer',
+        'priceCurrency': 'BRL',
+        'price': '0'
+      }
+    };
+    this.setJsonLd(jsonLd);
+  }
+
   setCatalogPage(loja?: any): void {
     const titleText = loja
       ? `${loja.lojNome} - Catalogo de Veiculos`

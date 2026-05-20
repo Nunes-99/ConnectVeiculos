@@ -94,6 +94,9 @@ export function app(): express.Express {
       let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
       xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
 
+      // Landing institucional - alvo principal pra busca por "connectveiculos"
+      xml += `  <url><loc>${siteBase}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>\n`;
+
       // 2) Para cada tenant, busca seu catalogo e gera URLs especificas
       for (const tenant of tenants) {
         try {

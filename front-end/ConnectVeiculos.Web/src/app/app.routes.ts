@@ -4,6 +4,11 @@ import { MainLayoutComponent } from './layout/main-layout/main-layout.component'
 
 export const routes: Routes = [
   {
+    path: '',
+    pathMatch: 'full',
+    loadComponent: () => import('./pages/landing/landing.component').then(m => m.LandingComponent)
+  },
+  {
     path: 'catalogo',
     loadComponent: () => import('./pages/catalogo/catalogo.component').then(m => m.CatalogoComponent)
   },
@@ -119,16 +124,11 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/logs/logs.component').then(m => m.LogsComponent),
         canActivate: [roleGuard],
         data: { roles: ['Administrador'] }
-      },
-      {
-        path: '',
-        redirectTo: 'dashboard',
-        pathMatch: 'full'
       }
     ]
   },
   {
     path: '**',
-    redirectTo: 'login'
+    redirectTo: ''
   }
 ];

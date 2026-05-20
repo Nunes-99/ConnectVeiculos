@@ -1,0 +1,287 @@
+<div class="landing-page">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="container header-inner">
+      <a routerLink="/" class="logo">
+        <img src="car-icon.png" alt="ConnectVeiculos" class="logo-img">
+        <span class="logo-text">ConnectVeiculos</span>
+      </a>
+      <nav class="nav-links">
+        <a href="#recursos">Recursos</a>
+        <a href="#como-funciona">Como funciona</a>
+        <a href="#planos">Planos</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+      <div class="header-actions">
+        @if (isAuthenticated()) {
+          <button class="btn btn-primary" (click)="irParaDashboard()">Acessar Dashboard</button>
+        } @else {
+          <button class="btn btn-link" (click)="irParaLogin()">Entrar</button>
+          <button class="btn btn-primary" (click)="irParaRegistro()">Cadastrar minha revenda</button>
+        }
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container hero-inner">
+      <div class="hero-text">
+        <span class="badge">Sistema completo para revendas de veículos</span>
+        <h1>O sistema da sua revenda <span class="highlight">do estoque ao fechamento</span>, em um só lugar</h1>
+        <p class="lead">
+          Estoque, catálogo online, leads, test drives, vendas, simulação de financiamento e
+          publicação automática no Google, Facebook e Mercado Livre. Tudo conectado, em tempo real.
+        </p>
+        <div class="hero-cta">
+          @if (isAuthenticated()) {
+            <button class="btn btn-primary btn-lg" (click)="irParaDashboard()">Acessar Dashboard</button>
+          } @else {
+            <button class="btn btn-primary btn-lg" (click)="irParaRegistro()">Começar grátis</button>
+            <button class="btn btn-outline btn-lg" (click)="irParaLogin()">Já tenho conta</button>
+          }
+        </div>
+        <div class="hero-stats">
+          <div class="stat">
+            <strong>3</strong>
+            <span>Marketplaces integrados</span>
+          </div>
+          <div class="stat">
+            <strong>100%</strong>
+            <span>Cloud, sem instalação</span>
+          </div>
+          <div class="stat">
+            <strong>24/7</strong>
+            <span>Catálogo no ar</span>
+          </div>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="hero-mockup">
+          <!-- Mockup SVG inline simulando dashboard -->
+          <svg viewBox="0 0 560 360" xmlns="http://www.w3.org/2000/svg" aria-label="Prévia do dashboard ConnectVeiculos">
+            <!-- janela -->
+            <rect x="0" y="0" width="560" height="360" rx="12" fill="#ffffff" stroke="#e5e7eb"/>
+            <!-- barra de título -->
+            <rect x="0" y="0" width="560" height="36" rx="12" fill="#1a237e"/>
+            <rect x="0" y="24" width="560" height="12" fill="#1a237e"/>
+            <circle cx="18" cy="18" r="5" fill="#ff5f57"/>
+            <circle cx="36" cy="18" r="5" fill="#febc2e"/>
+            <circle cx="54" cy="18" r="5" fill="#28c840"/>
+            <text x="280" y="22" font-family="Inter, sans-serif" font-size="11" fill="#cfd8ff" text-anchor="middle">connectveiculos.dev.br/dashboard</text>
+
+            <!-- sidebar -->
+            <rect x="0" y="36" width="120" height="324" fill="#0f172a"/>
+            <rect x="12" y="56" width="96" height="10" rx="3" fill="#475569"/>
+            <rect x="12" y="86" width="96" height="28" rx="6" fill="#1a237e"/>
+            <text x="22" y="104" font-family="Inter, sans-serif" font-size="11" font-weight="600" fill="#fff">Dashboard</text>
+            <rect x="12" y="122" width="96" height="10" rx="3" fill="#334155"/>
+            <rect x="12" y="140" width="96" height="10" rx="3" fill="#334155"/>
+            <rect x="12" y="158" width="96" height="10" rx="3" fill="#334155"/>
+            <rect x="12" y="176" width="96" height="10" rx="3" fill="#334155"/>
+            <rect x="12" y="194" width="96" height="10" rx="3" fill="#334155"/>
+            <rect x="12" y="212" width="96" height="10" rx="3" fill="#334155"/>
+
+            <!-- KPI cards -->
+            <rect x="140" y="56" width="124" height="64" rx="8" fill="#f8fafc" stroke="#e5e7eb"/>
+            <text x="152" y="76" font-family="Inter, sans-serif" font-size="10" fill="#6b7280">Veículos ativos</text>
+            <text x="152" y="102" font-family="Inter, sans-serif" font-size="22" font-weight="700" fill="#1a237e">142</text>
+
+            <rect x="276" y="56" width="124" height="64" rx="8" fill="#f8fafc" stroke="#e5e7eb"/>
+            <text x="288" y="76" font-family="Inter, sans-serif" font-size="10" fill="#6b7280">Leads no mês</text>
+            <text x="288" y="102" font-family="Inter, sans-serif" font-size="22" font-weight="700" fill="#16a34a">87</text>
+
+            <rect x="412" y="56" width="136" height="64" rx="8" fill="#f8fafc" stroke="#e5e7eb"/>
+            <text x="424" y="76" font-family="Inter, sans-serif" font-size="10" fill="#6b7280">Vendas no mês</text>
+            <text x="424" y="102" font-family="Inter, sans-serif" font-size="22" font-weight="700" fill="#1976d2">23</text>
+
+            <!-- gráfico -->
+            <rect x="140" y="136" width="408" height="140" rx="8" fill="#ffffff" stroke="#e5e7eb"/>
+            <text x="152" y="156" font-family="Inter, sans-serif" font-size="11" font-weight="600" fill="#1f2937">Vendas dos últimos 6 meses</text>
+            <polyline points="160,250 220,220 280,235 340,200 400,180 460,160 520,170"
+                      fill="none" stroke="#1a237e" stroke-width="2.5"/>
+            <polyline points="160,250 220,220 280,235 340,200 400,180 460,160 520,170 520,265 160,265"
+                      fill="url(#grad)" opacity="0.18"/>
+            <defs>
+              <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#1a237e"/>
+                <stop offset="100%" stop-color="#1a237e" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <!-- pontos -->
+            <circle cx="160" cy="250" r="3" fill="#1a237e"/>
+            <circle cx="220" cy="220" r="3" fill="#1a237e"/>
+            <circle cx="280" cy="235" r="3" fill="#1a237e"/>
+            <circle cx="340" cy="200" r="3" fill="#1a237e"/>
+            <circle cx="400" cy="180" r="3" fill="#1a237e"/>
+            <circle cx="460" cy="160" r="3" fill="#1a237e"/>
+            <circle cx="520" cy="170" r="3" fill="#1a237e"/>
+
+            <!-- linha de veículos recentes -->
+            <rect x="140" y="290" width="408" height="56" rx="8" fill="#ffffff" stroke="#e5e7eb"/>
+            <rect x="152" y="304" width="40" height="28" rx="4" fill="#e0e7ff"/>
+            <text x="172" y="322" font-family="Inter, sans-serif" font-size="9" font-weight="700" fill="#1a237e" text-anchor="middle">VW</text>
+            <text x="200" y="316" font-family="Inter, sans-serif" font-size="11" font-weight="600" fill="#1f2937">Jetta Trendline 1.4 TSI 2016</text>
+            <text x="200" y="330" font-family="Inter, sans-serif" font-size="10" fill="#6b7280">Branco · 45.000 km</text>
+            <text x="540" y="324" font-family="Inter, sans-serif" font-size="13" font-weight="700" fill="#16a34a" text-anchor="end">R$ 79.900</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="recursos" class="features">
+    <div class="container">
+      <div class="section-head">
+        <h2>Tudo que sua revenda precisa</h2>
+        <p>Um sistema completo, pensado para profissionalizar a operação e fazer você vender mais — sem precisar de cinco ferramentas diferentes.</p>
+      </div>
+      <div class="features-grid">
+        @for (feature of features; track feature.title) {
+          <div class="feature-card">
+            <div class="feature-icon">
+              <span class="material-icons">{{ feature.icon }}</span>
+            </div>
+            <h3>{{ feature.title }}</h3>
+            <p>{{ feature.desc }}</p>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Como funciona -->
+  <section id="como-funciona" class="como-funciona">
+    <div class="container">
+      <div class="section-head">
+        <h2>Comece em 3 passos</h2>
+        <p>Da criação da conta ao primeiro veículo publicado em menos de 10 minutos.</p>
+      </div>
+      <div class="passos-grid">
+        @for (passo of passos; track passo.numero) {
+          <div class="passo-card">
+            <div class="passo-numero">{{ passo.numero }}</div>
+            <h3>{{ passo.titulo }}</h3>
+            <p>{{ passo.desc }}</p>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Planos -->
+  <section id="planos" class="planos">
+    <div class="container">
+      <div class="section-head">
+        <h2>Planos que crescem com você</h2>
+        <p>Comece grátis, evolua quando precisar. Sem fidelidade, sem letras miúdas — cancele quando quiser.</p>
+      </div>
+      <div class="planos-grid">
+        @for (plano of planos; track plano.nome) {
+          <div class="plano-card" [class.destaque]="plano.destaque">
+            @if (plano.destaque) {
+              <span class="badge-destaque">Mais escolhido</span>
+            }
+            <h3>{{ plano.nome }}</h3>
+            <div class="plano-preco">
+              <span class="preco-valor">{{ plano.preco }}</span>
+              <span class="preco-periodo">{{ plano.periodo }}</span>
+            </div>
+            <ul class="plano-recursos">
+              @for (recurso of plano.recursos; track recurso) {
+                <li>
+                  <span class="material-icons">check</span>
+                  {{ recurso }}
+                </li>
+              }
+            </ul>
+            <button class="btn"
+                    [class.btn-primary]="plano.destaque"
+                    [class.btn-outline]="!plano.destaque"
+                    (click)="irParaRegistro()">
+              {{ plano.cta }}
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" class="faq">
+    <div class="container">
+      <div class="section-head">
+        <h2>Perguntas frequentes</h2>
+        <p>Não encontrou sua dúvida? Fale com a gente — respondemos em até 1 dia útil.</p>
+      </div>
+      <div class="faq-list">
+        @for (faq of faqs; track faq.pergunta; let i = $index) {
+          <div class="faq-item" [class.aberto]="faqAberto === i">
+            <button class="faq-pergunta" (click)="toggleFaq(i)">
+              <span>{{ faq.pergunta }}</span>
+              <span class="material-icons faq-icon">
+                {{ faqAberto === i ? 'remove' : 'add' }}
+              </span>
+            </button>
+            @if (faqAberto === i) {
+              <div class="faq-resposta">{{ faq.resposta }}</div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA final -->
+  <section class="cta-final">
+    <div class="container cta-inner">
+      <h2>Pronto para profissionalizar sua revenda?</h2>
+      <p>Comece agora — é grátis, leva menos de 5 minutos e você não precisa de cartão de crédito.</p>
+      @if (isAuthenticated()) {
+        <button class="btn btn-primary btn-lg" (click)="irParaDashboard()">Acessar Dashboard</button>
+      } @else {
+        <button class="btn btn-primary btn-lg" (click)="irParaRegistro()">Criar conta grátis</button>
+      }
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-col">
+        <div class="logo">
+          <img src="car-icon.png" alt="ConnectVeiculos" class="logo-img">
+          <span class="logo-text">ConnectVeiculos</span>
+        </div>
+        <p class="footer-tagline">O sistema definitivo para revendas de veículos. Do estoque ao fechamento, em um só lugar.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Produto</h4>
+        <a href="#recursos">Recursos</a>
+        <a href="#como-funciona">Como funciona</a>
+        <a href="#planos">Planos</a>
+        <a href="#faq">FAQ</a>
+      </div>
+      <div class="footer-col">
+        <h4>Empresa</h4>
+        <a href="#">Sobre</a>
+        <a href="#">Blog</a>
+        <a href="#">Contato</a>
+      </div>
+      <div class="footer-col">
+        <h4>Legal</h4>
+        <a href="#">Termos de uso</a>
+        <a href="#">Política de privacidade</a>
+        <a href="#">LGPD</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="container">
+        <span>© {{ ano }} ConnectVeiculos. Todos os direitos reservados.</span>
+      </div>
+    </div>
+  </footer>
+
+</div>
