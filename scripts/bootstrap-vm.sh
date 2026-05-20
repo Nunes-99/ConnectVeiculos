@@ -106,7 +106,10 @@ if [ -d "$INSTALL_DIR/.git" ]; then
     # porque a linha de set-url final remove o token, entao em runs subsequentes
     # o remote esta sem auth e o pull falha em "could not read Username".
     git remote set-url origin "https://${GITHUB_TOKEN}@github.com/${GITHUB_USER}/${GITHUB_REPO}.git"
-    git pull origin master
+    # --rebase reaplica commits locais de prod (ex: tweaks de nginx/HTTPS feitos
+    # diretamente na VM) em cima de origin/master, ao inves de tentar merge.
+    # Evita "fatal: Need to specify how to reconcile divergent branches" em cada deploy.
+    git pull --rebase origin master
     echo "  ✓ Repo atualizado em $INSTALL_DIR"
 else
     git clone "https://${GITHUB_TOKEN}@github.com/${GITHUB_USER}/${GITHUB_REPO}.git" "$INSTALL_DIR"
