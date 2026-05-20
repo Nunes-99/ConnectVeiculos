@@ -80,6 +80,13 @@ export function app(): express.Express {
   // Hardening: esconde o header "X-Powered-By: Express" das responses.
   server.disable('x-powered-by');
 
+  // Express atras de nginx — confiar nos headers X-Forwarded-* pra que
+  // req.protocol retorne "https" (do X-Forwarded-Proto do nginx) ao
+  // inves de "http". Sem isso, sitemap.xml gera <loc>http://...</loc>
+  // e o Search Console rejeita por mismatch de protocolo com a
+  // propriedade cadastrada (https://).
+  server.set('trust proxy', true);
+
   // Sitemap dinâmico — multi-tenant: itera todos os tenants ativos e
   // gera URLs no formato /catalogo/{tenantSlug} e /catalogo/{tenantSlug}/veiculo/{id}.
   server.get('/sitemap.xml', async (req, res) => {
