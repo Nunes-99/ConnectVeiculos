@@ -67,19 +67,47 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
             };
 
             var response = await _httpClient.PostAsJsonAsync("/oauth/token", request);
-            response.EnsureSuccessStatusCode();
+
+            // EnsureSuccessStatusCode lanca HttpRequestException com mensagem
+            // generica. Lendo o body antes da pra retornar erro descritivo
+            // (ex: invalid_grant, redirect_uri mismatch, etc) que aparece no
+            // popup de callback.
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                throw new InvalidOperationException(
+                    $"Mercado Livre rejeitou a troca de code por token (HTTP {(int)response.StatusCode}): {errorBody}");
+            }
 
             var result = await response.Content.ReadFromJsonAsync<JsonElement>();
-            _settings.AccessToken = result.GetProperty("access_token").GetString();
-            _settings.RefreshToken = result.GetProperty("refresh_token").GetString();
-            _settings.UserId = result.GetProperty("user_id").GetRawText();
+
+            // access_token e refresh_token sao obrigatorios. Sem eles a integracao
+            // nao funciona — falha imediato com mensagem clara em vez de KeyNotFound.
+            if (!result.TryGetProperty("access_token", out var accessTokenEl))
+                throw new InvalidOperationException("Resposta do Mercado Livre nao contem access_token.");
+            if (!result.TryGetProperty("refresh_token", out var refreshTokenEl))
+                throw new InvalidOperationException("Resposta do Mercado Livre nao contem refresh_token.");
+
+            _settings.AccessToken = accessTokenEl.GetString();
+            _settings.RefreshToken = refreshTokenEl.GetString();
+
+            // user_id e opcional — algumas versoes da API ML nao retornam aqui
+            // (precisa chamar /users/me separadamente). Antes, GetProperty
+            // lancava KeyNotFoundException com "The given key was not present
+            // in the dictionary." e o popup mostrava "Falha na conexao"
+            // mesmo com o token ja salvo em memoria.
+            if (result.TryGetProperty("user_id", out var userIdEl))
+            {
+                _settings.UserId = userIdEl.GetRawText();
+            }
 
             // Persistir tokens no banco
             await _configRepository.SetValorAsync("ML_ACCESS_TOKEN", _settings.AccessToken);
             await _configRepository.SetValorAsync("ML_REFRESH_TOKEN", _settings.RefreshToken);
-            await _configRepository.SetValorAsync("ML_USER_ID", _settings.UserId);
+            if (!string.IsNullOrEmpty(_settings.UserId))
+                await _configRepository.SetValorAsync("ML_USER_ID", _settings.UserId);
 
-            _logger.LogInformation("Mercado Livre conectado. UserId: {UserId}", _settings.UserId);
+            _logger.LogInformation("Mercado Livre conectado. UserId: {UserId}", _settings.UserId ?? "(nao retornado no token endpoint)");
         }
 
         public async Task<bool> IsConnectedAsync()
