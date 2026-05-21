@@ -16,7 +16,7 @@ export class SeoService {
     const imageUrl = veiculo.imagens?.length > 0
       ? `${origin}/api/imagens/file?path=${encodeURIComponent(veiculo.imagens[0])}`
       : '';
-    const canonicalUrl = pageUrl || (this.doc.location ? `${origin}${this.doc.location.pathname}` : origin);
+    const canonicalUrl = this.resolveCanonicalUrl(origin, pageUrl);
     const imageAlt = `${veiculo.veiMarca} ${veiculo.veiModelo} ${veiculo.veiAno}${veiculo.veiCor ? ' ' + veiculo.veiCor : ''}`;
 
     this.title.setTitle(titleText);
@@ -65,11 +65,13 @@ export class SeoService {
   }
 
   // Resolve a origem (https://dominio.com) priorizando, nessa ordem:
-  // 1. URL completa passada pelo SSR (pageUrl) — usada na renderizacao server-side
-  // 2. window.location no client
-  // 3. environment.apiUrl como fallback (dev only)
+  // 1. URL absoluta passada pelo chamador (se ja contem origin)
+  // 2. window.location no client (browser real)
+  // 3. environment.siteBaseUrl (fallback robusto pro SSR — document.location.origin
+  //    via Angular CommonEngine/domino retorna vazio, entao precisamos disso)
+  // 4. environment.apiUrl como ultimo recurso
   private resolveOrigin(pageUrl?: string): string {
-    if (pageUrl) {
+    if (pageUrl && pageUrl.startsWith('http')) {
       try {
         const u = new URL(pageUrl);
         return `${u.protocol}//${u.host}`;
@@ -78,8 +80,22 @@ export class SeoService {
     if (this.doc.location && this.doc.location.origin) {
       return this.doc.location.origin;
     }
-    // Fallback dev — em prod environment.apiUrl e relativo, entao isso ficaria vazio.
+    const envOrigin = (environment as any).siteBaseUrl;
+    if (envOrigin) return envOrigin;
     return environment.apiUrl.replace(/\/api\/?$/, '');
+  }
+
+  // Resolve URL canonica completa a partir do origin + path.
+  // Aceita pageUrl como (a) URL absoluta completa, (b) path relativo "/catalogo/..."
+  // ou (c) undefined (deriva do document.location.pathname).
+  private resolveCanonicalUrl(origin: string, pageUrl?: string): string {
+    if (pageUrl) {
+      if (pageUrl.startsWith('http')) return pageUrl;
+      return `${origin}${pageUrl.startsWith('/') ? '' : '/'}${pageUrl}`;
+    }
+    const path = this.doc.location?.pathname;
+    if (path) return `${origin}${path}`;
+    return origin;
   }
 
   private setCanonical(url: string): void {
@@ -150,7 +166,7 @@ export class SeoService {
 
   setVehicleJsonLd(veiculo: any, pageUrl?: string): void {
     const origin = this.resolveOrigin(pageUrl);
-    const canonicalUrl = pageUrl || (this.doc.location ? `${origin}${this.doc.location.pathname}` : origin);
+    const canonicalUrl = this.resolveCanonicalUrl(origin, pageUrl);
     const jsonLd: any = {
       '@context': 'https://schema.org',
       '@type': 'Vehicle',

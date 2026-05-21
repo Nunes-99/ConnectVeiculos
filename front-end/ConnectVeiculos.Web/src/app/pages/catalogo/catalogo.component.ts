@@ -272,8 +272,12 @@ export class CatalogoComponent implements OnInit, OnDestroy {
         if (this.autoOpenVeiculoId) {
           const v = this.veiculos.find(v => v.veiId === this.autoOpenVeiculoId);
           if (v) {
-            this.seoService.setVehiclePage(v);
-            this.seoService.setVehicleJsonLd(v);
+            // Passa o path atual para o SeoService construir og:url/canonical
+            // com origin correto (siteBaseUrl do environment), ja que
+            // document.location no SSR retorna vazio via CommonEngine.
+            const path = this.router.url;
+            this.seoService.setVehiclePage(v, path);
+            this.seoService.setVehicleJsonLd(v, path);
             if (isPlatformBrowser(this.platformId)) {
               this.abrirDetalhes(v);
             }
