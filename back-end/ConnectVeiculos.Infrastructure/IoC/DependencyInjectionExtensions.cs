@@ -279,19 +279,23 @@ namespace ConnectVeiculos.Infrastructure.IoC
                 if (!string.IsNullOrEmpty(envSecret)) opts.ClientSecret = envSecret;
                 if (!string.IsNullOrEmpty(envRedirect)) opts.RedirectUri = envRedirect;
             });
+            // Timeout 30s — OAuth do ML envolve roundtrip ate api.mercadolibre.com
+            // e a VM Oracle E2.1.Micro (1 GB RAM + swap) as vezes leva mais de
+            // 10s pra completar. Antes ficava em 10s e o callback dava
+            // TaskCanceledException no popup.
             services.AddHttpClient<Core.Interfaces.Services.IMercadoLivreService, Services.MercadoLivre.MercadoLivreService>()
-                .ConfigureHttpClient(client => client.Timeout = TimeSpan.FromSeconds(10));
+                .ConfigureHttpClient(client => client.Timeout = TimeSpan.FromSeconds(30));
             services.AddTransient<Core.Interfaces.Services.IFeedService, Services.Feed.FeedService>();
 
             // Services - Facebook Catalog (push instantaneo)
             services.Configure<Services.Facebook.FacebookCatalogSettings>(configuration.GetSection("FacebookCatalogSettings"));
             services.AddHttpClient<Core.Interfaces.Services.IFacebookCatalogService, Services.Facebook.FacebookCatalogService>()
-                .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(10));
+                .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(30));
 
             // Services - Google Merchant (push instantaneo)
             services.Configure<Services.Google.GoogleMerchantSettings>(configuration.GetSection("GoogleMerchantSettings"));
             services.AddHttpClient<Core.Interfaces.Services.IGoogleMerchantService, Services.Google.GoogleMerchantService>()
-                .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(10));
+                .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(30));
 
             // Services - Financiamento Bancos
             services.Configure<Services.Financiamento.BvFinanciamentoSettings>(configuration.GetSection("BvFinanciamentoSettings"));
