@@ -42,6 +42,8 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                 VeiPrecoCompra = ParseDecimal(v.VeiPrecoCompra),
                 VeiObservacao = v.VeiObservacao is string obs ? obs : null,
                 VeiOpcionais = v.VeiOpcionais is string opc ? opc : null,
+                VeiDonoAtual = v.VeiDonoAtual is string da ? da : null,
+                VeiDonoCelular = v.VeiDonoCelular is string dc ? dc : null,
                 VeiPrecoFipe = v.VeiPrecoFipe is decimal pfipe ? (decimal?)pfipe : (v.VeiPrecoFipe is double dpfipe ? (decimal?)(decimal)dpfipe : null),
                 VeiPostadoInsta = v.VeiPostadoInsta is long pi ? pi != 0 : v.VeiPostadoInsta is bool bpi && bpi,
                 VeiPostadoFace = v.VeiPostadoFace is long pf ? pf != 0 : v.VeiPostadoFace is bool bpf && bpf,
