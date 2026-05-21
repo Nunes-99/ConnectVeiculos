@@ -27,8 +27,9 @@ export class SignalRService {
       return;
     }
 
-    const token = this.authService.getToken();
-    if (!token) {
+    // Verificacao inicial — se nem token tem na primeira vez, evita
+    // tentar conectar e logar erro feio.
+    if (!this.authService.getToken()) {
       console.warn('SignalR: Token nao encontrado, conexao nao estabelecida');
       return;
     }
@@ -37,7 +38,12 @@ export class SignalRService {
 
     this.hubConnection = new signalR.HubConnectionBuilder()
       .withUrl(hubUrl, {
-        accessTokenFactory: () => token
+        // IMPORTANTE: factory e chamado a CADA tentativa de conexao/reconexao
+        // pelo SignalR — precisa ler do storage toda vez para pegar o token
+        // renovado via refresh_token. Capturar token em variavel local aqui
+        // congelava o valor da primeira chamada, e quando o JWT expirava (8h)
+        // todas as reconexoes recebiam 401 eternamente.
+        accessTokenFactory: () => this.authService.getToken() || ''
       })
       .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
       .configureLogging(signalR.LogLevel.Information)
