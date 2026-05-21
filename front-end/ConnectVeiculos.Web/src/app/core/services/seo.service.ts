@@ -9,34 +9,89 @@ export class SeoService {
   private title = inject(Title);
   private doc = inject(DOCUMENT);
 
-  setVehiclePage(veiculo: any, baseUrl?: string): void {
-    const base = baseUrl || environment.apiUrl.replace('/api', '');
+  setVehiclePage(veiculo: any, pageUrl?: string): void {
+    const origin = this.resolveOrigin(pageUrl);
     const titleText = `${veiculo.veiMarca} ${veiculo.veiModelo} ${veiculo.veiAno} - ${this.formatPreco(veiculo.veiPreco)}`;
-    const description = `${veiculo.veiMarca} ${veiculo.veiModelo} ${veiculo.veiAno}, ${veiculo.veiCor || ''}, ${this.formatKm(veiculo.veiKm)}. ${this.formatPreco(veiculo.veiPreco)}. ${veiculo.lojaNome} - ${veiculo.lojaCidade}/${veiculo.lojaEstado}`;
+    const description = `${veiculo.veiMarca} ${veiculo.veiModelo} ${veiculo.veiAno}, ${veiculo.veiCor || ''}, ${this.formatKm(veiculo.veiKm)}. ${this.formatPreco(veiculo.veiPreco)}. ${veiculo.lojaNome}${veiculo.lojaCidade ? ' - ' + veiculo.lojaCidade : ''}${veiculo.lojaEstado ? '/' + veiculo.lojaEstado : ''}`.trim();
     const imageUrl = veiculo.imagens?.length > 0
-      ? `${base}/api/imagens/file?path=${encodeURIComponent(veiculo.imagens[0])}`
+      ? `${origin}/api/imagens/file?path=${encodeURIComponent(veiculo.imagens[0])}`
       : '';
+    const canonicalUrl = pageUrl || (this.doc.location ? `${origin}${this.doc.location.pathname}` : origin);
+    const imageAlt = `${veiculo.veiMarca} ${veiculo.veiModelo} ${veiculo.veiAno}${veiculo.veiCor ? ' ' + veiculo.veiCor : ''}`;
 
     this.title.setTitle(titleText);
 
     this.meta.updateTag({ name: 'description', content: description });
     this.meta.updateTag({ name: 'robots', content: 'index, follow' });
+    this.setCanonical(canonicalUrl);
 
-    // Open Graph
+    // Open Graph (Facebook, WhatsApp, LinkedIn, Telegram)
     this.meta.updateTag({ property: 'og:title', content: titleText });
     this.meta.updateTag({ property: 'og:description', content: description });
     this.meta.updateTag({ property: 'og:type', content: 'product' });
+    this.meta.updateTag({ property: 'og:url', content: canonicalUrl });
+    this.meta.updateTag({ property: 'og:site_name', content: 'ConnectVeiculos' });
+    this.meta.updateTag({ property: 'og:locale', content: 'pt_BR' });
     if (imageUrl) {
+      // WhatsApp/Facebook escolhem a melhor imagem com base nas dimensoes.
+      // 1200x630 e o tamanho recomendado pelo Facebook para summary_large_image.
+      // Mesmo que a imagem real seja outra, declarar dimensoes evita lazy parse
+      // que pode resultar em "no preview" no WhatsApp.
       this.meta.updateTag({ property: 'og:image', content: imageUrl });
+      this.meta.updateTag({ property: 'og:image:secure_url', content: imageUrl });
+      this.meta.updateTag({ property: 'og:image:type', content: 'image/jpeg' });
+      this.meta.updateTag({ property: 'og:image:width', content: '1200' });
+      this.meta.updateTag({ property: 'og:image:height', content: '630' });
+      this.meta.updateTag({ property: 'og:image:alt', content: imageAlt });
+    }
+
+    // Product-specific (rich preview com preco em alguns scrapers)
+    if (veiculo.veiPreco) {
+      this.meta.updateTag({ property: 'product:price:amount', content: String(veiculo.veiPreco) });
+      this.meta.updateTag({ property: 'product:price:currency', content: 'BRL' });
+      this.meta.updateTag({ property: 'product:availability', content: 'in stock' });
+      this.meta.updateTag({ property: 'product:condition', content: 'used' });
     }
 
     // Twitter Card
     this.meta.updateTag({ name: 'twitter:card', content: 'summary_large_image' });
     this.meta.updateTag({ name: 'twitter:title', content: titleText });
     this.meta.updateTag({ name: 'twitter:description', content: description });
+    this.meta.updateTag({ name: 'twitter:url', content: canonicalUrl });
     if (imageUrl) {
       this.meta.updateTag({ name: 'twitter:image', content: imageUrl });
+      this.meta.updateTag({ name: 'twitter:image:alt', content: imageAlt });
     }
+  }
+
+  // Resolve a origem (https://dominio.com) priorizando, nessa ordem:
+  // 1. URL completa passada pelo SSR (pageUrl) — usada na renderizacao server-side
+  // 2. window.location no client
+  // 3. environment.apiUrl como fallback (dev only)
+  private resolveOrigin(pageUrl?: string): string {
+    if (pageUrl) {
+      try {
+        const u = new URL(pageUrl);
+        return `${u.protocol}//${u.host}`;
+      } catch { /* fall through */ }
+    }
+    if (this.doc.location && this.doc.location.origin) {
+      return this.doc.location.origin;
+    }
+    // Fallback dev — em prod environment.apiUrl e relativo, entao isso ficaria vazio.
+    return environment.apiUrl.replace(/\/api\/?$/, '');
+  }
+
+  private setCanonical(url: string): void {
+    const existing = this.doc.querySelector('link[rel="canonical"]');
+    if (existing) {
+      existing.setAttribute('href', url);
+      return;
+    }
+    const link = this.doc.createElement('link');
+    link.setAttribute('rel', 'canonical');
+    link.setAttribute('href', url);
+    this.doc.head.appendChild(link);
   }
 
   setLandingPage(): void {
@@ -93,16 +148,20 @@ export class SeoService {
     this.meta.updateTag({ property: 'og:type', content: 'website' });
   }
 
-  setVehicleJsonLd(veiculo: any, baseUrl?: string): void {
-    const base = baseUrl || environment.apiUrl.replace('/api', '');
-    const jsonLd = {
+  setVehicleJsonLd(veiculo: any, pageUrl?: string): void {
+    const origin = this.resolveOrigin(pageUrl);
+    const canonicalUrl = pageUrl || (this.doc.location ? `${origin}${this.doc.location.pathname}` : origin);
+    const jsonLd: any = {
       '@context': 'https://schema.org',
       '@type': 'Vehicle',
       'name': `${veiculo.veiMarca} ${veiculo.veiModelo} ${veiculo.veiAno}`,
+      'url': canonicalUrl,
       'brand': { '@type': 'Brand', 'name': veiculo.veiMarca },
       'model': veiculo.veiModelo,
       'modelDate': String(veiculo.veiAno),
+      'vehicleModelDate': String(veiculo.veiAno),
       'color': veiculo.veiCor,
+      'itemCondition': 'https://schema.org/UsedCondition',
       'mileageFromOdometer': {
         '@type': 'QuantitativeValue',
         'value': veiculo.veiKm,
@@ -110,9 +169,11 @@ export class SeoService {
       },
       'offers': {
         '@type': 'Offer',
+        'url': canonicalUrl,
         'price': veiculo.veiPreco,
         'priceCurrency': 'BRL',
         'availability': 'https://schema.org/InStock',
+        'itemCondition': 'https://schema.org/UsedCondition',
         'seller': {
           '@type': 'AutoDealer',
           'name': veiculo.lojaNome,
@@ -124,8 +185,8 @@ export class SeoService {
           }
         }
       },
-      'image': veiculo.imagens?.map((img: string) => `${base}/api/imagens/file?path=${encodeURIComponent(img)}`) || [],
-      'description': veiculo.veiObservacao || `${veiculo.veiMarca} ${veiculo.veiModelo} ${veiculo.veiAno} ${veiculo.veiCor || ''}`
+      'image': veiculo.imagens?.map((img: string) => `${origin}/api/imagens/file?path=${encodeURIComponent(img)}`) || [],
+      'description': veiculo.veiObservacao || `${veiculo.veiMarca} ${veiculo.veiModelo} ${veiculo.veiAno} ${veiculo.veiCor || ''}`.trim()
     };
 
     this.setJsonLd(jsonLd);
@@ -158,14 +219,31 @@ export class SeoService {
   }
 
   clearMeta(): void {
+    // Open Graph
     this.meta.removeTag('property="og:title"');
     this.meta.removeTag('property="og:description"');
     this.meta.removeTag('property="og:image"');
+    this.meta.removeTag('property="og:image:secure_url"');
+    this.meta.removeTag('property="og:image:type"');
+    this.meta.removeTag('property="og:image:width"');
+    this.meta.removeTag('property="og:image:height"');
+    this.meta.removeTag('property="og:image:alt"');
     this.meta.removeTag('property="og:type"');
+    this.meta.removeTag('property="og:url"');
+    this.meta.removeTag('property="og:site_name"');
+    this.meta.removeTag('property="og:locale"');
+    // Product
+    this.meta.removeTag('property="product:price:amount"');
+    this.meta.removeTag('property="product:price:currency"');
+    this.meta.removeTag('property="product:availability"');
+    this.meta.removeTag('property="product:condition"');
+    // Twitter
     this.meta.removeTag('name="twitter:card"');
     this.meta.removeTag('name="twitter:title"');
     this.meta.removeTag('name="twitter:description"');
     this.meta.removeTag('name="twitter:image"');
+    this.meta.removeTag('name="twitter:image:alt"');
+    this.meta.removeTag('name="twitter:url"');
   }
 
   private formatPreco(valor: number): string {
