@@ -747,13 +747,25 @@ export class VeiculosComponent implements OnInit {
 
   /**
    * Busca o preço FIPE quando temos marca + modelo + ano selecionados.
-   * Chamado quando muda modelo OU ano. Best-effort — falha silencioso se não achar.
+   *
+   * Por padrao (forcar=false) NAO sobrescreve um valor ja preenchido — isso
+   * evita que mexer no campo Ano (blur) destrua o preco FIPE salvo no banco
+   * quando o usuario esta apenas editando outros campos do veiculo. Para
+   * recalculo explicito (botao "Buscar FIPE"), passe forcar=true.
+   *
+   * Best-effort — falha silencioso se nao achar.
    */
-  buscarPrecoFipe(): void {
+  buscarPrecoFipe(forcar: boolean = false): void {
     const marcaCod = this.marcaCodigoSelecionado;
     const modeloCod = this.modeloCodigoSelecionado;
     const ano = this.form.get('veiAno')?.value;
     if (!marcaCod || !modeloCod || !ano) return;
+
+    // Nao sobrescrever valor existente a menos que o usuario tenha pedido explicitamente.
+    const valorAtual = this.form.get('veiPrecoFipe')?.value;
+    if (!forcar && valorAtual !== null && valorAtual !== undefined && valorAtual !== '' && Number(valorAtual) > 0) {
+      return;
+    }
 
     this.buscandoFipe = true;
     this.fipeService.getAnos(marcaCod, modeloCod).subscribe({

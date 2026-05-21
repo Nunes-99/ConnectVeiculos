@@ -332,8 +332,17 @@
                   <span style="color:#1a237e;font-size:11px;margin-left:0.5rem;">⟳ buscando FIPE...</span>
                 }
               </label>
-              <input formControlName="veiPrecoFipe" appCurrencyMask placeholder="0,00" />
-              <small style="color:#666;font-size:11px">Preenchido automaticamente ao selecionar Marca + Modelo + Ano (via API FIPE). Edite se quiser.</small>
+              <div style="display:flex;gap:0.5rem;align-items:center;">
+                <input formControlName="veiPrecoFipe" appCurrencyMask placeholder="0,00" style="flex:1;" />
+                <button type="button"
+                        (click)="buscarPrecoFipe(true)"
+                        [disabled]="buscandoFipe || !marcaCodigoSelecionado || !modeloCodigoSelecionado || !form.get('veiAno')?.value"
+                        style="padding:0.5rem 1rem;background:#1a237e;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;white-space:nowrap;"
+                        title="Buscar preço atual na tabela FIPE (sobrescreve o valor)">
+                  ⟳ Buscar FIPE
+                </button>
+              </div>
+              <small style="color:#666;font-size:11px">Preenchido automaticamente ao cadastrar (Marca + Modelo + Ano). Ao editar, o valor salvo é preservado — use "Buscar FIPE" para recalcular.</small>
             </div>
           </div>
           <div class="form-row">
