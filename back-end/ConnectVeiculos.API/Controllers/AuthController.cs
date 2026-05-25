@@ -384,8 +384,13 @@ namespace ConnectVeiculos.API.Controllers
         /// <summary>
         /// Realiza o login do usuario e retorna um token JWT
         /// </summary>
-        /// <param name="loginUseCase">Use case de login injetado</param>
+        /// <param name="master">DbContext do master para buscar tenant pelo email</param>
+        /// <param name="connFactory">Factory para resolver conexao do tenant</param>
+        /// <param name="softDeleteInterceptor">Interceptor pra filtrar soft-deleted</param>
+        /// <param name="configuration">Configuracao da app (JWT settings)</param>
+        /// <param name="logger">Logger</param>
         /// <param name="input">Credenciais do usuario (email e senha)</param>
+        /// <param name="ct">Cancellation token</param>
         /// <returns>Token JWT e dados do usuario autenticado</returns>
         /// <response code="200">Login realizado com sucesso</response>
         /// <response code="400">Dados de entrada invalidos</response>
