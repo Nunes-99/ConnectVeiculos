@@ -485,7 +485,10 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
                  // modes: [classified]" se enviarmos buy_it_now/gold_special.
                  buying_mode = "classified",
                 condition = "used",
-                 listing_type_id = "gold_premium", // Anuncio classificado premium (maior visibilidade)
+                 // 'silver' = classificado gratuito (sem taxa de listing). 'gold_premium'
+                 // dava HTTP 402 PaymentRequired pra contas sem creditos. Quando o cliente
+                 // tiver plano pago pode mudar pra gold_pro/gold_premium pra mais visibilidade.
+                 listing_type_id = "silver",
                 description = new { plain_text = MontarDescricao(veiculo, loja) },
                 pictures = pictures,
                  // ML exige location ate o nivel de cidade pra anuncio de veiculo.
