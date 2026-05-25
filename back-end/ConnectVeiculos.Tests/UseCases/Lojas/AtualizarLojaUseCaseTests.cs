@@ -71,7 +71,7 @@ namespace ConnectVeiculos.Tests.UseCases.Lojas
             Func<Task> act = async () => await _useCase.Execute(input);
 
             // Assert
-            await act.Should().ThrowAsync<Exception>().WithMessage("Loja nao encontrada.");
+            await act.Should().ThrowAsync<Exception>().WithMessage("Loja não encontrada.");
         }
 
         [Fact]

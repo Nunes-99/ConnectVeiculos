@@ -43,7 +43,7 @@ namespace ConnectVeiculos.Tests.UseCases
 
             var act = () => _useCase.ExecutarAsync(999, input);
 
-            await act.Should().ThrowAsync<InputModelException>().WithMessage("*nao encontrado*");
+            await act.Should().ThrowAsync<InputModelException>().WithMessage("*não encontrado*");
             _opsMock.Verify(o => o.AtualizarSenhaAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
         }
 

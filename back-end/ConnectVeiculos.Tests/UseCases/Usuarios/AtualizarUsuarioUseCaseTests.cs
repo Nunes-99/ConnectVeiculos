@@ -78,7 +78,7 @@ namespace ConnectVeiculos.Tests.UseCases.Usuarios
             Func<Task> act = async () => await _useCase.Execute(input);
 
             // Assert
-            await act.Should().ThrowAsync<Exception>().WithMessage("Usuario nao encontrado.");
+            await act.Should().ThrowAsync<Exception>().WithMessage("Usuário não encontrado.");
         }
 
         [Fact]

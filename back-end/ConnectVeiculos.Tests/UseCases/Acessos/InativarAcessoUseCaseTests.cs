@@ -38,7 +38,7 @@ namespace ConnectVeiculos.Tests.UseCases.Acessos
 
             Func<Task> act = async () => await _useCase.Execute(999);
 
-            await act.Should().ThrowAsync<Exception>().WithMessage("*Acesso nao encontrado*");
+            await act.Should().ThrowAsync<Exception>().WithMessage("*Acesso não encontrado*");
             _acessoRepositoryMock.Verify(x => x.DeleteAsync(It.IsAny<int>()), Times.Never);
         }
 

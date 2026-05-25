@@ -81,7 +81,7 @@ namespace ConnectVeiculos.Tests.UseCases.Veiculos
             Func<Task> act = async () => await _useCase.Execute(999);
 
             // Assert
-            await act.Should().ThrowAsync<Exception>().WithMessage("Veiculo nao encontrado.");
+            await act.Should().ThrowAsync<Exception>().WithMessage("Veículo não encontrado.");
         }
 
         [Fact]

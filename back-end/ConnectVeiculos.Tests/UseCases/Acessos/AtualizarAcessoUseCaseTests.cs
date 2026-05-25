@@ -60,7 +60,7 @@ namespace ConnectVeiculos.Tests.UseCases.Acessos
             Func<Task> act = async () => await _useCase.Execute(input);
 
             // Assert
-            await act.Should().ThrowAsync<Exception>().WithMessage("Acesso nao encontrado.");
+            await act.Should().ThrowAsync<Exception>().WithMessage("Acesso não encontrado.");
         }
 
         [Fact]

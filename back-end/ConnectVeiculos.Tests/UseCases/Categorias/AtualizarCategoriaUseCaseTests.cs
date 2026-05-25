@@ -60,7 +60,7 @@ namespace ConnectVeiculos.Tests.UseCases.Categorias
             Func<Task> act = async () => await _useCase.Execute(input);
 
             // Assert
-            await act.Should().ThrowAsync<Exception>().WithMessage("Categoria nao encontrada.");
+            await act.Should().ThrowAsync<Exception>().WithMessage("Categoria não encontrada.");
         }
 
         [Fact]

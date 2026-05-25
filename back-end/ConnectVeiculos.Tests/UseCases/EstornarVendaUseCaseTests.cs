@@ -63,7 +63,7 @@ namespace ConnectVeiculos.Tests.UseCases
 
             // Assert
             await act.Should().ThrowAsync<DomainException>()
-                .WithMessage("*nao encontrada*");
+                .WithMessage("*não encontrada*");
         }
 
         [Fact]

@@ -35,7 +35,7 @@ namespace ConnectVeiculos.Tests.Entities
 
             // Assert
             act.Should().Throw<DomainException>()
-                .WithMessage("*veiculo*obrigatorio*");
+                .WithMessage("*veículo*obrigatório*");
         }
 
         [Fact]
@@ -48,7 +48,7 @@ namespace ConnectVeiculos.Tests.Entities
 
             // Assert
             act.Should().Throw<DomainException>()
-                .WithMessage("*vendedor*obrigatorio*");
+                .WithMessage("*vendedor*obrigatório*");
         }
 
         [Fact]
@@ -61,7 +61,7 @@ namespace ConnectVeiculos.Tests.Entities
 
             // Assert
             act.Should().Throw<DomainException>()
-                .WithMessage("*comprador*obrigatorio*");
+                .WithMessage("*comprador*obrigatório*");
         }
 
         [Fact]

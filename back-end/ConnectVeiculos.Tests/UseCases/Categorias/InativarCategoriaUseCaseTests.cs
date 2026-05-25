@@ -38,7 +38,7 @@ namespace ConnectVeiculos.Tests.UseCases.Categorias
 
             Func<Task> act = async () => await _useCase.Execute(999);
 
-            await act.Should().ThrowAsync<Exception>().WithMessage("*Categoria nao encontrada*");
+            await act.Should().ThrowAsync<Exception>().WithMessage("*Categoria não encontrada*");
             _repoMock.Verify(x => x.DeleteAsync(It.IsAny<int>()), Times.Never);
         }
 

@@ -58,7 +58,7 @@ namespace ConnectVeiculos.Tests.UseCases.Lojas
 
             Func<Task> act = async () => await _useCase.Execute(999);
 
-            await act.Should().ThrowAsync<LojaException>().WithMessage("Loja nao encontrada.");
+            await act.Should().ThrowAsync<LojaException>().WithMessage("Loja não encontrada.");
             _lojaRepositoryMock.Verify(x => x.DeleteAsync(It.IsAny<int>()), Times.Never);
         }
 
@@ -72,7 +72,7 @@ namespace ConnectVeiculos.Tests.UseCases.Lojas
             Func<Task> act = async () => await _useCase.Execute(1);
 
             await act.Should().ThrowAsync<LojaException>()
-                .WithMessage("*veiculo(s) vinculado(s)*");
+                .WithMessage("*veículo(s) vinculado(s)*");
             _lojaRepositoryMock.Verify(x => x.DeleteAsync(It.IsAny<int>()), Times.Never);
             _lojaUsuarioRepositoryMock.Verify(x => x.DeleteByLojaIdAsync(It.IsAny<int>()), Times.Never);
         }

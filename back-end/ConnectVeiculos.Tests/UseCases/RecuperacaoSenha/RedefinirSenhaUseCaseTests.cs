@@ -67,7 +67,7 @@ namespace ConnectVeiculos.Tests.UseCases.RecuperacaoSenha
 
             // Assert
             await act.Should().ThrowAsync<InputModelException>()
-                .WithMessage("Token invalido ou expirado.");
+                .WithMessage("Token inválido ou expirado.");
         }
 
         [Fact]
@@ -90,7 +90,7 @@ namespace ConnectVeiculos.Tests.UseCases.RecuperacaoSenha
 
             // Assert
             await act.Should().ThrowAsync<InputModelException>()
-                .WithMessage("Token invalido ou expirado.");
+                .WithMessage("Token inválido ou expirado.");
         }
 
         [Fact]

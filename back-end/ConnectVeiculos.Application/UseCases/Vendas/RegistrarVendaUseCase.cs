@@ -43,7 +43,7 @@ namespace ConnectVeiculos.Application.UseCases.Vendas
                 throw new DomainException("Veículo não encontrado.");
 
             if (veiculo.VeiSts == "V")
-                throw new DomainException("Este veiculo ja foi vendido.");
+                throw new DomainException("Este veículo já foi vendido.");
 
             // Marcar veículo como vendido ANTES de criar a venda (evita venda duplicada)
             veiculo.AlterarStatus("V");

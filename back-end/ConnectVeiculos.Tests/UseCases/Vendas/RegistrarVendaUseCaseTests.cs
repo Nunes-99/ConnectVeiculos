@@ -92,7 +92,7 @@ namespace ConnectVeiculos.Tests.UseCases.Vendas
             Func<Task> act = async () => await _useCase.Execute(input);
 
             // Assert
-            await act.Should().ThrowAsync<DomainException>().WithMessage("Veiculo nao encontrado.");
+            await act.Should().ThrowAsync<DomainException>().WithMessage("Veículo não encontrado.");
         }
 
         [Fact]
@@ -112,7 +112,7 @@ namespace ConnectVeiculos.Tests.UseCases.Vendas
             Func<Task> act = async () => await _useCase.Execute(input);
 
             // Assert
-            await act.Should().ThrowAsync<DomainException>().WithMessage("Este veiculo ja foi vendido.");
+            await act.Should().ThrowAsync<DomainException>().WithMessage("Este veículo já foi vendido.");
         }
 
         [Fact]
