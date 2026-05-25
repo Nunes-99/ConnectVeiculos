@@ -26,6 +26,7 @@ using ConnectVeiculos.Core.Entities.Documentos;
 using ConnectVeiculos.Core.Entities.Negociacoes;
 using ConnectVeiculos.Core.Entities.Publicacoes;
 using ConnectVeiculos.Core.Entities.PushSubscriptions;
+using ConnectVeiculos.Core.Entities.Integracoes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using System.Globalization;
@@ -64,6 +65,8 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
         public DbSet<ConfiguracaoSistema> Configuracoes { get; set; }
         public DbSet<VeiculoDocumento> VeiculosDocumentos { get; set; }
         public DbSet<PushSubscription> PushSubscriptions { get; set; }
+        public DbSet<IntegracaoMercadoLivre> IntegracoesMercadoLivre { get; set; }
+        public DbSet<IntegracaoLog> IntegracoesLogs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -395,6 +398,30 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
                 entity.Property(e => e.PsbAuth).HasMaxLength(100).IsRequired();
                 entity.Property(e => e.PsbUserAgent).HasMaxLength(500);
                 entity.HasIndex(e => e.PsbEndpoint).IsUnique();
+            });
+
+            modelBuilder.Entity<IntegracaoMercadoLivre>(entity =>
+            {
+                entity.ToTable("IntegracaoMercadoLivre");
+                entity.HasKey(e => e.IntId);
+                entity.Property(e => e.IntId).ValueGeneratedOnAdd();
+                entity.Property(e => e.IntStatus).HasConversion<int>();
+                entity.Property(e => e.IntMotivoErro).HasConversion<int>();
+                entity.Property(e => e.IntSellerId).HasMaxLength(50);
+                entity.Property(e => e.IntMlNickname).HasMaxLength(100);
+                entity.Property(e => e.IntMlEmail).HasMaxLength(200);
+            });
+
+            modelBuilder.Entity<IntegracaoLog>(entity =>
+            {
+                entity.ToTable("IntegracaoLog");
+                entity.HasKey(e => e.IlgId);
+                entity.Property(e => e.IlgId).ValueGeneratedOnAdd();
+                entity.Property(e => e.IlgNivel).HasConversion<int>();
+                entity.Property(e => e.IlgCodigo).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.IlgMensagem).HasMaxLength(2000);
+                entity.HasIndex(e => e.IlgCriadoEm);
+                entity.HasIndex(e => new { e.IlgNivel, e.IlgCriadoEm });
             });
         }
     }

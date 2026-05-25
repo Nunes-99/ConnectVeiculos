@@ -279,7 +279,7 @@ export class VeiculosComponent implements OnInit {
       );
       this.loadImagens(veiculo.veiId);
       // Verificar se a marca está na FIPE
-      const marcaFipe = this.marcasFipe.find(m => m.nome.toLowerCase() === veiculo.veiMarca.toLowerCase());
+      const marcaFipe = this.marcasFipe.find(m => m.nome.toLowerCase() === (veiculo.veiMarca || '').toLowerCase());
       if (marcaFipe) {
         this.marcaSelecionada = marcaFipe.nome;
         this.marcaCodigoSelecionado = marcaFipe.codigo;
@@ -290,21 +290,31 @@ export class VeiculosComponent implements OnInit {
           next: (modelos) => {
             this.modelosFipe = modelos;
             this.carregandoModelos = false;
-            const modeloMatch = modelos.find(m => m.nome.toLowerCase() === veiculo.veiModelo.toLowerCase());
+            const modeloMatch = modelos.find(m => m.nome.toLowerCase() === (veiculo.veiModelo || '').toLowerCase());
             this.outroModelo = !modeloMatch;
-            this.buscaModelo = veiculo.veiModelo;
+            this.buscaModelo = veiculo.veiModelo || '';
             if (modeloMatch) this.modeloCodigoSelecionado = modeloMatch.codigo;
+             // Re-patch defensivo: a troca outroMarca/outroModelo entre autocomplete e
+             // input direto faz Angular remontar o input alvo do formControlName; sem
+             // este patch o valor original some quando o input "manual" entra em cena.
+             this.form.patchValue({ veiMarca: veiculo.veiMarca || '', veiModelo: veiculo.veiModelo || '' });
           },
-          error: () => { this.carregandoModelos = false; this.outroModelo = true; this.buscaModelo = veiculo.veiModelo; }
+          error: () => {
+            this.carregandoModelos = false;
+            this.outroModelo = true;
+            this.buscaModelo = veiculo.veiModelo || '';
+            this.form.patchValue({ veiMarca: veiculo.veiMarca || '', veiModelo: veiculo.veiModelo || '' });
+          }
         });
       } else {
         this.marcaSelecionada = '';
         this.marcaCodigoSelecionado = '';
-        this.buscaMarca = veiculo.veiMarca;
-        this.buscaModelo = veiculo.veiModelo;
+        this.buscaMarca = veiculo.veiMarca || '';
+        this.buscaModelo = veiculo.veiModelo || '';
         this.modelosFipe = [];
         this.outroMarca = true;
         this.outroModelo = true;
+        this.form.patchValue({ veiMarca: veiculo.veiMarca || '', veiModelo: veiculo.veiModelo || '' });
       }
     } else {
       this.editId = null;
@@ -759,7 +769,18 @@ export class VeiculosComponent implements OnInit {
     const marcaCod = this.marcaCodigoSelecionado;
     const modeloCod = this.modeloCodigoSelecionado;
     const ano = this.form.get('veiAno')?.value;
-    if (!marcaCod || !modeloCod || !ano) return;
+
+    if (!marcaCod || !modeloCod || !ano) {
+      if (forcar) {
+        const faltam = [
+          !marcaCod ? 'marca' : null,
+          !modeloCod ? 'modelo' : null,
+          !ano ? 'ano' : null
+        ].filter(x => x).join(', ');
+        this.toast.warning(`FIPE: selecione ${faltam} na lista FIPE antes de buscar.`);
+      }
+      return;
+    }
 
     // Nao sobrescrever valor existente a menos que o usuario tenha pedido explicitamente.
     const valorAtual = this.form.get('veiPrecoFipe')?.value;
@@ -773,28 +794,34 @@ export class VeiculosComponent implements OnInit {
         const anoMatch = anos.find(a => a.codigo.startsWith(`${ano}-`) || a.nome.startsWith(`${ano} `));
         if (!anoMatch) {
           this.buscandoFipe = false;
-          this.toast.warning(`FIPE: ano ${ano} não disponível para esse modelo na tabela FIPE.`);
+          const disponiveis = anos.slice(0, 5).map(a => a.nome).join(', ');
+          this.toast.warning(`FIPE: ano ${ano} nao disponivel. Anos na FIPE para esse modelo: ${disponiveis}${anos.length > 5 ? '...' : ''}`);
           return;
         }
 
         this.fipeService.getPreco(marcaCod, modeloCod, anoMatch.codigo).subscribe({
           next: (preco) => {
             const valorNumerico = this.fipeService.parseValorFipe(preco.valor);
-            if (valorNumerico) {
+            if (valorNumerico && valorNumerico > 0) {
               this.form.patchValue({ veiPrecoFipe: valorNumerico });
+              this.form.get('veiPrecoFipe')?.markAsDirty();
               this.toast.success(`FIPE: ${preco.valor} (${preco.mesReferencia})`);
+            } else {
+              this.toast.warning(`FIPE: API retornou valor invalido (${preco.valor}).`);
             }
             this.buscandoFipe = false;
           },
-          error: () => {
+          error: (err) => {
+            console.error('[FIPE] erro ao buscar preco', err);
             this.buscandoFipe = false;
-            this.toast.warning('FIPE: falha ao buscar preço (API externa indisponível).');
+            this.toast.warning(`FIPE: falha ao buscar preco (HTTP ${err?.status || '?'}).`);
           }
         });
       },
-      error: () => {
+      error: (err) => {
+        console.error('[FIPE] erro ao buscar anos', err);
         this.buscandoFipe = false;
-        this.toast.warning('FIPE: falha ao buscar anos disponíveis (API externa indisponível).');
+        this.toast.warning(`FIPE: falha ao buscar anos disponiveis (HTTP ${err?.status || '?'}).`);
       }
     });
   }

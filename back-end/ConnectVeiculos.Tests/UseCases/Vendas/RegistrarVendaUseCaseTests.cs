@@ -7,6 +7,7 @@ using ConnectVeiculos.Core.Interfaces.Database.Repositories.Vendas;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Email;
 using ConnectVeiculos.Core.Interfaces.Services;
+using ConnectVeiculos.Core.Interfaces.Tenancy;
 using FluentAssertions;
 using Moq;
 using Xunit;
@@ -29,12 +30,14 @@ namespace ConnectVeiculos.Tests.UseCases.Vendas
             _emailServiceMock = new Mock<IEmailService>();
             _notificacaoServiceMock = new Mock<INotificacaoService>();
             _catalogoHubServiceMock = new Mock<ICatalogoHubService>();
+             var tenantContextMock = new Mock<ITenantContext>();
             _useCase = new RegistrarVendaUseCase(
                 _vendaRepositoryMock.Object,
                 _veiculoRepositoryMock.Object,
                 _emailServiceMock.Object,
                 _notificacaoServiceMock.Object,
-                _catalogoHubServiceMock.Object);
+                 _catalogoHubServiceMock.Object,
+                 tenantContextMock.Object);
         }
 
         [Fact]

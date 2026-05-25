@@ -25,11 +25,11 @@
         <div class="ml-conta-info">
           <span class="material-icons">account_circle</span>
           <div>
-            <strong>Conectado como {{ mlConta.nickname }}</strong>
-            @if (mlConta.email) { <small>{{ mlConta.email }}</small> }
+            <strong>Conectado como {{ mlConta!.nickname }}</strong>
+            @if (mlConta!.email) { <small>{{ mlConta!.email }}</small> }
           </div>
-          @if (mlConta.urlPerfil) {
-            <a [href]="mlConta.urlPerfil" target="_blank" rel="noopener" title="Abrir perfil no ML">
+          @if (mlConta!.urlPerfil) {
+            <a [href]="mlConta!.urlPerfil" target="_blank" rel="noopener" title="Abrir perfil no ML">
               <span class="material-icons">open_in_new</span>
             </a>
           }
@@ -59,21 +59,21 @@
       @if (mlSincronizacaoResult) {
         <div class="ml-sync-result">
           <div class="ml-sync-summary">
-            <span><strong>{{ mlSincronizacaoResult.totalDisponiveis }}</strong> disponiveis</span>
+            <span><strong>{{ mlSincronizacaoResult!.totalDisponiveis }}</strong> disponiveis</span>
             <span class="sep">·</span>
-            <span class="ok"><strong>{{ mlSincronizacaoResult.novosPublicados }}</strong> publicado(s) agora</span>
+            <span class="ok"><strong>{{ mlSincronizacaoResult!.novosPublicados }}</strong> publicado(s) agora</span>
             <span class="sep">·</span>
-            <span><strong>{{ mlSincronizacaoResult.jaPublicados }}</strong> ja estavam no ML</span>
-            @if (mlSincronizacaoResult.falhas.length > 0) {
+            <span><strong>{{ mlSincronizacaoResult!.jaPublicados }}</strong> ja estavam no ML</span>
+            @if (mlSincronizacaoResult!.falhas.length > 0) {
               <span class="sep">·</span>
-              <span class="fail"><strong>{{ mlSincronizacaoResult.falhas.length }}</strong> falha(s)</span>
+              <span class="fail"><strong>{{ mlSincronizacaoResult!.falhas.length }}</strong> falha(s)</span>
             }
           </div>
-          @if (mlSincronizacaoResult.falhas.length > 0) {
+          @if (mlSincronizacaoResult!.falhas.length > 0) {
             <details class="ml-sync-fails">
               <summary>Ver veiculos que falharam</summary>
               <ul>
-                @for (f of mlSincronizacaoResult.falhas; track f.veiculoId) {
+                @for (f of mlSincronizacaoResult!.falhas; track f.veiculoId) {
                   <li><strong>{{ f.descricao }}</strong> — {{ f.erro }}</li>
                 }
               </ul>
@@ -88,7 +88,8 @@
     </div>
   </div>
 
-  <!-- WhatsApp Business -->
+  <!-- WhatsApp Business - DESATIVADO temporariamente, implementar depois -->
+  @if (false) {
   <div class="integracao-card">
     <div class="card-header">
       <div class="platform-info">
@@ -145,8 +146,10 @@
       <small>Custo: 1.000 conversas/mês grátis (iniciadas pelo cliente). Conversas adicionais ~R$0,06 (utility) ou ~R$0,30 (marketing). Pago direto ao Meta com o cartão da sua conta Business.</small>
     </div>
   </div>
+  }
 
-  <!-- Modal de configuração WhatsApp -->
+  <!-- Modal de configuração WhatsApp - DESATIVADO -->
+  @if (false) {
   @if (showWaConfigModal) {
     <div class="modal-overlay">
       <div class="modal modal-lg">
@@ -250,7 +253,10 @@
       </div>
     </div>
   }
+  }
 
+  <!-- Modal desconectar WhatsApp - DESATIVADO -->
+  @if (false) {
   <app-confirm-modal
     [show]="showWaDesconectarModal"
     titulo="Desconectar WhatsApp Business?"
@@ -260,6 +266,7 @@
     tipo="danger"
     (confirmar)="confirmarDesconectarWhatsApp()"
     (cancelar)="cancelarDesconectarWhatsApp()" />
+  }
 
   <!-- E-mail / SMTP -->
   <div class="integracao-card">
@@ -323,7 +330,62 @@
           <h2><span class="material-icons">mail</span> Configurar E-mail / SMTP</h2>
           <button class="modal-close" (click)="fecharConfigSmtp()"><span class="material-icons">close</span></button>
         </div>
+
+        <div class="wa-tabs">
+          <button [class.active]="smtpAbaTutorial" (click)="smtpAbaTutorial = true" type="button">
+            <span class="material-icons">help_outline</span> Como configurar
+          </button>
+          <button [class.active]="!smtpAbaTutorial" (click)="smtpAbaTutorial = false" type="button">
+            <span class="material-icons">settings</span> Credenciais
+          </button>
+        </div>
+
         <div class="modal-body">
+          @if (smtpAbaTutorial) {
+            <div class="wa-tutorial">
+              <p><strong>O sistema envia e-mails automáticos</strong> (confirmação de venda, queda de preço, recuperação de senha) usando o servidor SMTP de uma conta de e-mail que você controla. O remetente que aparece pro destinatário é o e-mail/nome configurados aqui.</p>
+
+              <h3 style="margin-top:1.25rem;color:#1a237e;font-size:1rem;">Gmail (recomendado, grátis)</h3>
+              <ol style="line-height:1.7;padding-left:1.5rem;margin:0.5rem 0;">
+                <li>Acesse <a href="https://myaccount.google.com/security" target="_blank" rel="noopener">myaccount.google.com/security</a> e <strong>ative a Verificação em 2 etapas</strong> (obrigatório).</li>
+                <li>Depois vá em <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">myaccount.google.com/apppasswords</a>.</li>
+                <li>Digite um nome (ex: <code>ConnectVeiculos</code>) e clique em <strong>Criar</strong>.</li>
+                <li>O Google mostra uma senha de <strong>16 caracteres</strong> (ex: <code>abcd efgh ijkl mnop</code>) — copie tudo. Essa popup só aparece UMA vez.</li>
+                <li>Preencha aqui na aba <strong>Credenciais</strong>:
+                  <ul style="padding-left:1.25rem;margin:0.4rem 0;line-height:1.55;">
+                    <li><strong>Servidor SMTP:</strong> <code>smtp.gmail.com</code></li>
+                    <li><strong>Porta:</strong> <code>587</code></li>
+                    <li><strong>E-mail/Usuário/Remetente:</strong> seu Gmail (ex: <code>contato&#64;minhaloja.com</code>)</li>
+                    <li><strong>Senha:</strong> cole a App Password de 16 caracteres (NÃO a senha normal do Gmail)</li>
+                    <li><strong>SSL/TLS:</strong> marcado</li>
+                  </ul>
+                </li>
+                <li>Clique em <strong>Salvar credenciais</strong>, depois em <strong>Testar</strong> com um e-mail seu pra confirmar.</li>
+              </ol>
+
+              <h3 style="margin-top:1.25rem;color:#1a237e;font-size:1rem;">Locaweb / KingHost / UOL Host (e-mail próprio)</h3>
+              <ol style="line-height:1.7;padding-left:1.5rem;margin:0.5rem 0;">
+                <li>Use os dados do painel do seu provedor de hospedagem (ex: <code>smtp.locaweb.com.br</code> / porta 587 ou 465).</li>
+                <li>Usuário = e-mail completo. Senha = senha do e-mail (sem 2FA aqui).</li>
+              </ol>
+
+              <h3 style="margin-top:1.25rem;color:#1a237e;font-size:1rem;">SendGrid (pago, alto volume)</h3>
+              <ol style="line-height:1.7;padding-left:1.5rem;margin:0.5rem 0;">
+                <li>Servidor: <code>smtp.sendgrid.net</code> · Porta: <code>587</code></li>
+                <li>Usuário: a string literal <code>apikey</code></li>
+                <li>Senha: a API Key gerada no painel SendGrid.</li>
+              </ol>
+
+              <p class="wa-aviso">
+                <span class="material-icons">warning</span>
+                <strong>NÃO use a senha normal do Gmail</strong> — o Google bloqueia esse tipo de login desde 2022. Sempre App Password.
+              </p>
+              <button class="btn-primary" type="button" (click)="smtpAbaTutorial = false">
+                Já tenho os dados, ir para credenciais
+                <span class="material-icons">arrow_forward</span>
+              </button>
+            </div>
+          } @else {
           <form [formGroup]="smtpForm" (ngSubmit)="salvarSmtp()" class="wa-form">
             <div class="form-row">
               <div class="form-group">
@@ -347,7 +409,7 @@
               <div class="form-group">
                 <label class="required">Nome remetente</label>
                 <input type="text" formControlName="senderName" placeholder="Diamante Veículos" />
-                <small>Aparece como "De:" antes do e-mail.</small>
+                <small>Aparece como "De:" antes do e-mail. Sugerimos o nome da sua loja padrão.</small>
               </div>
             </div>
 
@@ -358,14 +420,24 @@
             </div>
 
             <div class="form-group">
-              <label [class.required]="!smtpConfig.configurado">Senha SMTP {{ smtpConfig.configurado ? '(deixe em branco para manter atual)' : '' }}</label>
+              <label [class.required]="!smtpConfig.configurado">
+                Senha SMTP
+                @if (smtpConfig.configurado) {
+                  <span style="color:#16a34a;font-weight:400;font-size:0.8rem;margin-left:0.5rem;">
+                    <span class="material-icons" style="font-size:14px;vertical-align:middle;">check_circle</span> senha salva
+                  </span>
+                }
+              </label>
               <div class="token-input">
-                <input [type]="smtpMostrarSenha ? 'text' : 'password'" formControlName="password" placeholder="senha do e-mail ou app password" />
+                <input [type]="smtpMostrarSenha ? 'text' : 'password'" formControlName="password"
+                       [placeholder]="smtpConfig.configurado ? '••••••••••••  (deixe em branco para manter a salva)' : 'cole a App Password de 16 caracteres'" />
                 <button type="button" class="btn-mini" (click)="smtpMostrarSenha = !smtpMostrarSenha">
                   <span class="material-icons">{{ smtpMostrarSenha ? 'visibility_off' : 'visibility' }}</span>
                 </button>
               </div>
-              <small>Para Gmail: gere App Password em myaccount.google.com/apppasswords (precisa 2-Step Verification ativo).</small>
+              <small>
+                Para Gmail: <strong>NÃO use a senha normal</strong>. Gere App Password em <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">myaccount.google.com/apppasswords</a> (precisa 2FA ativo). Veja o passo a passo na aba "Como configurar".
+              </small>
             </div>
 
             <div class="form-group form-check">
@@ -404,6 +476,7 @@
               </button>
             </div>
           </form>
+          }
         </div>
       </div>
     </div>
@@ -419,7 +492,8 @@
     (confirmar)="confirmarDesconectarSmtp()"
     (cancelar)="cancelarDesconectarSmtp()" />
 
-  <!-- Facebook Catalog -->
+  <!-- Facebook Catalog - DESATIVADO temporariamente, implementar depois -->
+  @if (false) {
   <div class="integracao-card">
     <div class="card-header">
       <div class="platform-info">
@@ -479,9 +553,9 @@
           3. Clique Salvar e aguarde 5 min, depois volte ao Meta e clique "Verificar".
         </small>
         @if (fbVerifMensagem) {
-          <div class="verif-result" [class.sucesso]="fbVerifMensagem.sucesso" [class.falha]="!fbVerifMensagem.sucesso">
-            <span class="material-icons">{{ fbVerifMensagem.sucesso ? 'check_circle' : 'error' }}</span>
-            {{ fbVerifMensagem.texto }}
+          <div class="verif-result" [class.sucesso]="fbVerifMensagem!.sucesso" [class.falha]="!fbVerifMensagem!.sucesso">
+            <span class="material-icons">{{ fbVerifMensagem!.sucesso ? 'check_circle' : 'error' }}</span>
+            {{ fbVerifMensagem!.texto }}
           </div>
         }
       </div>
@@ -511,8 +585,10 @@
       <small>Custo: Grátis para listagem orgânica. Para impulsionar com Ads, o cliente define o orçamento.</small>
     </div>
   </div>
+  }
 
-  <!-- Modal config Facebook Catalog -->
+  <!-- Modal config Facebook Catalog - DESATIVADO -->
+  @if (false) {
   @if (showFbConfigModal) {
     <div class="modal-overlay">
       <div class="modal modal-lg">
@@ -598,9 +674,9 @@
                   </button>
                 </div>
                 @if (fbTesteResultado) {
-                  <div class="smtp-test-result" [class.sucesso]="fbTesteResultado.sucesso" [class.falha]="!fbTesteResultado.sucesso">
-                    <span class="material-icons">{{ fbTesteResultado.sucesso ? 'check_circle' : 'error' }}</span>
-                    {{ fbTesteResultado.mensagem }}
+                  <div class="smtp-test-result" [class.sucesso]="fbTesteResultado!.sucesso" [class.falha]="!fbTesteResultado!.sucesso">
+                    <span class="material-icons">{{ fbTesteResultado!.sucesso ? 'check_circle' : 'error' }}</span>
+                    {{ fbTesteResultado!.mensagem }}
                   </div>
                 }
                 <small>O teste usa as credenciais ATUALMENTE SALVAS. Salve antes de testar se acabou de mexer no formulário.</small>
@@ -618,7 +694,10 @@
       </div>
     </div>
   }
+  }
 
+  <!-- Modal desconectar Facebook - DESATIVADO -->
+  @if (false) {
   <app-confirm-modal
     [show]="showFbDesconectarModal"
     titulo="Desconectar Facebook Catalog?"
@@ -628,12 +707,13 @@
     tipo="danger"
     (confirmar)="confirmarDesconectarFacebook()"
     (cancelar)="cancelarDesconectarFacebook()" />
+  }
 
   <!-- Modais de confirmação do ML -->
   <app-confirm-modal
     [show]="showSubstituirModal"
     titulo="Substituir conta Mercado Livre?"
-    [mensagem]="'Já existe uma conta ML conectada' + (mlConta ? ' (' + mlConta.nickname + ')' : '') + '. Conectar uma nova conta vai SUBSTITUIR a atual e os anúncios futuros irão para a nova conta. Continuar?'"
+    [mensagem]="'Já existe uma conta ML conectada' + (mlConta ? ' (' + mlConta!.nickname + ')' : '') + '. Conectar uma nova conta vai SUBSTITUIR a atual e os anúncios futuros irão para a nova conta. Continuar?'"
     textoBotaoConfirmar="Sim, substituir"
     textoBotaoCancelar="Cancelar"
     tipo="warning"
@@ -650,7 +730,8 @@
     (confirmar)="confirmarDesconectar()"
     (cancelar)="cancelarDesconectar()" />
 
-  <!-- Google Merchant -->
+  <!-- Google Merchant - DESATIVADO temporariamente, implementar depois -->
+  @if (false) {
   <div class="integracao-card">
     <div class="card-header">
       <div class="platform-info">
@@ -710,9 +791,9 @@
           3. Salve, aguarde 5 min, depois clique "Verificar" no Google.
         </small>
         @if (gmVerifMensagem) {
-          <div class="verif-result" [class.sucesso]="gmVerifMensagem.sucesso" [class.falha]="!gmVerifMensagem.sucesso">
-            <span class="material-icons">{{ gmVerifMensagem.sucesso ? 'check_circle' : 'error' }}</span>
-            {{ gmVerifMensagem.texto }}
+          <div class="verif-result" [class.sucesso]="gmVerifMensagem!.sucesso" [class.falha]="!gmVerifMensagem!.sucesso">
+            <span class="material-icons">{{ gmVerifMensagem!.sucesso ? 'check_circle' : 'error' }}</span>
+            {{ gmVerifMensagem!.texto }}
           </div>
         }
       </div>
@@ -742,8 +823,10 @@
       <small>Custo: Listagem grátis. Para Google Ads (Vehicle Ads), o cliente define o orçamento (mín ~R$5/dia).</small>
     </div>
   </div>
+  }
 
-  <!-- Modal config Google Merchant -->
+  <!-- Modal config Google Merchant - DESATIVADO -->
+  @if (false) {
   @if (showGmConfigModal) {
     <div class="modal-overlay">
       <div class="modal modal-lg">
@@ -871,9 +954,9 @@
                   </button>
                 </div>
                 @if (gmTesteResultado) {
-                  <div class="smtp-test-result" [class.sucesso]="gmTesteResultado.sucesso" [class.falha]="!gmTesteResultado.sucesso">
-                    <span class="material-icons">{{ gmTesteResultado.sucesso ? 'check_circle' : 'error' }}</span>
-                    {{ gmTesteResultado.mensagem }}
+                  <div class="smtp-test-result" [class.sucesso]="gmTesteResultado!.sucesso" [class.falha]="!gmTesteResultado!.sucesso">
+                    <span class="material-icons">{{ gmTesteResultado!.sucesso ? 'check_circle' : 'error' }}</span>
+                    {{ gmTesteResultado!.mensagem }}
                   </div>
                 }
                 <small>O teste usa as credenciais ATUALMENTE SALVAS. Salve antes de testar se acabou de mexer no formulário.</small>
@@ -891,7 +974,10 @@
       </div>
     </div>
   }
+  }
 
+  <!-- Modal desconectar Google - DESATIVADO -->
+  @if (false) {
   <app-confirm-modal
     [show]="showGmDesconectarModal"
     titulo="Desconectar Google Merchant?"
@@ -901,10 +987,13 @@
     tipo="danger"
     (confirmar)="confirmarDesconectarGoogle()"
     (cancelar)="cancelarDesconectarGoogle()" />
+  }
 
   <!-- Google Gemini OCR (scanner de CRLV) - card oculto.
        Todos os tenants usam a chave configurada via variavel de ambiente GEMINI_API_KEY no servidor. -->
 
+  <!-- Modal templates WhatsApp - DESATIVADO -->
+  @if (false) {
   @if (showWaTemplatesModal) {
     <div class="modal-overlay">
       <div class="modal modal-lg">
@@ -1010,5 +1099,6 @@ _&#123;&#123;6&#125;&#125;_</pre>
         </div>
       </div>
     </div>
+  }
   }
 </div>

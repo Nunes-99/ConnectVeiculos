@@ -44,7 +44,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                 VeiOpcionais = v.VeiOpcionais is string opc ? opc : null,
                 VeiDonoAtual = v.VeiDonoAtual is string da ? da : null,
                 VeiDonoCelular = v.VeiDonoCelular is string dc ? dc : null,
-                VeiPrecoFipe = v.VeiPrecoFipe is decimal pfipe ? (decimal?)pfipe : (v.VeiPrecoFipe is double dpfipe ? (decimal?)(decimal)dpfipe : null),
+                VeiPrecoFipe = ParseNullableDecimal(v.VeiPrecoFipe),
                 VeiPostadoInsta = v.VeiPostadoInsta is long pi ? pi != 0 : v.VeiPostadoInsta is bool bpi && bpi,
                 VeiPostadoFace = v.VeiPostadoFace is long pf ? pf != 0 : v.VeiPostadoFace is bool bpf && bpf,
                 VeiDtPostagemInsta = v.VeiDtPostagemInsta is DateTime dti ? dti : v.VeiDtPostagemInsta is string si && DateTime.TryParse(si, out var parsedInsta) ? parsedInsta : null,
@@ -62,6 +62,22 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             if (value is int i) return i;
             if (value is string s) return decimal.Parse(s, CultureInfo.InvariantCulture);
             return Convert.ToDecimal(value, CultureInfo.InvariantCulture);
+        }
+
+        // VeiPrecoFipe é armazenado como TEXT no SQLite (ValueConverter em
+        // ConnectVeiculosDbContext); Dapper devolve string em vez de double.
+        // Cobrimos os outros tipos pra resistir a registros legados.
+        private static decimal? ParseNullableDecimal(dynamic value)
+        {
+            if (value == null) return null;
+            if (value is decimal d) return d;
+            if (value is double dbl) return (decimal)dbl;
+            if (value is long l) return l;
+            if (value is int i) return i;
+            if (value is string s)
+                return string.IsNullOrWhiteSpace(s) ? (decimal?)null
+                    : decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed) ? parsed : (decimal?)null;
+            return null;
         }
     }
 }

@@ -34,7 +34,14 @@ export class SignalRService {
       return;
     }
 
-    const hubUrl = `${environment.apiUrl.replace('/api', '')}/hubs/notificacoes`;
+    // SignalR JS client nao passa pelo HttpInterceptor do Angular, entao o
+     // header X-Tenant-Slug nao chega ao backend. Em dev (localhost) o middleware
+     // resolveria para tenant "default" e o JWT (que carrega tenant_id real)
+     // seria rejeitado pelo cross-tenant check com 401. O override ?tenant=slug
+     // na query string e aceito pelo TenantResolutionMiddleware.
+     const tenantSlug = this.authService.getTenantSlug();
+     const tenantQuery = tenantSlug ? `?tenant=${encodeURIComponent(tenantSlug)}` : '';
+     const hubUrl = `${environment.apiUrl.replace('/api', '')}/hubs/notificacoes${tenantQuery}`;
 
     this.hubConnection = new signalR.HubConnectionBuilder()
       .withUrl(hubUrl, {

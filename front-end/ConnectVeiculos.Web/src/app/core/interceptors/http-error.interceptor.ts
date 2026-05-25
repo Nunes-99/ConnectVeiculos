@@ -52,6 +52,10 @@ export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
         errorMessage = error.error.error;
       } else if (error.error?.message) {
         errorMessage = error.error.message;
+       } else if (error.error?.mensagem) {
+         // ASP.NET retorna ViewModels com nomes em pt-BR ({ sucesso, mensagem }) em
+         // alguns endpoints (SMTP test, Facebook test, etc) — precisamos capturar esse campo.
+         errorMessage = error.error.mensagem;
       } else if (error.error?.title) {
         errorMessage = error.error.title;
       } else if (typeof error.error === 'string') {

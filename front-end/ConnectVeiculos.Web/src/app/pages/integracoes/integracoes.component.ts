@@ -3,7 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { IntegracaoService, MercadoLivreContaInfo, MercadoLivreSincronizacaoResult, WhatsAppConfigInfo, EmailConfigInfo, FacebookConfigInfo, GoogleMerchantConfigInfo, TestIntegracaoResult } from '../../core/services/integracao.service';
-import { ToastService } from '../../core/services';
+import { AuthService, LojaService, ToastService } from '../../core/services';
 import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal.component';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
@@ -21,6 +21,13 @@ export class IntegracoesComponent implements OnInit {
   private platformId = inject(PLATFORM_ID);
   private fb = inject(FormBuilder);
   private http = inject(HttpClient);
+  private lojaService = inject(LojaService);
+  private authService = inject(AuthService);
+
+  // Nome da loja padrao do tenant — usado como sugestao default para o
+  // "Nome remetente" do SMTP. Vazio se a chamada nao terminou ainda ou
+  // se nao ha lojas cadastradas.
+  private lojaPadraoNome = '';
 
   // WhatsApp templates modal
   showWaTemplatesModal = false;
@@ -121,6 +128,8 @@ _{{6}}_`;
   smtpEmailTeste = '';
   smtpTestando = false;
   smtpTesteResultado: { sucesso: boolean; mensagem: string } | null = null;
+   // Default = tutorial aberto na primeira config; uma vez configurado, abre direto no form.
+   smtpAbaTutorial = true;
 
   // Facebook Catalog (Push API)
   fbConfig: FacebookConfigInfo = { configurado: false, tokenDefinido: false };
@@ -180,6 +189,16 @@ _{{6}}_`;
     this.checkFacebookStatus();
     this.checkGoogleStatus();
     this.loadVerificationCodes();
+    this.carregarLojaPadrao();
+  }
+
+  private carregarLojaPadrao(): void {
+    this.lojaService.getAll().subscribe({
+      next: (lojas) => {
+        const padrao = lojas.find(l => l.lojPadraoCatalogo) || lojas[0];
+        this.lojaPadraoNome = padrao?.lojNome || '';
+      }
+    });
   }
 
   // ============================================================
@@ -398,13 +417,42 @@ _{{6}}_`;
   abrirConfigSmtp(): void {
     this.smtpMostrarSenha = false;
     this.smtpTesteResultado = null;
-    this.smtpForm.reset({
+     // Tutorial aberto na primeira configuracao; uma vez configurado, abre direto no form.
+     this.smtpAbaTutorial = !this.smtpConfig.configurado;
+
+     // Defaults sugeridos quando nao ha config salva:
+     //  - Nome remetente: nome da loja padrao do tenant.
+     //  - E-mail remetente/usuario: e-mail do admin logado (precisa coincidir
+     //    com a conta SMTP autenticada — Gmail/Outlook rejeitam "From"
+     //    diferente do "Username").
+     // Os valores "ConnectVeiculos" / "contato.connectveiculos@gmail.com" sao
+     // o fallback global da plataforma (appsettings.json) e nao servem como
+     // remetente util pra loja — tratamos como vazio pra sugerir os dados do
+     // admin/loja padrao no lugar.
+     const PLATFORM_DEFAULT_NAME = 'ConnectVeiculos';
+     const PLATFORM_DEFAULT_EMAIL = 'contato.connectveiculos@gmail.com';
+
+     const senderNameSalvo = this.smtpConfig.senderName && this.smtpConfig.senderName !== PLATFORM_DEFAULT_NAME
+       ? this.smtpConfig.senderName
+       : '';
+     const senderEmailSalvo = this.smtpConfig.senderEmail && this.smtpConfig.senderEmail !== PLATFORM_DEFAULT_EMAIL
+       ? this.smtpConfig.senderEmail
+       : '';
+     const usernameSalvo = this.smtpConfig.username && this.smtpConfig.username !== PLATFORM_DEFAULT_EMAIL
+       ? this.smtpConfig.username
+       : '';
+     const nomeRemetenteDefault = senderNameSalvo || this.lojaPadraoNome || PLATFORM_DEFAULT_NAME;
+     const adminEmail = this.authService.getUser()?.usuEmail || '';
+     const emailRemetenteDefault = senderEmailSalvo || adminEmail;
+     const usuarioDefault = usernameSalvo || adminEmail;
+
+     this.smtpForm.reset({
       smtpServer: this.smtpConfig.smtpServer || 'smtp.gmail.com',
       smtpPort: this.smtpConfig.smtpPort || 587,
-      username: this.smtpConfig.username || '',
+       username: usuarioDefault,
       password: '',
-      senderEmail: this.smtpConfig.senderEmail || '',
-      senderName: this.smtpConfig.senderName || 'ConnectVeiculos',
+       senderEmail: emailRemetenteDefault,
+       senderName: nomeRemetenteDefault,
       enableSsl: this.smtpConfig.enableSsl ?? true
     });
     this.showSmtpConfigModal = true;

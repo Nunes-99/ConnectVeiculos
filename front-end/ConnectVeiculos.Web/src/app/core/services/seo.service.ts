@@ -148,21 +148,52 @@ export class SeoService {
     this.setJsonLd(jsonLd);
   }
 
-  setCatalogPage(loja?: any): void {
+  setCatalogPage(loja?: any, pageUrl?: string): void {
+    const origin = this.resolveOrigin(pageUrl);
+    const canonicalUrl = this.resolveCanonicalUrl(origin, pageUrl);
     const titleText = loja
       ? `${loja.lojNome} - Catalogo de Veiculos`
       : 'Catalogo de Veiculos';
     const description = loja
-      ? `Veja os veículos disponíveis em ${loja.lojNome}, ${loja.lojCidade}/${loja.lojaEstado}. Carros, motos e muito mais.`
+      ? `Veja os veículos disponíveis em ${loja.lojNome}${loja.lojCidade ? ', ' + loja.lojCidade : ''}${loja.lojEstado ? '/' + loja.lojEstado : ''}. Carros, motos e muito mais.`
       : 'Encontre o veículo ideal. Catálogo completo com fotos, preços e detalhes.';
+    const imageUrl = this.resolveLojaLogo(origin, loja?.lojImg);
 
     this.title.setTitle(titleText);
     this.meta.updateTag({ name: 'description', content: description });
     this.meta.updateTag({ name: 'robots', content: 'index, follow' });
+    this.setCanonical(canonicalUrl);
+
+    // Open Graph
     this.meta.updateTag({ property: 'og:title', content: titleText });
     this.meta.updateTag({ property: 'og:description', content: description });
     this.meta.updateTag({ property: 'og:type', content: 'website' });
+    this.meta.updateTag({ property: 'og:url', content: canonicalUrl });
+    this.meta.updateTag({ property: 'og:site_name', content: loja?.lojNome || 'ConnectVeiculos' });
+    this.meta.updateTag({ property: 'og:locale', content: 'pt_BR' });
+    if (imageUrl) {
+      this.meta.updateTag({ property: 'og:image', content: imageUrl });
+      this.meta.updateTag({ property: 'og:image:secure_url', content: imageUrl });
+      this.meta.updateTag({ property: 'og:image:alt', content: `Logo ${loja?.lojNome || 'Loja'}` });
+    }
+
+    // Twitter Card
+    this.meta.updateTag({ name: 'twitter:card', content: imageUrl ? 'summary_large_image' : 'summary' });
+    this.meta.updateTag({ name: 'twitter:title', content: titleText });
+    this.meta.updateTag({ name: 'twitter:description', content: description });
+    this.meta.updateTag({ name: 'twitter:url', content: canonicalUrl });
+    if (imageUrl) {
+      this.meta.updateTag({ name: 'twitter:image', content: imageUrl });
+    }
   }
+
+  // Logo vem do backend como path relativo (ex: "/uploads/lojas/123.jpg") ou
+   // ja-absoluto ("https://..."). Bots do WhatsApp/Facebook precisam URL absoluta.
+   private resolveLojaLogo(origin: string, lojImg?: string | null): string {
+     if (!lojImg) return '';
+     if (lojImg.startsWith('http://') || lojImg.startsWith('https://')) return lojImg;
+     return `${origin}${lojImg.startsWith('/') ? '' : '/'}${lojImg}`;
+   }
 
   setVehicleJsonLd(veiculo: any, pageUrl?: string): void {
     const origin = this.resolveOrigin(pageUrl);

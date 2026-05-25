@@ -32,6 +32,12 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework.Repositories
                 .FirstOrDefaultAsync(p => p.R_VeiId == veiculoId && p.PubPlataforma == plataforma && p.PubStatus == "ATIVO");
         }
 
+         public async Task<VeiculoPublicacao> GetAtivaByExternoIdAsync(string externoId, string plataforma)
+         {
+             return await _context.VeiculoPublicacoes
+                 .FirstOrDefaultAsync(p => p.PubExternoId == externoId && p.PubPlataforma == plataforma && p.PubStatus == "ATIVO");
+         }
+
         public async Task<int> CreateAsync(VeiculoPublicacao publicacao)
         {
             _context.VeiculoPublicacoes.Add(publicacao);

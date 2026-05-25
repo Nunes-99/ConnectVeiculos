@@ -4,6 +4,7 @@ using ConnectVeiculos.Core.Interfaces.Database.Common;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Publicacoes;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Services;
+using ConnectVeiculos.Core.Interfaces.Tenancy;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -31,6 +32,7 @@ namespace ConnectVeiculos.Tests.UseCases.Veiculos
             _facebookServiceMock = new Mock<IFacebookCatalogService>();
             _googleServiceMock = new Mock<IGoogleMerchantService>();
             _publicacaoRepositoryMock = new Mock<IVeiculoPublicacaoRepository>();
+             var tenantContextMock = new Mock<ITenantContext>();
             _useCase = new InativarVeiculoUseCase(
                 _veiculoRepositoryMock.Object,
                 _unitOfWorkMock.Object,
@@ -39,6 +41,7 @@ namespace ConnectVeiculos.Tests.UseCases.Veiculos
                 _facebookServiceMock.Object,
                 _googleServiceMock.Object,
                 _publicacaoRepositoryMock.Object,
+                 tenantContextMock.Object,
                 NullLogger<InativarVeiculoUseCase>.Instance);
         }
 

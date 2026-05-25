@@ -284,7 +284,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
           }
           this.autoOpenVeiculoId = null;
         } else {
-          this.seoService.setCatalogPage(this.loja);
+          this.seoService.setCatalogPage(this.loja, this.router.url);
           this.seoService.setCatalogJsonLd(this.veiculos);
         }
       },

@@ -2,6 +2,7 @@ using ConnectVeiculos.Core.Entities.Publicacoes;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Publicacoes;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Email;
+using ConnectVeiculos.Core.Interfaces.Security;
 using ConnectVeiculos.Core.Interfaces.Services;
 using ConnectVeiculos.Core.Interfaces.Tenancy;
 using Microsoft.AspNetCore.Authorization;
@@ -39,6 +40,7 @@ namespace ConnectVeiculos.API.Controllers
         public async Task<IActionResult> MercadoLivreCallback(
             [FromServices] IMercadoLivreService mlService,
             [FromQuery] string? code,
+             [FromQuery] string? state,
             [FromQuery(Name = "error")] string? oauthError,
             [FromQuery(Name = "error_description")] string? oauthErrorDesc)
         {
@@ -50,9 +52,15 @@ namespace ConnectVeiculos.API.Controllers
 
             try
             {
-                await mlService.HandleCallbackAsync(code);
+                 await mlService.HandleCallbackAsync(code, state);
                 return Content(BuildCallbackHtml(true, null), "text/html");
             }
+             catch (OAuthStateException ex)
+             {
+                 // State CSRF invalido — pode ser link velho (state expirado), callback
+                 // chegando em outro tenant ou ataque. Resposta amigavel sem stack trace.
+                 return Content(BuildCallbackHtml(false, ex.Message), "text/html");
+             }
             catch (Exception ex)
             {
                 return Content(BuildCallbackHtml(false, ex.Message), "text/html");
@@ -167,15 +175,37 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
 
         [HttpPost("mercadolivre/notifications")]
         [AllowAnonymous]
-        public IActionResult MercadoLivreNotifications(
+        public async Task<IActionResult> MercadoLivreNotifications(
+            [FromServices] IMercadoLivreService mlService,
             [FromServices] ILogger<IntegracoesController> logger,
             [FromBody] System.Text.Json.JsonElement payload)
         {
-            // Webhook do ML: chega quando um anuncio muda de status, recebe pergunta etc.
-            // Por enquanto so logamos. Processamento async pode ser plugado aqui (Hangfire/SignalR).
+            // Webhook do ML envia POST com body { topic, resource, user_id, ... }.
+            // Sempre respondemos 200 rapido (ML retenta se nao recebe 2xx em 22s),
+            // entao tratamos excecoes localmente e logamos.
             logger.LogInformation("ML notification recebida: {Payload}", payload.ToString());
+            try
+            {
+                var topic = payload.TryGetProperty("topic", out var t) ? t.GetString() : null;
+                var resource = payload.TryGetProperty("resource", out var r) ? r.GetString() : null;
+                await mlService.ProcessarNotificacaoAsync(topic ?? "", resource ?? "");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Erro processando webhook ML — respondendo 200 mesmo assim pra ML nao retentar.");
+            }
             return Ok();
         }
+
+         [HttpGet("mercadolivre/logs")]
+         [Authorize(Roles = "Administrador,Gerente")]
+         public async Task<IActionResult> GetMercadoLivreLogs(
+             [FromServices] Core.Interfaces.Database.Repositories.Integracoes.IIntegracaoLogRepository logRepo,
+             [FromQuery] int limit = 100)
+         {
+             var logs = await logRepo.GetUltimosAsync(limit);
+             return Ok(logs);
+         }
 
         [HttpDelete("mercadolivre/remover/{veiculoId}")]
         public async Task<IActionResult> RemoverMercadoLivre(

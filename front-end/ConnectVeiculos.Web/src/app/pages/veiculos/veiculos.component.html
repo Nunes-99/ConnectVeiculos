@@ -336,9 +336,10 @@
                 <input formControlName="veiPrecoFipe" appCurrencyMask placeholder="0,00" style="flex:1;" />
                 <button type="button"
                         (click)="buscarPrecoFipe(true)"
-                        [disabled]="buscandoFipe || !marcaCodigoSelecionado || !modeloCodigoSelecionado || !form.get('veiAno')?.value"
+                        [disabled]="buscandoFipe"
+                        [style.opacity]="buscandoFipe ? 0.5 : 1"
                         style="padding:0.5rem 1rem;background:#1a237e;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;white-space:nowrap;"
-                        title="Buscar preço atual na tabela FIPE (sobrescreve o valor)">
+                        title="Buscar preço atual na tabela FIPE (precisa de marca + modelo + ano selecionados da lista FIPE)">
                   ⟳ Buscar FIPE
                 </button>
               </div>

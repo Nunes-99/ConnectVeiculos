@@ -5,6 +5,7 @@ using ConnectVeiculos.Core.Interfaces.Database.Common;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Publicacoes;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Services;
+using ConnectVeiculos.Core.Interfaces.Tenancy;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -44,7 +45,8 @@ namespace ConnectVeiculos.Tests.UseCases.Veiculos
                 _googleServiceMock.Object,
                 _publicacaoRepositoryMock.Object,
                 NullLogger<CadastrarVeiculoUseCase>.Instance,
-                new Mock<IFavoritoNotificacaoService>().Object);
+                 new Mock<IFavoritoNotificacaoService>().Object,
+                 new Mock<ITenantContext>().Object);
         }
 
         [Fact]

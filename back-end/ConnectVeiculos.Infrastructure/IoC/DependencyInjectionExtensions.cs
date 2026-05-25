@@ -267,6 +267,20 @@ namespace ConnectVeiculos.Infrastructure.IoC
             // Repositories - Publicacoes
             services.AddTransient<Core.Interfaces.Database.Repositories.Publicacoes.IVeiculoPublicacaoRepository, Database.EntityFramework.Repositories.VeiculoPublicacaoRepository>();
 
+             // Repositories - Integracoes (Fase 3 + 4)
+             services.AddTransient<Core.Interfaces.Database.Repositories.Integracoes.IIntegracaoMercadoLivreRepository, Database.EntityFramework.Repositories.IntegracaoMercadoLivreRepository>();
+             services.AddTransient<Core.Interfaces.Database.Repositories.Integracoes.IIntegracaoLogRepository, Database.EntityFramework.Repositories.IntegracaoLogRepository>();
+
+             // Data Protection — usado para cifrar tokens OAuth e payloads de state
+             // (CSRF). Default persiste chaves no profile do usuario (Windows) ou
+             // /root/.aspnet/DataProtection-Keys (Linux/container). Em prod, mapear
+             // volume persistente nesse path para sobreviver a restart sem invalidar
+             // tokens. Para customizar via filesystem path, adicione o pacote
+             // Microsoft.AspNetCore.DataProtection.Extensions e use PersistKeysToFileSystem.
+             services.AddDataProtection();
+             services.AddSingleton<Core.Interfaces.Security.ITokenProtector, Security.DataProtectionTokenProtector>();
+             services.AddSingleton<Core.Interfaces.Security.IOAuthStateProtector, Security.OAuthStateProtector>();
+
             // Services - Integracoes
             services.Configure<Services.MercadoLivre.MercadoLivreSettings>(opts =>
             {
@@ -392,6 +406,33 @@ namespace ConnectVeiculos.Infrastructure.IoC
 
                 // Preco FIPE do veiculo (consulta automatica/manual)
                 AddColumnIfNotExists(connection, "Veiculo", "VeiPrecoFipe", "REAL");
+
+                // ===== Integracoes (Fase 3): entidade dedicada por tenant =====
+                // EnsureCreated() so cria tabelas se o banco esta vazio; em tenants
+                // ja existentes precisamos criar explicitamente.
+                CreateTableIfNotExists(connection, "IntegracaoMercadoLivre",
+                    @"IntId INTEGER PRIMARY KEY AUTOINCREMENT,
+                      IntStatus INTEGER NOT NULL DEFAULT 0,
+                      IntMotivoErro INTEGER NOT NULL DEFAULT 0,
+                      IntFalhasConsecutivasSync INTEGER NOT NULL DEFAULT 0,
+                      IntAccessTokenCifrado TEXT,
+                      IntRefreshTokenCifrado TEXT,
+                      IntAccessTokenExpiraEm TEXT,
+                      IntSellerId TEXT,
+                      IntMlNickname TEXT,
+                      IntMlEmail TEXT,
+                      IntAutenticadaEm TEXT,
+                      IntCriadaEm TEXT NOT NULL,
+                      IntAtualizadaEm TEXT");
+
+                CreateTableIfNotExists(connection, "IntegracaoLog",
+                    @"IlgId INTEGER PRIMARY KEY AUTOINCREMENT,
+                      IlgNivel INTEGER NOT NULL DEFAULT 0,
+                      IlgCodigo TEXT NOT NULL,
+                      IlgMensagem TEXT,
+                      IlgMetadadosJson TEXT,
+                      IlgUsuarioId INTEGER,
+                      IlgCriadoEm TEXT NOT NULL");
 
                 // Limpa strings vazias em colunas decimais nullable. SQLite armazena
                 // decimal como TEXT, e EF Core lanca FormatException ao tentar
