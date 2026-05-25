@@ -530,7 +530,16 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
             var response = await _httpClient.SendAsync(request);
             var responseBody = await response.Content.ReadAsStringAsync();
 
-            if (!response.IsSuccessStatusCode)
+             // Caso especial: ML cobra taxa de listing pra categoria de veiculos
+             // (MLB1744). Contas sem plano/creditos recebem o item CRIADO mas com
+             // status=payment_required (HTTP 402). Anuncio existe, so precisa o
+             // seller finalizar o pagamento no painel do ML pra ativar.
+             // Tratamos como sucesso parcial: registra publicacao localmente com o
+             // permalink e instrucao clara pro operador.
+             var isPaymentRequired = response.StatusCode == System.Net.HttpStatusCode.PaymentRequired
+                 || responseBody.Contains("\"status\":\"payment_required\"", StringComparison.OrdinalIgnoreCase);
+
+             if (!response.IsSuccessStatusCode && !isPaymentRequired)
             {
                 _logger.LogError("Erro ao publicar no ML: {Response}", responseBody);
                  await LogAsync(NivelIntegracaoLog.Error, "item.publicar.erro",
@@ -543,10 +552,20 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
             var externoId = result.GetProperty("id").GetString();
             var permalink = result.GetProperty("permalink").GetString();
 
-             await LogAsync(NivelIntegracaoLog.Info, "item.publicar.sucesso",
-                 $"Veiculo {veiculoId} publicado no ML como {externoId}.",
-                 new { veiculoId, externoId, permalink });
-            _logger.LogInformation("Veiculo {VeiculoId} publicado no ML: {ExternoId}", veiculoId, externoId);
+             if (isPaymentRequired)
+             {
+                 await LogAsync(NivelIntegracaoLog.Warning, "item.publicar.aguardando-pagamento",
+                     $"Anuncio {externoId} criado mas aguarda pagamento de taxa do ML pra ativar.",
+                     new { veiculoId, externoId, permalink });
+                 _logger.LogInformation("Veiculo {VeiculoId} criado no ML como {ExternoId} (payment_required)", veiculoId, externoId);
+             }
+             else
+             {
+                 await LogAsync(NivelIntegracaoLog.Info, "item.publicar.sucesso",
+                     $"Veiculo {veiculoId} publicado no ML como {externoId}.",
+                     new { veiculoId, externoId, permalink });
+                 _logger.LogInformation("Veiculo {VeiculoId} publicado no ML: {ExternoId}", veiculoId, externoId);
+             }
 
             return (externoId, permalink);
         }
