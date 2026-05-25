@@ -51,7 +51,12 @@ services:
       - FacebookCatalogSettings__PublicSiteUrl=${PUBLIC_SITE_URL:-https://connectveiculos.dev.br}
     volumes:
       - ./data:/app/data
-      - ./uploads/cliente:/app/wwwroot/uploads
+      # IMPORTANTE: backend salva em /app/uploads/veiculos/... (ImagensController.cs
+      # usa ContentRootPath, nao WebRootPath). Antes esse volume montava em
+      # /app/wwwroot/uploads — mismatch fatal: arquivos iam pra /app/uploads (sem
+      # persistencia), sumiam na primeira recriacao do container. As thumbnails
+      # quebravam com 404 logo apos qualquer deploy.
+      - ./uploads/cliente:/app/uploads
     restart: unless-stopped
     deploy:
       resources:
