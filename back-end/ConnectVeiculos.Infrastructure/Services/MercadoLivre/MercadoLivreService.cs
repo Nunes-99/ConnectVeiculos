@@ -466,9 +466,13 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
                 price = veiculo.VeiPreco,
                 currency_id = "BRL",
                 available_quantity = 1,
-                buying_mode = "buy_it_now",
+                 // Categoria de veiculos no ML BR (MLB1744) so aceita anuncio
+                 // CLASSIFICADO — comprador entra em contato com vendedor, sem
+                 // checkout direto. ML retorna "Category only supports listing
+                 // modes: [classified]" se enviarmos buy_it_now/gold_special.
+                 buying_mode = "classified",
                 condition = "used",
-                listing_type_id = "gold_special", // Destaque
+                 listing_type_id = "gold_premium", // Anuncio classificado premium (maior visibilidade)
                 description = new { plain_text = MontarDescricao(veiculo, loja) },
                 pictures = pictures,
                 attributes = new object[]
