@@ -449,6 +449,11 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
             var veiculo = await _veiculoRepository.GetByIdAsync(veiculoId);
             if (veiculo == null) throw new Exception("Veículo não encontrado.");
 
+             // ML rejeita "0 km" pra user comum (precisa ser concessionaria). Valida
+             // antes da chamada pra dar erro claro ao operador.
+             if (veiculo.VeiKm <= 0)
+                 throw new Exception("Veiculo com 0 km nao pode ser anunciado por usuario comum no Mercado Livre. Atualize a quilometragem antes.");
+
             var imagens = await _imagemRepository.GetByVeiculoIdAsync(veiculoId);
             var loja = await _lojaRepository.GetByIdAsync(veiculo.R_LojId);
             var urlBase = loja?.LojUrlCatalogo?.TrimEnd('/') ?? "";
@@ -475,19 +480,31 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
                  listing_type_id = "gold_premium", // Anuncio classificado premium (maior visibilidade)
                 description = new { plain_text = MontarDescricao(veiculo, loja) },
                 pictures = pictures,
+                 // ML exige location ate o nivel de cidade pra anuncio de veiculo.
+                 // Fallbacks generosos: se a loja nao tem cidade/estado cadastrado, usa
+                 // valores padrao pra nao explodir a chamada (cliente corrige depois
+                 // no painel do ML).
+                 location = new
+                 {
+                     country = new { name = "Brasil" },
+                     state = new { name = string.IsNullOrWhiteSpace(loja?.LojEstado) ? "São Paulo" : loja.LojEstado },
+                     city = new { name = string.IsNullOrWhiteSpace(loja?.LojCidade) ? "São Paulo" : loja.LojCidade }
+                 },
                 attributes = new object[]
                 {
                     new { id = "BRAND", value_name = veiculo.VeiMarca },
                     new { id = "MODEL", value_name = veiculo.VeiModelo },
                     new { id = "VEHICLE_YEAR", value_name = veiculo.VeiAno.ToString() },
                      // ML exige unidade no valor — "8000" sem unidade e' rejeitado.
-                     // Atributo normalizado: o ML parseia "8000 km" e armazena com unit code.
                      new { id = "KILOMETERS", value_name = $"{veiculo.VeiKm} km" },
                     new { id = "COLOR", value_name = veiculo.VeiCor ?? "" },
-                     // FUEL_TYPE omitido propositalmente: ML exige value_id de uma lista
-                     // fechada (Gasolina, Flex, Diesel, Hibrido...) com IDs especificos
-                     // por categoria. Enviar value_name="Flex" sem id e' rejeitado como
-                     // "Attribute is not valid". E' opcional, o anuncio vai sem.
+                     // Atributos OBRIGATORIOS pra MLB1744 + channel marketplace. Sem
+                     // campos proprios no veiculo, mandamos defaults: 4 portas e
+                     // "Gasolina e álcool" (Flex). ML normaliza pro value_id correto.
+                     new { id = "DOORS", value_name = "4" },
+                     new { id = "FUEL_TYPE", value_name = "Gasolina e álcool" },
+                     // TRIM (versao) — sem campo dedicado, repete o modelo como aproximacao.
+                     new { id = "TRIM", value_name = veiculo.VeiModelo },
                     new { id = "ITEM_CONDITION", value_name = "Usado" }
                 }
             };
