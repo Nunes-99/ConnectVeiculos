@@ -464,11 +464,19 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
                 .Select(i => new { source = $"{urlBase}/api/imagens/file?path={Uri.EscapeDataString(i.ImgCaminho)}" })
                 .ToList();
 
+             // ML exige fotos pro listing_type gold_premium. Sem pictures, retorna
+             // 'item.listing_type_id.requiresPictures' — pre-valida pra mensagem clara.
+             if (pictures.Count == 0)
+                 throw new Exception("Veiculo nao tem fotos cadastradas. Adicione pelo menos 1 foto antes de publicar no Mercado Livre.");
+
             var item = new
             {
                 title = $"{veiculo.VeiMarca} {veiculo.VeiModelo} {veiculo.VeiAno}",
                 category_id = "MLB1744", // Carros, Vans e Utilitarios
-                price = veiculo.VeiPreco,
+                 // ML rejeitava VeiPreco como decimal '100000.00' com erro 'item.price.invalid:
+                 // requires a maximum of price 5000000'. Casting pra long (centavos truncados)
+                 // serializa como inteiro puro, que e' o formato esperado pra essa categoria.
+                 price = (long)veiculo.VeiPreco,
                 currency_id = "BRL",
                 available_quantity = 1,
                  // Categoria de veiculos no ML BR (MLB1744) so aceita anuncio
