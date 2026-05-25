@@ -26,35 +26,7 @@ namespace ConnectVeiculos.Infrastructure.Security
 
         public OAuthStatePayload Validar(string? state, string tenantSlugAtual)
         {
-            if (string.IsNullOrWhiteSpace(state))
-                throw new OAuthStateException("Parametro 'state' ausente. Inicie a conexao OAuth a partir do painel.");
-
-            string json;
-            try
-            {
-                json = _tokenProtector.Unprotect(state);
-            }
-            catch
-            {
-                // CryptographicException — state adulterado, expirado da chave antiga ou de outra origem.
-                throw new OAuthStateException("State invalido ou expirado. Tente conectar de novo.");
-            }
-
-            OAuthStatePayload? payload;
-            try
-            {
-                payload = JsonSerializer.Deserialize<OAuthStatePayload>(json);
-            }
-            catch
-            {
-                throw new OAuthStateException("State invalido (payload corrompido).");
-            }
-
-            if (payload is null)
-                throw new OAuthStateException("State invalido (payload vazio).");
-
-            if (DateTime.UtcNow > payload.ExpiraEm)
-                throw new OAuthStateException("State expirado (autorizacao demorou demais). Tente de novo.");
+            var payload = Decifrar(state);
 
             if (!string.Equals(payload.TenantSlug, tenantSlugAtual, StringComparison.OrdinalIgnoreCase))
                 throw new OAuthStateException(
@@ -63,5 +35,40 @@ namespace ConnectVeiculos.Infrastructure.Security
 
             return payload;
         }
+
+         public OAuthStatePayload Decifrar(string? state)
+         {
+             if (string.IsNullOrWhiteSpace(state))
+                 throw new OAuthStateException("Parametro 'state' ausente. Inicie a conexao OAuth a partir do painel.");
+
+             string json;
+             try
+             {
+                 json = _tokenProtector.Unprotect(state);
+             }
+             catch
+             {
+                 // CryptographicException — state adulterado, expirado da chave antiga ou de outra origem.
+                 throw new OAuthStateException("State invalido ou expirado. Tente conectar de novo.");
+             }
+
+             OAuthStatePayload? payload;
+             try
+             {
+                 payload = JsonSerializer.Deserialize<OAuthStatePayload>(json);
+             }
+             catch
+             {
+                 throw new OAuthStateException("State invalido (payload corrompido).");
+             }
+
+             if (payload is null)
+                 throw new OAuthStateException("State invalido (payload vazio).");
+
+             if (DateTime.UtcNow > payload.ExpiraEm)
+                 throw new OAuthStateException("State expirado (autorizacao demorou demais). Tente de novo.");
+
+             return payload;
+         }
     }
 }

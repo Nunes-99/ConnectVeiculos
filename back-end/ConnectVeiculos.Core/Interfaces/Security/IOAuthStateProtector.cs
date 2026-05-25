@@ -24,5 +24,10 @@ namespace ConnectVeiculos.Core.Interfaces.Security
         // de state vazio, adulterado, expirado ou com tenantSlug diferente do
         // tenant atual da requisicao.
         OAuthStatePayload Validar(string? state, string tenantSlugAtual);
+
+         // Decifra SEM checar tenant — usado pelo controller de callback no
+         // dominio raiz, que precisa do slug pra fazer redirect pro subdomain
+         // correto antes de chamar Validar() no contexto do tenant alvo.
+         OAuthStatePayload Decifrar(string? state);
     }
 }

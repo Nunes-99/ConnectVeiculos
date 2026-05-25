@@ -39,6 +39,8 @@ namespace ConnectVeiculos.API.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> MercadoLivreCallback(
             [FromServices] IMercadoLivreService mlService,
+             [FromServices] IOAuthStateProtector stateProtector,
+             [FromServices] ITenantContext tenantContext,
             [FromQuery] string? code,
              [FromQuery] string? state,
             [FromQuery(Name = "error")] string? oauthError,
@@ -49,6 +51,37 @@ namespace ConnectVeiculos.API.Controllers
 
             if (string.IsNullOrEmpty(code))
                 return Content(BuildCallbackHtml(false, "Código de autorização não fornecido."), "text/html");
+
+             // ML so aceita 1 redirect_uri por app (cadastrado como dominio raiz
+             // https://connectveiculos.dev.br/...), entao TODOS os callbacks chegam
+             // resolvidos como tenant "default". O state cifrado carrega o slug
+             // real — se for diferente, redireciona pro subdomain certo pra que o
+             // TenantResolutionMiddleware aponte pro banco do tenant alvo.
+             if (!string.IsNullOrEmpty(state))
+             {
+                 try
+                 {
+                     var payload = stateProtector.Decifrar(state);
+                     var slugAtual = tenantContext.IsResolved ? tenantContext.TenantSlug : "default";
+                     if (!string.IsNullOrEmpty(payload.TenantSlug)
+                         && !string.Equals(payload.TenantSlug, slugAtual, StringComparison.OrdinalIgnoreCase)
+                         && !string.Equals(payload.TenantSlug, "default", StringComparison.OrdinalIgnoreCase))
+                     {
+                         // Monta URL no subdomain do tenant alvo preservando query string.
+                         var host = Request.Host.Host;
+                         // Se ja veio com subdomain (raro), troca-o; senao prefixa o slug.
+                         var rootDomain = host.Contains('.')
+                             ? string.Join('.', host.Split('.').AsEnumerable().Reverse().Take(3).Reverse())
+                             : host;
+                         var newUrl = $"{Request.Scheme}://{payload.TenantSlug}.{rootDomain}{Request.Path}{Request.QueryString}";
+                         return Redirect(newUrl);
+                     }
+                 }
+                 catch (OAuthStateException ex)
+                 {
+                     return Content(BuildCallbackHtml(false, ex.Message), "text/html");
+                 }
+             }
 
             try
             {
