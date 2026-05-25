@@ -480,9 +480,14 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
                     new { id = "BRAND", value_name = veiculo.VeiMarca },
                     new { id = "MODEL", value_name = veiculo.VeiModelo },
                     new { id = "VEHICLE_YEAR", value_name = veiculo.VeiAno.ToString() },
-                    new { id = "KILOMETERS", value_name = veiculo.VeiKm.ToString() },
+                     // ML exige unidade no valor — "8000" sem unidade e' rejeitado.
+                     // Atributo normalizado: o ML parseia "8000 km" e armazena com unit code.
+                     new { id = "KILOMETERS", value_name = $"{veiculo.VeiKm} km" },
                     new { id = "COLOR", value_name = veiculo.VeiCor ?? "" },
-                    new { id = "FUEL_TYPE", value_name = "Flex" },
+                     // FUEL_TYPE omitido propositalmente: ML exige value_id de uma lista
+                     // fechada (Gasolina, Flex, Diesel, Hibrido...) com IDs especificos
+                     // por categoria. Enviar value_name="Flex" sem id e' rejeitado como
+                     // "Attribute is not valid". E' opcional, o anuncio vai sem.
                     new { id = "ITEM_CONDITION", value_name = "Usado" }
                 }
             };
