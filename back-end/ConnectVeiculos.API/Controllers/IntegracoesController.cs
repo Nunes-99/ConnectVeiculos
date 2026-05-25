@@ -55,25 +55,32 @@ namespace ConnectVeiculos.API.Controllers
              // ML so aceita 1 redirect_uri por app (cadastrado como dominio raiz
              // https://connectveiculos.dev.br/...), entao TODOS os callbacks chegam
              // resolvidos como tenant "default". O state cifrado carrega o slug
-             // real — se for diferente, redireciona pro subdomain certo pra que o
-             // TenantResolutionMiddleware aponte pro banco do tenant alvo.
+             // real do tenant que iniciou o OAuth.
+             //
+             // Aqui no projeto NAO ha DNS wildcard *.connectveiculos.dev.br — o
+             // sistema usa o dominio raiz e o tenant e selecionado via override:
+             // ?tenant=slug (query string) ou X-Tenant-Slug (header). O middleware
+             // TenantResolutionMiddleware aceita esse override.
+             //
+             // Estrategia: se o state aponta pra tenant diferente do atual,
+             // redireciona pro MESMO host adicionando ?tenant={slug} na query,
+             // pra que o middleware reresolva o tenant correto antes do request
+             // ser processado.
              if (!string.IsNullOrEmpty(state))
              {
                  try
                  {
                      var payload = stateProtector.Decifrar(state);
                      var slugAtual = tenantContext.IsResolved ? tenantContext.TenantSlug : "default";
-                     if (!string.IsNullOrEmpty(payload.TenantSlug)
-                         && !string.Equals(payload.TenantSlug, slugAtual, StringComparison.OrdinalIgnoreCase)
-                         && !string.Equals(payload.TenantSlug, "default", StringComparison.OrdinalIgnoreCase))
+                     var slugAlvo = payload.TenantSlug;
+                     if (!string.IsNullOrEmpty(slugAlvo)
+                         && !string.Equals(slugAlvo, slugAtual, StringComparison.OrdinalIgnoreCase))
                      {
-                         // Monta URL no subdomain do tenant alvo preservando query string.
-                         var host = Request.Host.Host;
-                         // Se ja veio com subdomain (raro), troca-o; senao prefixa o slug.
-                         var rootDomain = host.Contains('.')
-                             ? string.Join('.', host.Split('.').AsEnumerable().Reverse().Take(3).Reverse())
-                             : host;
-                         var newUrl = $"{Request.Scheme}://{payload.TenantSlug}.{rootDomain}{Request.Path}{Request.QueryString}";
+                         // Constroi nova URL preservando code+state e adicionando ?tenant=.
+                         // Se ja existir param tenant (caso raro), nao duplica — substitui.
+                         var query = System.Web.HttpUtility.ParseQueryString(Request.QueryString.Value ?? "");
+                         query["tenant"] = slugAlvo;
+                         var newUrl = $"{Request.Scheme}://{Request.Host}{Request.Path}?{query}";
                          return Redirect(newUrl);
                      }
                  }
