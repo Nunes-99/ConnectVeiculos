@@ -825,6 +825,50 @@
   </div>
   }
 
+  <!-- Marketing no Google (card informativo enquanto Vehicle Ads nao esta liberado no Brasil) -->
+  <div class="integracao-card">
+    <div class="card-header">
+      <div class="platform-info">
+        <span class="platform-icon google-icon">G</span>
+        <div>
+          <h3>Marketing no Google</h3>
+          <p>Como anunciar seus veículos no Google</p>
+        </div>
+      </div>
+      <span class="status-badge disconnected">Informativo</span>
+    </div>
+    <div class="card-body">
+      <p>O <strong>Google Vehicle Ads</strong> (anúncios de veículos no Google Shopping) ainda <strong>não está disponível no Brasil</strong> — Google só liberou em EUA, Canadá, Austrália e alguns países da Europa. Vamos habilitar a publicação automática nesta tela assim que o Brasil for incluído pelo Google.</p>
+
+      <p>Enquanto isso, há duas formas <strong>já funcionais</strong> de aparecer no Google hoje:</p>
+
+      <div class="info-block">
+        <h4><span class="material-icons">search</span> 1. Pesquisa orgânica (grátis)</h4>
+        <p>Seu catálogo já está indexado automaticamente. Cada veículo cadastrado é exposto em <code>https://connectveiculos.dev.br/catalogo/[seu-slug]/veiculo/[id]</code> e entra no sitemap dinâmico. Para acelerar, cadastre o domínio no <a href="https://search.google.com/search-console" target="_blank" rel="noopener">Google Search Console</a> e envie o sitemap.</p>
+      </div>
+
+      <div class="info-block">
+        <h4><span class="material-icons">campaign</span> 2. Google Ads (pago, gerenciado por você)</h4>
+        <p>Crie conta em <a href="https://ads.google.com" target="_blank" rel="noopener">ads.google.com</a> com seu CPF/CNPJ e configure campanhas apontando para o seu catálogo. Orçamento mínimo recomendado: <strong>R$ 300-500/mês</strong>. O pagamento é feito direto ao Google — a ConnectVeiculos não interfere nem cobra comissão.</p>
+      </div>
+
+      <div class="card-actions">
+        <a href="https://ads.google.com" target="_blank" rel="noopener" class="btn-primary">
+          <span class="material-icons">open_in_new</span>
+          Abrir Google Ads
+        </a>
+        <a href="https://search.google.com/search-console" target="_blank" rel="noopener" class="btn-outline">
+          <span class="material-icons">open_in_new</span>
+          Search Console
+        </a>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="material-icons">info</span>
+      <small>Quando o Google liberar Vehicle Ads no Brasil, ativaremos a publicação automática nesta tela. Por enquanto, indexação orgânica + Google Ads próprio é o caminho recomendado.</small>
+    </div>
+  </div>
+
   <!-- Modal config Google Merchant - DESATIVADO -->
   @if (false) {
   @if (showGmConfigModal) {
