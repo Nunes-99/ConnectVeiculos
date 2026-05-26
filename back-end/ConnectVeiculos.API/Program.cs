@@ -53,6 +53,7 @@ builder.Configuration.AddEnvironmentVariables();
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<ValidationFilter>();
+     options.Filters.Add<ConnectVeiculos.API.Filters.LimitePlanoExceptionFilter>();
 });
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddEndpointsApiExplorer();

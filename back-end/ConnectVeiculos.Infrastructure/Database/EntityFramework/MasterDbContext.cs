@@ -11,6 +11,7 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
     {
         public DbSet<Tenant> Tenants => Set<Tenant>();
         public DbSet<UserEmailMap> UserEmailMaps => Set<UserEmailMap>();
+         public DbSet<Plano> Planos => Set<Plano>();
 
         public MasterDbContext(DbContextOptions<MasterDbContext> options) : base(options) { }
 
@@ -28,6 +29,23 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
             t.Property(x => x.TenDtCriacao);
             t.Property(x => x.TenGoogleVerifCode).HasMaxLength(128);
             t.Property(x => x.TenFacebookVerifCode).HasMaxLength(128);
+             t.Property(x => x.TenPlaId);
+             t.Property(x => x.TenTrialAte);
+
+             var p = modelBuilder.Entity<Plano>();
+             p.ToTable("Planos");
+             p.HasKey(x => x.PlaId);
+             p.Property(x => x.PlaId).ValueGeneratedOnAdd();
+             p.Property(x => x.PlaNome).IsRequired().HasMaxLength(64);
+             p.HasIndex(x => x.PlaNome).IsUnique();
+             p.Property(x => x.PlaPreco).HasPrecision(10, 2);
+             p.Property(x => x.PlaMaxVeiculos);
+             p.Property(x => x.PlaMaxLojas);
+             p.Property(x => x.PlaMaxUsuarios);
+             p.Property(x => x.PlaMaxLeadsMes);
+             p.Property(x => x.PlaOrdem);
+             p.Property(x => x.PlaAtivo);
+             p.Property(x => x.PlaDtCriacao);
 
             var u = modelBuilder.Entity<UserEmailMap>();
             u.ToTable("UserEmailMap");

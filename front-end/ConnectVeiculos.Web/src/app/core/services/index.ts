@@ -26,3 +26,4 @@ export * from './integracao.service';
 export * from './financiamento-banco.service';
 export * from './veiculo-documento.service';
 export * from './push.service';
+export * from './plano.service';

@@ -46,7 +46,8 @@ namespace ConnectVeiculos.Tests.UseCases.Veiculos
                 _publicacaoRepositoryMock.Object,
                 NullLogger<CadastrarVeiculoUseCase>.Instance,
                  new Mock<IFavoritoNotificacaoService>().Object,
-                 new Mock<ITenantContext>().Object);
+                 new Mock<ITenantContext>().Object,
+                 new Mock<ILimiteService>().Object);
         }
 
         [Fact]

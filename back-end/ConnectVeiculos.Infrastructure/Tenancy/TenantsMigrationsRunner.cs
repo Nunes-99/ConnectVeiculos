@@ -117,7 +117,91 @@ namespace ConnectVeiculos.Infrastructure.Tenancy
 
             EnsureColumn(conn, "Tenants", "TenGoogleVerifCode", "TEXT NULL");
             EnsureColumn(conn, "Tenants", "TenFacebookVerifCode", "TEXT NULL");
+
+             // Billing / planos (Camada 1: limites por plano + trial 30d).
+             // Tabela Planos + colunas TenPlaId/TenTrialAte sao idempotentes.
+             using (var planoCmd = conn.CreateCommand())
+             {
+                 planoCmd.CommandText = @"CREATE TABLE IF NOT EXISTS Planos (
+                     PlaId INTEGER PRIMARY KEY AUTOINCREMENT,
+                     PlaNome TEXT NOT NULL UNIQUE,
+                     PlaPreco TEXT NOT NULL DEFAULT '0',
+                     PlaMaxVeiculos INTEGER NULL,
+                     PlaMaxLojas INTEGER NULL,
+                     PlaMaxUsuarios INTEGER NULL,
+                     PlaMaxLeadsMes INTEGER NULL,
+                     PlaOrdem INTEGER NOT NULL DEFAULT 0,
+                     PlaAtivo INTEGER NOT NULL DEFAULT 1,
+                     PlaDtCriacao TEXT NOT NULL
+                 )";
+                 planoCmd.ExecuteNonQuery();
+             }
+
+             EnsureColumn(conn, "Tenants", "TenPlaId", "INTEGER NULL");
+             EnsureColumn(conn, "Tenants", "TenTrialAte", "TEXT NULL");
+
+             // Seed dos planos default. UPSERT manual (insere se o nome ainda nao
+             // existe). Permite atualizar limites ajustando a config aqui — basta
+             // mudar nome ou apagar e recriar; tenants existentes mantem o
+             // TenPlaId que ja tinham.
+             SeedPlanoSeNaoExistir(conn, "Free",       0,    5,   1,  1,   20, 1);
+             SeedPlanoSeNaoExistir(conn, "Basic",     99,   50,   1,  3,  200, 2);
+             SeedPlanoSeNaoExistir(conn, "Pro",      299,  500,   3, 10, 2000, 3);
+             SeedPlanoSeNaoExistir(conn, "Enterprise", 0, null, null, null, null, 4);
+
+             // Tenants sem plano atribuido -> Free, com trial 30 dias a partir do
+             // momento que essa migration roda (idempotente: so atribui se TenPlaId IS NULL).
+             AtribuirPlanoDefaultParaTenantsExistentes(conn);
         }
+
+         private static void SeedPlanoSeNaoExistir(System.Data.Common.DbConnection conn, string nome,
+             decimal preco, int? maxVei, int? maxLojas, int? maxUsu, int? maxLeads, int ordem)
+         {
+             using var check = conn.CreateCommand();
+             check.CommandText = "SELECT COUNT(*) FROM Planos WHERE PlaNome=$nome";
+             var pN = check.CreateParameter(); pN.ParameterName = "$nome"; pN.Value = nome; check.Parameters.Add(pN);
+             if (Convert.ToInt32(check.ExecuteScalar()) > 0) return;
+
+             using var ins = conn.CreateCommand();
+             ins.CommandText = @"INSERT INTO Planos
+                 (PlaNome, PlaPreco, PlaMaxVeiculos, PlaMaxLojas, PlaMaxUsuarios, PlaMaxLeadsMes, PlaOrdem, PlaAtivo, PlaDtCriacao)
+                 VALUES ($nome, $preco, $mv, $ml, $mu, $mle, $ordem, 1, $dt)";
+             AddParam(ins, "$nome", nome);
+             AddParam(ins, "$preco", preco.ToString(System.Globalization.CultureInfo.InvariantCulture));
+             AddParam(ins, "$mv", (object?)maxVei ?? DBNull.Value);
+             AddParam(ins, "$ml", (object?)maxLojas ?? DBNull.Value);
+             AddParam(ins, "$mu", (object?)maxUsu ?? DBNull.Value);
+             AddParam(ins, "$mle", (object?)maxLeads ?? DBNull.Value);
+             AddParam(ins, "$ordem", ordem);
+             AddParam(ins, "$dt", DateTime.UtcNow.ToString("o"));
+             ins.ExecuteNonQuery();
+         }
+
+         private static void AddParam(System.Data.Common.DbCommand cmd, string name, object value)
+         {
+             var p = cmd.CreateParameter();
+             p.ParameterName = name;
+             p.Value = value;
+             cmd.Parameters.Add(p);
+         }
+
+         private static void AtribuirPlanoDefaultParaTenantsExistentes(System.Data.Common.DbConnection conn)
+         {
+             // Pega o id do plano Free.
+             using var sel = conn.CreateCommand();
+             sel.CommandText = "SELECT PlaId FROM Planos WHERE PlaNome='Free' LIMIT 1";
+             var freeId = sel.ExecuteScalar();
+             if (freeId == null || freeId == DBNull.Value) return;
+
+             // Atribui plano Free + trial 30d para qualquer tenant ainda sem plano.
+             using var upd = conn.CreateCommand();
+             upd.CommandText = @"UPDATE Tenants
+                 SET TenPlaId=$pid, TenTrialAte=$ate
+                 WHERE TenPlaId IS NULL";
+             AddParam(upd, "$pid", Convert.ToInt32(freeId));
+             AddParam(upd, "$ate", DateTime.UtcNow.AddDays(30).ToString("o"));
+             upd.ExecuteNonQuery();
+         }
 
         /// <summary>
         /// ALTER TABLE ... ADD COLUMN idempotente para SQLite. Verifica via

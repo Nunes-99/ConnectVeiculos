@@ -24,6 +24,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
         private readonly ILogger<CadastrarVeiculoUseCase> _logger;
         private readonly IFavoritoNotificacaoService _favoritoNotificacaoService;
         private readonly ITenantContext _tenantContext;
+         private readonly ILimiteService _limiteService;
 
         public CadastrarVeiculoUseCase(
             IVeiculoRepository veiculoRepository,
@@ -36,7 +37,8 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             IVeiculoPublicacaoRepository publicacaoRepository,
             ILogger<CadastrarVeiculoUseCase> logger,
             IFavoritoNotificacaoService favoritoNotificacaoService,
-            ITenantContext tenantContext)
+             ITenantContext tenantContext,
+             ILimiteService limiteService)
         {
             _veiculoRepository = veiculoRepository;
             _unitOfWork = unitOfWork;
@@ -49,10 +51,13 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             _logger = logger;
             _favoritoNotificacaoService = favoritoNotificacaoService;
             _tenantContext = tenantContext;
+             _limiteService = limiteService;
         }
 
         public async Task<int> Execute(VeiculoInputModel inputModel)
         {
+             await _limiteService.GarantirPodeCriarVeiculoAsync();
+
             var veiculo = new Veiculo(
                 inputModel.VeiId,
                 inputModel.R_LojId,

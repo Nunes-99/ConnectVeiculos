@@ -113,6 +113,12 @@ export const routes: Routes = [
         canActivate: [roleGuard],
         data: { roles: ['Administrador', 'Gerente'] }
       },
+       {
+         path: 'plano',
+         loadComponent: () => import('./pages/plano/plano.component').then(m => m.PlanoComponent),
+         canActivate: [roleGuard],
+         data: { roles: ['Administrador', 'Gerente'] }
+       },
       {
         path: 'favoritos',
         loadComponent: () => import('./pages/favoritos-admin/favoritos-admin.component').then(m => m.FavoritosAdminComponent),

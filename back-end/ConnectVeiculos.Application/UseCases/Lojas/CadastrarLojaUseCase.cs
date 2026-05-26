@@ -3,6 +3,7 @@ using ConnectVeiculos.Application.Interfaces.Lojas;
 using ConnectVeiculos.Core.Entities.Lojas;
 using ConnectVeiculos.Core.Interfaces.Database.Common;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Lojas;
+using ConnectVeiculos.Core.Interfaces.Services;
 
 namespace ConnectVeiculos.Application.UseCases.Lojas
 {
@@ -10,15 +11,18 @@ namespace ConnectVeiculos.Application.UseCases.Lojas
     {
         private readonly ILojaRepository _lojaRepository;
         private readonly IUnitOfWork _unitOfWork;
+         private readonly ILimiteService _limiteService;
 
-        public CadastrarLojaUseCase(ILojaRepository lojaRepository, IUnitOfWork unitOfWork)
+        public CadastrarLojaUseCase(ILojaRepository lojaRepository, IUnitOfWork unitOfWork, ILimiteService limiteService)
         {
             _lojaRepository = lojaRepository;
             _unitOfWork = unitOfWork;
+             _limiteService = limiteService;
         }
 
         public async Task<int> Execute(LojaInputModel inputModel)
         {
+             await _limiteService.GarantirPodeCriarLojaAsync();
             var loja = new Loja(
                 inputModel.LojId,
                 inputModel.LojNome,

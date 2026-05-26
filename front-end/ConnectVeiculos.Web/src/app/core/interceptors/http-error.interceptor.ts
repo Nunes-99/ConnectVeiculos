@@ -43,6 +43,12 @@ export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
 
       let errorMessage = 'Ocorreu um erro inesperado';
 
+       // Limite de plano (403 do LimitePlanoExceptionFilter): mensagem amigavel
+       // com numeros do uso atual e link pra tela 'Meu plano'.
+       if (error.status === 403 && error.error?.error === 'limite_plano') {
+         const e = error.error;
+         errorMessage = `Limite do plano ${e.plano} atingido: ${e.atual}/${e.limite} ${e.recurso}. Acesse "Meu plano" para fazer upgrade.`;
+       } else
       if (error.error instanceof ErrorEvent) {
         errorMessage = error.error.message;
       } else if (error.error?.type === 'ValidationError' && error.error?.errors) {

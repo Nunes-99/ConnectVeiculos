@@ -121,6 +121,7 @@ export class SidebarComponent {
       title: 'Sistema',
       items: [
         { label: 'Integrações', icon: 'hub', route: '/integracoes' },
+         { label: 'Meu plano', icon: 'card_membership', route: '/plano' },
         { label: 'Logs', icon: 'history', route: '/logs' },
       ]
     }

@@ -8,6 +8,7 @@ using ConnectVeiculos.Core.Interfaces.Database.Repositories.LojasUsuarios;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Permissoes;
 using ConnectVeiculos.Core.Exceptions;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Usuarios;
+using ConnectVeiculos.Core.Interfaces.Services;
 
 namespace ConnectVeiculos.Application.UseCases.Usuarios
 {
@@ -17,21 +18,25 @@ namespace ConnectVeiculos.Application.UseCases.Usuarios
         private readonly ILojaUsuarioRepository _lojaUsuarioRepository;
         private readonly IPermissaoRepository _permissaoRepository;
         private readonly IUnitOfWork _unitOfWork;
+         private readonly ILimiteService _limiteService;
 
         public CadastrarUsuarioUseCase(
             IUsuarioRepository usuarioRepository,
             ILojaUsuarioRepository lojaUsuarioRepository,
             IPermissaoRepository permissaoRepository,
-            IUnitOfWork unitOfWork)
+             IUnitOfWork unitOfWork,
+             ILimiteService limiteService)
         {
             _usuarioRepository = usuarioRepository;
             _lojaUsuarioRepository = lojaUsuarioRepository;
             _permissaoRepository = permissaoRepository;
             _unitOfWork = unitOfWork;
+             _limiteService = limiteService;
         }
 
         public async Task<int> Execute(UsuarioInputModel inputModel)
         {
+             await _limiteService.GarantirPodeCriarUsuarioAsync();
             // Verificar se email já existe
             var existente = await _usuarioRepository.GetByEmailAsync(inputModel.UsuEmail);
             if (existente != null)

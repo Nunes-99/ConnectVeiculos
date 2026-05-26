@@ -96,55 +96,74 @@ export class LandingComponent implements OnInit {
     }
   ];
 
-  planos = [
-    {
-      nome: 'Starter',
-      preco: 'R$ 0',
-      periodo: 'durante o teste',
-      destaque: false,
-      recursos: [
-        'Até 10 veículos no catálogo',
-        '1 loja, até 2 usuários',
-        'Catálogo público com SEO',
-        'Captura de leads e test drives',
-        'Suporte por e-mail'
-      ],
-      cta: 'Começar grátis'
-    },
-    {
-      nome: 'Pro',
-      preco: 'R$ 197',
-      periodo: '/mês',
-      destaque: true,
-      recursos: [
-        'Veículos ilimitados',
-        'Até 3 lojas, usuários ilimitados',
-        'Google Merchant + Facebook Catalog',
-        'Mercado Livre integrado',
-        'Notificações automáticas (e-mail + WhatsApp)',
-        'Relatórios avançados e exportação',
-        'Simulação de financiamento (BV, Pan)',
-        'Suporte prioritário'
-      ],
-      cta: 'Assinar Pro'
-    },
-    {
-      nome: 'Enterprise',
-      preco: 'Sob consulta',
-      periodo: '',
-      destaque: false,
-      recursos: [
-        'Tudo do plano Pro',
-        'Lojas ilimitadas',
-        'SLA dedicado com gerente de conta',
-        'Onboarding e treinamento presencial',
-        'Integrações sob demanda',
-        'Domínio próprio no catálogo',
-        'Suporte 24/7'
-      ],
-      cta: 'Falar com vendas'
-    }
-  ];
+   // Sincronizado com os planos do backend (TenantsMigrationsRunner.SeedPlanoSeNaoExistir).
+   // Trial: ao se cadastrar, todo tenant ganha 30 dias com TODOS os limites liberados,
+   // independente do plano que escolher. Apos o trial, os limites do plano voltam a valer.
+   planos = [
+     {
+       nome: 'Free',
+       preco: 'R$ 0',
+       periodo: '/mês',
+       destaque: false,
+       recursos: [
+         '30 dias grátis com todos os recursos liberados',
+         'Até 5 veículos no catálogo',
+         '1 loja, 1 usuário',
+         '20 leads por mês',
+         'Catálogo público com SEO',
+         'Integrações ML, Facebook, Google e WhatsApp',
+         'Suporte por e-mail'
+       ],
+       cta: 'Começar grátis'
+     },
+     {
+       nome: 'Basic',
+       preco: 'R$ 99',
+       periodo: '/mês',
+       destaque: false,
+       recursos: [
+         'Até 50 veículos',
+         '1 loja, até 3 usuários',
+         '200 leads por mês',
+         'Todas as integrações',
+         'Relatórios e exportação',
+         'Suporte por e-mail'
+       ],
+       cta: 'Assinar Basic'
+     },
+     {
+       nome: 'Pro',
+       preco: 'R$ 299',
+       periodo: '/mês',
+       destaque: true,
+       recursos: [
+         'Até 500 veículos',
+         'Até 3 lojas, até 10 usuários',
+         '2.000 leads por mês',
+         'Todas as integrações',
+         'Relatórios avançados',
+         'Simulação de financiamento (BV, Pan)',
+         'Suporte prioritário'
+       ],
+       cta: 'Assinar Pro'
+     },
+     {
+       nome: 'Enterprise',
+       preco: 'Sob consulta',
+       periodo: '',
+       destaque: false,
+       recursos: [
+         'Veículos, lojas e usuários ilimitados',
+         'Leads ilimitados',
+         'SLA dedicado com gerente de conta',
+         'Onboarding e treinamento',
+         'Integrações sob demanda',
+         'Domínio próprio no catálogo',
+         'Suporte 24/7'
+       ],
+       cta: 'Falar com vendas'
+     }
+   ];
 
   faqs = [
     {

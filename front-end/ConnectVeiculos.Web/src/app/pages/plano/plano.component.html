@@ -1,0 +1,134 @@
+<div class="page-header">
+  <h1><span class="material-icons">card_membership</span> Meu Plano</h1>
+  <p>Acompanhe seu uso, gerencie limites e faça upgrade quando precisar.</p>
+</div>
+
+@if (carregando) {
+  <div class="loading-state"><span class="material-icons spin">autorenew</span> Carregando…</div>
+} @else if (meu) {
+  <!-- Card do plano atual + trial -->
+  <div class="plano-atual-card">
+    <div class="plano-header">
+      <div>
+        <span class="plano-label">Plano atual</span>
+        <h2>{{ meu.plano?.nome || 'Sem plano' }}</h2>
+        @if (meu.plano && meu.plano.preco > 0) {
+          <span class="plano-preco">R$ {{ meu.plano.preco }}<span class="por-mes">/mês</span></span>
+        } @else if (meu.plano) {
+          <span class="plano-preco-free">Grátis</span>
+        }
+      </div>
+      @if (meu.emTrial) {
+        <div class="trial-badge">
+          <span class="material-icons">access_time</span>
+          <div>
+            <strong>Trial ativo</strong>
+            <small>{{ meu.diasRestantesTrial }} {{ meu.diasRestantesTrial === 1 ? 'dia restante' : 'dias restantes' }}</small>
+          </div>
+        </div>
+      }
+    </div>
+
+    @if (meu.emTrial) {
+      <p class="trial-info">
+        <span class="material-icons">info</span>
+        Durante o trial todos os limites estão liberados. Quando acabar, os limites do plano <strong>{{ meu.plano?.nome }}</strong> voltam a valer — escolha um plano maior antes de bater no teto.
+      </p>
+    }
+  </div>
+
+  <!-- Cards de uso -->
+  <h3 class="section-title">Uso atual</h3>
+  <div class="uso-grid">
+    <div class="uso-card">
+      <div class="uso-header">
+        <span class="material-icons">directions_car</span>
+        <span class="uso-titulo">Veículos</span>
+      </div>
+      <div class="uso-valor">
+        {{ meu.uso.veiculos }} <span class="uso-total">/ {{ formatarLimite(meu.plano?.maxVeiculos) }}</span>
+      </div>
+      <div class="barra-progresso">
+        <div class="barra-fill" [class]="classeBarra(meu.uso.veiculos, meu.plano?.maxVeiculos)"
+             [style.width.%]="porcentagem(meu.uso.veiculos, meu.plano?.maxVeiculos)"></div>
+      </div>
+    </div>
+
+    <div class="uso-card">
+      <div class="uso-header">
+        <span class="material-icons">storefront</span>
+        <span class="uso-titulo">Lojas</span>
+      </div>
+      <div class="uso-valor">
+        {{ meu.uso.lojas }} <span class="uso-total">/ {{ formatarLimite(meu.plano?.maxLojas) }}</span>
+      </div>
+      <div class="barra-progresso">
+        <div class="barra-fill" [class]="classeBarra(meu.uso.lojas, meu.plano?.maxLojas)"
+             [style.width.%]="porcentagem(meu.uso.lojas, meu.plano?.maxLojas)"></div>
+      </div>
+    </div>
+
+    <div class="uso-card">
+      <div class="uso-header">
+        <span class="material-icons">people</span>
+        <span class="uso-titulo">Usuários</span>
+      </div>
+      <div class="uso-valor">
+        {{ meu.uso.usuarios }} <span class="uso-total">/ {{ formatarLimite(meu.plano?.maxUsuarios) }}</span>
+      </div>
+      <div class="barra-progresso">
+        <div class="barra-fill" [class]="classeBarra(meu.uso.usuarios, meu.plano?.maxUsuarios)"
+             [style.width.%]="porcentagem(meu.uso.usuarios, meu.plano?.maxUsuarios)"></div>
+      </div>
+    </div>
+
+    <div class="uso-card">
+      <div class="uso-header">
+        <span class="material-icons">contact_mail</span>
+        <span class="uso-titulo">Leads este mês</span>
+      </div>
+      <div class="uso-valor">
+        {{ meu.uso.leadsMes }} <span class="uso-total">/ {{ formatarLimite(meu.plano?.maxLeadsMes) }}</span>
+      </div>
+      <div class="barra-progresso">
+        <div class="barra-fill" [class]="classeBarra(meu.uso.leadsMes, meu.plano?.maxLeadsMes)"
+             [style.width.%]="porcentagem(meu.uso.leadsMes, meu.plano?.maxLeadsMes)"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comparativo de planos -->
+  @if (planosDisponiveis.length > 0) {
+    <h3 class="section-title">Outros planos disponíveis</h3>
+    <div class="planos-grid">
+      @for (p of planosDisponiveis; track p.id) {
+        <div class="plano-card" [class.atual]="p.id === meu.plano?.id">
+          <h4>{{ p.nome }}</h4>
+          @if (p.preco > 0) {
+            <div class="preco">R$ {{ p.preco }}<span>/mês</span></div>
+          } @else if (p.nome === 'Enterprise') {
+            <div class="preco-custom">Sob consulta</div>
+          } @else {
+            <div class="preco-free">Grátis</div>
+          }
+          <ul>
+            <li><strong>{{ formatarLimite(p.maxVeiculos) }}</strong> veículos</li>
+            <li><strong>{{ formatarLimite(p.maxLojas) }}</strong> {{ p.maxLojas === 1 ? 'loja' : 'lojas' }}</li>
+            <li><strong>{{ formatarLimite(p.maxUsuarios) }}</strong> {{ p.maxUsuarios === 1 ? 'usuário' : 'usuários' }}</li>
+            <li><strong>{{ formatarLimite(p.maxLeadsMes) }}</strong> leads/mês</li>
+          </ul>
+          @if (p.id === meu.plano?.id) {
+            <button class="btn-atual" disabled>Plano atual</button>
+          } @else {
+            <button class="btn-upgrade" (click)="contatarUpgrade(p.nome)">
+              <span class="material-icons">chat</span>
+              {{ p.nome === 'Enterprise' ? 'Falar com vendas' : 'Solicitar upgrade' }}
+            </button>
+          }
+        </div>
+      }
+    </div>
+  }
+} @else {
+  <div class="empty-state">Não foi possível carregar seu plano.</div>
+}

@@ -5,6 +5,7 @@ using ConnectVeiculos.Core.Interfaces.Database.Common;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.LojasUsuarios;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Permissoes;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Usuarios;
+using ConnectVeiculos.Core.Interfaces.Services;
 using FluentAssertions;
 using Moq;
 using Xunit;
@@ -29,7 +30,8 @@ namespace ConnectVeiculos.Tests.UseCases.Usuarios
                 _usuarioRepositoryMock.Object,
                 _lojaUsuarioRepositoryMock.Object,
                 _permissaoRepositoryMock.Object,
-                _unitOfWorkMock.Object);
+                 _unitOfWorkMock.Object,
+                 new Mock<ILimiteService>().Object);
         }
 
         [Fact]

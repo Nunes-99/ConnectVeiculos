@@ -1,0 +1,220 @@
+.page-header {
+  margin-bottom: 1.5rem;
+
+  h1 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #1a237e;
+    margin-bottom: 0.25rem;
+    .material-icons { font-size: 28px; }
+  }
+  p { color: #666; font-size: 14px; }
+}
+
+.loading-state, .empty-state {
+  text-align: center;
+  padding: 3rem;
+  color: #888;
+
+  .spin {
+    animation: spin 1s linear infinite;
+  }
+}
+
+@keyframes spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+
+.plano-atual-card {
+  background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+  color: #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 16px rgba(26, 35, 126, 0.2);
+
+  .plano-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .plano-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.7;
+  }
+
+  h2 { margin: 0.25rem 0; font-size: 2rem; }
+
+  .plano-preco {
+    font-size: 1.5rem;
+    font-weight: 600;
+    .por-mes { font-size: 0.9rem; opacity: 0.8; }
+  }
+  .plano-preco-free {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #4ade80;
+  }
+
+  .trial-badge {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+
+    .material-icons { font-size: 28px; color: #fbbf24; }
+    strong { display: block; }
+    small { opacity: 0.85; font-size: 0.8rem; }
+  }
+
+  .trial-info {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    font-size: 0.875rem;
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    .material-icons { font-size: 18px; }
+  }
+}
+
+.section-title {
+  color: #1a237e;
+  margin: 1.5rem 0 0.75rem;
+  font-size: 1.1rem;
+}
+
+.uso-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.uso-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1rem;
+
+  .uso-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #666;
+    margin-bottom: 0.75rem;
+
+    .material-icons { font-size: 20px; color: #1a237e; }
+    .uso-titulo { font-size: 0.875rem; font-weight: 500; }
+  }
+
+  .uso-valor {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #1a237e;
+    margin-bottom: 0.75rem;
+
+    .uso-total {
+      font-size: 1rem;
+      font-weight: 400;
+      color: #888;
+    }
+  }
+
+  .barra-progresso {
+    height: 8px;
+    background: #f3f4f6;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .barra-fill {
+    height: 100%;
+    transition: width 0.3s;
+
+    &.ok { background: #16a34a; }
+    &.aviso { background: #f59e0b; }
+    &.critico { background: #dc2626; }
+    &.ilimitado { background: linear-gradient(90deg, #1a237e, #6366f1); width: 100%; }
+  }
+}
+
+.planos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.plano-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+
+  &.atual {
+    border-color: #1a237e;
+    border-width: 2px;
+    background: #f0f4ff;
+  }
+
+  h4 { color: #1a237e; margin: 0 0 0.5rem; }
+
+  .preco {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a237e;
+    span { font-size: 0.85rem; font-weight: 400; color: #666; }
+  }
+  .preco-free { font-size: 1.5rem; font-weight: 700; color: #16a34a; }
+  .preco-custom { font-size: 1.1rem; font-weight: 600; color: #666; }
+
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0.75rem 0 1rem;
+
+    li {
+      padding: 0.35rem 0;
+      font-size: 0.875rem;
+      color: #555;
+      strong { color: #1a237e; }
+    }
+  }
+
+  button {
+    margin-top: auto;
+    padding: 0.6rem;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+
+    .material-icons { font-size: 16px; }
+  }
+  .btn-atual {
+    background: #e5e7eb;
+    color: #888;
+    cursor: not-allowed;
+  }
+  .btn-upgrade {
+    background: #1a237e;
+    color: #fff;
+
+    &:hover { background: #283593; }
+  }
+}

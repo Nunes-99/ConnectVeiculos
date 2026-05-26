@@ -3,6 +3,7 @@ using ConnectVeiculos.Application.UseCases.Lojas;
 using ConnectVeiculos.Core.Entities.Lojas;
 using ConnectVeiculos.Core.Interfaces.Database.Common;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Lojas;
+using ConnectVeiculos.Core.Interfaces.Services;
 using FluentAssertions;
 using Moq;
 using Xunit;
@@ -19,7 +20,7 @@ namespace ConnectVeiculos.Tests.UseCases.Lojas
         {
             _lojaRepositoryMock = new Mock<ILojaRepository>();
             _unitOfWorkMock = new Mock<IUnitOfWork>();
-            _useCase = new CadastrarLojaUseCase(_lojaRepositoryMock.Object, _unitOfWorkMock.Object);
+            _useCase = new CadastrarLojaUseCase(_lojaRepositoryMock.Object, _unitOfWorkMock.Object, new Mock<ILimiteService>().Object);
         }
 
         [Fact]

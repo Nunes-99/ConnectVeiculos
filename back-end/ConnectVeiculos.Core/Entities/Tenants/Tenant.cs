@@ -36,6 +36,14 @@ namespace ConnectVeiculos.Core.Entities.Tenants
         /// </summary>
         public string? TenFacebookVerifCode { get; private set; }
 
+         // FK para Plano (no master). Default na migration: plano Free.
+         public int? TenPlaId { get; private set; }
+
+         // Trial expira em (UTC). Durante o trial, limites do plano sao IGNORADOS — tenant
+         // tem acesso ilimitado. Apos a data, limites do TenPlaId voltam a valer. Null =
+         // sem trial (tenant cadastrado antes da feature ou nunca esteve em trial).
+         public DateTime? TenTrialAte { get; private set; }
+
         public Tenant() { }
 
         public Tenant(string slug, string nome, string? databaseFile = null)
@@ -57,5 +65,11 @@ namespace ConnectVeiculos.Core.Entities.Tenants
 
         public void SetFacebookVerifCode(string? code)
             => TenFacebookVerifCode = string.IsNullOrWhiteSpace(code) ? null : code.Trim();
+
+         public void AlterarPlano(int novoPlanoId) => TenPlaId = novoPlanoId;
+
+         public void IniciarTrial(int dias) => TenTrialAte = DateTime.UtcNow.AddDays(dias);
+
+         public bool EmTrial() => TenTrialAte.HasValue && TenTrialAte.Value > DateTime.UtcNow;
     }
 }

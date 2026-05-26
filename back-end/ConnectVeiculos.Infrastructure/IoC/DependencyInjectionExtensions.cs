@@ -271,6 +271,10 @@ namespace ConnectVeiculos.Infrastructure.IoC
              services.AddTransient<Core.Interfaces.Database.Repositories.Integracoes.IIntegracaoMercadoLivreRepository, Database.EntityFramework.Repositories.IntegracaoMercadoLivreRepository>();
              services.AddTransient<Core.Interfaces.Database.Repositories.Integracoes.IIntegracaoLogRepository, Database.EntityFramework.Repositories.IntegracaoLogRepository>();
 
+             // Repositories - Tenants/Planos (billing camada 1)
+             services.AddTransient<Core.Interfaces.Database.Repositories.Tenants.IPlanoRepository, Database.EntityFramework.Repositories.PlanoRepository>();
+             services.AddScoped<Core.Interfaces.Services.ILimiteService, Services.Limites.LimiteService>();
+
              // Data Protection — usado para cifrar tokens OAuth e payloads de state
              // (CSRF). Default persiste chaves no profile do usuario (Windows) ou
              // /root/.aspnet/DataProtection-Keys (Linux/container). Em prod, mapear
