@@ -607,6 +607,20 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
             return result.Sucesso ? Ok(result) : StatusCode(502, result);
         }
 
+         // Liga/desliga a flag que decide se o backend publica via Push API. Quando
+         // false, GoogleMerchantService.PublicarVeiculoAsync retorna early com log.
+         // Usuario deve ligar APENAS apos receber email do Google confirmando aprovacao
+         // no programa Vehicle Ads (Merchant Center > Crescimento > Anuncios de veiculos).
+         [HttpPost("google/vehicle-ads")]
+         [Authorize(Roles = "Administrador,Gerente")]
+         public async Task<IActionResult> SetVehicleAdsGoogle(
+             [FromServices] IGoogleMerchantService gm,
+             [FromBody] VehicleAdsHabilitadoInput input)
+         {
+             await gm.SetVehicleAdsHabilitadoAsync(input.Habilitado);
+             return Ok(new { habilitado = input.Habilitado });
+         }
+
         [HttpGet("google/verification-code")]
         [Authorize(Roles = "Administrador,Gerente")]
         public async Task<IActionResult> GetGoogleVerificationCode(
@@ -685,6 +699,11 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
             }));
         }
     }
+
+     public class VehicleAdsHabilitadoInput
+     {
+         public bool Habilitado { get; set; }
+     }
 
     public class EnviarWhatsAppRequest
     {

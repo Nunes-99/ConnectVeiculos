@@ -43,6 +43,7 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         Task<TestIntegracaoResult> TestarAsync();
         Task PublicarVeiculoAsync(int veiculoId);
         Task RemoverVeiculoAsync(int veiculoId);
+         Task SetVehicleAdsHabilitadoAsync(bool habilitado);
     }
 
     public class GoogleMerchantConfigInfo
@@ -52,6 +53,9 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         public string? ClientId { get; set; }
         public bool ClientSecretDefinido { get; set; }
         public bool RefreshTokenDefinido { get; set; }
+         // Programa Vehicle Ads aprovado pelo Google Merchant. Quando false, push
+         // API e' pulada (Google rejeita veiculos sem esse programa habilitado).
+         public bool VehicleAdsHabilitado { get; set; }
     }
 
     public class GoogleMerchantConfigInput

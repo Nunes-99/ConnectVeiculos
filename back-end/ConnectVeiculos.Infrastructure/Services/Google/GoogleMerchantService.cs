@@ -88,7 +88,8 @@ namespace ConnectVeiculos.Infrastructure.Services.Google
                 MerchantId = merchantId,
                 ClientId = clientId,
                 ClientSecretDefinido = !string.IsNullOrEmpty(clientSecret),
-                RefreshTokenDefinido = !string.IsNullOrEmpty(refreshToken)
+                 RefreshTokenDefinido = !string.IsNullOrEmpty(refreshToken),
+                 VehicleAdsHabilitado = await VehicleAdsHabilitadoAsync()
             };
         }
 
@@ -116,9 +117,16 @@ namespace ConnectVeiculos.Infrastructure.Services.Google
             await _configRepository.SetValorAsync(KEY_REFRESH, "");
             await _configRepository.SetValorAsync(KEY_MERCHANT, "");
             await _configRepository.SetValorAsync(KEY_ACCESS, "");
+             await _configRepository.SetValorAsync(KEY_VEHICLE_ADS_HABILITADO, "");
             _cachedAccessToken = null;
             _tokenExpiration = DateTime.MinValue;
         }
+
+         public async Task SetVehicleAdsHabilitadoAsync(bool habilitado)
+         {
+             await _configRepository.SetValorAsync(KEY_VEHICLE_ADS_HABILITADO, habilitado ? "true" : "false");
+             _logger.LogInformation("Vehicle Ads {Status} pelo operador.", habilitado ? "HABILITADO" : "DESABILITADO");
+         }
 
         public async Task<TestIntegracaoResult> TestarAsync()
         {
@@ -151,10 +159,36 @@ namespace ConnectVeiculos.Infrastructure.Services.Google
             }
         }
 
+         // Flag explicita por tenant: 'GOOGLE_VEHICLE_ADS_HABILITADO'. Quando 'false'
+         // (default), as chamadas Push API sao puladas pra evitar dezenas de produtos
+         // reprovados poluindo o Merchant Center (Google rejeita TODO veiculo motorizado
+         // sob o programa Shopping comum — exige inscricao manual no Vehicle Ads).
+         // Usuario liga essa flag depois que Vehicle Ads for aprovado pelo Google.
+         private const string KEY_VEHICLE_ADS_HABILITADO = "GOOGLE_VEHICLE_ADS_HABILITADO";
+
+         private async Task<bool> VehicleAdsHabilitadoAsync()
+         {
+             var valor = await _configRepository.GetValorAsync(KEY_VEHICLE_ADS_HABILITADO);
+             return string.Equals(valor, "true", StringComparison.OrdinalIgnoreCase);
+         }
+
         public async Task PublicarVeiculoAsync(int veiculoId)
         {
             var (clientId, clientSecret, refreshToken, merchantId) = await ResolveAsync();
             if (string.IsNullOrEmpty(merchantId) || string.IsNullOrEmpty(refreshToken)) return;
+
+             // Skip se Vehicle Ads nao habilitado. Sem isso, Google rejeita TODO veiculo
+             // como "produto nao aceito no Shopping" — pollui o Merchant Center sem
+             // beneficio. Quando o programa for aprovado pelo Google, usuario liga a
+             // flag em Integracoes > Google e a publicacao volta a rodar.
+             if (!await VehicleAdsHabilitadoAsync())
+             {
+                 _logger.LogInformation(
+                     "Google publicar veiculo {VeiculoId} pulado: Vehicle Ads nao habilitado. " +
+                     "Inscreva-se em Merchant Center > Crescimento > Anuncios de veiculos e " +
+                     "ligue a flag em Integracoes apos aprovacao do Google.", veiculoId);
+                 return;
+             }
 
             var token = await EnsureTokenAsync(clientId, clientSecret, refreshToken);
             if (string.IsNullOrEmpty(token)) return;
@@ -193,7 +227,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Google
             {
                 offerId = veiculoId.ToString(),
                 title = $"{veiculo.VeiMarca} {veiculo.VeiModelo} {veiculo.VeiAno}",
-                description = $"{veiculo.VeiMarca} {veiculo.VeiModelo} {veiculo.VeiAno}, {veiculo.VeiCor}, {veiculo.VeiKm:N0} km. {loja?.LojNome}",
+                 description = MontarDescricaoRica(veiculo, loja),
                 link = $"{baseUrl}/catalogo/{slug}/veiculo/{veiculoId}",
                 imageLink = imageUrl,
                 contentLanguage = "pt",
@@ -275,7 +309,43 @@ namespace ConnectVeiculos.Infrastructure.Services.Google
             }
         }
 
-        // Sanitiza LojUrlCatalogo antes de enviar pro Google.
+         // Descricao rica pro Vehicle Ads. Google reprova descricoes muito curtas
+         // ou genericas ("Marca Modelo Ano, Cor, X km"). Esta versao inclui:
+         // marca/modelo/ano destacado, km formatado, cor, opcionais detalhados,
+         // observacao do operador e dados da loja — passa dos 200 chars facilmente,
+         // bem dentro do limite de 5000.
+         private static string MontarDescricaoRica(Core.Entities.Veiculos.Veiculo veiculo, Core.Entities.Lojas.Loja? loja)
+         {
+             var sb = new System.Text.StringBuilder();
+             sb.Append(veiculo.VeiMarca).Append(' ').Append(veiculo.VeiModelo).Append(' ').Append(veiculo.VeiAno);
+             sb.Append(" usado, em otimo estado de conservacao. ");
+             if (!string.IsNullOrWhiteSpace(veiculo.VeiCor))
+                 sb.Append("Cor: ").Append(veiculo.VeiCor).Append(". ");
+             if (veiculo.VeiKm > 0)
+                 sb.Append("Quilometragem: ").Append(veiculo.VeiKm.ToString("N0", new System.Globalization.CultureInfo("pt-BR"))).Append(" km. ");
+             if (!string.IsNullOrWhiteSpace(veiculo.VeiOpcionais))
+             {
+                 sb.Append("Opcionais: ");
+                 sb.Append(veiculo.VeiOpcionais.Replace(",", ", ").TrimEnd(' ', ','));
+                 sb.Append(". ");
+             }
+             if (!string.IsNullOrWhiteSpace(veiculo.VeiObservacao))
+                 sb.Append(veiculo.VeiObservacao).Append(' ');
+
+             sb.Append("Veiculo disponivel para test drive e financiamento. ");
+             if (loja != null)
+             {
+                 sb.Append("Anunciado por ").Append(loja.LojNome);
+                 if (!string.IsNullOrWhiteSpace(loja.LojCidade))
+                     sb.Append(" em ").Append(loja.LojCidade).Append('/').Append(loja.LojEstado);
+                 if (!string.IsNullOrWhiteSpace(loja.LojWhatsApp))
+                     sb.Append(". WhatsApp: ").Append(loja.LojWhatsApp);
+                 sb.Append('.');
+             }
+             return sb.ToString().Trim();
+         }
+
+         // Sanitiza LojUrlCatalogo antes de enviar pro Google.
         // Aceita "https://site.com", "site.com" (https auto), "http://localhost:5219".
         // Rejeita vazio, "http:", "http:/" e qualquer URI sem host.
         private static string? NormalizeBaseUrl(string? raw)
