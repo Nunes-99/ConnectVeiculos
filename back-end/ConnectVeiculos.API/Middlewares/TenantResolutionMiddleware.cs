@@ -76,15 +76,21 @@ namespace ConnectVeiculos.API.Middlewares
 
                 _logger.LogWarning("Tenant nao encontrado para subdomain '{Slug}' (host '{Host}')",
                     slug, context.Request.Host.Host);
-                context.Response.StatusCode = StatusCodes.Status404NotFound;
-                await context.Response.WriteAsync($"Tenant '{slug}' nao encontrado.");
+                 // JSON em vez de text/plain — frontend faz JSON.parse no response e
+                 // texto cru quebra com 'Unexpected token T' na UI.
+                 context.Response.StatusCode = StatusCodes.Status404NotFound;
+                 context.Response.ContentType = "application/json";
+                 await context.Response.WriteAsync(
+                     $"{{\"error\":\"tenant_nao_encontrado\",\"mensagem\":\"Tenant '{slug}' nao encontrado.\",\"slug\":\"{slug}\"}}");
                 return;
             }
 
             if (tenant.TenStatus == TenantStatus.Suspended)
             {
                 context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
-                await context.Response.WriteAsync($"Tenant '{tenant.TenSlug}' esta suspenso.");
+                 context.Response.ContentType = "application/json";
+                 await context.Response.WriteAsync(
+                     $"{{\"error\":\"tenant_suspenso\",\"mensagem\":\"Tenant '{tenant.TenSlug}' esta suspenso.\",\"slug\":\"{tenant.TenSlug}\"}}");
                 return;
             }
 

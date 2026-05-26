@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { Title } from '@angular/platform-browser';
-import { CatalogoService, ImagemService, TestDriveService, LeadService, FavoritoService, ToastService } from '../../core/services';
+import { AuthService, CatalogoService, ImagemService, TestDriveService, LeadService, FavoritoService, ToastService } from '../../core/services';
 import { SeoService } from '../../core/services/seo.service';
 import { CurrencyMaskDirective } from '../../shared/directives';
 import { CatalogoVeiculo, CatalogoFiltro, CatalogoLoja, CatalogoLojaResumo } from '../../core/models';
@@ -47,6 +47,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   private toast = inject(ToastService);
   private seoService = inject(SeoService);
   private platformId = inject(PLATFORM_ID);
+   private authService = inject(AuthService);
 
   veiculos: CatalogoVeiculo[] = [];
   filtros: CatalogoFiltro = {
@@ -858,8 +859,14 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   getShareUrl(veiculo: CatalogoVeiculo): string {
     const urlCatalogo = this.loja?.lojUrlCatalogo;
     const base = urlCatalogo ? urlCatalogo.replace(/\/$/, '') : (isPlatformBrowser(this.platformId) ? window.location.origin : '');
-    const lojaParam = this.lojaSlug || this.loja?.lojSlug || this.lojaId;
-    return lojaParam ? `${base}/catalogo/${lojaParam}/veiculo/${veiculo.veiId}` : `${base}/catalogo?veiculo=${veiculo.veiId}`;
+     // Rota Angular publica e' /catalogo/:tenantSlug/veiculo/:id — espera o slug
+     // do TENANT, nao da loja. Antes usavamos lojSlug aqui e o backend retornava
+     // 404 'Tenant lo... nao encontrado' quando o link era aberto.
+     // Ordem: tenantSlug do route param atual > tenantSlug do admin logado > vazio.
+     const tenantSlug = this.tenantSlug || this.authService.getTenantSlug() || '';
+     return tenantSlug
+       ? `${base}/catalogo/${tenantSlug}/veiculo/${veiculo.veiId}`
+       : `${base}/catalogo?veiculo=${veiculo.veiId}`;
   }
 
   copiarLink(): void {
