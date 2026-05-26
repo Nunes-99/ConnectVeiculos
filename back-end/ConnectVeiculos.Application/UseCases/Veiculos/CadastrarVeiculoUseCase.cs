@@ -19,6 +19,8 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
         private readonly ICatalogoHubService _catalogoHubService;
         private readonly IMercadoLivreService _mercadoLivreService;
         private readonly IFacebookCatalogService _facebookService;
+        private readonly IFacebookPagePostService _facebookPagePostService;
+        private readonly IInstagramPostService _instagramPostService;
         private readonly IGoogleMerchantService _googleService;
         private readonly IVeiculoPublicacaoRepository _publicacaoRepository;
         private readonly ILogger<CadastrarVeiculoUseCase> _logger;
@@ -33,6 +35,8 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             ICatalogoHubService catalogoHubService,
             IMercadoLivreService mercadoLivreService,
             IFacebookCatalogService facebookService,
+            IFacebookPagePostService facebookPagePostService,
+            IInstagramPostService instagramPostService,
             IGoogleMerchantService googleService,
             IVeiculoPublicacaoRepository publicacaoRepository,
             ILogger<CadastrarVeiculoUseCase> logger,
@@ -46,6 +50,8 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             _catalogoHubService = catalogoHubService;
             _mercadoLivreService = mercadoLivreService;
             _facebookService = facebookService;
+            _facebookPagePostService = facebookPagePostService;
+            _instagramPostService = instagramPostService;
             _googleService = googleService;
             _publicacaoRepository = publicacaoRepository;
             _logger = logger;
@@ -131,7 +137,13 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                     }
 
                     try { await _facebookService.PublicarVeiculoAsync(id); }
-                    catch (Exception ex) { _logger.LogError(ex, "Erro ao publicar veiculo {VeiculoId} no Facebook", id); }
+                    catch (Exception ex) { _logger.LogError(ex, "Erro ao publicar veiculo {VeiculoId} no Facebook Catalog", id); }
+
+                    try { await _facebookPagePostService.PublicarVeiculoAsync(id); }
+                    catch (Exception ex) { _logger.LogError(ex, "Erro ao postar veiculo {VeiculoId} na Facebook Page", id); }
+
+                    try { await _instagramPostService.PublicarVeiculoAsync(id); }
+                    catch (Exception ex) { _logger.LogError(ex, "Erro ao postar veiculo {VeiculoId} no Instagram", id); }
 
                     try { await _googleService.PublicarVeiculoAsync(id); }
                     catch (Exception ex) { _logger.LogError(ex, "Erro ao publicar veiculo {VeiculoId} no Google", id); }

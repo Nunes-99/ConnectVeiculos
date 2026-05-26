@@ -42,6 +42,8 @@ namespace ConnectVeiculos.Tests.UseCases.Veiculos
                 _catalogoHubServiceMock.Object,
                 _mercadoLivreServiceMock.Object,
                 _facebookServiceMock.Object,
+                new Mock<IFacebookPagePostService>().Object,
+                new Mock<IInstagramPostService>().Object,
                 _googleServiceMock.Object,
                 _publicacaoRepositoryMock.Object,
                 NullLogger<CadastrarVeiculoUseCase>.Instance,

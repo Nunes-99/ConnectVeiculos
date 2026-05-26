@@ -13,6 +13,7 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         Task<TestIntegracaoResult> TestarAsync();
         Task PublicarVeiculoAsync(int veiculoId);
         Task RemoverVeiculoAsync(int veiculoId);
+        Task SetAutoPostHabilitadoAsync(bool habilitado);
     }
 
     public class FacebookConfigInfo
@@ -21,6 +22,7 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         public string? CatalogId { get; set; }
         public string? ApiVersion { get; set; }
         public bool TokenDefinido { get; set; }
+        public bool AutoPostHabilitado { get; set; }
     }
 
     public class FacebookConfigInput

@@ -2,7 +2,7 @@ import { Component, inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { IntegracaoService, MercadoLivreContaInfo, MercadoLivreSincronizacaoResult, WhatsAppConfigInfo, EmailConfigInfo, FacebookConfigInfo, GoogleMerchantConfigInfo, TestIntegracaoResult } from '../../core/services/integracao.service';
+import { IntegracaoService, MercadoLivreContaInfo, MercadoLivreSincronizacaoResult, WhatsAppConfigInfo, EmailConfigInfo, FacebookConfigInfo, GoogleMerchantConfigInfo, TestIntegracaoResult, MetaConnectionInfo, MetaPageOption, FacebookPagePostConfigInfo, InstagramPostConfigInfo } from '../../core/services/integracao.service';
 import { AuthService, LojaService, ToastService } from '../../core/services';
 import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal.component';
 import { HttpClient } from '@angular/common/http';
@@ -132,7 +132,7 @@ _{{6}}_`;
    smtpAbaTutorial = true;
 
   // Facebook Catalog (Push API)
-  fbConfig: FacebookConfigInfo = { configurado: false, tokenDefinido: false };
+  fbConfig: FacebookConfigInfo = { configurado: false, tokenDefinido: false, autoPostHabilitado: false };
   fbLoading = false;
   showFbConfigModal = false;
   showFbDesconectarModal = false;
@@ -175,6 +175,25 @@ _{{6}}_`;
   gmVerifEditando = false;
   gmVerifMensagem: { sucesso: boolean; texto: string } | null = null;
 
+  // ============================================================
+  // Meta (Facebook + Instagram unificado)
+  // ============================================================
+  metaConnection: MetaConnectionInfo = {
+    userTokenDefinido: false,
+    pageSelecionada: false,
+    instagramConectado: false
+  };
+  metaPages: MetaPageOption[] = [];
+  metaCarregando = false;
+  metaPageIdSelecionada = '';
+  fbPageConfig: FacebookPagePostConfigInfo = { pageConectada: false, autoPostHabilitado: false };
+  igConfig: InstagramPostConfigInfo = { instagramConectado: false, autoPostHabilitado: false };
+  fbCatalogConfig: FacebookConfigInfo = { configurado: false, tokenDefinido: false, autoPostHabilitado: false };
+  fbPageTesteResultado: TestIntegracaoResult | null = null;
+  igTesteResultado: TestIntegracaoResult | null = null;
+  fbPageTestando = false;
+  igTestando = false;
+
   ngOnInit(): void {
     if (isPlatformBrowser(this.platformId)) {
       // Lidos no client porque dependem do tenant slug do localStorage,
@@ -188,8 +207,170 @@ _{{6}}_`;
     this.checkSmtpStatus();
     this.checkFacebookStatus();
     this.checkGoogleStatus();
+    this.checkMetaStatus();
     this.loadVerificationCodes();
     this.carregarLojaPadrao();
+  }
+
+  // ============================================================
+  // Meta — actions
+  // ============================================================
+  checkMetaStatus(): void {
+    this.integracaoService.getMetaStatus().subscribe({
+      next: (info) => {
+        this.metaConnection = info;
+        if (info.pageSelecionada) {
+          this.integracaoService.getFacebookPageStatus().subscribe({
+            next: (c) => this.fbPageConfig = c,
+            error: () => { /* silencioso */ }
+          });
+          this.integracaoService.getInstagramStatus().subscribe({
+            next: (c) => this.igConfig = c,
+            error: () => { /* silencioso */ }
+          });
+          this.integracaoService.getFacebookConfig().subscribe({
+            next: (c) => this.fbCatalogConfig = c,
+            error: () => { /* silencioso */ }
+          });
+        }
+      },
+      error: () => { /* silencioso */ }
+    });
+  }
+
+  conectarMeta(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    this.metaCarregando = true;
+    this.integracaoService.getMetaAuthUrl().subscribe({
+      next: (result) => {
+        const popup = window.open(result.url, '_blank', 'width=700,height=750');
+        const timer = setInterval(() => {
+          if (popup?.closed) {
+            clearInterval(timer);
+            this.metaCarregando = false;
+            this.checkMetaStatus();
+            this.carregarMetaPages();
+          }
+        }, 1000);
+      },
+      error: (err) => {
+        this.metaCarregando = false;
+        const msg = err?.error?.error || 'Erro ao iniciar conexao Meta. Verifique se MetaSettings__AppId esta definido no servidor.';
+        this.toast.error(msg);
+      }
+    });
+  }
+
+  carregarMetaPages(): void {
+    this.metaCarregando = true;
+    this.integracaoService.listarMetaPages().subscribe({
+      next: (pages) => {
+        this.metaPages = pages;
+        this.metaCarregando = false;
+        if (pages.length === 0)
+          this.toast.info('Nenhuma Page encontrada nessa conta. Crie uma Facebook Page primeiro.');
+      },
+      error: () => {
+        this.metaCarregando = false;
+        this.toast.error('Erro ao listar Pages do Facebook.');
+      }
+    });
+  }
+
+  selecionarMetaPage(): void {
+    if (!this.metaPageIdSelecionada) return;
+    this.metaCarregando = true;
+    this.integracaoService.selecionarMetaPage(this.metaPageIdSelecionada).subscribe({
+      next: (r) => {
+        this.metaCarregando = false;
+        if (r.sucesso) {
+          this.toast.success(r.instagramConectado
+            ? `Page '${r.pageNome}' + Instagram @${r.instagramUsername} configurados!`
+            : `Page '${r.pageNome}' configurada (sem Instagram Business vinculado).`);
+          this.checkMetaStatus();
+        } else {
+          this.toast.error(r.mensagem || 'Falha ao selecionar Page.');
+        }
+      },
+      error: () => {
+        this.metaCarregando = false;
+        this.toast.error('Erro ao selecionar Page.');
+      }
+    });
+  }
+
+  desconectarMeta(): void {
+    this.integracaoService.desconectarMeta().subscribe({
+      next: () => {
+        this.toast.success('Conta Meta desconectada.');
+        this.metaConnection = { userTokenDefinido: false, pageSelecionada: false, instagramConectado: false };
+        this.metaPages = [];
+        this.metaPageIdSelecionada = '';
+        this.fbPageConfig = { pageConectada: false, autoPostHabilitado: false };
+        this.igConfig = { instagramConectado: false, autoPostHabilitado: false };
+      },
+      error: () => this.toast.error('Erro ao desconectar Meta.')
+    });
+  }
+
+  toggleFbPageAutoPost(habilitado: boolean): void {
+    this.integracaoService.setFacebookPageAutoPost(habilitado).subscribe({
+      next: () => {
+        this.fbPageConfig.autoPostHabilitado = habilitado;
+        this.toast.success(habilitado
+          ? 'Auto-post na Facebook Page ATIVADO.'
+          : 'Auto-post na Facebook Page desativado.');
+      },
+      error: () => this.toast.error('Erro ao atualizar configuracao.')
+    });
+  }
+
+  toggleIgAutoPost(habilitado: boolean): void {
+    this.integracaoService.setInstagramAutoPost(habilitado).subscribe({
+      next: () => {
+        this.igConfig.autoPostHabilitado = habilitado;
+        this.toast.success(habilitado
+          ? 'Auto-post no Instagram ATIVADO.'
+          : 'Auto-post no Instagram desativado.');
+      },
+      error: () => this.toast.error('Erro ao atualizar configuracao.')
+    });
+  }
+
+  toggleFbCatalogAutoPost(habilitado: boolean): void {
+    this.integracaoService.setFacebookCatalogAutoPost(habilitado).subscribe({
+      next: () => {
+        this.fbCatalogConfig.autoPostHabilitado = habilitado;
+        this.toast.success(habilitado
+          ? 'Catalog auto-post ATIVADO (necessario configurar Catalog ID separado).'
+          : 'Catalog auto-post desativado.');
+      },
+      error: () => this.toast.error('Erro ao atualizar configuracao.')
+    });
+  }
+
+  testarFbPage(): void {
+    this.fbPageTestando = true;
+    this.fbPageTesteResultado = null;
+    this.integracaoService.testarFacebookPage().subscribe({
+      next: (r) => { this.fbPageTesteResultado = r; this.fbPageTestando = false; },
+      error: (err) => {
+        this.fbPageTesteResultado = err?.error ?? { sucesso: false, mensagem: 'Erro ao testar.' };
+        this.fbPageTestando = false;
+      }
+    });
+  }
+
+  testarIg(): void {
+    this.igTestando = true;
+    this.igTesteResultado = null;
+    this.integracaoService.testarInstagram().subscribe({
+      next: (r) => { this.igTesteResultado = r; this.igTestando = false; },
+      error: (err) => {
+        this.igTesteResultado = err?.error ?? { sucesso: false, mensagem: 'Erro ao testar.' };
+        this.igTestando = false;
+      }
+    });
   }
 
   private carregarLojaPadrao(): void {
@@ -511,7 +692,7 @@ _{{6}}_`;
     this.integracaoService.getFacebookConfig().subscribe({
       next: (info) => { this.fbConfig = info; this.fbLoading = false; },
       error: () => {
-        this.fbConfig = { configurado: false, tokenDefinido: false };
+        this.fbConfig = { configurado: false, tokenDefinido: false, autoPostHabilitado: false };
         this.fbLoading = false;
       }
     });

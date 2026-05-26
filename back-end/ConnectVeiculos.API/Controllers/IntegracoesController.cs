@@ -678,6 +678,146 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
         }
 
         // ==========================================
+        // META (FACEBOOK + INSTAGRAM) — OAuth unificado
+        // ==========================================
+
+        [HttpGet("meta/auth-url")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> GetMetaAuthUrl([FromServices] IMetaOAuthService meta)
+        {
+            try
+            {
+                var redirectUri = $"{Request.Scheme}://{Request.Host}/api/integracoes/meta/callback";
+                var url = await meta.BuildAuthorizeUrlAsync(redirectUri);
+                return Ok(new { url });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("meta/callback")]
+        [AllowAnonymous]
+        public async Task<IActionResult> MetaCallback(
+            [FromServices] IMetaOAuthService meta,
+            [FromQuery] string? code,
+            [FromQuery] string? state,
+            [FromQuery(Name = "error")] string? oauthError,
+            [FromQuery(Name = "error_description")] string? oauthErrorDesc)
+        {
+            if (!string.IsNullOrEmpty(oauthError))
+                return Content(BuildCallbackHtml(false, $"{oauthError}: {oauthErrorDesc}"), "text/html");
+            if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(state))
+                return Content(BuildCallbackHtml(false, "Code ou state ausente."), "text/html");
+
+            try
+            {
+                var redirectUri = $"{Request.Scheme}://{Request.Host}/api/integracoes/meta/callback";
+                var result = await meta.ExchangeCodeAsync(code, state, redirectUri);
+                return Content(BuildCallbackHtml(result.Sucesso, result.Sucesso ? null : result.Mensagem), "text/html");
+            }
+            catch (OAuthStateException ex)
+            {
+                return Content(BuildCallbackHtml(false, ex.Message), "text/html");
+            }
+            catch (Exception ex)
+            {
+                return Content(BuildCallbackHtml(false, ex.Message), "text/html");
+            }
+        }
+
+        [HttpGet("meta/status")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> GetMetaStatus([FromServices] IMetaOAuthService meta)
+            => Ok(await meta.GetConnectionInfoAsync());
+
+        [HttpGet("meta/pages")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> ListarMetaPages([FromServices] IMetaOAuthService meta)
+            => Ok(await meta.ListarPagesAsync());
+
+        [HttpPost("meta/select-page")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> SelecionarMetaPage(
+            [FromServices] IMetaOAuthService meta,
+            [FromBody] SelecionarMetaPageInput input)
+        {
+            if (string.IsNullOrWhiteSpace(input?.PageId))
+                return BadRequest(new { error = "PageId obrigatorio." });
+            var result = await meta.SelecionarPageAsync(input.PageId);
+            return result.Sucesso ? Ok(result) : StatusCode(502, result);
+        }
+
+        [HttpPost("meta/desconectar")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> DesconectarMeta([FromServices] IMetaOAuthService meta)
+        {
+            await meta.DesconectarAsync();
+            return Ok(new { mensagem = "Conta Meta desconectada." });
+        }
+
+        // ----- Facebook Page Posts -----
+
+        [HttpGet("facebook/page-status")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> GetFacebookPageStatus([FromServices] IFacebookPagePostService fp)
+            => Ok(await fp.GetConfigAsync());
+
+        [HttpPost("facebook/page-auto-post")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> SetFacebookPageAutoPost(
+            [FromServices] IFacebookPagePostService fp,
+            [FromBody] AutoPostInput input)
+        {
+            await fp.SetAutoPostHabilitadoAsync(input.Habilitado);
+            return Ok(new { habilitado = input.Habilitado });
+        }
+
+        [HttpPost("facebook/page-test")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> TestarFacebookPage([FromServices] IFacebookPagePostService fp)
+        {
+            var r = await fp.TestarAsync();
+            return r.Sucesso ? Ok(r) : StatusCode(502, r);
+        }
+
+        [HttpPost("facebook/catalog-auto-post")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> SetFacebookCatalogAutoPost(
+            [FromServices] IFacebookCatalogService fc,
+            [FromBody] AutoPostInput input)
+        {
+            await fc.SetAutoPostHabilitadoAsync(input.Habilitado);
+            return Ok(new { habilitado = input.Habilitado });
+        }
+
+        // ----- Instagram Posts -----
+
+        [HttpGet("instagram/status")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> GetInstagramStatus([FromServices] IInstagramPostService ig)
+            => Ok(await ig.GetConfigAsync());
+
+        [HttpPost("instagram/auto-post")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> SetInstagramAutoPost(
+            [FromServices] IInstagramPostService ig,
+            [FromBody] AutoPostInput input)
+        {
+            await ig.SetAutoPostHabilitadoAsync(input.Habilitado);
+            return Ok(new { habilitado = input.Habilitado });
+        }
+
+        [HttpPost("instagram/test")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> TestarInstagram([FromServices] IInstagramPostService ig)
+        {
+            var r = await ig.TestarAsync();
+            return r.Sucesso ? Ok(r) : StatusCode(502, r);
+        }
+
+        // ==========================================
         // PUBLICACOES
         // ==========================================
 
@@ -704,6 +844,16 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
      {
          public bool Habilitado { get; set; }
      }
+
+    public class AutoPostInput
+    {
+        public bool Habilitado { get; set; }
+    }
+
+    public class SelecionarMetaPageInput
+    {
+        public string PageId { get; set; } = "";
+    }
 
     public class EnviarWhatsAppRequest
     {

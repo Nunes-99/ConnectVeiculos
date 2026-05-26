@@ -60,6 +60,7 @@ export interface FacebookConfigInfo {
   catalogId?: string;
   apiVersion?: string;
   tokenDefinido: boolean;
+  autoPostHabilitado: boolean;
 }
 
 export interface FacebookConfigInput {
@@ -86,6 +87,48 @@ export interface GoogleMerchantConfigInput {
 export interface TestIntegracaoResult {
   sucesso: boolean;
   mensagem?: string;
+}
+
+export interface MetaConnectionInfo {
+  userTokenDefinido: boolean;
+  pageSelecionada: boolean;
+  pageId?: string | null;
+  pageNome?: string | null;
+  instagramConectado: boolean;
+  instagramBusinessId?: string | null;
+  instagramUsername?: string | null;
+  userTokenExpiraEm?: string | null;
+}
+
+export interface MetaPageOption {
+  pageId: string;
+  nome: string;
+  categoria: string;
+  temInstagramBusiness: boolean;
+  instagramUsername?: string | null;
+}
+
+export interface MetaSelectPageResult {
+  sucesso: boolean;
+  mensagem?: string;
+  pageId: string;
+  pageNome: string;
+  instagramConectado: boolean;
+  instagramUsername?: string | null;
+}
+
+export interface FacebookPagePostConfigInfo {
+  pageConectada: boolean;
+  pageId?: string | null;
+  pageNome?: string | null;
+  autoPostHabilitado: boolean;
+}
+
+export interface InstagramPostConfigInfo {
+  instagramConectado: boolean;
+  businessAccountId?: string | null;
+  username?: string | null;
+  autoPostHabilitado: boolean;
 }
 
 @Injectable({
@@ -232,5 +275,56 @@ export class IntegracaoService {
   private tenantQuery(): string {
     const slug = this.auth.getTenantSlug();
     return slug ? `?tenant=${encodeURIComponent(slug)}` : '';
+  }
+
+  // Meta (OAuth unificado Facebook + Instagram)
+  getMetaAuthUrl(): Observable<{ url: string }> {
+    return this.http.get<{ url: string }>(`${this.baseUrl}/integracoes/meta/auth-url`);
+  }
+
+  getMetaStatus(): Observable<MetaConnectionInfo> {
+    return this.http.get<MetaConnectionInfo>(`${this.baseUrl}/integracoes/meta/status`);
+  }
+
+  listarMetaPages(): Observable<MetaPageOption[]> {
+    return this.http.get<MetaPageOption[]>(`${this.baseUrl}/integracoes/meta/pages`);
+  }
+
+  selecionarMetaPage(pageId: string): Observable<MetaSelectPageResult> {
+    return this.http.post<MetaSelectPageResult>(`${this.baseUrl}/integracoes/meta/select-page`, { pageId });
+  }
+
+  desconectarMeta(): Observable<{ mensagem: string }> {
+    return this.http.post<{ mensagem: string }>(`${this.baseUrl}/integracoes/meta/desconectar`, {});
+  }
+
+  // Facebook Page Posts
+  getFacebookPageStatus(): Observable<FacebookPagePostConfigInfo> {
+    return this.http.get<FacebookPagePostConfigInfo>(`${this.baseUrl}/integracoes/facebook/page-status`);
+  }
+
+  setFacebookPageAutoPost(habilitado: boolean): Observable<{ habilitado: boolean }> {
+    return this.http.post<{ habilitado: boolean }>(`${this.baseUrl}/integracoes/facebook/page-auto-post`, { habilitado });
+  }
+
+  testarFacebookPage(): Observable<TestIntegracaoResult> {
+    return this.http.post<TestIntegracaoResult>(`${this.baseUrl}/integracoes/facebook/page-test`, {});
+  }
+
+  setFacebookCatalogAutoPost(habilitado: boolean): Observable<{ habilitado: boolean }> {
+    return this.http.post<{ habilitado: boolean }>(`${this.baseUrl}/integracoes/facebook/catalog-auto-post`, { habilitado });
+  }
+
+  // Instagram Posts
+  getInstagramStatus(): Observable<InstagramPostConfigInfo> {
+    return this.http.get<InstagramPostConfigInfo>(`${this.baseUrl}/integracoes/instagram/status`);
+  }
+
+  setInstagramAutoPost(habilitado: boolean): Observable<{ habilitado: boolean }> {
+    return this.http.post<{ habilitado: boolean }>(`${this.baseUrl}/integracoes/instagram/auto-post`, { habilitado });
+  }
+
+  testarInstagram(): Observable<TestIntegracaoResult> {
+    return this.http.post<TestIntegracaoResult>(`${this.baseUrl}/integracoes/instagram/test`, {});
   }
 }

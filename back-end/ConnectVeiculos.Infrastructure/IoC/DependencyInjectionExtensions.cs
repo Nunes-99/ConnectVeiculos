@@ -310,6 +310,15 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.AddHttpClient<Core.Interfaces.Services.IFacebookCatalogService, Services.Facebook.FacebookCatalogService>()
                 .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(30));
 
+            // Services - Meta (OAuth unificado FB + IG + Page Posts + Instagram Posts)
+            services.Configure<Services.Meta.MetaSettings>(configuration.GetSection("MetaSettings"));
+            services.AddHttpClient<Core.Interfaces.Services.IMetaOAuthService, Services.Meta.MetaOAuthService>()
+                .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(30));
+            services.AddHttpClient<Core.Interfaces.Services.IFacebookPagePostService, Services.Meta.FacebookPagePostService>()
+                .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(30));
+            services.AddHttpClient<Core.Interfaces.Services.IInstagramPostService, Services.Meta.InstagramPostService>()
+                .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(30));
+
             // Services - Google Merchant (push instantaneo)
             services.Configure<Services.Google.GoogleMerchantSettings>(configuration.GetSection("GoogleMerchantSettings"));
             services.AddHttpClient<Core.Interfaces.Services.IGoogleMerchantService, Services.Google.GoogleMerchantService>()

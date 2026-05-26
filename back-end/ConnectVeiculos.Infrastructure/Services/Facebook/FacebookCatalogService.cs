@@ -15,6 +15,10 @@ namespace ConnectVeiculos.Infrastructure.Services.Facebook
         private const string KEY_TOKEN = "FB_ACCESS_TOKEN";
         private const string KEY_CATALOG = "FB_CATALOG_ID";
         private const string KEY_VERSION = "FB_API_VERSION";
+        // Flag de auto-publicacao no Catalog. Quando 'false', PublicarVeiculoAsync
+        // pula a Push API (mesmo se Catalog estiver configurado) — util quando o
+        // tenant nao quer pagar Vehicle Ads ainda. Default false ate o tenant ligar.
+        private const string KEY_AUTO_POST = "FB_AUTO_POST";
 
         private readonly HttpClient _httpClient;
         private readonly FacebookCatalogSettings _settings;
@@ -79,8 +83,21 @@ namespace ConnectVeiculos.Infrastructure.Services.Facebook
                 Configurado = !string.IsNullOrEmpty(token) && !string.IsNullOrEmpty(catalogId),
                 CatalogId = catalogId,
                 ApiVersion = apiVersion,
-                TokenDefinido = !string.IsNullOrEmpty(token)
+                TokenDefinido = !string.IsNullOrEmpty(token),
+                AutoPostHabilitado = await AutoPostHabilitadoAsync()
             };
+        }
+
+        public async Task SetAutoPostHabilitadoAsync(bool habilitado)
+        {
+            await _configRepository.SetValorAsync(KEY_AUTO_POST, habilitado ? "true" : "false");
+            _logger.LogInformation("Facebook Catalog auto-post {Status}", habilitado ? "HABILITADO" : "DESABILITADO");
+        }
+
+        private async Task<bool> AutoPostHabilitadoAsync()
+        {
+            var v = await _configRepository.GetValorAsync(KEY_AUTO_POST);
+            return string.Equals(v, "true", StringComparison.OrdinalIgnoreCase);
         }
 
         public async Task SalvarConfigAsync(FacebookConfigInput input)
@@ -98,6 +115,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Facebook
             await _configRepository.SetValorAsync(KEY_TOKEN, "");
             await _configRepository.SetValorAsync(KEY_CATALOG, "");
             await _configRepository.SetValorAsync(KEY_VERSION, "");
+            await _configRepository.SetValorAsync(KEY_AUTO_POST, "");
         }
 
         public async Task<TestIntegracaoResult> TestarAsync()
@@ -135,6 +153,15 @@ namespace ConnectVeiculos.Infrastructure.Services.Facebook
         {
             var (token, catalogId, apiVersion) = await ResolveAsync();
             if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(catalogId)) return;
+
+            // Skip se auto-post desligado. Diferente do Google, o Facebook Catalog
+            // aceita veiculos no programa Vehicle Ads do BR — mas o tenant decide
+            // ligar quando estiver pronto pra pagar Dynamic Ads for Auto.
+            if (!await AutoPostHabilitadoAsync())
+            {
+                _logger.LogDebug("Facebook Catalog auto-post desligado, pulando veiculo {VeiculoId}", veiculoId);
+                return;
+            }
 
             var veiculo = await _veiculoRepository.GetByIdAsync(veiculoId);
             if (veiculo == null) return;

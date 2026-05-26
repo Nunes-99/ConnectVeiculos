@@ -730,6 +730,179 @@
     (confirmar)="confirmarDesconectar()"
     (cancelar)="cancelarDesconectar()" />
 
+  <!-- Meta (Facebook + Instagram unificado) -->
+  <div class="integracao-card">
+    <div class="card-header">
+      <div class="platform-info">
+        <span class="platform-icon meta-icon">M</span>
+        <div>
+          <h3>Meta — Facebook + Instagram</h3>
+          <p>Conexão única para postar veículos no feed da Page e no Instagram Business</p>
+        </div>
+      </div>
+      <span class="status-badge"
+            [class.connected]="metaConnection.pageSelecionada"
+            [class.disconnected]="!metaConnection.pageSelecionada">
+        {{ metaConnection.pageSelecionada ? 'Conectado' : 'Desconectado' }}
+      </span>
+    </div>
+    <div class="card-body">
+
+      @if (!metaConnection.userTokenDefinido) {
+        <p>Conecte sua conta Facebook (Business) e escolha qual Page usar. Se a Page tiver Instagram Business vinculado, o Instagram conecta junto automaticamente.</p>
+        <div class="info-block">
+          <h4><span class="material-icons">info</span> Pré-requisitos</h4>
+          <p>1. Página do Facebook (Business) já criada<br/>
+             2. (Opcional) Conta Instagram convertida para <strong>Business</strong> ou <strong>Creator</strong> e vinculada à Page</p>
+        </div>
+        <div class="card-actions">
+          <button class="btn-primary" (click)="conectarMeta()" [disabled]="metaCarregando">
+            <span class="material-icons">link</span>
+            {{ metaCarregando ? 'Aguardando...' : 'Conectar com Facebook' }}
+          </button>
+        </div>
+      } @else if (!metaConnection.pageSelecionada) {
+        <p><strong>Conta Meta conectada.</strong> Agora escolha qual Page do Facebook este sistema vai usar para publicar.</p>
+
+        @if (metaPages.length === 0) {
+          <div class="card-actions">
+            <button class="btn-primary" (click)="carregarMetaPages()" [disabled]="metaCarregando">
+              <span class="material-icons">refresh</span>
+              {{ metaCarregando ? 'Carregando...' : 'Carregar minhas Pages' }}
+            </button>
+          </div>
+        } @else {
+          <div class="form-group">
+            <label>Selecione a Page:</label>
+            <select [(ngModel)]="metaPageIdSelecionada" [ngModelOptions]="{standalone: true}">
+              <option value="">— Escolha uma Page —</option>
+              @for (p of metaPages; track p.pageId) {
+                <option [value]="p.pageId">
+                  {{ p.nome }}{{ p.temInstagramBusiness ? ' + Instagram @' + p.instagramUsername : ' (sem IG)' }}
+                </option>
+              }
+            </select>
+          </div>
+          <div class="card-actions">
+            <button class="btn-primary" (click)="selecionarMetaPage()"
+                    [disabled]="metaCarregando || !metaPageIdSelecionada">
+              <span class="material-icons">check</span>
+              Confirmar Page
+            </button>
+            <button class="btn-outline" (click)="carregarMetaPages()" [disabled]="metaCarregando">
+              <span class="material-icons">refresh</span>
+              Recarregar
+            </button>
+            <button class="btn-danger-outline" (click)="desconectarMeta()">
+              <span class="material-icons">link_off</span>
+              Desconectar
+            </button>
+          </div>
+        }
+      } @else {
+        <!-- Conectado e page selecionada — exibe controles -->
+        <div class="ml-conta-info">
+          <span class="material-icons">verified</span>
+          <div>
+            <strong>Page: {{ metaConnection.pageNome }}</strong>
+            @if (metaConnection.instagramConectado) {
+              <small>Instagram vinculado: &#64;{{ metaConnection.instagramUsername }}</small>
+            } @else {
+              <small>Sem Instagram Business vinculado a esta Page</small>
+            }
+          </div>
+        </div>
+
+        <!-- Toggle Facebook Page Post -->
+        <div class="info-block">
+          <h4><span class="material-icons">share</span> 1. Posts orgânicos no Facebook (feed da Page)</h4>
+          <p>Quando ativado, cada veículo novo cadastrado vira um post automático na timeline da Page com foto, descrição e link.</p>
+          <div class="card-actions" style="margin-top:8px">
+            <label class="toggle-switch">
+              <input type="checkbox" [checked]="fbPageConfig.autoPostHabilitado"
+                     (change)="toggleFbPageAutoPost(!fbPageConfig.autoPostHabilitado)" />
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">{{ fbPageConfig.autoPostHabilitado ? 'Ativado' : 'Desativado' }}</span>
+            </label>
+            <button class="btn-outline" (click)="testarFbPage()" [disabled]="fbPageTestando">
+              <span class="material-icons">science</span>
+              {{ fbPageTestando ? 'Testando...' : 'Testar conexão' }}
+            </button>
+          </div>
+          @if (fbPageTesteResultado) {
+            <div class="smtp-test-result"
+                 [class.sucesso]="fbPageTesteResultado!.sucesso"
+                 [class.falha]="!fbPageTesteResultado!.sucesso">
+              <span class="material-icons">{{ fbPageTesteResultado!.sucesso ? 'check_circle' : 'error' }}</span>
+              {{ fbPageTesteResultado!.mensagem }}
+            </div>
+          }
+        </div>
+
+        <!-- Toggle Instagram -->
+        @if (metaConnection.instagramConectado) {
+          <div class="info-block">
+            <h4><span class="material-icons">photo_camera</span> 2. Posts orgânicos no Instagram (feed)</h4>
+            <p>Cada veículo vira um post no Instagram Business com carrossel de até 10 fotos + legenda com preço, km, opcionais e hashtags. <strong>Requer HTTPS no domínio público</strong> (Instagram não aceita HTTP).</p>
+            <div class="card-actions" style="margin-top:8px">
+              <label class="toggle-switch">
+                <input type="checkbox" [checked]="igConfig.autoPostHabilitado"
+                       (change)="toggleIgAutoPost(!igConfig.autoPostHabilitado)" />
+                <span class="toggle-slider"></span>
+                <span class="toggle-label">{{ igConfig.autoPostHabilitado ? 'Ativado' : 'Desativado' }}</span>
+              </label>
+              <button class="btn-outline" (click)="testarIg()" [disabled]="igTestando">
+                <span class="material-icons">science</span>
+                {{ igTestando ? 'Testando...' : 'Testar conexão' }}
+              </button>
+            </div>
+            @if (igTesteResultado) {
+              <div class="smtp-test-result"
+                   [class.sucesso]="igTesteResultado!.sucesso"
+                   [class.falha]="!igTesteResultado!.sucesso">
+                <span class="material-icons">{{ igTesteResultado!.sucesso ? 'check_circle' : 'error' }}</span>
+                {{ igTesteResultado!.mensagem }}
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="info-block">
+            <h4><span class="material-icons">photo_camera</span> 2. Instagram (não vinculado)</h4>
+            <p>Para ativar posts no Instagram, vincule sua conta Instagram <strong>Business</strong> à Page do Facebook em <a href="https://business.facebook.com/" target="_blank" rel="noopener">business.facebook.com</a> e selecione esta Page novamente.</p>
+          </div>
+        }
+
+        <!-- Toggle Facebook Catalog (Vehicle Ads pago) -->
+        <div class="info-block">
+          <h4><span class="material-icons">shopping_cart</span> 3. Facebook Catalog (Vehicle Ads pago)</h4>
+          <p>Catálogo de produtos que alimenta o programa <strong>Dynamic Ads for Auto</strong> (anúncios pagos no Marketplace, Feed e Instagram). Funciona no Brasil mas o tenant paga clique no Ads Manager. Requer Catalog ID + Token configurados separadamente abaixo.</p>
+          <div class="card-actions" style="margin-top:8px">
+            <label class="toggle-switch">
+              <input type="checkbox" [checked]="fbCatalogConfig.autoPostHabilitado"
+                     (change)="toggleFbCatalogAutoPost(!fbCatalogConfig.autoPostHabilitado)" />
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">{{ fbCatalogConfig.autoPostHabilitado ? 'Ativado' : 'Desativado' }}</span>
+            </label>
+            @if (!fbCatalogConfig.configurado) {
+              <small style="color:#b45309">⚠ Catalog ID ainda não configurado — toggle não terá efeito.</small>
+            }
+          </div>
+        </div>
+
+        <div class="card-actions">
+          <button class="btn-danger-outline" (click)="desconectarMeta()">
+            <span class="material-icons">link_off</span>
+            Desconectar conta Meta
+          </button>
+        </div>
+      }
+    </div>
+    <div class="card-footer">
+      <span class="material-icons">info</span>
+      <small>Os posts da Page e do Instagram são publicações orgânicas (gratuitas). O Catalog alimenta anúncios pagos — você só paga se rodar campanha no Ads Manager. Tokens cifrados no banco; Page Token não expira.</small>
+    </div>
+  </div>
+
   <!-- Google Merchant - DESATIVADO temporariamente, implementar depois -->
   @if (false) {
   <div class="integracao-card">
