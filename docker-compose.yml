@@ -49,6 +49,13 @@ services:
       # Google Merchant / Facebook quando Loja.LojUrlCatalogo estiver vazio.
       - GoogleMerchantSettings__PublicSiteUrl=${PUBLIC_SITE_URL:-https://connectveiculos.dev.br}
       - FacebookCatalogSettings__PublicSiteUrl=${PUBLIC_SITE_URL:-https://connectveiculos.dev.br}
+      # Meta (Facebook + Instagram). App unico cadastrado em developers.facebook.com,
+      # serve todos os tenants. Cada tenant autoriza a propria Page via OAuth.
+      # Tokens individuais ficam cifrados no banco do tenant.
+      - MetaSettings__AppId=${META_APP_ID:-}
+      - MetaSettings__AppSecret=${META_APP_SECRET:-}
+      - MetaSettings__ApiVersion=${META_API_VERSION:-v18.0}
+      - MetaSettings__PublicSiteUrl=${PUBLIC_SITE_URL:-https://connectveiculos.dev.br}
     volumes:
       - ./data:/app/data
       # IMPORTANTE: backend salva em /app/uploads/veiculos/... (ImagensController.cs
