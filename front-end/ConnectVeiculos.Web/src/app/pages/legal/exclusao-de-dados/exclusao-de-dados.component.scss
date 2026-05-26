@@ -1,0 +1,104 @@
+// Estilos extras da pagina de exclusao de dados (form helper)
+
+.metodos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.metodo-card {
+  background: #f9fafb;
+  border: 1px solid #e3e7ef;
+  border-radius: 8px;
+  padding: 1rem;
+
+  h3 {
+    margin: 0 0 0.5rem;
+    color: #1a237e;
+    font-size: 1.05rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    .material-icons { font-size: 1.2rem; }
+  }
+  p { margin: 0; font-size: 0.88rem; }
+}
+
+.form-helper {
+  background: #eef2ff;
+  border: 1px solid #c5cae9;
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin: 1.5rem 0;
+
+  h3 {
+    margin: 0 0 0.75rem;
+    color: #1a237e;
+    font-size: 1.05rem;
+  }
+
+  label {
+    display: block;
+    margin-bottom: 0.85rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+
+    input, textarea {
+      width: 100%;
+      margin-top: 0.25rem;
+      padding: 0.55rem 0.75rem;
+      border: 1px solid #c5cae9;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      box-sizing: border-box;
+
+      &:focus {
+        outline: none;
+        border-color: #1a237e;
+        box-shadow: 0 0 0 2px rgba(26, 35, 126, 0.15);
+      }
+    }
+    textarea { resize: vertical; min-height: 70px; }
+  }
+
+  .form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  button {
+    padding: 0.6rem 1rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+
+    &.btn-primary {
+      background: #1a237e;
+      color: #fff;
+      &:hover { background: #283593; }
+    }
+
+    &.btn-outline {
+      background: #fff;
+      color: #1a237e;
+      border: 1px solid #1a237e;
+      &:hover { background: #eef2ff; }
+    }
+  }
+
+  .copiado-feedback {
+    font-size: 0.82rem;
+    color: #16a34a;
+    margin-left: 0.5rem;
+    align-self: center;
+  }
+}

@@ -41,6 +41,18 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/acesso-negado/acesso-negado.component').then(m => m.AcessoNegadoComponent)
   },
   {
+    path: 'privacidade',
+    loadComponent: () => import('./pages/legal/privacidade/privacidade.component').then(m => m.PrivacidadeComponent)
+  },
+  {
+    path: 'termos',
+    loadComponent: () => import('./pages/legal/termos/termos.component').then(m => m.TermosComponent)
+  },
+  {
+    path: 'exclusao-de-dados',
+    loadComponent: () => import('./pages/legal/exclusao-de-dados/exclusao-de-dados.component').then(m => m.ExclusaoDeDadosComponent)
+  },
+  {
     path: '',
     component: MainLayoutComponent,
     canActivate: [authGuard],

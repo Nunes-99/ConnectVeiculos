@@ -1,0 +1,123 @@
+<section class="legal-header">
+  <div class="header-inner">
+    <div class="breadcrumb"><a routerLink="/">← Voltar ao início</a></div>
+    <h1>Exclusão de Dados Pessoais</h1>
+    <p class="subtitle">Como solicitar a remoção dos seus dados — conforme LGPD e diretrizes Meta / Google</p>
+  </div>
+</section>
+
+<article class="legal-content">
+
+  <p>Você tem o direito de solicitar a exclusão dos seus dados pessoais armazenados na plataforma <strong>ConnectVeiculos</strong> a qualquer momento, conforme o <strong>art. 18, inciso VI da LGPD (Lei nº 13.709/2018)</strong> e as diretrizes da Meta Platform e do Google.</p>
+
+  <div class="info-card">
+    <p><strong>Prazo de resposta:</strong> até <strong>15 dias úteis</strong> a partir da solicitação<br>
+    <strong>Confirmação:</strong> enviada por e-mail<br>
+    <strong>Custo:</strong> gratuito</p>
+  </div>
+
+  <h2>1. Como solicitar a exclusão</h2>
+
+  <p>Você pode escolher qualquer um dos métodos abaixo. Todos têm o mesmo efeito legal.</p>
+
+  <div class="metodos">
+    <div class="metodo-card">
+      <h3><span class="material-icons">email</span> Por e-mail</h3>
+      <p>Envie pedido para <a href="mailto:desenvolvimento&#64;acsn.com.br">desenvolvimento&#64;acsn.com.br</a> com assunto "Solicitação de Exclusão de Dados".</p>
+    </div>
+
+    <div class="metodo-card">
+      <h3><span class="material-icons">person</span> Logado na plataforma</h3>
+      <p>Acesse <a routerLink="/login">/login</a>, vá em <strong>Meu Perfil → Excluir minha conta</strong>. A operação remove sua conta e todos os dados vinculados.</p>
+    </div>
+
+    <div class="metodo-card">
+      <h3><span class="material-icons">chat</span> Via WhatsApp</h3>
+      <p>Mande mensagem com o pedido e seu nome/e-mail cadastrado. O número está no rodapé do site.</p>
+    </div>
+  </div>
+
+  <h2>2. Formulário rápido (gera e-mail pré-preenchido)</h2>
+
+  <div class="form-helper">
+    <h3>Preencha e clique para abrir seu cliente de e-mail</h3>
+    <label>
+      Nome completo
+      <input type="text" [ngModel]="nome()" (ngModelChange)="nome.set($event)" placeholder="João da Silva" />
+    </label>
+    <label>
+      E-mail cadastrado na plataforma
+      <input type="email" [ngModel]="email()" (ngModelChange)="email.set($event)" placeholder="seu@email.com" />
+    </label>
+    <label>
+      Motivo / observação (opcional)
+      <textarea [ngModel]="motivo()" (ngModelChange)="motivo.set($event)" rows="3"></textarea>
+    </label>
+    <div class="form-actions">
+      <button type="button" class="btn-primary" (click)="abrirEmail()">
+        <span class="material-icons">send</span>
+        Abrir cliente de e-mail
+      </button>
+      <button type="button" class="btn-outline" (click)="copiarEmail()">
+        <span class="material-icons">content_copy</span>
+        Copiar e-mail
+      </button>
+      @if (copiado()) { <span class="copiado-feedback">✓ Copiado!</span> }
+    </div>
+  </div>
+
+  <h2>3. Dados que serão excluídos</h2>
+
+  <ul>
+    <li>Dados de cadastro (nome, e-mail, CPF, telefone, foto de perfil)</li>
+    <li>Histórico de acesso e logs de auditoria vinculados ao seu usuário</li>
+    <li>Veículos cadastrados sob sua conta (transferidos para um usuário admin da revenda ou excluídos)</li>
+    <li>Tokens OAuth de plataformas conectadas (Mercado Livre, Meta, Google, WhatsApp)</li>
+    <li>Mensagens, leads e test drives associados ao seu usuário</li>
+    <li>Configurações pessoais (tema, preferências, notificações)</li>
+  </ul>
+
+  <h2>4. Dados que podem ser mantidos por obrigação legal</h2>
+
+  <p>Alguns dados podem ser <strong>anonimizados em vez de excluídos</strong> quando houver obrigação legal de retenção:</p>
+
+  <ul>
+    <li><strong>Documentos fiscais:</strong> mantidos por 5 anos (Art. 173 do CTN), mas com dados pessoais sensíveis substituídos por valores genéricos</li>
+    <li><strong>Logs de segurança:</strong> retidos por até 6 meses para prevenção de fraudes</li>
+    <li><strong>Backups:</strong> backups antigos podem conter cópia dos seus dados até serem rotacionados (máximo 90 dias)</li>
+  </ul>
+
+  <h2>5. O que NÃO podemos excluir</h2>
+
+  <p>Dados que estão sob controle de terceiros, mesmo que tenham sido publicados por nossa plataforma, precisam ser excluídos diretamente com cada provedor:</p>
+
+  <ul>
+    <li><strong>Anúncios no Mercado Livre:</strong> remova diretamente em <a href="https://www.mercadolivre.com.br" target="_blank" rel="noopener">mercadolivre.com.br</a></li>
+    <li><strong>Posts no Facebook / Instagram:</strong> remova diretamente na Page ou perfil IG</li>
+    <li><strong>Catalog do Facebook Business Manager:</strong> em <a href="https://business.facebook.com" target="_blank" rel="noopener">business.facebook.com</a></li>
+    <li><strong>Listagens no Google Merchant Center:</strong> em <a href="https://merchants.google.com" target="_blank" rel="noopener">merchants.google.com</a></li>
+  </ul>
+
+  <p>Embora ao desconectar a integração nossa plataforma envie pedido de remoção a cada serviço, a aplicação efetiva depende de cada provedor.</p>
+
+  <h2>6. Processo após o pedido</h2>
+
+  <ol>
+    <li>Você envia o pedido (e-mail, in-app ou WhatsApp)</li>
+    <li>Confirmamos o recebimento em até <strong>2 dias úteis</strong></li>
+    <li>Verificamos sua identidade (e-mail cadastrado) para evitar fraude</li>
+    <li>Executamos a exclusão / anonimização em até <strong>15 dias úteis</strong></li>
+    <li>Enviamos relatório final por e-mail com o que foi excluído e o que foi mantido (com base legal)</li>
+  </ol>
+
+  <h2>7. Reclamações</h2>
+
+  <p>Se não estiver satisfeito com nossa resposta, você pode reclamar perante a <strong>Autoridade Nacional de Proteção de Dados (ANPD)</strong> em <a href="https://www.gov.br/anpd/" target="_blank" rel="noopener">www.gov.br/anpd</a>.</p>
+
+  <h2>8. Dúvidas</h2>
+
+  <p>Encarregado pelo Tratamento de Dados (DPO): <strong>Vitor Nunes</strong><br>
+  E-mail: <a href="mailto:desenvolvimento&#64;acsn.com.br">desenvolvimento&#64;acsn.com.br</a></p>
+
+  <p class="last-update">Última atualização: {{ ano }}-05-26 — Esta URL é a oficial de Data Deletion Instructions URL declarada nas plataformas Meta e Google.</p>
+</article>

@@ -1,0 +1,156 @@
+<section class="legal-header">
+  <div class="header-inner">
+    <div class="breadcrumb"><a routerLink="/">← Voltar ao início</a></div>
+    <h1>Política de Privacidade</h1>
+    <p class="subtitle">Como tratamos seus dados pessoais — conforme LGPD (Lei nº 13.709/2018)</p>
+  </div>
+</section>
+
+<article class="legal-content">
+
+  <p>Esta Política descreve como o <strong>ConnectVeiculos</strong> ("nós", "plataforma") coleta, usa, armazena e compartilha dados pessoais dos usuários da plataforma e visitantes do site. Ao utilizar nossos serviços, você concorda com as práticas descritas aqui.</p>
+
+  <div class="info-card">
+    <p><strong>Controlador:</strong> ConnectVeiculos (plataforma SaaS para revendas de veículos)<br>
+    <strong>Contato:</strong> <a href="mailto:desenvolvimento&#64;acsn.com.br">desenvolvimento&#64;acsn.com.br</a><br>
+    <strong>Encarregado (DPO):</strong> Vitor Nunes</p>
+  </div>
+
+  <h2>1. Dados que coletamos</h2>
+
+  <h3>1.1 Cadastro de usuários (administradores das revendas)</h3>
+  <ul>
+    <li>Nome completo, e-mail, telefone, CPF</li>
+    <li>Senha (armazenada com hash + salt; nunca em texto puro)</li>
+    <li>Cargo, loja vinculada, permissões</li>
+  </ul>
+
+  <h3>1.2 Cadastro de veículos</h3>
+  <ul>
+    <li>Marca, modelo, ano, placa, chassi, cor, quilometragem, preço, opcionais, fotos</li>
+    <li>Dono atual e telefone (somente se informado pela revenda)</li>
+  </ul>
+
+  <h3>1.3 Visitantes do catálogo público</h3>
+  <ul>
+    <li>Dados informados em formulários de contato/test drive (nome, telefone, e-mail, mensagem)</li>
+    <li>Dados técnicos automáticos: IP, user agent, páginas visitadas (analytics)</li>
+    <li>Cookies essenciais e de preferência (tema escuro/claro, idioma)</li>
+  </ul>
+
+  <h3>1.4 Integrações com terceiros (Mercado Livre, Meta, Google)</h3>
+  <p>Quando um administrador conecta sua conta de redes sociais ou marketplaces à plataforma, armazenamos <strong>tokens de acesso cifrados</strong> (DataProtection API). Não temos acesso às credenciais (senha) — apenas tokens OAuth com escopos limitados.</p>
+
+  <h2>2. Como usamos seus dados</h2>
+
+  <ul>
+    <li><strong>Operacional:</strong> autenticação, gestão de estoque de veículos, publicações automáticas em plataformas externas (ML, Facebook, Instagram, Google)</li>
+    <li><strong>Comunicação:</strong> notificações por e-mail/WhatsApp sobre eventos da sua conta (test drives, leads, alertas de documentos vencendo)</li>
+    <li><strong>Estatísticas:</strong> métricas agregadas (sem identificação pessoal) para análise de uso da plataforma</li>
+    <li><strong>Legal:</strong> cumprimento de obrigações fiscais e atendimento a requisições legais</li>
+  </ul>
+
+  <h2>3. Base legal (LGPD)</h2>
+
+  <p>Tratamos dados pessoais sob as seguintes bases legais (Art. 7º da LGPD):</p>
+  <ul>
+    <li><strong>Execução de contrato</strong> — para prestar o serviço SaaS aos clientes pagantes</li>
+    <li><strong>Consentimento</strong> — quando o usuário aceita formulários de contato no catálogo público</li>
+    <li><strong>Legítimo interesse</strong> — para análise técnica, segurança e prevenção de fraude</li>
+    <li><strong>Cumprimento de obrigação legal</strong> — emissão de notas fiscais, retenções etc.</li>
+  </ul>
+
+  <h2>4. Compartilhamento de dados</h2>
+
+  <p>Compartilhamos dados pessoais <strong>apenas</strong> quando estritamente necessário e nas seguintes hipóteses:</p>
+
+  <h3>4.1 Plataformas integradas autorizadas pelo usuário</h3>
+  <ul>
+    <li><strong>Mercado Livre</strong> (api.mercadolibre.com) — publicação de anúncios de veículos</li>
+    <li><strong>Meta (Facebook + Instagram)</strong> (graph.facebook.com) — publicação de posts orgânicos e alimentação de Catalog para Vehicle Ads</li>
+    <li><strong>Google Merchant Center</strong> (shoppingcontent.googleapis.com) — feed e Vehicle Ads (quando disponível no Brasil)</li>
+    <li><strong>Tabela FIPE</strong> (parallelum.com.br) — consulta pública de preços de veículos</li>
+  </ul>
+
+  <p>O compartilhamento com cada plataforma só ocorre <strong>após o administrador conectar sua conta via OAuth</strong> autorizando os escopos específicos. Os dados enviados são os públicos do veículo (marca, modelo, fotos, preço) e dados básicos da revenda (nome, telefone, cidade).</p>
+
+  <h3>4.2 Processadores de dados (sub-operadores)</h3>
+  <ul>
+    <li><strong>Oracle Cloud</strong> — hospedagem da infraestrutura (servidor em região Brasil)</li>
+    <li><strong>Provedores de e-mail SMTP</strong> — envio de notificações transacionais (definido pelo próprio cliente nas Integrações)</li>
+  </ul>
+
+  <h3>4.3 Autoridades</h3>
+  <p>Mediante ordem judicial ou requisição legítima de órgão público competente, nos termos da legislação brasileira.</p>
+
+  <h2>5. Armazenamento e segurança</h2>
+
+  <ul>
+    <li>Dados hospedados em <strong>Oracle Cloud — região Brasil</strong>, com backups automatizados</li>
+    <li>Conexões HTTPS/TLS 1.2+ para todo o tráfego</li>
+    <li>Senhas com hash <strong>BCrypt</strong>; tokens OAuth de terceiros cifrados via <strong>DataProtection API</strong></li>
+    <li>Banco multi-tenant com isolamento por arquivo SQLite separado por revenda</li>
+    <li>Logs estruturados sem dados sensíveis (somente IDs e eventos)</li>
+  </ul>
+
+  <h2>6. Retenção de dados</h2>
+
+  <p>Mantemos seus dados pelo tempo necessário para cumprir as finalidades descritas:</p>
+  <ul>
+    <li><strong>Dados de conta ativa:</strong> enquanto durar a relação contratual</li>
+    <li><strong>Dados de leads do catálogo público:</strong> 12 meses após o último contato, ou até o titular solicitar exclusão</li>
+    <li><strong>Logs e backups:</strong> até 6 meses</li>
+    <li><strong>Documentos fiscais:</strong> 5 anos (Art. 173 do CTN)</li>
+  </ul>
+
+  <p>Após esses prazos, dados são anonimizados ou excluídos.</p>
+
+  <h2>7. Seus direitos (Art. 18 da LGPD)</h2>
+
+  <p>Você tem direito a, mediante solicitação:</p>
+  <ul>
+    <li>Confirmar a existência de tratamento dos seus dados</li>
+    <li>Acessar seus dados</li>
+    <li>Corrigir dados incompletos, inexatos ou desatualizados</li>
+    <li>Solicitar anonimização, bloqueio ou eliminação de dados desnecessários ou tratados em desconformidade com a LGPD</li>
+    <li>Portabilidade dos dados a outro fornecedor</li>
+    <li>Eliminação dos dados pessoais tratados com consentimento</li>
+    <li>Obter informação sobre entidades públicas e privadas com as quais compartilhamos seus dados</li>
+    <li>Revogar o consentimento a qualquer tempo</li>
+  </ul>
+
+  <p>Para exercer qualquer direito, envie pedido para <a href="mailto:desenvolvimento&#64;acsn.com.br">desenvolvimento&#64;acsn.com.br</a> ou acesse <a routerLink="/exclusao-de-dados">/exclusao-de-dados</a>.</p>
+
+  <h2>8. Cookies</h2>
+
+  <p>Utilizamos apenas cookies <strong>essenciais</strong> (sessão de login, tenant, preferências de tema) — não usamos cookies de publicidade ou rastreamento de terceiros.</p>
+
+  <h2>9. Transferência internacional</h2>
+
+  <p>Quando o administrador conecta sua conta Meta/Google, parte dos dados é processada nos servidores dessas empresas (EUA e Europa). Essas transferências ocorrem sob:</p>
+  <ul>
+    <li>Cláusulas contratuais padrão (Meta, Google têm certificações DPA/SCC)</li>
+    <li>Apenas após autorização explícita do administrador via OAuth</li>
+  </ul>
+
+  <h2>10. Crianças e adolescentes</h2>
+
+  <p>A plataforma é destinada a empresas (B2B) e profissionais maiores de 18 anos. Não coletamos intencionalmente dados de menores. Caso identifique o cadastro de dados de menor, removeremos imediatamente.</p>
+
+  <h2>11. Alterações desta política</h2>
+
+  <p>Poderemos atualizar esta Política para refletir mudanças no serviço ou na legislação. A versão vigente é sempre a publicada nesta URL. Mudanças relevantes serão comunicadas por e-mail aos administradores com 30 dias de antecedência.</p>
+
+  <h2>12. Contato</h2>
+
+  <p>Dúvidas, reclamações ou solicitações sobre privacidade e proteção de dados:</p>
+  <ul>
+    <li><strong>E-mail:</strong> <a href="mailto:desenvolvimento&#64;acsn.com.br">desenvolvimento&#64;acsn.com.br</a></li>
+    <li><strong>Encarregado de dados (DPO):</strong> Vitor Nunes</li>
+    <li><strong>Solicitação de exclusão de dados:</strong> <a routerLink="/exclusao-de-dados">página específica</a></li>
+  </ul>
+
+  <p>Em caso de não atendimento, você pode reclamar perante a Autoridade Nacional de Proteção de Dados (ANPD) em <a href="https://www.gov.br/anpd/" target="_blank" rel="noopener">www.gov.br/anpd</a>.</p>
+
+  <p class="last-update">Última atualização: {{ ano }}-05-26</p>
+</article>

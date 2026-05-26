@@ -1,0 +1,119 @@
+// Layout compartilhado pelas paginas legais (privacidade, termos, exclusao-de-dados).
+// Estilo neutro, fonte legivel, max-width fixo para readability.
+
+:host {
+  display: block;
+  background: var(--bg-primary, #fff);
+  min-height: 100vh;
+  color: var(--text-primary, #1f2937);
+}
+
+.legal-header {
+  background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+  color: #fff;
+  padding: 2.5rem 1.5rem 2rem;
+
+  .header-inner {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    margin: 0 0 0.5rem;
+    font-size: 2rem;
+    font-weight: 700;
+  }
+
+  .subtitle {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 0.95rem;
+  }
+
+  .breadcrumb {
+    margin-bottom: 1rem;
+    a {
+      color: #c5cae9;
+      text-decoration: none;
+      font-size: 0.85rem;
+      &:hover { text-decoration: underline; color: #fff; }
+    }
+  }
+}
+
+.legal-content {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4rem;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: var(--text-primary, #1f2937);
+
+  h2 {
+    margin: 2rem 0 0.75rem;
+    font-size: 1.35rem;
+    color: #1a237e;
+    border-bottom: 2px solid #e0e3e8;
+    padding-bottom: 0.5rem;
+  }
+
+  h3 {
+    margin: 1.5rem 0 0.5rem;
+    font-size: 1.1rem;
+    color: #283593;
+  }
+
+  p {
+    margin: 0.75rem 0;
+  }
+
+  ul, ol {
+    margin: 0.75rem 0;
+    padding-left: 1.5rem;
+    li {
+      margin-bottom: 0.4rem;
+    }
+  }
+
+  a {
+    color: #1a237e;
+    text-decoration: underline;
+
+    &:hover { color: #283593; }
+  }
+
+  strong { color: #111827; }
+
+  code {
+    background: #f3f4f6;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 0.85em;
+    word-break: break-all;
+  }
+
+  .info-card {
+    background: #eef2ff;
+    border-left: 4px solid #1a237e;
+    padding: 0.85rem 1rem;
+    border-radius: 4px;
+    margin: 1.25rem 0;
+
+    p { margin: 0; }
+    strong { color: #1a237e; }
+  }
+
+  .last-update {
+    margin-top: 3rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e0e3e8;
+    font-size: 0.85rem;
+    color: var(--text-secondary, #6b7280);
+    font-style: italic;
+  }
+}
+
+@media (max-width: 600px) {
+  .legal-header h1 { font-size: 1.6rem; }
+  .legal-content { padding: 1.5rem 1rem 3rem; }
+}

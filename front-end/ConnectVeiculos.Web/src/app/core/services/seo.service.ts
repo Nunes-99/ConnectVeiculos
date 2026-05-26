@@ -110,6 +110,23 @@ export class SeoService {
     this.doc.head.appendChild(link);
   }
 
+  // Helper generico para paginas estaticas (termos, privacidade, etc). Define
+  // apenas titulo + meta description + canonical. Sem JSON-LD nem OG.
+  setMeta(opts: { title: string; description: string }): void {
+    this.title.setTitle(opts.title);
+    this.meta.updateTag({ name: 'description', content: opts.description });
+    this.meta.updateTag({ name: 'robots', content: 'index, follow' });
+    const origin = this.resolveOrigin();
+    const canonical = this.resolveCanonicalUrl(origin);
+    this.setCanonical(canonical);
+    this.meta.updateTag({ property: 'og:title', content: opts.title });
+    this.meta.updateTag({ property: 'og:description', content: opts.description });
+    this.meta.updateTag({ property: 'og:type', content: 'website' });
+    this.meta.updateTag({ property: 'og:url', content: canonical });
+    this.meta.updateTag({ property: 'og:site_name', content: 'ConnectVeiculos' });
+    this.meta.updateTag({ property: 'og:locale', content: 'pt_BR' });
+  }
+
   setLandingPage(): void {
     const titleText = 'ConnectVeiculos — Sistema de Gestão para Revendas de Veículos';
     const description = 'Plataforma SaaS completa para revendedores de veículos: estoque, catálogo online, leads, vendas, integrações com Google Merchant, Facebook Catalog, Mercado Livre e muito mais.';
