@@ -9,8 +9,11 @@ namespace ConnectVeiculos.API.Controllers
     [AllowAnonymous]
     public class FeedController : ControllerBase
     {
+        // Cache curto (60s) pra balancear: feeds sao puxados ~1x/hora por
+        // Facebook/Google, e mudancas no admin (preco, novo veiculo, vendido)
+        // devem refletir rapidamente. 30 min era atritoso pra debug + cadastro.
         [HttpGet("facebook")]
-        [ResponseCache(Duration = 1800)]
+        [ResponseCache(Duration = 60)]
         public async Task<IActionResult> FacebookFeed([FromServices] IFeedService feedService)
         {
             var feed = await feedService.GerarFeedFacebookAsync();
@@ -18,7 +21,7 @@ namespace ConnectVeiculos.API.Controllers
         }
 
         [HttpGet("google")]
-        [ResponseCache(Duration = 1800)]
+        [ResponseCache(Duration = 60)]
         public async Task<IActionResult> GoogleFeed([FromServices] IFeedService feedService)
         {
             var feed = await feedService.GerarFeedGoogleAsync();

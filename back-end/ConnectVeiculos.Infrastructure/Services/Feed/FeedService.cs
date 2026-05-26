@@ -43,7 +43,36 @@ namespace ConnectVeiculos.Infrastructure.Services.Feed
             var fallback = NormalizeBaseUrl(_facebookSettings?.PublicSiteUrl);
 
             var sb = new StringBuilder();
-            sb.AppendLine("id\ttitle\tdescription\tavailability\tcondition\tprice\tlink\timage_link\tbrand\tvehicle_type\tyear\tmileage.value\tmileage.unit\tcolor\taddress.city\taddress.region");
+            // Schema Facebook Vehicle Inventory (formato TSV achatado).
+            // Doc: https://developers.facebook.com/docs/marketing-api/catalog/reference#vehicle
+            // Renomes vs schema antigo: id→vehicle_id, brand→make, link→url,
+            // image_link→image.url, condition→state_of_vehicle, vehicle_type→body_style.
+            sb.AppendLine(string.Join("\t",
+                "vehicle_id",
+                "title",
+                "description",
+                "url",
+                "make",
+                "model",
+                "year",
+                "mileage.value",
+                "mileage.unit",
+                "image.url",
+                "address.addr1",
+                "address.city",
+                "address.region",
+                "address.country",
+                "address.postal_code",
+                "price",
+                "state_of_vehicle",
+                "body_style",
+                "exterior_color",
+                "vin",
+                "fuel_type",
+                "transmission",
+                "dealer_name",
+                "dealer_phone"
+            ));
 
             foreach (var v in veiculos.Where(v => v.VeiSts == "D"))
             {
@@ -62,30 +91,117 @@ namespace ConnectVeiculos.Infrastructure.Services.Feed
                 var imageUrl = imagemPrincipal != null
                     ? $"{baseUrl}/api/imagens/file?path={Uri.EscapeDataString(imagemPrincipal.ImgCaminho)}"
                     : "";
+
+                // Sem imagem o Facebook rejeita o produto no upload. Logamos e pulamos.
+                if (string.IsNullOrEmpty(imageUrl))
+                {
+                    _logger.LogWarning(
+                        "Feed Facebook: veiculo {VeiculoId} ({Marca} {Modelo}) omitido - sem imagem principal cadastrada.",
+                        v.VeiId, v.VeiMarca, v.VeiModelo);
+                    continue;
+                }
+
                 var slug = loja?.LojSlug ?? v.R_LojId.ToString();
-                var link = $"{baseUrl}/catalogo/{slug}/veiculo/{v.VeiId}";
+                var url = $"{baseUrl}/catalogo/{slug}/veiculo/{v.VeiId}";
+
+                // Title max 65 chars; trunca com sufixo curto se ultrapassar.
+                var title = $"{v.VeiMarca} {v.VeiModelo} {v.VeiAno}";
+                if (title.Length > 65) title = title.Substring(0, 62) + "...";
+
+                var description = $"{v.VeiMarca} {v.VeiModelo} {v.VeiAno}, {v.VeiCor}, {v.VeiKm:N0} km";
+                if (!string.IsNullOrWhiteSpace(v.VeiObservacao))
+                    description += ". " + v.VeiObservacao;
+                if (description.Length > 5000) description = description.Substring(0, 4997) + "...";
+
+                // Endereco completo monta com Logradouro + Numero + Bairro.
+                var endereco = string.Join(", ", new[]
+                {
+                    loja?.LojLogradouro,
+                    loja?.LojNumero,
+                    loja?.LojBairro
+                }.Where(s => !string.IsNullOrWhiteSpace(s)));
 
                 sb.AppendLine(string.Join("\t",
-                    v.VeiId,
-                    $"{v.VeiMarca} {v.VeiModelo} {v.VeiAno}",
-                    $"{v.VeiMarca} {v.VeiModelo} {v.VeiAno}, {v.VeiCor}, {v.VeiKm:N0} km",
-                    "in stock",
-                    "used",
-                    $"{v.VeiPreco:F2} BRL",
-                    link,
-                    imageUrl,
-                    v.VeiMarca,
-                    "car",
-                    v.VeiAno,
-                    v.VeiKm,
+                    Tsv(v.VeiId.ToString()),
+                    Tsv(title),
+                    Tsv(description),
+                    Tsv(url),
+                    Tsv(v.VeiMarca),
+                    Tsv(v.VeiModelo),
+                    Tsv(v.VeiAno.ToString()),
+                    Tsv(v.VeiKm.ToString()),
                     "KM",
-                    v.VeiCor ?? "",
-                    loja?.LojCidade ?? "",
-                    loja?.LojEstado ?? ""
+                    Tsv(imageUrl),
+                    Tsv(string.IsNullOrWhiteSpace(endereco) ? (loja?.LojCidade ?? "") : endereco),
+                    Tsv(loja?.LojCidade ?? ""),
+                    Tsv(loja?.LojEstado ?? ""),
+                    "BR",
+                    Tsv(loja?.LojCEP ?? ""),
+                    $"{v.VeiPreco:F2} BRL",
+                    "USED",
+                    InferirBodyStyle(v.VeiModelo),
+                    Tsv(v.VeiCor ?? ""),
+                    Tsv(v.VeiChassi ?? ""),
+                    "OTHER",
+                    "OTHER",
+                    Tsv(loja?.LojNome ?? ""),
+                    Tsv(loja?.LojWhatsApp ?? loja?.LojTel1 ?? "")
                 ));
             }
 
             return sb.ToString();
+        }
+
+        // Mapeia modelo do veiculo para body_style enumerado pela Meta.
+        // Valores aceitos: CONVERTIBLE, COUPE, HATCHBACK, MINIVAN, TRUCK, SUV,
+        // SEDAN, VAN, WAGON, OTHER. Heuristica simples por palavra-chave;
+        // quando nao reconhece, devolve OTHER (Meta aceita).
+        private static string InferirBodyStyle(string? modelo)
+        {
+            if (string.IsNullOrWhiteSpace(modelo)) return "OTHER";
+            var m = modelo.ToUpperInvariant();
+            if (m.Contains("SUV") || m.Contains("TRACKER") || m.Contains("DUSTER") ||
+                m.Contains("ECOSPORT") || m.Contains("HRV") || m.Contains("HR-V") ||
+                m.Contains("KICKS") || m.Contains("RENEGADE") || m.Contains("COMPASS") ||
+                m.Contains("CRETA") || m.Contains("T-CROSS") || m.Contains("TCROSS"))
+                return "SUV";
+            if (m.Contains("PICK") || m.Contains("HILUX") || m.Contains("S10") ||
+                m.Contains("STRADA") || m.Contains("MONTANA") || m.Contains("SAVEIRO") ||
+                m.Contains("RAM ") || m.Contains("FRONTIER") || m.Contains("AMAROK") ||
+                m.Contains("RANGER") || m.Contains("L200"))
+                return "TRUCK";
+            if (m.Contains("MINIVAN") || m.Contains("SHARAN") || m.Contains("CARAVAN") ||
+                m.Contains("DOBLO"))
+                return "MINIVAN";
+            if (m.Contains("VAN") || m.Contains("SPRINTER") || m.Contains("DUCATO") ||
+                m.Contains("MASTER"))
+                return "VAN";
+            if (m.Contains("WAGON") || m.Contains("PERUA"))
+                return "WAGON";
+            if (m.Contains("COUPE") || m.Contains("CABRIO") || m.Contains("CONVERSIVEL"))
+                return "CONVERTIBLE";
+            if (m.Contains("HATCH") || m.Contains("HB20") || m.Contains("GOL") ||
+                m.Contains(" KA") || m.Contains("KA SE") || m.Contains("FOX") ||
+                m.Contains("FIESTA") || m.Contains("UNO") || m.Contains("PALIO") ||
+                m.Contains("CELTA") || m.Contains("ONIX") && !m.Contains("PLUS") ||
+                m.Contains("YARIS HATCH") || m.Contains("POLO"))
+                return "HATCHBACK";
+            // Default sedan pra modelos populares conhecidos
+            if (m.Contains("COROLLA") || m.Contains("CIVIC") || m.Contains("JETTA") ||
+                m.Contains("CRUZE") || m.Contains("VIRTUS") || m.Contains("VOYAGE") ||
+                m.Contains("PRISMA") || m.Contains("LOGAN") || m.Contains("HB20S") ||
+                m.Contains("ONIX PLUS") || m.Contains("CITY") || m.Contains("VERSA") ||
+                m.Contains("SENTRA"))
+                return "SEDAN";
+            return "OTHER";
+        }
+
+        // Sanitiza valor pra coluna TSV: remove tabs/quebras de linha que
+        // quebrariam o parser do Facebook (1 produto por linha).
+        private static string Tsv(string? raw)
+        {
+            if (string.IsNullOrEmpty(raw)) return "";
+            return raw.Replace('\t', ' ').Replace('\n', ' ').Replace('\r', ' ').Trim();
         }
 
         public async Task<string> GerarFeedGoogleAsync()
