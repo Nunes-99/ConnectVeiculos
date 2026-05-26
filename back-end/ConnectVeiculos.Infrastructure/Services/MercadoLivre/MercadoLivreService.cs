@@ -456,7 +456,18 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
 
             var imagens = await _imagemRepository.GetByVeiculoIdAsync(veiculoId);
             var loja = await _lojaRepository.GetByIdAsync(veiculo.R_LojId);
-            var urlBase = loja?.LojUrlCatalogo?.TrimEnd('/') ?? "";
+
+             // ML precisa baixar as imagens via HTTPS publico. Loja.LojUrlCatalogo
+             // costuma estar vazio ou apontar pra localhost em dev — sem fallback,
+             // ML recebe URL relativa (/api/imagens/file?...) e fica eternamente
+             // "processando imagem". Usa PUBLIC_SITE_URL (env var, default
+             // https://connectveiculos.dev.br) como fallback robusto.
+             string urlBase = loja?.LojUrlCatalogo?.TrimEnd('/');
+             if (string.IsNullOrWhiteSpace(urlBase) || !urlBase.StartsWith("http"))
+             {
+                 urlBase = (Environment.GetEnvironmentVariable("PUBLIC_SITE_URL")
+                            ?? "https://connectveiculos.dev.br").TrimEnd('/');
+             }
 
             var pictures = imagens
                 .Where(i => i.ImgSts)
