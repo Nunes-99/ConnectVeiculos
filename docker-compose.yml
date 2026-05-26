@@ -57,11 +57,11 @@ services:
       # persistencia), sumiam na primeira recriacao do container. As thumbnails
       # quebravam com 404 logo apos qualquer deploy.
       - ./uploads/cliente:/app/uploads
-       # DataProtection keys: usadas pra cifrar tokens OAuth (ML, futuro WhatsApp/
-       # FB/Google) e o state CSRF. Default do ASP.NET grava em /root/.aspnet —
-       # sem volume, cada rebuild do container gera chaves novas e os tokens
-       # cifrados antigos viram lixo (ML "desconecta" sozinho em cada deploy).
-       - ./dpkeys:/root/.aspnet/DataProtection-Keys
+      # DataProtection keys: usadas pra cifrar tokens OAuth (ML, futuro WhatsApp/
+      # FB/Google) e o state CSRF. Default do ASP.NET grava em /root/.aspnet —
+      # sem volume, cada rebuild do container gera chaves novas e os tokens
+      # cifrados antigos viram lixo (ML "desconecta" sozinho em cada deploy).
+      - ./dpkeys:/root/.aspnet/DataProtection-Keys
     restart: unless-stopped
     deploy:
       resources:
