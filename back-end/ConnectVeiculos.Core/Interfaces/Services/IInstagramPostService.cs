@@ -10,7 +10,20 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         Task<InstagramPostConfigInfo> GetConfigAsync();
         Task SetAutoPostHabilitadoAsync(bool habilitado);
         Task<TestIntegracaoResult> TestarAsync();
-        Task PublicarVeiculoAsync(int veiculoId);
+
+        /// <summary>
+        /// Publica veiculo no feed do IG. Retorna o resultado se publicou, ou
+        /// null se pulou (auto-post desabilitado, sem credenciais, sem imagens,
+        /// rate-limit, etc). Hook deve persistir o resultado em VeiculoPublicacao.
+        /// </summary>
+        Task<PublicacaoResult?> PublicarVeiculoAsync(int veiculoId);
+
+        /// <summary>
+        /// Variante manual: publica mesmo se auto-post estiver desabilitado.
+        /// Respeita demais restricoes (credenciais, imagens, rate limit).
+        /// Usado pelo endpoint "Publicar agora" na tela de veiculos.
+        /// </summary>
+        Task<PublicacaoResult?> PublicarManualAsync(int veiculoId);
     }
 
     public class InstagramPostConfigInfo
@@ -19,5 +32,15 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         public string? BusinessAccountId { get; set; }
         public string? Username { get; set; }
         public bool AutoPostHabilitado { get; set; }
+    }
+
+    /// <summary>
+    /// Resultado de uma publicacao em rede social. Usado pra persistir em
+    /// VeiculoPublicacao (historico + impedir republicacao).
+    /// </summary>
+    public class PublicacaoResult
+    {
+        public string ExternoId { get; set; } = "";
+        public string Url { get; set; } = "";
     }
 }

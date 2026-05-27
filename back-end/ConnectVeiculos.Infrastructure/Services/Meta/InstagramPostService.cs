@@ -6,6 +6,7 @@ using ConnectVeiculos.Core.Entities.Lojas;
 using ConnectVeiculos.Core.Entities.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Configuracoes;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Lojas;
+using ConnectVeiculos.Core.Interfaces.Database.Repositories.Publicacoes;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.VeiculosImagens;
 using ConnectVeiculos.Core.Interfaces.Security;
@@ -18,9 +19,15 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
     public class InstagramPostService : IInstagramPostService
     {
         public const string KEY_AUTO_POST = "META_IG_AUTO_POST";
+        public const string PLATAFORMA = "Instagram";
 
         // Instagram Carrossel: minimo 2, maximo 10 itens. Single Photo se for 1.
         private const int MaxImagensCarrossel = 10;
+
+        // Rate limit oficial Meta: 25 publicacoes/24h por conta IG Business
+        // (https://developers.facebook.com/docs/instagram-api/reference/ig-user/media_publish).
+        // Calculado via VeiculoPublicacao (plataforma=Instagram, ATIVO, ultimas 24h).
+        private const int MaxPostsPor24h = 25;
 
         private readonly HttpClient _httpClient;
         private readonly MetaSettings _settings;
@@ -29,6 +36,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
         private readonly IVeiculoRepository _veiculoRepository;
         private readonly IVeiculoImagemRepository _imagemRepository;
         private readonly ILojaRepository _lojaRepository;
+        private readonly IVeiculoPublicacaoRepository _publicacaoRepository;
         private readonly ILogger<InstagramPostService> _logger;
 
         public InstagramPostService(
@@ -39,6 +47,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             IVeiculoRepository veiculoRepository,
             IVeiculoImagemRepository imagemRepository,
             ILojaRepository lojaRepository,
+            IVeiculoPublicacaoRepository publicacaoRepository,
             ILogger<InstagramPostService> logger)
         {
             _httpClient = httpClient;
@@ -48,6 +57,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             _veiculoRepository = veiculoRepository;
             _imagemRepository = imagemRepository;
             _lojaRepository = lojaRepository;
+            _publicacaoRepository = publicacaoRepository;
             _logger = logger;
         }
 
@@ -101,23 +111,43 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             }
         }
 
-        public async Task PublicarVeiculoAsync(int veiculoId)
+        public async Task<PublicacaoResult?> PublicarVeiculoAsync(int veiculoId)
         {
             if (!await AutoPostHabilitadoAsync())
             {
                 _logger.LogDebug("Instagram auto-post desabilitado, pulando veiculo {VeiculoId}", veiculoId);
-                return;
+                return null;
             }
+            return await PublicarInternoAsync(veiculoId, ignorarAutoPost: false);
+        }
 
+        // Publica mesmo com auto-post desabilitado. Usado pelo endpoint
+        // "Publicar agora" manual no card do veiculo.
+        public async Task<PublicacaoResult?> PublicarManualAsync(int veiculoId)
+            => await PublicarInternoAsync(veiculoId, ignorarAutoPost: true);
+
+        private async Task<PublicacaoResult?> PublicarInternoAsync(int veiculoId, bool ignorarAutoPost)
+        {
             var (token, igId) = await ResolveAsync();
             if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(igId))
             {
                 _logger.LogDebug("Instagram Business nao configurado, pulando veiculo {VeiculoId}", veiculoId);
-                return;
+                return null;
+            }
+
+            // Throttle: max 25 posts/24h por conta IG Business (limite oficial Meta).
+            // Conta TODAS as publicacoes IG do tenant nas ultimas 24h.
+            var postsRecentes = await _publicacaoRepository.CountByPlataformaUltimasHorasAsync(PLATAFORMA, 24);
+            if (postsRecentes >= MaxPostsPor24h)
+            {
+                _logger.LogWarning(
+                    "Instagram post veiculo {VeiculoId} bloqueado: {Count}/{Max} posts nas ultimas 24h (rate limit Meta)",
+                    veiculoId, postsRecentes, MaxPostsPor24h);
+                return null;
             }
 
             var veiculo = await _veiculoRepository.GetByIdAsync(veiculoId);
-            if (veiculo == null) return;
+            if (veiculo == null) return null;
 
             var imagens = (await _imagemRepository.GetByVeiculoIdAsync(veiculoId))
                 .Where(i => i.ImgSts)
@@ -126,7 +156,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             if (imagens.Count == 0)
             {
                 _logger.LogInformation("Instagram post veiculo {VeiculoId} pulado: sem imagens.", veiculoId);
-                return;
+                return null;
             }
 
             var loja = await _lojaRepository.GetByIdAsync(veiculo.R_LojId);
@@ -134,49 +164,63 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             if (baseUrl == null)
             {
                 _logger.LogWarning("Instagram post abortado: sem URL publica configurada (veiculo {VeiculoId})", veiculoId);
-                return;
+                return null;
             }
 
             // IG so aceita HTTPS. Em dev (http://localhost) o post sera rejeitado.
             if (!baseUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             {
                 _logger.LogWarning("Instagram post abortado: URL publica precisa ser HTTPS (recebido '{Url}')", baseUrl);
-                return;
+                return null;
             }
 
             var slug = loja?.LojSlug ?? veiculo.R_LojId.ToString();
+            // ?max=1440 invoca o resize on-the-fly do ImagensController (IG aceita
+            // ate 1440px lado, JPEG <= 8MB). Sem o param, imagem original pode falhar.
             var imageUrls = imagens
                 .Take(MaxImagensCarrossel)
-                .Select(i => $"{baseUrl}/api/imagens/file?path={Uri.EscapeDataString(i.ImgCaminho)}")
+                .Select(i => $"{baseUrl}/api/imagens/file?path={Uri.EscapeDataString(i.ImgCaminho)}&max=1440&format=jpeg")
                 .ToList();
 
             var legenda = MontarLegenda(veiculo, loja, baseUrl, slug);
 
             try
             {
-                if (imageUrls.Count == 1)
-                    await PublicarFotoUnicaAsync(igId, token, imageUrls[0], legenda, veiculoId);
-                else
-                    await PublicarCarrosselAsync(igId, token, imageUrls, legenda, veiculoId);
+                string? mediaId = imageUrls.Count == 1
+                    ? await PublicarFotoUnicaAsync(igId, token, imageUrls[0], legenda, veiculoId)
+                    : await PublicarCarrosselAsync(igId, token, imageUrls, legenda, veiculoId);
+
+                if (string.IsNullOrEmpty(mediaId)) return null;
+
+                // Permalink: tenta resolver pra retornar URL definitiva do post
+                // (https://instagram.com/p/{shortcode}). Falha silenciosa cai pra
+                // URL padrao baseada em IG ID (funciona pra rastrear).
+                var permalink = await ResolverPermalinkAsync(mediaId, token);
+                return new PublicacaoResult
+                {
+                    ExternoId = mediaId,
+                    Url = permalink ?? $"https://www.instagram.com/{await _configRepository.GetValorAsync(MetaOAuthService.KEY_IG_USERNAME)}/"
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao postar veiculo {VeiculoId} no Instagram", veiculoId);
+                return null;
             }
         }
 
-        private async Task PublicarFotoUnicaAsync(string igId, string token, string imageUrl, string caption, int veiculoId)
+        private async Task<string?> PublicarFotoUnicaAsync(string igId, string token, string imageUrl, string caption, int veiculoId)
         {
             var creationId = await CreateImageContainerAsync(igId, token, imageUrl, caption, isCarouselItem: false);
             if (string.IsNullOrEmpty(creationId))
             {
                 _logger.LogWarning("Instagram foto unica veiculo {VeiculoId}: falha ao criar container", veiculoId);
-                return;
+                return null;
             }
-            await PublishContainerAsync(igId, token, creationId, veiculoId);
+            return await PublishContainerAsync(igId, token, creationId, veiculoId);
         }
 
-        private async Task PublicarCarrosselAsync(string igId, string token, List<string> imageUrls, string caption, int veiculoId)
+        private async Task<string?> PublicarCarrosselAsync(string igId, string token, List<string> imageUrls, string caption, int veiculoId)
         {
             // 1. Cria 1 container por imagem (is_carousel_item=true).
             var childIds = new List<string>();
@@ -188,7 +232,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             if (childIds.Count < 2)
             {
                 _logger.LogWarning("Instagram carrossel veiculo {VeiculoId}: menos de 2 itens validos, abortando", veiculoId);
-                return;
+                return null;
             }
 
             // 2. Cria container do carrossel referenciando os children.
@@ -205,13 +249,13 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             if (!resp.IsSuccessStatusCode)
             {
                 _logger.LogWarning("Instagram carrossel container veiculo {VeiculoId} falhou: {Body}", veiculoId, body);
-                return;
+                return null;
             }
             using var doc = JsonDocument.Parse(body);
             var carrosselId = doc.RootElement.GetProperty("id").GetString() ?? "";
 
             // 3. Publica o carrossel.
-            await PublishContainerAsync(igId, token, carrosselId, veiculoId);
+            return await PublishContainerAsync(igId, token, carrosselId, veiculoId);
         }
 
         private async Task<string?> CreateImageContainerAsync(string igId, string token, string imageUrl, string? caption, bool isCarouselItem)
@@ -236,7 +280,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             return doc.RootElement.TryGetProperty("id", out var id) ? id.GetString() : null;
         }
 
-        private async Task PublishContainerAsync(string igId, string token, string creationId, int veiculoId)
+        private async Task<string?> PublishContainerAsync(string igId, string token, string creationId, int veiculoId)
         {
             var url = $"https://graph.facebook.com/{_settings.ApiVersion}/{igId}/media_publish";
             var payload = new Dictionary<string, string>
@@ -247,9 +291,26 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             var resp = await _httpClient.PostAsync(url, new FormUrlEncodedContent(payload));
             var body = await resp.Content.ReadAsStringAsync();
             if (!resp.IsSuccessStatusCode)
+            {
                 _logger.LogWarning("Instagram publish veiculo {VeiculoId} falhou: {Body}", veiculoId, body);
-            else
-                _logger.LogInformation("Instagram publish veiculo {VeiculoId}: OK", veiculoId);
+                return null;
+            }
+            _logger.LogInformation("Instagram publish veiculo {VeiculoId}: OK", veiculoId);
+            using var doc = JsonDocument.Parse(body);
+            return doc.RootElement.TryGetProperty("id", out var id) ? id.GetString() : null;
+        }
+
+        private async Task<string?> ResolverPermalinkAsync(string mediaId, string token)
+        {
+            try
+            {
+                var url = $"https://graph.facebook.com/{_settings.ApiVersion}/{mediaId}?fields=permalink&access_token={Uri.EscapeDataString(token)}";
+                var resp = await _httpClient.GetAsync(url);
+                if (!resp.IsSuccessStatusCode) return null;
+                using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+                return doc.RootElement.TryGetProperty("permalink", out var p) ? p.GetString() : null;
+            }
+            catch { return null; }
         }
 
         // Legenda IG: similar ao FB mas sem link clicavel (IG nao permite links em

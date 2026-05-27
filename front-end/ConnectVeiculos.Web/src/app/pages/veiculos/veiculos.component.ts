@@ -2,6 +2,8 @@ import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { VeiculoService, LojaService, CategoriaService, ImagemService, VeiculoImagem, ToastService, FipeService, FipeMarca, FipeModelo } from '../../core/services';
+import { IntegracaoService, MetaFeatureFlags } from '../../core/services/integracao.service';
+import { CompartilharInstagramService } from '../../core/services/compartilhar-instagram.service';
 import { Veiculo, Loja, Categoria } from '../../core/models';
 import { MaskDirective, CurrencyMaskDirective } from '../../shared/directives';
 import { PaginationComponent, ConfirmModalComponent } from '../../shared/components';
@@ -24,6 +26,16 @@ export class VeiculosComponent implements OnInit {
   private fb = inject(FormBuilder);
   private toast = inject(ToastService);
   private fipeService = inject(FipeService);
+  private integracaoService = inject(IntegracaoService);
+  private compartilharInstagram = inject(CompartilharInstagramService);
+
+  // Flag global que controla se botoes "publicar via API" aparecem (FB Page + IG).
+  // Vem do backend (MetaSettings__InstagramEnabled). Default false: botoes ocultos
+  // enquanto App Meta nao tiver Business Verification + App Review.
+  metaFlags: MetaFeatureFlags = { instagramEnabled: false, appConfigured: false, appId: '', developmentMode: false };
+  // Set de veiculoId em publicacao no momento (pra desabilitar o botao durante request).
+  publicandoIg = new Set<number>();
+  publicandoFb = new Set<number>();
 
   veiculos: Veiculo[] = [];
   veiculosPaginados: Veiculo[] = [];
@@ -225,6 +237,65 @@ export class VeiculosComponent implements OnInit {
     this.loadData();
     this.fipeService.getMarcas().subscribe({
       next: (marcas) => this.marcasFipe = marcas
+    });
+    this.integracaoService.getMetaFeatureFlags().subscribe({
+      next: (flags) => this.metaFlags = flags,
+      error: () => { /* silencioso — mantem defaults (botoes ocultos) */ }
+    });
+  }
+
+  publicarNoInstagram(veiculoId: number): void {
+    if (this.publicandoIg.has(veiculoId)) return;
+    this.publicandoIg.add(veiculoId);
+    this.integracaoService.publicarVeiculoInstagram(veiculoId).subscribe({
+      next: (r) => {
+        this.publicandoIg.delete(veiculoId);
+        this.toast.success(r?.mensagem || 'Publicado no Instagram!');
+        this.loadData();
+      },
+      error: (err) => {
+        this.publicandoIg.delete(veiculoId);
+        const msg = err?.error?.error || 'Falha ao publicar no Instagram. Veja a tela de Integrações.';
+        this.toast.error(msg);
+      }
+    });
+  }
+
+  // Compartilhamento manual: gera JPG composto (1080x1080 com preço/marca em
+  // overlay) + legenda. No celular abre Web Share API (seletor inclui IG).
+  // No desktop baixa o JPG e copia legenda. Funciona SEM API Meta, App Review
+  // ou MEI — usuario so toca "Compartilhar" no app do telefone.
+  async compartilharIg(veiculo: Veiculo): Promise<void> {
+    // Pega imagens se nao vierem com o veiculo (lista do GetAll pode nao incluir)
+    if (!veiculo.imagens || veiculo.imagens.length === 0) {
+      const imgs = await new Promise<any[]>(resolve => {
+        this.imagemService.getByVeiculo(veiculo.veiId).subscribe({
+          next: (r) => resolve(r || []),
+          error: () => resolve([])
+        });
+      });
+      veiculo.imagens = imgs;
+    }
+    const loja = this.lojas.find(l => l.lojId === veiculo.r_LojId) || null;
+    const result = await this.compartilharInstagram.compartilhar({ veiculo, loja });
+    if (result.ok) this.toast.success(result.mensagem);
+    else this.toast.error(result.mensagem);
+  }
+
+  publicarNaFacebookPage(veiculoId: number): void {
+    if (this.publicandoFb.has(veiculoId)) return;
+    this.publicandoFb.add(veiculoId);
+    this.integracaoService.publicarVeiculoFacebookPage(veiculoId).subscribe({
+      next: (r) => {
+        this.publicandoFb.delete(veiculoId);
+        this.toast.success(r?.mensagem || 'Publicado na Page Facebook!');
+        this.loadData();
+      },
+      error: (err) => {
+        this.publicandoFb.delete(veiculoId);
+        const msg = err?.error?.error || 'Falha ao publicar no Facebook. Veja a tela de Integrações.';
+        this.toast.error(msg);
+      }
     });
   }
 

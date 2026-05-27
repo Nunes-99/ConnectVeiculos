@@ -98,23 +98,32 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             }
         }
 
-        public async Task PublicarVeiculoAsync(int veiculoId)
+        public const string PLATAFORMA = "FacebookPage";
+
+        public async Task<PublicacaoResult?> PublicarVeiculoAsync(int veiculoId)
         {
             if (!await AutoPostHabilitadoAsync())
             {
                 _logger.LogDebug("Facebook auto-post desabilitado, pulando veiculo {VeiculoId}", veiculoId);
-                return;
+                return null;
             }
+            return await PublicarInternoAsync(veiculoId);
+        }
 
+        public async Task<PublicacaoResult?> PublicarManualAsync(int veiculoId)
+            => await PublicarInternoAsync(veiculoId);
+
+        private async Task<PublicacaoResult?> PublicarInternoAsync(int veiculoId)
+        {
             var (token, pageId) = await ResolvePageCredentialsAsync();
             if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(pageId))
             {
                 _logger.LogDebug("Facebook Page nao configurada, pulando veiculo {VeiculoId}", veiculoId);
-                return;
+                return null;
             }
 
             var veiculo = await _veiculoRepository.GetByIdAsync(veiculoId);
-            if (veiculo == null) return;
+            if (veiculo == null) return null;
 
             var imagens = await _imagemRepository.GetByVeiculoIdAsync(veiculoId);
             var loja = await _lojaRepository.GetByIdAsync(veiculo.R_LojId);
@@ -122,14 +131,14 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             if (baseUrl == null)
             {
                 _logger.LogWarning("Facebook Page post abortado: sem URL publica configurada (veiculo {VeiculoId})", veiculoId);
-                return;
+                return null;
             }
 
             var slug = loja?.LojSlug ?? veiculo.R_LojId.ToString();
             var linkVeiculo = $"{baseUrl}/catalogo/{slug}/veiculo/{veiculoId}";
             var imagemPrincipal = imagens.Where(i => i.ImgSts).OrderBy(i => i.ImgOrdem).FirstOrDefault();
             var imageUrl = imagemPrincipal != null
-                ? $"{baseUrl}/api/imagens/file?path={Uri.EscapeDataString(imagemPrincipal.ImgCaminho)}"
+                ? $"{baseUrl}/api/imagens/file?path={Uri.EscapeDataString(imagemPrincipal.ImgCaminho)}&max=1440&format=jpeg"
                 : "";
 
             var legenda = MontarLegenda(veiculo, loja, linkVeiculo);
@@ -151,13 +160,29 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
                 var body = await resp.Content.ReadAsStringAsync();
 
                 if (!resp.IsSuccessStatusCode)
+                {
                     _logger.LogWarning("Facebook Page post veiculo {VeiculoId} falhou: {Body}", veiculoId, body);
-                else
-                    _logger.LogInformation("Facebook Page post veiculo {VeiculoId}: OK", veiculoId);
+                    return null;
+                }
+
+                _logger.LogInformation("Facebook Page post veiculo {VeiculoId}: OK", veiculoId);
+                using var doc = JsonDocument.Parse(body);
+                // Resposta: { "id": "{page-id}_{post-id}", "post_id": "..." }
+                var postId = doc.RootElement.TryGetProperty("post_id", out var pid) ? pid.GetString()
+                           : doc.RootElement.TryGetProperty("id", out var id) ? id.GetString()
+                           : null;
+                if (string.IsNullOrEmpty(postId)) return null;
+
+                return new PublicacaoResult
+                {
+                    ExternoId = postId,
+                    Url = $"https://www.facebook.com/{postId}"
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao postar veiculo {VeiculoId} na Facebook Page", veiculoId);
+                return null;
             }
         }
 

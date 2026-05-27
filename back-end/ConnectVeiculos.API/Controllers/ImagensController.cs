@@ -2,6 +2,9 @@ using ConnectVeiculos.Application.Interfaces.Imagens;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Processing;
 
 namespace ConnectVeiculos.API.Controllers
 {
@@ -85,7 +88,11 @@ namespace ConnectVeiculos.API.Controllers
 
         [AllowAnonymous]
         [HttpGet("file")]
-        public IActionResult GetImageFile([FromQuery] string path)
+        [ResponseCache(Duration = 86400, Location = ResponseCacheLocation.Any)]
+        public async Task<IActionResult> GetImageFile(
+            [FromQuery] string path,
+            [FromQuery] int? max = null,
+            [FromQuery] string? format = null)
         {
             if (string.IsNullOrEmpty(path))
                 return NotFound();
@@ -95,8 +102,47 @@ namespace ConnectVeiculos.API.Controllers
             if (!System.IO.File.Exists(filePath))
                 return NotFound();
 
-            var contentType = GetContentType(filePath);
-            return PhysicalFile(filePath, contentType);
+            // Sem transformacao: serve direto (path do disco, zero alocacao).
+            // Default path usado por catalogo publico, ML, Google etc.
+            if (!max.HasValue && string.IsNullOrEmpty(format))
+                return PhysicalFile(filePath, GetContentType(filePath));
+
+            // Com transformacao: usado pelo Instagram/Facebook Page que precisam
+            // de JPEG <= 8MB e lado maximo 1440px. Sanitiza inputs antes.
+            var alvo = Math.Clamp(max ?? 1440, 100, 2048);
+            var fmt = (format ?? "jpeg").ToLowerInvariant();
+
+            try
+            {
+                using var image = await Image.LoadAsync(filePath);
+                if (image.Width > alvo || image.Height > alvo)
+                {
+                    image.Mutate(x => x.Resize(new ResizeOptions
+                    {
+                        Mode = ResizeMode.Max,
+                        Size = new Size(alvo, alvo)
+                    }));
+                }
+
+                var ms = new MemoryStream();
+                if (fmt == "jpeg" || fmt == "jpg")
+                {
+                    // Quality 85 da boa relacao qualidade/tamanho. IG limita 8MB;
+                    // mesmo fotos grandes ficam <2MB nesse setup.
+                    await image.SaveAsync(ms, new JpegEncoder { Quality = 85 });
+                    ms.Position = 0;
+                    return File(ms, "image/jpeg");
+                }
+
+                // Fallback: serve original se format desconhecido.
+                ms.Dispose();
+                return PhysicalFile(filePath, GetContentType(filePath));
+            }
+            catch
+            {
+                // Se decodificacao falhar (arquivo corrompido), cai pro original.
+                return PhysicalFile(filePath, GetContentType(filePath));
+            }
         }
 
         private static string GetContentType(string path)

@@ -131,6 +131,15 @@ export interface InstagramPostConfigInfo {
   autoPostHabilitado: boolean;
 }
 
+// Master switch + status do App Meta. Front usa pra (1) exibir/ocultar o card
+// Meta inteiro, (2) decidir se mostra banner "Modo Teste" vs "Live Mode".
+export interface MetaFeatureFlags {
+  instagramEnabled: boolean;
+  appConfigured: boolean;
+  appId: string;
+  developmentMode: boolean;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -263,13 +272,15 @@ export class IntegracaoService {
 
   // Feeds — sempre incluem ?tenant=<slug> para que cada loja exponha
   // somente os proprios veiculos no catalogo do Facebook/Google.
-  // Se o usuario ainda nao logou (slug indisponivel), cai no tenant default.
+  // Usa publicApiBaseUrl (URL publica) e nao baseUrl (que pode ser localhost
+  // em dev) — Facebook/Google precisam puxar o XML da internet, sem isso
+  // o feed cadastrado no Business Manager nao funciona.
   getFacebookFeedUrl(): string {
-    return `${this.baseUrl}/feed/facebook${this.tenantQuery()}`;
+    return `${environment.publicApiBaseUrl}/feed/facebook${this.tenantQuery()}`;
   }
 
   getGoogleFeedUrl(): string {
-    return `${this.baseUrl}/feed/google${this.tenantQuery()}`;
+    return `${environment.publicApiBaseUrl}/feed/google${this.tenantQuery()}`;
   }
 
   private tenantQuery(): string {
@@ -284,6 +295,10 @@ export class IntegracaoService {
 
   getMetaStatus(): Observable<MetaConnectionInfo> {
     return this.http.get<MetaConnectionInfo>(`${this.baseUrl}/integracoes/meta/status`);
+  }
+
+  getMetaFeatureFlags(): Observable<MetaFeatureFlags> {
+    return this.http.get<MetaFeatureFlags>(`${this.baseUrl}/integracoes/meta/feature-flags`);
   }
 
   listarMetaPages(): Observable<MetaPageOption[]> {
@@ -326,5 +341,15 @@ export class IntegracaoService {
 
   testarInstagram(): Observable<TestIntegracaoResult> {
     return this.http.post<TestIntegracaoResult>(`${this.baseUrl}/integracoes/instagram/test`, {});
+  }
+
+  publicarVeiculoInstagram(veiculoId: number): Observable<{ externoId: string; url: string; mensagem: string }> {
+    return this.http.post<{ externoId: string; url: string; mensagem: string }>(
+      `${this.baseUrl}/integracoes/instagram/publicar/${veiculoId}`, {});
+  }
+
+  publicarVeiculoFacebookPage(veiculoId: number): Observable<{ externoId: string; url: string; mensagem: string }> {
+    return this.http.post<{ externoId: string; url: string; mensagem: string }>(
+      `${this.baseUrl}/integracoes/facebook/page-publicar/${veiculoId}`, {});
   }
 }

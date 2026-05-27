@@ -139,10 +139,20 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                     try { await _facebookService.PublicarVeiculoAsync(id); }
                     catch (Exception ex) { _logger.LogError(ex, "Erro ao publicar veiculo {VeiculoId} no Facebook Catalog", id); }
 
-                    try { await _facebookPagePostService.PublicarVeiculoAsync(id); }
+                    try
+                    {
+                        var r = await _facebookPagePostService.PublicarVeiculoAsync(id);
+                        if (r != null)
+                            await _publicacaoRepository.CreateAsync(new VeiculoPublicacao(id, "FacebookPage", r.ExternoId, r.Url));
+                    }
                     catch (Exception ex) { _logger.LogError(ex, "Erro ao postar veiculo {VeiculoId} na Facebook Page", id); }
 
-                    try { await _instagramPostService.PublicarVeiculoAsync(id); }
+                    try
+                    {
+                        var r = await _instagramPostService.PublicarVeiculoAsync(id);
+                        if (r != null)
+                            await _publicacaoRepository.CreateAsync(new VeiculoPublicacao(id, "Instagram", r.ExternoId, r.Url));
+                    }
                     catch (Exception ex) { _logger.LogError(ex, "Erro ao postar veiculo {VeiculoId} no Instagram", id); }
 
                     try { await _googleService.PublicarVeiculoAsync(id); }

@@ -2,7 +2,7 @@ import { Component, inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { IntegracaoService, MercadoLivreContaInfo, MercadoLivreSincronizacaoResult, WhatsAppConfigInfo, EmailConfigInfo, FacebookConfigInfo, GoogleMerchantConfigInfo, TestIntegracaoResult, MetaConnectionInfo, MetaPageOption, FacebookPagePostConfigInfo, InstagramPostConfigInfo } from '../../core/services/integracao.service';
+import { IntegracaoService, MercadoLivreContaInfo, MercadoLivreSincronizacaoResult, WhatsAppConfigInfo, EmailConfigInfo, FacebookConfigInfo, GoogleMerchantConfigInfo, TestIntegracaoResult, MetaConnectionInfo, MetaPageOption, FacebookPagePostConfigInfo, InstagramPostConfigInfo, MetaFeatureFlags } from '../../core/services/integracao.service';
 import { AuthService, LojaService, ToastService } from '../../core/services';
 import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal.component';
 import { HttpClient } from '@angular/common/http';
@@ -194,6 +194,17 @@ _{{6}}_`;
   fbPageTestando = false;
   igTestando = false;
 
+  // Master switch — vem do backend (MetaSettings__InstagramEnabled). Default
+  // false: oculta o card inteiro enquanto o App Meta nao tiver passado em
+  // Business Verification + App Review. Workaround sem MEI: ligar manualmente
+  // e adicionar contas como tester no painel Meta (limite 100).
+  metaFlags: MetaFeatureFlags = {
+    instagramEnabled: false,
+    appConfigured: false,
+    appId: '',
+    developmentMode: false
+  };
+
   ngOnInit(): void {
     if (isPlatformBrowser(this.platformId)) {
       // Lidos no client porque dependem do tenant slug do localStorage,
@@ -208,8 +219,16 @@ _{{6}}_`;
     this.checkFacebookStatus();
     this.checkGoogleStatus();
     this.checkMetaStatus();
+    this.loadMetaFeatureFlags();
     this.loadVerificationCodes();
     this.carregarLojaPadrao();
+  }
+
+  private loadMetaFeatureFlags(): void {
+    this.integracaoService.getMetaFeatureFlags().subscribe({
+      next: (flags) => this.metaFlags = flags,
+      error: () => { /* silencioso — mantem defaults (card escondido) */ }
+    });
   }
 
   // ============================================================

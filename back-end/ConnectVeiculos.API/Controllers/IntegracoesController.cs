@@ -732,6 +732,27 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
         public async Task<IActionResult> GetMetaStatus([FromServices] IMetaOAuthService meta)
             => Ok(await meta.GetConnectionInfoAsync());
 
+        // Master switch consumido pelo front pra exibir/ocultar o card Meta
+        // (Facebook Page Post + Instagram). Quando false, front esconde o card
+        // inteiro. Tambem retorna se o App esta em Development Mode pra UI mostrar
+        // banner "Modo Teste". Esses valores vem de MetaSettings__InstagramEnabled
+        // e MetaSettings__AppId (vazio = nao configurado).
+        [HttpGet("meta/feature-flags")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public IActionResult GetMetaFeatureFlags([FromServices] Microsoft.Extensions.Options.IOptions<ConnectVeiculos.Infrastructure.Services.Meta.MetaSettings> opts)
+        {
+            var s = opts.Value;
+            return Ok(new
+            {
+                instagramEnabled = s.InstagramEnabled,
+                appConfigured = !string.IsNullOrWhiteSpace(s.AppId),
+                appId = s.AppId,
+                // Heuristica: se nao tem AppSecret, ainda nao configurou de verdade.
+                // Front usa pra decidir se mostra banner "Modo Teste" ou "Live Mode".
+                developmentMode = !string.IsNullOrWhiteSpace(s.AppId) && string.IsNullOrWhiteSpace(s.AppSecret)
+            });
+        }
+
         [HttpGet("meta/pages")]
         [Authorize(Roles = "Administrador,Gerente")]
         public async Task<IActionResult> ListarMetaPages([FromServices] IMetaOAuthService meta)
@@ -815,6 +836,52 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
         {
             var r = await ig.TestarAsync();
             return r.Sucesso ? Ok(r) : StatusCode(502, r);
+        }
+
+        // Publica um veiculo manualmente — ignora flag auto-post mas respeita
+        // demais restricoes (credenciais, rate limit 25/24h, sem imagens, etc).
+        // Se ja existe publicacao ATIVA pra este veiculo, marca a anterior como
+        // REMOVIDA antes de criar a nova (republicacao manual).
+        [HttpPost("instagram/publicar/{veiculoId}")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> PublicarVeiculoInstagram(
+            [FromServices] IInstagramPostService ig,
+            [FromServices] IVeiculoPublicacaoRepository pubRepo,
+            int veiculoId)
+        {
+            var r = await ig.PublicarManualAsync(veiculoId);
+            if (r == null)
+                return StatusCode(502, new { error = "Falha ao publicar. Verifique: conexão Meta, imagens, URL HTTPS, rate limit 25/24h. Veja logs pro motivo exato." });
+
+            var existente = await pubRepo.GetAtivaByVeiculoEPlataformaAsync(veiculoId, "Instagram");
+            if (existente != null)
+            {
+                existente.Remover();
+                await pubRepo.UpdateAsync(existente);
+            }
+            await pubRepo.CreateAsync(new VeiculoPublicacao(veiculoId, "Instagram", r.ExternoId, r.Url));
+            return Ok(new { externoId = r.ExternoId, url = r.Url, mensagem = "Publicado no Instagram!" });
+        }
+
+        [HttpPost("facebook/page-publicar/{veiculoId}")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> PublicarVeiculoFacebookPage(
+            [FromServices] IFacebookPagePostService fp,
+            [FromServices] IVeiculoPublicacaoRepository pubRepo,
+            int veiculoId)
+        {
+            var r = await fp.PublicarManualAsync(veiculoId);
+            if (r == null)
+                return StatusCode(502, new { error = "Falha ao publicar na Page. Verifique: conexão Meta, imagens, URL HTTPS. Veja logs pro motivo exato." });
+
+            var existente = await pubRepo.GetAtivaByVeiculoEPlataformaAsync(veiculoId, "FacebookPage");
+            if (existente != null)
+            {
+                existente.Remover();
+                await pubRepo.UpdateAsync(existente);
+            }
+            await pubRepo.CreateAsync(new VeiculoPublicacao(veiculoId, "FacebookPage", r.ExternoId, r.Url));
+            return Ok(new { externoId = r.ExternoId, url = r.Url, mensagem = "Publicado na Facebook Page!" });
         }
 
         // ==========================================

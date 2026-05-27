@@ -10,7 +10,15 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         Task<FacebookPagePostConfigInfo> GetConfigAsync();
         Task SetAutoPostHabilitadoAsync(bool habilitado);
         Task<TestIntegracaoResult> TestarAsync();
-        Task PublicarVeiculoAsync(int veiculoId);
+
+        /// <summary>
+        /// Publica veiculo na timeline da Page. Retorna resultado se publicou ou
+        /// null se pulou. Hook deve persistir em VeiculoPublicacao.
+        /// </summary>
+        Task<PublicacaoResult?> PublicarVeiculoAsync(int veiculoId);
+
+        /// <summary>Variante manual — ignora auto-post desabilitado.</summary>
+        Task<PublicacaoResult?> PublicarManualAsync(int veiculoId);
     }
 
     public class FacebookPagePostConfigInfo

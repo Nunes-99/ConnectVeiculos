@@ -730,28 +730,35 @@
     (confirmar)="confirmarDesconectar()"
     (cancelar)="cancelarDesconectar()" />
 
-  <!-- Facebook Catalog via Feed XML (FUNCIONA SEM OAUTH/MEI) -->
-  <!-- Alimenta Marketplace + Vehicle Ads + Shop on Instagram. Cada tenant
-       cola a URL no Business Manager dele uma vez; Facebook puxa 1x/dia. -->
+  <!-- Facebook Catalog via Feed XML (FUNCIONA SEM OAUTH/MEI/APP REVIEW) -->
+  <!-- Alimenta Marketplace + Vehicle Ads + Shop on Instagram + Dynamic Ads.
+       Caminho recomendado pra qualquer tenant. Cada um cola a URL no Business
+       Manager dele uma vez; Facebook puxa 1x/dia automaticamente. -->
   <div class="integracao-card">
     <div class="card-header">
       <div class="platform-info">
         <span class="platform-icon meta-icon">M</span>
         <div>
-          <h3>Facebook Catalog (Feed)</h3>
-          <p>Seus veículos no Facebook Marketplace + Catalog — sem login, atualização diária automática</p>
+          <h3>Catálogo Facebook + Instagram (Feed) <span style="background:#16a34a;color:#fff;font-size:11px;padding:2px 8px;border-radius:10px;margin-left:6px;vertical-align:middle">RECOMENDADO</span></h3>
+          <p>Veículos no Marketplace, Shop on Instagram e Vehicle Ads — sem login, sem App Review, sem MEI</p>
         </div>
       </div>
       <span class="status-badge connected">Disponível</span>
     </div>
     <div class="card-body">
-      <p>O <strong>Facebook puxa seus veículos automaticamente</strong> (1x ao dia) através de um feed público gerado pela plataforma. Não precisa fazer login, OAuth, ou App Review. Os veículos cadastrados aparecem no:</p>
+      <p>O <strong>Facebook puxa seus veículos automaticamente</strong> (1x ao dia) através de um feed público gerado pela plataforma. Esta é a forma <strong>mais simples</strong> de aparecer no ecossistema Meta — não precisa OAuth, App Review nem CNPJ. Uma única URL alimenta:</p>
       <ul>
-        <li>📦 <strong>Facebook Catalog</strong> (gerenciador de produtos da Business)</li>
-        <li>🛒 <strong>Facebook Marketplace</strong> (listagens orgânicas)</li>
+        <li>🛒 <strong>Facebook Marketplace</strong> (listagens orgânicas — gratuito)</li>
+        <li>🛍️ <strong>Shop on Instagram</strong> — vitrine "Loja" no perfil IG da sua Page (gratuito)</li>
+        <li>📦 <strong>Facebook Catalog</strong> (gerenciador de produtos da Business Manager)</li>
         <li>📢 <strong>Dynamic Ads / Vehicle Ads</strong> (anúncios pagos — opcional, paga só se rodar campanha)</li>
-        <li>🛍️ <strong>Shop on Instagram</strong> (vitrine no IG)</li>
       </ul>
+      <div class="info-block" style="background:#dbeafe;border-left:4px solid #2563eb;padding:10px 12px">
+        <p style="margin:0;color:#1e3a8a;font-size:13px">
+          <span class="material-icons" style="vertical-align:middle;font-size:18px">lightbulb</span>
+          <strong>Para a vitrine no Instagram aparecer:</strong> sua Page Facebook precisa estar vinculada a uma conta Instagram <strong>Business</strong> e o catálogo precisa estar associado a essa Page (passo final no Business Manager).
+        </p>
+      </div>
 
       <div class="feed-url-section">
         <label>URL do Feed (cole no Facebook Business Manager):</label>
@@ -788,11 +795,12 @@
     </div>
   </div>
 
-  <!-- Meta (Facebook Page Post + Instagram Post + Catalog Push API) - DESATIVADO -->
-  <!-- Aguardando o usuário abrir MEI/CNPJ pra fazer Business Verification +
-       App Review na Meta. Quando estiver liberado, remover @if (false) abaixo.
-       Detalhes em ~/.claude/.../memory/project_pendente_meta_app_review.md -->
-  @if (false) {
+  <!-- Meta (Facebook Page Post + Instagram Post + Catalog Push API)
+       Controlado por MetaSettings__InstagramEnabled (default false).
+       Quando MEI/Business Verification/App Review estiverem prontos, ligar a flag.
+       Workaround sem MEI: ligar a flag + adicionar contas como tester no painel
+       Meta (limite 100). Banner abaixo orienta o cliente. -->
+  @if (metaFlags.instagramEnabled) {
   <div class="integracao-card">
     <div class="card-header">
       <div class="platform-info">
@@ -809,6 +817,28 @@
       </span>
     </div>
     <div class="card-body">
+
+      @if (metaFlags.developmentMode) {
+        <div class="info-block" style="background:#fef3c7;border-left:4px solid #f59e0b;padding:12px;margin-bottom:16px">
+          <h4 style="color:#92400e;margin:0 0 8px 0">
+            <span class="material-icons" style="vertical-align:middle">science</span>
+            Modo Teste (Development Mode)
+          </h4>
+          <p style="margin:0 0 8px 0;color:#78350f">
+            O App Meta ainda está em <strong>Modo de Desenvolvimento</strong>. Apenas contas adicionadas como <strong>Tester</strong> no painel da Meta conseguem conectar.
+          </p>
+          <p style="margin:0 0 8px 0;color:#78350f"><strong>Para liberar a conexão de uma conta:</strong></p>
+          <ol style="margin:0 0 8px 18px;color:#78350f">
+            <li>Acesse <a href="https://developers.facebook.com/apps/{{ metaFlags.appId || '/' }}/roles/roles/" target="_blank" rel="noopener" style="color:#1d4ed8">Painel Meta → Funções do app → Funções</a></li>
+            <li>Clique em <strong>Adicionar testadores</strong> e digite o nome de usuário Facebook do cliente</li>
+            <li>Cliente recebe convite em <code>facebook.com/settings</code> e aceita</li>
+            <li>Pronto — cliente já consegue clicar em "Conectar com Facebook" abaixo</li>
+          </ol>
+          <p style="margin:0;color:#78350f;font-size:12px">
+            Posts publicados saem <strong>idênticos a posts normais</strong> — sem marca d'água, sem aviso. Limite Meta: 100 testers por App.
+          </p>
+        </div>
+      }
 
       @if (!metaConnection.userTokenDefinido) {
         <p>Conecte sua conta Facebook (Business) e escolha qual Page usar. Se a Page tiver Instagram Business vinculado, o Instagram conecta junto automaticamente.</p>

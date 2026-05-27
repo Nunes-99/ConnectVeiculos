@@ -50,5 +50,15 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework.Repositories
             _context.VeiculoPublicacoes.Update(publicacao);
             await _context.SaveChangesAsync();
         }
+
+        public async Task<int> CountByPlataformaUltimasHorasAsync(string plataforma, int horas = 24)
+        {
+            var corte = DateTime.UtcNow.AddHours(-horas);
+            return await _context.VeiculoPublicacoes
+                .Where(p => p.PubPlataforma == plataforma
+                            && p.PubDtPublicacao.HasValue
+                            && p.PubDtPublicacao.Value >= corte)
+                .CountAsync();
+        }
     }
 }
