@@ -469,10 +469,17 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
                             ?? "https://connectveiculos.dev.br").TrimEnd('/');
              }
 
-            var pictures = imagens
+             // ML exige imagens com Content-Type image/jpeg ou image/png e tem
+             // timeout curto pra baixar do source (~5-10s). Servir o arquivo bruto
+             // do disco (que pode ser HEIC do iPhone, WebP, ou JPEG de 8MB do
+             // celular) fazia o ML criar o item SEM fotos silenciosamente. Pede
+             // transformacao JPEG <=1200px ao endpoint /api/imagens/file (que ja
+             // re-encoda em quality=85) pra garantir compatibilidade + tamanho
+             // reduzido (<500KB tipico).
+             var pictures = imagens
                 .Where(i => i.ImgSts)
                 .OrderBy(i => i.ImgOrdem)
-                .Select(i => new { source = $"{urlBase}/api/imagens/file?path={Uri.EscapeDataString(i.ImgCaminho)}" })
+                .Select(i => new { source = $"{urlBase}/api/imagens/file?path={Uri.EscapeDataString(i.ImgCaminho)}&max=1200&format=jpeg" })
                 .ToList();
 
              // ML exige fotos pro listing_type gold_premium. Sem pictures, retorna
@@ -562,6 +569,26 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
             var result = JsonSerializer.Deserialize<JsonElement>(responseBody);
             var externoId = result.GetProperty("id").GetString();
             var permalink = result.GetProperty("permalink").GetString();
+
+             // ML pode aceitar o item mas falhar silenciosamente no download de
+             // todas as fotos (timeout, formato nao suportado, URL invalida). O
+             // item fica criado sem pictures e o vendedor ve um anuncio "sem
+             // imagem" no painel. Compara o que mandamos vs o que voltou pra
+             // detectar essa falha e logar com clareza.
+             var picturesEnviadas = pictures.Count;
+             var picturesAceitas = 0;
+             if (result.TryGetProperty("pictures", out var picsRetornadas) && picsRetornadas.ValueKind == JsonValueKind.Array)
+                 picturesAceitas = picsRetornadas.GetArrayLength();
+
+             if (picturesAceitas < picturesEnviadas)
+             {
+                 _logger.LogWarning(
+                     "ML aceitou {Aceitas}/{Enviadas} fotos do veiculo {VeiculoId} (item {ExternoId}). Verifique se urlBase '{UrlBase}' e' acessivel publicamente.",
+                     picturesAceitas, picturesEnviadas, veiculoId, externoId, urlBase);
+                 await LogAsync(NivelIntegracaoLog.Warning, "item.publicar.fotos-parcial",
+                     $"ML aceitou {picturesAceitas}/{picturesEnviadas} fotos do anuncio {externoId}.",
+                     new { veiculoId, externoId, picturesEnviadas, picturesAceitas, urlBase });
+             }
 
              if (isPaymentRequired)
              {
