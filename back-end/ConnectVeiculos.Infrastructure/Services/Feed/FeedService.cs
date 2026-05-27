@@ -43,10 +43,13 @@ namespace ConnectVeiculos.Infrastructure.Services.Feed
             var fallback = NormalizeBaseUrl(_facebookSettings?.PublicSiteUrl);
 
             var sb = new StringBuilder();
-            // Schema Facebook Vehicle Inventory (formato TSV achatado).
+            // Schema Facebook Vehicle Inventory (formato TSV achatado, v2 simplificado).
             // Doc: https://developers.facebook.com/docs/marketing-api/catalog/reference#vehicle
-            // Renomes vs schema antigo: id→vehicle_id, brand→make, link→url,
-            // image_link→image.url, condition→state_of_vehicle, vehicle_type→body_style.
+            //
+            // Apenas campos obrigatorios mais comuns. Versao anterior incluia opcionais
+            // (vin, fuel_type, transmission, dealer_*) que podem rejeitar com valores
+            // OTHER ou formato fora do esperado. image_link em vez de image.url
+            // porque varias docs indicam o plain. condition separado de state_of_vehicle.
             sb.AppendLine(string.Join("\t",
                 "vehicle_id",
                 "title",
@@ -57,7 +60,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Feed
                 "year",
                 "mileage.value",
                 "mileage.unit",
-                "image.url",
+                "image_link",
                 "address.addr1",
                 "address.city",
                 "address.region",
@@ -66,12 +69,9 @@ namespace ConnectVeiculos.Infrastructure.Services.Feed
                 "price",
                 "state_of_vehicle",
                 "body_style",
-                "exterior_color",
-                "vin",
-                "fuel_type",
-                "transmission",
-                "dealer_name",
-                "dealer_phone"
+                "availability",
+                "condition",
+                "exterior_color"
             ));
 
             foreach (var v in veiculos.Where(v => v.VeiSts == "D"))
@@ -136,16 +136,13 @@ namespace ConnectVeiculos.Infrastructure.Services.Feed
                     Tsv(loja?.LojCidade ?? ""),
                     Tsv(loja?.LojEstado ?? ""),
                     "BR",
-                    Tsv(loja?.LojCEP ?? ""),
+                    Tsv(SanitizarCEP(loja?.LojCEP)),
                     $"{v.VeiPreco:F2} BRL",
                     "USED",
                     InferirBodyStyle(v.VeiModelo),
-                    Tsv(v.VeiCor ?? ""),
-                    Tsv(v.VeiChassi ?? ""),
-                    "OTHER",
-                    "OTHER",
-                    Tsv(loja?.LojNome ?? ""),
-                    Tsv(loja?.LojWhatsApp ?? loja?.LojTel1 ?? "")
+                    "AVAILABLE",
+                    "USED",
+                    Tsv(v.VeiCor ?? "")
                 ));
             }
 
@@ -202,6 +199,14 @@ namespace ConnectVeiculos.Infrastructure.Services.Feed
         {
             if (string.IsNullOrEmpty(raw)) return "";
             return raw.Replace('\t', ' ').Replace('\n', ' ').Replace('\r', ' ').Trim();
+        }
+
+        // CEP do Facebook deve ser numerico puro (sem hifen). Brasileiro "13322-372"
+        // vira "13322372". Strings vazias/null mantem vazio.
+        private static string SanitizarCEP(string? cep)
+        {
+            if (string.IsNullOrWhiteSpace(cep)) return "";
+            return new string(cep.Where(char.IsDigit).ToArray());
         }
 
         public async Task<string> GerarFeedGoogleAsync()
