@@ -60,7 +60,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Feed
                 "year",
                 "mileage.value",
                 "mileage.unit",
-                "image_link",
+                "image[0].url",
                 "address.addr1",
                 "address.city",
                 "address.region",
@@ -141,7 +141,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Feed
                     "USED",
                     InferirBodyStyle(v.VeiModelo),
                     "AVAILABLE",
-                    "USED",
+                    "GOOD",
                     Tsv(v.VeiCor ?? "")
                 ));
             }
