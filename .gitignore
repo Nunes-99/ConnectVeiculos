@@ -62,3 +62,9 @@ scripts/deploy-stack.sh
 GUIA-DEPLOY-GITHUB.md
 STATUS-PROJETO.md
 .claude/
+
+# Artifacts temporarios de debug de integracoes externas
+# (relatorios de upload Meta Catalog, CSVs de importacao de teste)
+*_errors_for_feed_upload*.xlsx
+importar_veiculos*.csv
+
