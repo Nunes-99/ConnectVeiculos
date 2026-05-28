@@ -43,8 +43,8 @@ export class LandingComponent implements OnInit {
     },
     {
       icon: 'share',
-      title: 'Marketplaces em 1 clique',
-      desc: 'Publicação automática no Google Merchant (Vehicle Ads), Facebook Catalog e Mercado Livre. Edite uma vez, propaga em todos.'
+      title: 'Mercado Livre + Facebook em 1 clique',
+      desc: 'Publicação automática no Mercado Livre e catálogo conectado ao Facebook (e Instagram via vitrine). Cadastra o veículo uma vez e ele propaga.'
     },
     {
       icon: 'group',
@@ -67,11 +67,6 @@ export class LandingComponent implements OnInit {
       desc: 'Avise clientes que favoritaram quando o preço cair, quando um similar chegar e quando a venda for confirmada — por e-mail e WhatsApp.'
     },
     {
-      icon: 'request_quote',
-      title: 'Financiamento integrado',
-      desc: 'Simulações com BV e Banco Pan direto no catálogo, agilizando o fechamento sem o cliente precisar sair do anúncio.'
-    },
-    {
       icon: 'document_scanner',
       title: 'OCR de documentos',
       desc: 'Tire foto do CRLV e o sistema extrai chassi, RENAVAM, placa, ano e modelo automaticamente. Cadastro em segundos.'
@@ -92,7 +87,7 @@ export class LandingComponent implements OnInit {
     {
       numero: '03',
       titulo: 'Venda mais e melhor',
-      desc: 'Catálogo no ar, leads chegando organizados e seus veículos anunciados no Google e Facebook automaticamente.'
+      desc: 'Catálogo no ar, leads chegando organizados e seus veículos publicados no Mercado Livre e no catálogo do Facebook/Instagram automaticamente.'
     }
   ];
 
@@ -111,7 +106,7 @@ export class LandingComponent implements OnInit {
          '1 loja, 1 usuário',
          '20 leads por mês',
          'Catálogo público com SEO',
-         'Integrações ML, Facebook, Google e WhatsApp',
+         'Integrações Mercado Livre, Facebook Catalog e WhatsApp',
          'Suporte por e-mail'
        ],
        cta: 'Começar grátis'
@@ -142,8 +137,8 @@ export class LandingComponent implements OnInit {
          '2.000 leads por mês',
          'Todas as integrações',
          'Relatórios avançados',
-         'Simulação de financiamento (BV, Pan)',
-         'Suporte prioritário'
+         'Importação CSV em massa',
+         'Suporte por e-mail prioritário'
        ],
        cta: 'Assinar Pro'
      },
@@ -155,11 +150,9 @@ export class LandingComponent implements OnInit {
        recursos: [
          'Veículos, lojas e usuários ilimitados',
          'Leads ilimitados',
-         'SLA dedicado com gerente de conta',
-         'Onboarding e treinamento',
          'Integrações sob demanda',
-         'Domínio próprio no catálogo',
-         'Suporte 24/7'
+         'Importação CSV em massa',
+         'Suporte por e-mail prioritário'
        ],
        cta: 'Falar com vendas'
      }
@@ -168,19 +161,19 @@ export class LandingComponent implements OnInit {
   faqs = [
     {
       pergunta: 'O que é o ConnectVeiculos?',
-      resposta: 'É uma plataforma SaaS na nuvem feita para revendas de veículos. Em um só lugar você gerencia estoque, catálogo online, leads, test drives, vendas, financiamento e ainda publica automaticamente nos principais marketplaces (Google, Facebook, Mercado Livre).'
+      resposta: 'É uma plataforma SaaS na nuvem feita para revendas de veículos. Em um só lugar você gerencia estoque, catálogo online, leads, test drives e vendas — e publica seus veículos automaticamente no Mercado Livre, no catálogo do Facebook e na vitrine do Instagram.'
     },
     {
       pergunta: 'Preciso instalar algo no computador?',
       resposta: 'Não. Tudo funciona no navegador — Chrome, Edge, Safari ou Firefox — em qualquer computador, tablet ou celular. Sua equipe acessa de onde estiver, sem instalação e sem dor de cabeça com atualizações.'
     },
     {
-      pergunta: 'Como funcionam as integrações com Google e Facebook?',
-      resposta: 'Você autentica suas contas do Google Merchant Center e Facebook Catalog uma única vez nas configurações. A partir daí, cada veículo cadastrado, alterado ou vendido é sincronizado automaticamente nos catálogos — em tempo real, sem você fazer nada.'
+      pergunta: 'Como funcionam as integrações com Mercado Livre e Facebook?',
+      resposta: 'Mercado Livre: você autentica sua conta uma vez e cada veículo cadastrado pode ser publicado com 1 clique — com fotos, descrição e localização. Facebook e Instagram: o sistema gera um feed XML que o Facebook Catalog lê automaticamente, alimentando o Marketplace e — se você criar uma Loja no Commerce Manager — a vitrine pública no perfil da Page e do Instagram.'
     },
     {
       pergunta: 'Posso testar antes de assinar?',
-      resposta: 'Sim. O plano Starter é gratuito e permite cadastrar até 10 veículos com todas as funcionalidades essenciais. Sem cartão de crédito, sem limite de tempo enquanto você estiver testando.'
+      resposta: 'Sim. Ao se cadastrar você ganha 30 dias de trial com TODOS os recursos liberados, independente do plano que escolher. Depois do trial, o plano Free continua gratuito (até 5 veículos, 1 loja, 1 usuário). Sem cartão de crédito.'
     },
     {
       pergunta: 'Meus dados ficam seguros?',
@@ -188,7 +181,7 @@ export class LandingComponent implements OnInit {
     },
     {
       pergunta: 'Posso migrar meu estoque atual?',
-      resposta: 'Sim. Suportamos importação em massa via planilha CSV — você nos passa o arquivo, a gente importa pra você no onboarding. Veículos e fotos chegam organizados, prontos para publicar.'
+      resposta: 'Sim. O sistema suporta importação em massa via planilha CSV nos planos Pro e Enterprise — você sobe o arquivo no painel e os veículos são cadastrados em lote. Fotos podem ser adicionadas depois pelo painel ou via app.'
     }
   ];
 
