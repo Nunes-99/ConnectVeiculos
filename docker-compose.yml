@@ -56,6 +56,11 @@ services:
       - MetaSettings__AppSecret=${META_APP_SECRET:-}
       - MetaSettings__ApiVersion=${META_API_VERSION:-v18.0}
       - MetaSettings__PublicSiteUrl=${PUBLIC_SITE_URL:-https://connectveiculos.dev.br}
+      # IndexNow — protocolo aberto Bing/Yandex/DuckDuckGo crawl on-demand.
+      # Key precisa bater com o arquivo /{key}.txt servido pelo frontend.
+      - IndexNowSettings__Enabled=${INDEXNOW_ENABLED:-true}
+      - IndexNowSettings__Key=${INDEXNOW_KEY:-8818d3a30c584c3b8c5b936a120d9527}
+      - IndexNowSettings__PublicSiteUrl=${PUBLIC_SITE_URL:-https://connectveiculos.dev.br}
     volumes:
       - ./data:/app/data
       # IMPORTANTE: backend salva em /app/uploads/veiculos/... (ImagensController.cs

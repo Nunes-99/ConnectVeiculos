@@ -19,6 +19,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
         private readonly IVeiculoPublicacaoRepository _publicacaoRepository;
         private readonly ITenantContext _tenantContext;
         private readonly ILogger<InativarVeiculoUseCase> _logger;
+        private readonly IIndexNowService _indexNowService;
 
         public InativarVeiculoUseCase(
             IVeiculoRepository veiculoRepository,
@@ -29,7 +30,8 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             IGoogleMerchantService googleService,
             IVeiculoPublicacaoRepository publicacaoRepository,
             ITenantContext tenantContext,
-            ILogger<InativarVeiculoUseCase> logger)
+            ILogger<InativarVeiculoUseCase> logger,
+            IIndexNowService indexNowService)
         {
             _veiculoRepository = veiculoRepository;
             _unitOfWork = unitOfWork;
@@ -40,6 +42,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             _publicacaoRepository = publicacaoRepository;
             _tenantContext = tenantContext;
             _logger = logger;
+            _indexNowService = indexNowService;
         }
 
         public async Task Execute(int id)
@@ -58,6 +61,11 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             {
                 await _veiculoRepository.UpdateAsync(veiculo);
                 _unitOfWork.Commit();
+
+                // IndexNow — veiculo saiu do catalogo publico, pede recrawl
+                // pra remover do indice. Notifica apenas a home (sem veiculoId)
+                // pra o crawler perceber a remocao via 404.
+                _ = Task.Run(() => _indexNowService.NotifyVeiculoAsync(_tenantContext.TenantSlug, null));
 
                 // Notificar catalogo publico
                 await _catalogoHubService.NotificarAtualizacaoCatalogo(_tenantContext.TenantSlug, lojaId, "VEICULO_REMOVIDO", new

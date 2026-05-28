@@ -23,6 +23,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
         private readonly ILogger<AtualizarVeiculoUseCase> _logger;
         private readonly IFavoritoNotificacaoService _favoritoNotificacaoService;
         private readonly ITenantContext _tenantContext;
+        private readonly IIndexNowService _indexNowService;
 
         public AtualizarVeiculoUseCase(
             IVeiculoRepository veiculoRepository,
@@ -35,7 +36,8 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             IVeiculoPublicacaoRepository publicacaoRepository,
             ILogger<AtualizarVeiculoUseCase> logger,
             IFavoritoNotificacaoService favoritoNotificacaoService,
-            ITenantContext tenantContext)
+            ITenantContext tenantContext,
+            IIndexNowService indexNowService)
         {
             _veiculoRepository = veiculoRepository;
             _unitOfWork = unitOfWork;
@@ -48,6 +50,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             _logger = logger;
             _tenantContext = tenantContext;
             _favoritoNotificacaoService = favoritoNotificacaoService;
+            _indexNowService = indexNowService;
         }
 
         public async Task Execute(VeiculoInputModel inputModel)
@@ -89,6 +92,11 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             {
                 await _veiculoRepository.UpdateAsync(veiculo);
                 _unitOfWork.Commit();
+
+                // IndexNow — preço/status/foto mudou, pede recrawl. Mesmo se o
+                // veiculo virou vendido/reservado vale notificar (a listagem
+                // muda). Fire-and-forget; falha nao quebra o update.
+                _ = Task.Run(() => _indexNowService.NotifyVeiculoAsync(_tenantContext.TenantSlug, inputModel.VeiId));
 
                 // Notificar se veiculo foi reservado (usuarios internos)
                 if (statusAnterior != "R" && inputModel.VeiSts == "R")

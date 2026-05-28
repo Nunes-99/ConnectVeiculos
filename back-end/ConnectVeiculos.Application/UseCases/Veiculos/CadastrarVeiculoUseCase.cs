@@ -27,6 +27,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
         private readonly IFavoritoNotificacaoService _favoritoNotificacaoService;
         private readonly ITenantContext _tenantContext;
          private readonly ILimiteService _limiteService;
+         private readonly IIndexNowService _indexNowService;
 
         public CadastrarVeiculoUseCase(
             IVeiculoRepository veiculoRepository,
@@ -42,7 +43,8 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             ILogger<CadastrarVeiculoUseCase> logger,
             IFavoritoNotificacaoService favoritoNotificacaoService,
              ITenantContext tenantContext,
-             ILimiteService limiteService)
+             ILimiteService limiteService,
+             IIndexNowService indexNowService)
         {
             _veiculoRepository = veiculoRepository;
             _unitOfWork = unitOfWork;
@@ -58,6 +60,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             _favoritoNotificacaoService = favoritoNotificacaoService;
             _tenantContext = tenantContext;
              _limiteService = limiteService;
+             _indexNowService = indexNowService;
         }
 
         public async Task<int> Execute(VeiculoInputModel inputModel)
@@ -118,6 +121,14 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                 if (inputModel.VeiSts == "D")
                 {
                     _ = Task.Run(() => _favoritoNotificacaoService.NotificarVeiculoSimilarAsync(id));
+                }
+
+                // IndexNow — notifica Bing/Yandex/DuckDuckGo que existe nova URL
+                // (fire-and-forget; falha nao quebra o cadastro). Apenas para
+                // veiculos disponiveis no catalogo publico (sts=D).
+                if (inputModel.VeiSts == "D")
+                {
+                    _ = Task.Run(() => _indexNowService.NotifyVeiculoAsync(_tenantContext.TenantSlug, id));
                 }
 
                 // Publicar nas plataformas externas se disponivel

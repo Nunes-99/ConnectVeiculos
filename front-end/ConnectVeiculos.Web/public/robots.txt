@@ -16,4 +16,4 @@ Disallow: /logs
 Disallow: /recuperar-senha
 Disallow: /redefinir-senha
 
-Sitemap: /sitemap.xml
+Sitemap: https://connectveiculos.dev.br/sitemap.xml
