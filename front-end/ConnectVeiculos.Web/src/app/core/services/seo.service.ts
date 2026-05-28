@@ -129,7 +129,7 @@ export class SeoService {
 
   setLandingPage(): void {
     const titleText = 'ConnectVeiculos — Sistema de Gestão para Revendas de Veículos';
-    const description = 'Plataforma SaaS completa para revendedores de veículos: estoque, catálogo online, leads, vendas, integrações com Google Merchant, Facebook Catalog, Mercado Livre e muito mais.';
+    const description = 'Plataforma SaaS completa para revendedores de veículos: estoque, catálogo online, leads, vendas, publicação automática no Mercado Livre e catálogo conectado ao Facebook e Instagram.';
 
     this.title.setTitle(titleText);
     this.meta.updateTag({ name: 'description', content: description });
