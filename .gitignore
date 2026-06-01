@@ -35,6 +35,7 @@ data/
 # Secrets / configs locais com credenciais (NUNCA commitar!)
 back-end/ConnectVeiculos.API/appsettings.Development.json
 back-end/ConnectVeiculos.API/appsettings.*.local.json
+back-end/ConnectVeiculos.API/Properties/launchSettings.json
 .env
 
 # Salvaguardas extras de credenciais (case insensitive)

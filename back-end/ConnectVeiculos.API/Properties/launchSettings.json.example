@@ -1,5 +1,6 @@
-﻿{
+{
   "$schema": "http://json.schemastore.org/launchsettings.json",
+  "_comment_setup": "Copie este arquivo para launchSettings.json e preencha GEMINI_API_KEY com sua chave do Google AI Studio (https://aistudio.google.com/apikey). launchSettings.json esta no .gitignore — nunca commite secrets aqui.",
   "iisSettings": {
     "windowsAuthentication": false,
     "anonymousAuthentication": true,
@@ -19,7 +20,7 @@
         "ASPNETCORE_ENVIRONMENT": "Development",
         "TENANTS_DATA_DIR": "data",
         "DEFAULT_TENANT_DATABASE_FILE": "ConnectVeiculos.db",
-        "GEMINI_API_KEY": "AIzaSyBxDv6Z7ABkQtWHYaqD60W8g3BEExCzx_w"
+        "GEMINI_API_KEY": ""
       }
     },
     "https": {
