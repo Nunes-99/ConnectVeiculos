@@ -1,5 +1,9 @@
 # ConnectVeiculos
 
+**Demo no ar:** [connectveiculos.dev.br](https://connectveiculos.dev.br)
+
+> Codigo publicado para fins de portfolio. Uso comercial requer autorizacao — ver [LICENSE](./LICENSE).
+
 Sistema **multi-tenant** de gestao para revendas de veiculos: catalogo publico SEO + admin (RBAC) + integracoes com Mercado Livre, Facebook Catalog, Google Merchant e WhatsApp Business.
 
 ## Stack
