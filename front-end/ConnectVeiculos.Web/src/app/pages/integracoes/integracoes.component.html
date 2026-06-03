@@ -88,8 +88,8 @@
     </div>
   </div>
 
-  <!-- WhatsApp Business - DESATIVADO temporariamente, implementar depois -->
-  @if (false) {
+  <!-- WhatsApp Business -->
+  @if (true) {
   <div class="integracao-card">
     <div class="card-header">
       <div class="platform-info">
@@ -148,8 +148,8 @@
   </div>
   }
 
-  <!-- Modal de configuração WhatsApp - DESATIVADO -->
-  @if (false) {
+  <!-- Modal de configuração WhatsApp -->
+  @if (true) {
   @if (showWaConfigModal) {
     <div class="modal-overlay">
       <div class="modal modal-lg">
@@ -255,8 +255,8 @@
   }
   }
 
-  <!-- Modal desconectar WhatsApp - DESATIVADO -->
-  @if (false) {
+  <!-- Modal desconectar WhatsApp -->
+  @if (true) {
   <app-confirm-modal
     [show]="showWaDesconectarModal"
     titulo="Desconectar WhatsApp Business?"
@@ -1302,8 +1302,8 @@
   <!-- Google Gemini OCR (scanner de CRLV) - card oculto.
        Todos os tenants usam a chave configurada via variavel de ambiente GEMINI_API_KEY no servidor. -->
 
-  <!-- Modal templates WhatsApp - DESATIVADO -->
-  @if (false) {
+  <!-- Modal templates WhatsApp -->
+  @if (true) {
   @if (showWaTemplatesModal) {
     <div class="modal-overlay">
       <div class="modal modal-lg">
