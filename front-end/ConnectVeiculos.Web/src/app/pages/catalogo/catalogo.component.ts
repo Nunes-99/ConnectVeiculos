@@ -1,9 +1,9 @@
 import { Component, inject, OnInit, OnDestroy, PLATFORM_ID } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { isPlatformBrowser, Location } from '@angular/common';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Subscription, SubscriptionLike } from 'rxjs';
 import { Title } from '@angular/platform-browser';
 import { AuthService, CatalogoService, ImagemService, TestDriveService, LeadService, FavoritoService, ToastService } from '../../core/services';
 import { SeoService } from '../../core/services/seo.service';
@@ -44,6 +44,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   private favoritoService = inject(FavoritoService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private location = inject(Location);
   private titleService = inject(Title);
   private toast = inject(ToastService);
   private seoService = inject(SeoService);
@@ -69,6 +70,14 @@ export class CatalogoComponent implements OnInit, OnDestroy {
 
   // Subscriptions
   private routeSubscription: Subscription | null = null;
+  private locationSubscription: SubscriptionLike | null = null;
+  // Evita loop: quando o modal fecha por causa do botao Voltar do navegador,
+  // nao devemos empurrar/voltar historico de novo.
+  private fechandoPorHistorico = false;
+  // So volta no historico se fomos nos que empurramos a entrada. Quem chega
+  // direto pelo link compartilhado (ou pelo Google) nao tem pra onde voltar
+  // dentro do site — um location.back() ali jogaria a pessoa pra fora.
+  private empurrouHistorico = false;
 
   // Real-time
   private hubConnection: signalR.HubConnection | null = null;
@@ -193,10 +202,31 @@ export class CatalogoComponent implements OnInit, OnDestroy {
       }
     });
 
+    // Fallback pra quando o catalogo e' acessado sem slug na rota (tenant vindo
+    // do subdominio): ai a URL compartilhavel e' /catalogo?veiculo=123.
+    const veiculoQuery = this.route.snapshot.queryParamMap.get('veiculo');
+    if (veiculoQuery && /^\d+$/.test(veiculoQuery)) {
+      this.autoOpenVeiculoId = Number(veiculoQuery);
+    }
+
+    if (isPlatformBrowser(this.platformId)) {
+      // Botao Voltar do navegador fecha o modal em vez de sair do catalogo.
+      this.locationSubscription = this.location.subscribe(() => {
+        if (!this.showDetalhes) return;
+        const url = this.location.path();
+        const aindaEmVeiculo = /\/veiculo\/\d+/.test(url) || /[?&]veiculo=\d+/.test(url);
+        if (!aindaEmVeiculo) {
+          this.fechandoPorHistorico = true;
+          this.fecharDetalhes();
+          this.fechandoPorHistorico = false;
+        }
+      });
+    }
   }
 
   ngOnDestroy(): void {
     this.routeSubscription?.unsubscribe();
+    this.locationSubscription?.unsubscribe();
     this.pararSignalR();
   }
 
@@ -356,6 +386,17 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   }
 
   // Detalhes
+  /**
+   * URL publica do veiculo aberto. Com slug na rota usa o caminho canonico
+   * (que o Google ja indexa); sem slug — catalogo servido por subdominio —
+   * cai na query string, que resolve o tenant do mesmo jeito.
+   */
+  private urlDoVeiculo(veiculoId: number): string {
+    return this.tenantSlug
+      ? `/catalogo/${this.tenantSlug}/veiculo/${veiculoId}`
+      : `/catalogo?veiculo=${veiculoId}`;
+  }
+
   abrirDetalhes(veiculo: CatalogoVeiculo): void {
     this.veiculoSelecionado = veiculo;
     this.detalhesImagemIndex = 0;
@@ -363,14 +404,38 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     this.showDetalhes = true;
     if (isPlatformBrowser(this.platformId)) {
       document.body.style.overflow = 'hidden';
+
+      // location.go em vez de router.navigate: muda a URL e cria a entrada no
+      // historico sem re-executar a rota — o router recarregaria o catalogo
+      // inteiro (e reconectaria o SignalR) so pra abrir um modal.
+      const url = this.urlDoVeiculo(veiculo.veiId);
+      if (this.location.path() !== url) {
+        this.location.go(url);
+        this.empurrouHistorico = true;
+      }
     }
   }
 
   fecharDetalhes(): void {
+    const estavaAberto = this.showDetalhes;
     this.showDetalhes = false;
     this.veiculoSelecionado = null;
     if (isPlatformBrowser(this.platformId)) {
       document.body.style.overflow = '';
+
+      // Desfaz a entrada criada ao abrir, pra que fechar pelo X e voltar pelo
+      // navegador cheguem no mesmo lugar. Quando o fechamento JA veio do
+      // historico, mexer de novo empurraria o usuario pra fora do catalogo.
+      if (estavaAberto && !this.fechandoPorHistorico) {
+        if (this.empurrouHistorico) {
+          this.location.back();
+        } else {
+          // Chegou direto na URL do veiculo: troca pela do catalogo sem criar
+          // entrada nova, pra nao prender a pessoa num ciclo de Voltar.
+          this.location.replaceState(this.tenantSlug ? `/catalogo/${this.tenantSlug}` : '/catalogo');
+        }
+      }
+      this.empurrouHistorico = false;
     }
   }
 
