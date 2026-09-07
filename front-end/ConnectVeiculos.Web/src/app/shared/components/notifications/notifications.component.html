@@ -1,5 +1,6 @@
 <div class="notifications-container">
-  <button class="notification-trigger" (click)="toggleDropdown()" [class.has-notifications]="naoLidas > 0">
+  <button class="notification-trigger" (click)="toggleDropdown()" [class.has-notifications]="naoLidas > 0"
+          [attr.aria-label]="naoLidas > 0 ? 'Notificações (' + naoLidas + ' não lidas)' : 'Notificações'">
     <span class="material-icons">notifications</span>
     @if (naoLidas > 0) {
       <span class="badge">{{ naoLidas > 99 ? '99+' : naoLidas }}</span>

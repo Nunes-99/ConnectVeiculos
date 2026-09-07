@@ -34,15 +34,15 @@
         }
       </div>
       <div class="filtro-acoes">
-        <button class="btn-secondary" (click)="limparFiltros()">
-          <span class="material-icons">clear</span>
+        <button class="btn-secondary" (click)="limparFiltros()" aria-label="Limpar filtros">
+          <span class="material-icons" aria-hidden="true">clear</span>
           <span>Limpar</span>
         </button>
       </div>
     </div>
     <div class="filtro-selects">
       <div class="filtro-grupo">
-        <select [(ngModel)]="filtroLoja" (change)="aplicarFiltros()">
+        <select [(ngModel)]="filtroLoja" (change)="aplicarFiltros()" aria-label="Filtrar por loja">
           <option [ngValue]="null">Todas as lojas</option>
           @for (loja of lojas; track loja.lojId) {
             <option [ngValue]="loja.lojId">{{ loja.lojNome }}</option>
@@ -50,7 +50,7 @@
         </select>
       </div>
       <div class="filtro-grupo">
-        <select [(ngModel)]="filtroCategoria" (change)="aplicarFiltros()">
+        <select [(ngModel)]="filtroCategoria" (change)="aplicarFiltros()" aria-label="Filtrar por categoria">
           <option [ngValue]="null">Todas as categorias</option>
           @for (categoria of categorias; track categoria.catId) {
             <option [ngValue]="categoria.catId">{{ categoria.catNome }}</option>
@@ -58,7 +58,7 @@
         </select>
       </div>
       <div class="filtro-grupo">
-        <select [(ngModel)]="filtroStatus" (change)="aplicarFiltros()">
+        <select [(ngModel)]="filtroStatus" (change)="aplicarFiltros()" aria-label="Filtrar por status">
           <option value="">Todos os status</option>
           <option value="D">Disponível</option>
           <option value="V">Vendido</option>

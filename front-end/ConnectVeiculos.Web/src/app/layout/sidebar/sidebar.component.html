@@ -46,8 +46,9 @@
           <span class="material-icons">storefront</span>
           <span>Catálogo Público</span>
         </button>
-        <button class="btn-copiar" (click)="copiarLinkCatalogo()" title="Copiar link do catálogo">
-          <span class="material-icons">{{ linkCopiado ? 'check' : 'content_copy' }}</span>
+        <button class="btn-copiar" (click)="copiarLinkCatalogo()" title="Copiar link do catálogo"
+                [attr.aria-label]="linkCopiado ? 'Link do catálogo copiado' : 'Copiar link do catálogo'">
+          <span class="material-icons" aria-hidden="true">{{ linkCopiado ? 'check' : 'content_copy' }}</span>
         </button>
       </div>
       @if (linkCopiado) {

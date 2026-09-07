@@ -323,7 +323,7 @@
           <h3>Vendas por Período</h3>
           <div class="chart-filter">
             <label>Período:</label>
-            <select [(ngModel)]="periodoVendas" (change)="onPeriodoChange()">
+            <select [(ngModel)]="periodoVendas" (change)="onPeriodoChange()" aria-label="Período das vendas">
               <option [value]="7">7 dias</option>
               <option [value]="15">15 dias</option>
               <option [value]="30">30 dias</option>
@@ -351,7 +351,7 @@
           <h3>Faturamento Mensal</h3>
           <div class="chart-filter">
             <label>Ano:</label>
-            <select [(ngModel)]="anoFaturamento" (change)="onAnoChange()">
+            <select [(ngModel)]="anoFaturamento" (change)="onAnoChange()" aria-label="Ano do faturamento">
               @for (ano of anosDisponiveis; track ano) {
                 <option [value]="ano">{{ ano }}</option>
               }

@@ -9,7 +9,7 @@
           <div class="cat-navbar-logo-icon"><span class="material-icons">directions_car</span></div>
         }
         <div class="cat-navbar-title">
-          <strong>{{ loja?.lojNome || 'Catálogo de Veículos' }}</strong>
+          <h1>{{ loja?.lojNome || 'Catálogo de Veículos' }}</h1>
           @if (loja?.lojEndereco) {
             <small>{{ loja!.lojCidade }}/{{ loja!.lojEstado }}</small>
           }
@@ -83,7 +83,7 @@
       }
     </div>
     <div class="toolbar-right">
-      <select class="cat-sort-select" [(ngModel)]="ordenacao" (change)="filtrarPorTexto()">
+      <select class="cat-sort-select" [(ngModel)]="ordenacao" (change)="filtrarPorTexto()" aria-label="Ordenar veículos">
         <option value="">Mais recentes</option>
         <option value="preco_asc">Menor preço</option>
         <option value="preco_desc">Maior preço</option>
@@ -91,10 +91,12 @@
         <option value="ano_asc">Mais antigos</option>
         <option value="km_asc">Menor km</option>
       </select>
-      <button class="toolbar-btn view-toggle" [class.active]="viewMode === 'grid'" (click)="viewMode = 'grid'">
+      <button class="toolbar-btn view-toggle" [class.active]="viewMode === 'grid'" (click)="viewMode = 'grid'"
+              aria-label="Ver em grade" [attr.aria-pressed]="viewMode === 'grid'">
         <span class="material-icons">grid_view</span>
       </button>
-      <button class="toolbar-btn view-toggle" [class.active]="viewMode === 'list'" (click)="viewMode = 'list'">
+      <button class="toolbar-btn view-toggle" [class.active]="viewMode === 'list'" (click)="viewMode = 'list'"
+              aria-label="Ver em lista" [attr.aria-pressed]="viewMode === 'list'">
         <span class="material-icons">view_list</span>
       </button>
     </div>
@@ -111,7 +113,7 @@
       @if (lojas.length > 1 && !lojaSlug) {
         <div class="filtro-grupo">
           <label>Loja</label>
-          <select [ngModel]="filtroLojaId || ''" (ngModelChange)="onLojaFiltroChange($event)">
+          <select [ngModel]="filtroLojaId || ''" (ngModelChange)="onLojaFiltroChange($event)" aria-label="Filtrar por loja">
             <option value="">Todas as lojas</option>
             @for (l of lojas; track l.lojId) {
               <option [value]="l.lojId">{{ l.lojNome }}</option>
@@ -121,7 +123,7 @@
       }
       <div class="filtro-grupo">
         <label>Marca</label>
-        <select [(ngModel)]="marcaSelecionada" (change)="loadCatalogo()">
+        <select [(ngModel)]="marcaSelecionada" (change)="loadCatalogo()" aria-label="Filtrar por marca">
           <option value="">Todas as marcas</option>
           @for (marca of filtros.marcas; track marca) {
             <option [value]="marca">{{ marca }}</option>
@@ -138,7 +140,7 @@
       </div>
       <div class="filtro-grupo">
         <label>Categoria</label>
-        <select [(ngModel)]="categoriaSelecionada" (change)="filtrarPorTexto()">
+        <select [(ngModel)]="categoriaSelecionada" (change)="filtrarPorTexto()" aria-label="Filtrar por categoria">
           <option value="">Todas as categorias</option>
           @for (cat of categorias; track cat) {
             <option [value]="cat">{{ cat }}</option>

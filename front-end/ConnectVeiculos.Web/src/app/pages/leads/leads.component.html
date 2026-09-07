@@ -82,7 +82,7 @@
   <div class="filtros-bar">
     <div class="filtro-grupo">
       <label>Status</label>
-      <select [(ngModel)]="filtroStatus" (change)="loadData()">
+      <select [(ngModel)]="filtroStatus" (change)="loadData()" aria-label="Filtrar por status">
         <option value="">Todos</option>
         <option value="NOVO">Novos</option>
         <option value="CONTATO">Em Contato</option>
@@ -93,7 +93,7 @@
     </div>
     <div class="filtro-grupo">
       <label>Origem</label>
-      <select [(ngModel)]="filtroOrigem" (change)="loadData()">
+      <select [(ngModel)]="filtroOrigem" (change)="loadData()" aria-label="Filtrar por origem">
         <option value="">Todas as origens</option>
         <option value="WHATSAPP_CATALOGO">WhatsApp Catálogo</option>
         <option value="WHATSAPP_DETALHE">WhatsApp Detalhe</option>
@@ -190,7 +190,8 @@
               <td data-label="Origem"><span class="badge-origem">{{ getOrigemLabel(lead.leaOrigem) }}</span></td>
               <td data-label="Status">
                 <select [ngModel]="lead.leaStatus" (ngModelChange)="atualizarStatus(lead.leaId, $event)"
-                        class="status-select" [class]="'sel-' + lead.leaStatus">
+                        class="status-select" [class]="'sel-' + lead.leaStatus"
+                        [attr.aria-label]="'Status do lead ' + (lead.leaNomeCliente || lead.leaId)">
                   <option value="NOVO">Novo</option>
                   <option value="CONTATO">Em Contato</option>
                   <option value="NEGOCIANDO">Negociando</option>
