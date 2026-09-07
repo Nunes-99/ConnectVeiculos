@@ -29,9 +29,15 @@ namespace ConnectVeiculos.API.Controllers
             return Ok(imagens);
         }
 
+        // Limites do upload. Antes era [DisableRequestSizeLimit] +
+        // MultipartBodyLengthLimit = long.MaxValue: qualquer usuario autenticado
+        // podia encher o disco da VM (Free Tier tem pouco espaco).
+        private const long TamanhoMaximoBytes = 15 * 1024 * 1024; // 15 MB
+        private const int LadoMaximoPx = 1920;
+
         [HttpPost("veiculo/{veiculoId}")]
-        [DisableRequestSizeLimit]
-        [RequestFormLimits(MultipartBodyLengthLimit = long.MaxValue)]
+        [RequestSizeLimit(TamanhoMaximoBytes)]
+        [RequestFormLimits(MultipartBodyLengthLimit = TamanhoMaximoBytes)]
         public async Task<IActionResult> UploadImagem(
             [FromServices] IUploadImagemVeiculoUseCase uploadImagemUseCase,
             int veiculoId,
@@ -40,30 +46,56 @@ namespace ConnectVeiculos.API.Controllers
             if (arquivo == null || arquivo.Length == 0)
                 return BadRequest("Arquivo não enviado.");
 
-            // Validar tipo de arquivo
+            if (arquivo.Length > TamanhoMaximoBytes)
+                return BadRequest($"Arquivo muito grande. Maximo {TamanhoMaximoBytes / (1024 * 1024)} MB.");
+
             var extensoesPermitidas = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
             var extensao = Path.GetExtension(arquivo.FileName).ToLowerInvariant();
 
             if (!extensoesPermitidas.Contains(extensao))
                 return BadRequest("Tipo de arquivo não permitido. Use JPG, PNG, GIF ou WEBP.");
 
-            // Criar pasta se nao existir
             var uploadPath = Path.Combine(_environment.ContentRootPath, "uploads", "veiculos", veiculoId.ToString());
             if (!Directory.Exists(uploadPath))
                 Directory.CreateDirectory(uploadPath);
 
-            // Gerar nome unico para o arquivo
-            var nomeArquivo = $"{Guid.NewGuid()}{extensao}";
-            var caminhoCompleto = Path.Combine(uploadPath, nomeArquivo);
-            var caminhoRelativo = $"/uploads/veiculos/{veiculoId}/{nomeArquivo}";
+            string caminhoRelativo;
 
-            // Salvar arquivo
-            using (var stream = new FileStream(caminhoCompleto, FileMode.Create))
+            try
             {
-                await arquivo.CopyToAsync(stream);
+                // Decodificar com ImageSharp faz as vezes de validacao de conteudo:
+                // extensao .png num executavel/HTML nao passa daqui. Antes a checagem
+                // era so pela extensao do nome do arquivo.
+                using var image = await Image.LoadAsync(arquivo.OpenReadStream());
+
+                // Redimensiona o que vier maior que LadoMaximoPx. Foto de celular
+                // tem 4000px+ e ia inteira pro catalogo publico.
+                if (image.Width > LadoMaximoPx || image.Height > LadoMaximoPx)
+                {
+                    image.Mutate(x => x.Resize(new ResizeOptions
+                    {
+                        Mode = ResizeMode.Max,
+                        Size = new Size(LadoMaximoPx, LadoMaximoPx)
+                    }));
+                }
+
+                // Normaliza tudo pra JPEG: formato unico simplifica o catalogo e
+                // corta metadados (inclusive GPS da foto original).
+                var nomeArquivo = $"{Guid.NewGuid()}.jpg";
+                var caminhoCompleto = Path.Combine(uploadPath, nomeArquivo);
+                caminhoRelativo = $"/uploads/veiculos/{veiculoId}/{nomeArquivo}";
+
+                await image.SaveAsJpegAsync(caminhoCompleto, new JpegEncoder { Quality = 85 });
+            }
+            catch (UnknownImageFormatException)
+            {
+                return BadRequest("Arquivo não é uma imagem válida.");
+            }
+            catch (InvalidImageContentException)
+            {
+                return BadRequest("Imagem corrompida ou ilegível.");
             }
 
-            // Registrar no banco
             var imagem = await uploadImagemUseCase.Execute(veiculoId, caminhoRelativo);
             return CreatedAtAction(nameof(ConsultarImagens), new { veiculoId }, imagem);
         }

@@ -1,4 +1,4 @@
-using ConnectVeiculos.Infrastructure.IoC;
+﻿using ConnectVeiculos.Infrastructure.IoC;
 using ConnectVeiculos.Infrastructure.Hubs;
 using ConnectVeiculos.API.Extensions;
 using ConnectVeiculos.API.Filters;
@@ -54,6 +54,33 @@ builder.Services.AddControllers(options =>
 {
     options.Filters.Add<ValidationFilter>();
      options.Filters.Add<ConnectVeiculos.API.Filters.LimitePlanoExceptionFilter>();
+});
+
+// Upload acima do limite estoura durante o model binding do multipart, entao o
+// erro vira ModelState e nunca chega no ErrorHandlingMiddleware. Sem este
+// tratamento o usuario recebe "Failed to read the request form. Request body
+// too large. The max request body size is 15728640 bytes" — em ingles e falando
+// em bytes.
+builder.Services.Configure<Microsoft.AspNetCore.Mvc.ApiBehaviorOptions>(options =>
+{
+    var padrao = options.InvalidModelStateResponseFactory;
+
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var corpoGrande = context.ModelState.Values
+            .SelectMany(v => v.Errors)
+            .Any(e => e.ErrorMessage.Contains("Request body too large", StringComparison.OrdinalIgnoreCase));
+
+        if (corpoGrande)
+        {
+            return new Microsoft.AspNetCore.Mvc.ObjectResult(new { error = "Arquivo muito grande. O tamanho máximo é 15 MB." })
+            {
+                StatusCode = StatusCodes.Status413PayloadTooLarge
+            };
+        }
+
+        return padrao(context);
+    };
 });
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddEndpointsApiExplorer();
