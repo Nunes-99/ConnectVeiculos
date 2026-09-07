@@ -8,6 +8,7 @@ import { Title } from '@angular/platform-browser';
 import { AuthService, CatalogoService, ImagemService, TestDriveService, LeadService, FavoritoService, ToastService } from '../../core/services';
 import { SeoService } from '../../core/services/seo.service';
 import { CurrencyMaskDirective } from '../../shared/directives';
+import { TelefonePipe } from '../../shared/pipes';
 import { CatalogoVeiculo, CatalogoFiltro, CatalogoLoja, CatalogoLojaResumo } from '../../core/models';
 import * as signalR from '@microsoft/signalr';
 import { environment } from '../../../environments/environment';
@@ -31,7 +32,7 @@ const NO_IMAGE_PLACEHOLDER = `data:image/svg+xml;base64,${btoa(`<svg xmlns="http
 @Component({
   selector: 'app-catalogo',
   standalone: true,
-  imports: [CommonModule, FormsModule, CurrencyMaskDirective],
+  imports: [CommonModule, FormsModule, CurrencyMaskDirective, TelefonePipe],
   templateUrl: './catalogo.component.html',
   styleUrl: './catalogo.component.scss'
 })
@@ -191,6 +192,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
         this.iniciarSignalR();
       }
     });
+
   }
 
   ngOnDestroy(): void {

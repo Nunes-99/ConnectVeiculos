@@ -165,7 +165,7 @@
                 }
               </td>
               <td data-label="Veículo"><strong>{{ td.veiculoNome || '-' }}</strong></td>
-              <td data-label="Telefone">{{ td.tdrTelefone || '-' }}</td>
+              <td data-label="Telefone">{{ (td.tdrTelefone | telefone) || '-' }}</td>
               <td data-label="Data">{{ td.tdrDataAgendamento | date:'dd/MM/yyyy' }}</td>
               <td data-label="Horário">{{ td.tdrHorario || '-' }}</td>
               <td data-label="Status">

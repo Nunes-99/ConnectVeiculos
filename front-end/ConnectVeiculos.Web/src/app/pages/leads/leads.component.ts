@@ -2,11 +2,12 @@ import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LeadService, Lead } from '../../core/services';
+import { TelefonePipe } from '../../shared/pipes';
 
 @Component({
   selector: 'app-leads',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TelefonePipe],
   templateUrl: './leads.component.html',
   styleUrl: './leads.component.scss'
 })

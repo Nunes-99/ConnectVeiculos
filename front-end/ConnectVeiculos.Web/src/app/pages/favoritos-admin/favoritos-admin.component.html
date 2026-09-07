@@ -152,7 +152,7 @@
               <tr>
                 <td data-label="Nome"><strong>{{ v.nome || 'Visitante' }}</strong></td>
                 <td data-label="E-mail">{{ v.email }}</td>
-                <td data-label="Telefone">{{ v.telefone || '-' }}</td>
+                <td data-label="Telefone">{{ (v.telefone | telefone) || '-' }}</td>
                 <td data-label="Favoritos">
                   <span class="fav-count">
                     <span class="material-icons">favorite</span>

@@ -42,7 +42,7 @@
             <tr>
               <td data-label="Nome">{{ loja.lojNome }}</td>
               <td data-label="Cidade/Estado">{{ loja.lojCidade }} / {{ loja.lojEstado }}</td>
-              <td data-label="Telefone">{{ loja.lojTel1 || '-' }}</td>
+              <td data-label="Telefone">{{ (loja.lojTel1 | telefone) || '-' }}</td>
               <td data-label="E-mail">{{ loja.lojEmail || '-' }}</td>
               <td data-label="Status">
                 <span class="badge" [class.active]="loja.lojSts" [class.inactive]="!loja.lojSts">

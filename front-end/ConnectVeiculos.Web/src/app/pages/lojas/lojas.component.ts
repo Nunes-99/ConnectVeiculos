@@ -10,11 +10,12 @@ import { MaskDirective } from '../../shared/directives';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal.component';
 import { DocumentoValidator } from '../../shared/validators/documento.validator';
+import { TelefonePipe } from '../../shared/pipes';
 
 @Component({
   selector: 'app-lojas',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, MaskDirective, PaginationComponent, ConfirmModalComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, MaskDirective, PaginationComponent, ConfirmModalComponent, TelefonePipe],
   templateUrl: './lojas.component.html',
   styleUrl: './lojas.component.scss'
 })

@@ -186,7 +186,7 @@
                   <br><span class="text-muted">{{ lead.leaEmail }}</span>
                 }
               </td>
-              <td data-label="Telefone">{{ lead.leaTelefone || '-' }}</td>
+              <td data-label="Telefone">{{ (lead.leaTelefone | telefone) || '-' }}</td>
               <td data-label="Origem"><span class="badge-origem">{{ getOrigemLabel(lead.leaOrigem) }}</span></td>
               <td data-label="Status">
                 <select [ngModel]="lead.leaStatus" (ngModelChange)="atualizarStatus(lead.leaId, $event)"

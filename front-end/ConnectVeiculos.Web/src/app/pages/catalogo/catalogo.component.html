@@ -19,7 +19,7 @@
         @if (loja?.lojTel1) {
           <a [href]="'tel:' + loja!.lojTel1" class="cat-nav-btn">
             <span class="material-icons">phone</span>
-            <span class="cat-nav-btn-text">{{ loja!.lojTel1 }}</span>
+            <span class="cat-nav-btn-text">{{ loja!.lojTel1 | telefone }}</span>
           </a>
         }
         @if (loja?.lojInstagram) {
@@ -263,7 +263,7 @@
         @if (loja.lojTel1) {
           <a [href]="'tel:' + loja.lojTel1" class="footer-link">
             <span class="material-icons">phone</span>
-            {{ loja.lojTel1 }}
+            {{ loja.lojTel1 | telefone }}
           </a>
         }
         @if (loja.lojWhatsApp) {

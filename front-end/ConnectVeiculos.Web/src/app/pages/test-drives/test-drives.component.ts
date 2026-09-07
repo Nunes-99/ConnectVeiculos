@@ -2,11 +2,12 @@ import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TestDriveService, TestDrive, ToastService } from '../../core/services';
+import { TelefonePipe } from '../../shared/pipes';
 
 @Component({
   selector: 'app-test-drives',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TelefonePipe],
   templateUrl: './test-drives.component.html',
   styleUrl: './test-drives.component.scss'
 })
