@@ -1,6 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PlanoService, MeuPlano, PlanoPublico, ToastService } from '../../core/services';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-plano',
@@ -47,7 +48,7 @@ export class PlanoComponent implements OnInit {
   }
 
   contatarUpgrade(planoNome: string): void {
-    const tel = '5511999999999'; // TODO: configurar telefone real do suporte
+    const tel = environment.suporteWhatsApp;
     const msg = encodeURIComponent(
       `Olá! Sou ${this.meu?.tenantNome} e quero fazer upgrade para o plano ${planoNome}.`);
     window.open(`https://wa.me/${tel}?text=${msg}`, '_blank');

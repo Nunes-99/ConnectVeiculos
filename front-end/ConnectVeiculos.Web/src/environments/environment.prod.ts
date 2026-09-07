@@ -7,5 +7,9 @@ export const environment = {
   siteBaseUrl: 'https://connectveiculos.dev.br',
   // URL absoluta publica usada para feeds (FB Catalog, Google Merchant) que
   // precisam ser puxados por crawlers externos.
-  publicApiBaseUrl: 'https://connectveiculos.dev.br/api'
+  publicApiBaseUrl: 'https://connectveiculos.dev.br/api',
+  // WhatsApp do suporte, em E.164 sem o '+' (formato que o wa.me espera).
+  // Fica aqui pra trocar sem mexer em codigo — antes estava fixo no
+  // componente do plano, e era um numero ficticio em producao.
+  suporteWhatsApp: '5511953179948'
 };
