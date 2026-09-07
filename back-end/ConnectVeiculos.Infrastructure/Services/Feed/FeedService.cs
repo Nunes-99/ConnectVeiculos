@@ -1,9 +1,11 @@
-using System.Text;
+﻿using System.Text;
 using System.Xml.Linq;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Lojas;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.VeiculosImagens;
+using ConnectVeiculos.Core.Catalogo;
 using ConnectVeiculos.Core.Interfaces.Services;
+using ConnectVeiculos.Core.Interfaces.Tenancy;
 using ConnectVeiculos.Infrastructure.Services.Facebook;
 using ConnectVeiculos.Infrastructure.Services.Google;
 using Microsoft.Extensions.Logging;
@@ -20,13 +22,16 @@ namespace ConnectVeiculos.Infrastructure.Services.Feed
         private readonly FacebookCatalogSettings _facebookSettings;
         private readonly ILogger<FeedService> _logger;
 
+        private readonly ITenantContext _tenantContext;
+
         public FeedService(
             ILojaRepository lojaRepository,
             IVeiculoRepository veiculoRepository,
             IVeiculoImagemRepository imagemRepository,
             IOptions<GoogleMerchantSettings> googleSettings,
             IOptions<FacebookCatalogSettings> facebookSettings,
-            ILogger<FeedService> logger)
+            ILogger<FeedService> logger,
+            ITenantContext tenantContext)
         {
             _lojaRepository = lojaRepository;
             _veiculoRepository = veiculoRepository;
@@ -34,6 +39,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Feed
             _googleSettings = googleSettings.Value;
             _facebookSettings = facebookSettings.Value;
             _logger = logger;
+            _tenantContext = tenantContext;
         }
 
         public async Task<string> GerarFeedFacebookAsync()
@@ -101,8 +107,8 @@ namespace ConnectVeiculos.Infrastructure.Services.Feed
                     continue;
                 }
 
-                var slug = loja?.LojSlug ?? v.R_LojId.ToString();
-                var url = $"{baseUrl}/catalogo/{slug}/veiculo/{v.VeiId}";
+                var slug = _tenantContext.IsResolved ? _tenantContext.TenantSlug : null;
+                var url = CatalogoUrl.Veiculo(baseUrl, slug, v.VeiId);
 
                 // Title max 65 chars; trunca com sufixo curto se ultrapassar.
                 var title = $"{v.VeiMarca} {v.VeiModelo} {v.VeiAno}";
@@ -238,8 +244,8 @@ namespace ConnectVeiculos.Infrastructure.Services.Feed
                 var imageUrl = imagemPrincipal != null
                     ? $"{baseUrl}/api/imagens/file?path={Uri.EscapeDataString(imagemPrincipal.ImgCaminho)}"
                     : "";
-                var slug = loja?.LojSlug ?? v.R_LojId.ToString();
-                var link = $"{baseUrl}/catalogo/{slug}/veiculo/{v.VeiId}";
+                var slug = _tenantContext.IsResolved ? _tenantContext.TenantSlug : null;
+                var link = CatalogoUrl.Veiculo(baseUrl, slug, v.VeiId);
 
                 var item = new XElement("item",
                     new XElement(g + "id", v.VeiId),

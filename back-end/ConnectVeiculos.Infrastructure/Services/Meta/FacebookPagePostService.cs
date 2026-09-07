@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
@@ -9,7 +9,9 @@ using ConnectVeiculos.Core.Interfaces.Database.Repositories.Lojas;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.VeiculosImagens;
 using ConnectVeiculos.Core.Interfaces.Security;
+using ConnectVeiculos.Core.Catalogo;
 using ConnectVeiculos.Core.Interfaces.Services;
+using ConnectVeiculos.Core.Interfaces.Tenancy;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -28,6 +30,8 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
         private readonly ILojaRepository _lojaRepository;
         private readonly ILogger<FacebookPagePostService> _logger;
 
+        private readonly ITenantContext _tenantContext;
+
         public FacebookPagePostService(
             HttpClient httpClient,
             IOptions<MetaSettings> settings,
@@ -36,7 +40,8 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             IVeiculoRepository veiculoRepository,
             IVeiculoImagemRepository imagemRepository,
             ILojaRepository lojaRepository,
-            ILogger<FacebookPagePostService> logger)
+            ILogger<FacebookPagePostService> logger,
+            ITenantContext tenantContext)
         {
             _httpClient = httpClient;
             _settings = settings.Value;
@@ -46,6 +51,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             _imagemRepository = imagemRepository;
             _lojaRepository = lojaRepository;
             _logger = logger;
+            _tenantContext = tenantContext;
         }
 
         public async Task<bool> IsConfiguredAsync()
@@ -134,8 +140,8 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
                 return null;
             }
 
-            var slug = loja?.LojSlug ?? veiculo.R_LojId.ToString();
-            var linkVeiculo = $"{baseUrl}/catalogo/{slug}/veiculo/{veiculoId}";
+            var slug = _tenantContext.IsResolved ? _tenantContext.TenantSlug : null;
+            var linkVeiculo = CatalogoUrl.Veiculo(baseUrl, slug, veiculoId);
             var imagemPrincipal = imagens.Where(i => i.ImgSts).OrderBy(i => i.ImgOrdem).FirstOrDefault();
             var imageUrl = imagemPrincipal != null
                 ? $"{baseUrl}/api/imagens/file?path={Uri.EscapeDataString(imagemPrincipal.ImgCaminho)}&max=1440&format=jpeg"

@@ -1,3 +1,4 @@
+﻿using ConnectVeiculos.Core.Catalogo;
 using ConnectVeiculos.Core.Interfaces.Services;
 using QRCoder;
 
@@ -20,10 +21,9 @@ namespace ConnectVeiculos.Infrastructure.Services.QrCode
             return Convert.ToBase64String(bytes);
         }
 
-        public byte[] GerarQrCodeVeiculo(int veiculoId, string baseUrl)
+        public byte[] GerarQrCodeVeiculo(int veiculoId, string baseUrl, string tenantSlug)
         {
-            var url = $"{baseUrl.TrimEnd('/')}/catalogo/veiculo/{veiculoId}";
-            return GerarQrCode(url);
+            return GerarQrCode(CatalogoUrl.Veiculo(baseUrl, tenantSlug, veiculoId));
         }
     }
 }

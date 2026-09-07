@@ -1,6 +1,9 @@
+﻿using ConnectVeiculos.Core.Catalogo;
 using ConnectVeiculos.Core.Interfaces.Email;
 using ConnectVeiculos.Core.Interfaces.Services;
+using ConnectVeiculos.Core.Interfaces.Tenancy;
 using ConnectVeiculos.Infrastructure.Database.EntityFramework;
+using ConnectVeiculos.Core.Entities.Lojas;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -10,16 +13,32 @@ namespace ConnectVeiculos.Infrastructure.Services.Notificacao
     {
         private readonly ConnectVeiculosDbContext _context;
         private readonly IEmailService _emailService;
+        private readonly ITenantContext _tenantContext;
         private readonly ILogger<FavoritoNotificacaoService> _logger;
 
         public FavoritoNotificacaoService(
             ConnectVeiculosDbContext context,
             IEmailService emailService,
+            ITenantContext tenantContext,
             ILogger<FavoritoNotificacaoService> logger)
         {
             _context = context;
             _emailService = emailService;
+            _tenantContext = tenantContext;
             _logger = logger;
+        }
+
+        /// <summary>
+        /// Monta o link publico do veiculo. A rota Angular e'
+        /// /catalogo/{tenantSlug}/veiculo/{id} — sem o slug do TENANT (nao o da
+        /// loja) o router cai no wildcard e joga o visitante na landing page.
+        /// </summary>
+        private string MontarLinkVeiculo(Loja loja, int veiculoId)
+        {
+            var baseUrl = loja?.LojUrlCatalogo ?? "https://connectveiculos.dev.br";
+            var tenantSlug = _tenantContext.IsResolved ? _tenantContext.TenantSlug : null;
+
+            return CatalogoUrl.Veiculo(baseUrl, tenantSlug, veiculoId);
         }
 
         public async Task NotificarPrecoAlteradoAsync(int veiculoId, decimal precoAntigo, decimal precoNovo)
@@ -44,8 +63,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Notificacao
                     .ToListAsync();
 
                 var descricao = $"{veiculo.VeiMarca} {veiculo.VeiModelo} {veiculo.VeiAno}";
-                var baseUrl = (loja?.LojUrlCatalogo ?? "https://connectveiculos.dev.br").TrimEnd('/');
-                var link = $"{baseUrl}/catalogo/veiculo/{veiculoId}";
+                var link = MontarLinkVeiculo(loja, veiculoId);
 
                 foreach (var f in favoritos)
                 {
@@ -95,8 +113,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Notificacao
                 var loja = await _context.Lojas.AsNoTracking()
                     .FirstOrDefaultAsync(l => l.LojId == veiculo.R_LojId);
                 var descricao = $"{veiculo.VeiMarca} {veiculo.VeiModelo} {veiculo.VeiAno}";
-                var baseUrl = (loja?.LojUrlCatalogo ?? "https://connectveiculos.dev.br").TrimEnd('/');
-                var link = $"{baseUrl}/catalogo/veiculo/{veiculoId}";
+                var link = MontarLinkVeiculo(loja, veiculoId);
 
                 foreach (var dest in emailsParaNotificar)
                 {

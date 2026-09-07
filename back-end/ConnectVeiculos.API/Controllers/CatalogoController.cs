@@ -1,5 +1,7 @@
-using ConnectVeiculos.Application.Interfaces.Catalogo;
+﻿using ConnectVeiculos.Application.Interfaces.Catalogo;
+using ConnectVeiculos.Core.Catalogo;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Lojas;
+using ConnectVeiculos.Core.Interfaces.Tenancy;
 using ConnectVeiculos.Infrastructure.Cache;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -19,10 +21,12 @@ namespace ConnectVeiculos.API.Controllers
     public class CatalogoController : ControllerBase
     {
         private readonly ICacheService _cacheService;
+        private readonly ITenantContext _tenantContext;
 
-        public CatalogoController(ICacheService cacheService)
+        public CatalogoController(ICacheService cacheService, ITenantContext tenantContext)
         {
             _cacheService = cacheService;
+            _tenantContext = tenantContext;
         }
 
         /// <summary>
@@ -115,8 +119,11 @@ namespace ConnectVeiculos.API.Controllers
         [HttpGet("veiculo/{veiculoId}/qrcode")]
         public IActionResult GerarQrCodeUrl(int veiculoId, [FromQuery] int? lojaId = null)
         {
+            // O segmento da rota e' o slug do TENANT — lojaId aqui gerava
+            // /catalogo/3/veiculo/7, que nao casa com rota nenhuma.
             var baseUrl = $"{Request.Scheme}://{Request.Host}";
-            var url = lojaId.HasValue ? $"{baseUrl}/catalogo/{lojaId}/veiculo/{veiculoId}" : $"{baseUrl}/catalogo?veiculo={veiculoId}";
+            var slug = _tenantContext.IsResolved ? _tenantContext.TenantSlug : null;
+            var url = CatalogoUrl.Veiculo(baseUrl, slug, veiculoId);
             return Ok(new { url, veiculoId, lojaId });
         }
 

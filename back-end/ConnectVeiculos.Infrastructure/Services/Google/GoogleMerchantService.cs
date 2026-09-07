@@ -1,11 +1,13 @@
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Configuracoes;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Lojas;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.VeiculosImagens;
+using ConnectVeiculos.Core.Catalogo;
 using ConnectVeiculos.Core.Interfaces.Services;
+using ConnectVeiculos.Core.Interfaces.Tenancy;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -30,6 +32,8 @@ namespace ConnectVeiculos.Infrastructure.Services.Google
         private string? _cachedAccessToken;
         private DateTime _tokenExpiration;
 
+        private readonly ITenantContext _tenantContext;
+
         public GoogleMerchantService(
             HttpClient httpClient,
             IOptions<GoogleMerchantSettings> settings,
@@ -37,7 +41,8 @@ namespace ConnectVeiculos.Infrastructure.Services.Google
             IVeiculoRepository veiculoRepository,
             IVeiculoImagemRepository imagemRepository,
             ILojaRepository lojaRepository,
-            IConfiguracaoSistemaRepository configRepository)
+            IConfiguracaoSistemaRepository configRepository,
+            ITenantContext tenantContext)
         {
             _httpClient = httpClient;
             _settings = settings.Value;
@@ -46,6 +51,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Google
             _imagemRepository = imagemRepository;
             _lojaRepository = lojaRepository;
             _configRepository = configRepository;
+            _tenantContext = tenantContext;
         }
 
         // Precedencia: env var > database (ConfiguracaoSistema) > appsettings.json
@@ -209,7 +215,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Google
                     veiculoId, veiculo.R_LojId, loja?.LojUrlCatalogo, _settings?.PublicSiteUrl);
                 return;
             }
-            var slug = loja?.LojSlug ?? veiculo.R_LojId.ToString();
+            var slug = _tenantContext.IsResolved ? _tenantContext.TenantSlug : null;
 
             var imagemPrincipal = imagens.Where(i => i.ImgSts).OrderBy(i => i.ImgOrdem).FirstOrDefault();
             var imageUrl = imagemPrincipal != null
@@ -228,7 +234,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Google
                 offerId = veiculoId.ToString(),
                 title = $"{veiculo.VeiMarca} {veiculo.VeiModelo} {veiculo.VeiAno}",
                  description = MontarDescricaoRica(veiculo, loja),
-                link = $"{baseUrl}/catalogo/{slug}/veiculo/{veiculoId}",
+                link = CatalogoUrl.Veiculo(baseUrl, slug, veiculoId),
                 imageLink = imageUrl,
                 contentLanguage = "pt",
                 targetCountry = "BR",

@@ -1,5 +1,6 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
+using ConnectVeiculos.Core.Catalogo;
 using ConnectVeiculos.Core.Interfaces.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -42,9 +43,9 @@ namespace ConnectVeiculos.Infrastructure.Services.Seo
              // Notifica sempre a home do catalogo (lista mudou) e, se houver,
              // a pagina especifica do veiculo. IndexNow aceita ate 10k URLs
              // por payload, entao 2 por vez e' insignificante.
-             var urls = new List<string> { $"{baseUrl}/catalogo/{tenantSlug}" };
+             var urls = new List<string> { CatalogoUrl.Listagem(baseUrl, tenantSlug) };
              if (veiculoId.HasValue)
-                 urls.Add($"{baseUrl}/catalogo/{tenantSlug}/veiculo/{veiculoId.Value}");
+                 urls.Add(CatalogoUrl.Veiculo(baseUrl, tenantSlug, veiculoId.Value));
 
              var payload = new
              {

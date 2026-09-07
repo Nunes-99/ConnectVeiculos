@@ -1,4 +1,5 @@
-using ConnectVeiculos.Core.Interfaces.Services;
+﻿using ConnectVeiculos.Core.Interfaces.Services;
+using ConnectVeiculos.Core.Interfaces.Tenancy;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -15,11 +16,15 @@ namespace ConnectVeiculos.API.Controllers
     public class QrCodeController : ControllerBase
     {
         private readonly IQrCodeService _qrCodeService;
+        private readonly ITenantContext _tenantContext;
 
-        public QrCodeController(IQrCodeService qrCodeService)
+        public QrCodeController(IQrCodeService qrCodeService, ITenantContext tenantContext)
         {
             _qrCodeService = qrCodeService;
+            _tenantContext = tenantContext;
         }
+
+        private string TenantSlug => _tenantContext.IsResolved ? _tenantContext.TenantSlug : null;
 
         /// <summary>
         /// Gera QR Code para um veiculo (retorna imagem PNG)
@@ -30,7 +35,7 @@ namespace ConnectVeiculos.API.Controllers
         public IActionResult GetQrCodeVeiculo(int veiculoId, [FromQuery] string baseUrl = null)
         {
             var url = baseUrl ?? $"{Request.Scheme}://{Request.Host}";
-            var qrCode = _qrCodeService.GerarQrCodeVeiculo(veiculoId, url);
+            var qrCode = _qrCodeService.GerarQrCodeVeiculo(veiculoId, url, TenantSlug);
             return File(qrCode, "image/png");
         }
 
@@ -43,7 +48,7 @@ namespace ConnectVeiculos.API.Controllers
         public IActionResult GetQrCodeVeiculoBase64(int veiculoId, [FromQuery] string baseUrl = null)
         {
             var url = baseUrl ?? $"{Request.Scheme}://{Request.Host}";
-            var qrCode = _qrCodeService.GerarQrCodeVeiculo(veiculoId, url);
+            var qrCode = _qrCodeService.GerarQrCodeVeiculo(veiculoId, url, TenantSlug);
             var base64 = Convert.ToBase64String(qrCode);
             return Ok(new { qrCode = $"data:image/png;base64,{base64}" });
         }

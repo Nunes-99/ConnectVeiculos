@@ -1,10 +1,12 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
+using ConnectVeiculos.Core.Catalogo;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Configuracoes;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Lojas;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.VeiculosImagens;
 using ConnectVeiculos.Core.Interfaces.Services;
+using ConnectVeiculos.Core.Interfaces.Tenancy;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -27,6 +29,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Facebook
         private readonly IVeiculoImagemRepository _imagemRepository;
         private readonly ILojaRepository _lojaRepository;
         private readonly IConfiguracaoSistemaRepository _configRepository;
+        private readonly ITenantContext _tenantContext;
 
         public FacebookCatalogService(
             HttpClient httpClient,
@@ -35,7 +38,8 @@ namespace ConnectVeiculos.Infrastructure.Services.Facebook
             IVeiculoRepository veiculoRepository,
             IVeiculoImagemRepository imagemRepository,
             ILojaRepository lojaRepository,
-            IConfiguracaoSistemaRepository configRepository)
+            IConfiguracaoSistemaRepository configRepository,
+            ITenantContext tenantContext)
         {
             _httpClient = httpClient;
             _settings = settings.Value;
@@ -44,6 +48,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Facebook
             _imagemRepository = imagemRepository;
             _lojaRepository = lojaRepository;
             _configRepository = configRepository;
+            _tenantContext = tenantContext;
         }
 
         // Precedencia: env var > database (ConfiguracaoSistema) > appsettings.json
@@ -179,7 +184,17 @@ namespace ConnectVeiculos.Infrastructure.Services.Facebook
                     veiculoId, veiculo.R_LojId, loja?.LojUrlCatalogo, _settings?.PublicSiteUrl);
                 return;
             }
-            var slug = loja?.LojSlug ?? veiculo.R_LojId.ToString();
+            // A rota publica e' /catalogo/{tenantSlug}/veiculo/{id} — o slug e' do
+            // TENANT, nao da loja (ver catalogo.component.ts). Com LojSlug aqui o
+            // link caia no wildcard do router e levava o comprador pra landing.
+            var slug = _tenantContext.IsResolved ? _tenantContext.TenantSlug : null;
+            if (string.IsNullOrWhiteSpace(slug))
+            {
+                _logger.LogWarning(
+                    "Facebook publicar veiculo {VeiculoId} abortado: tenant nao resolvido, link do anuncio ficaria quebrado.",
+                    veiculoId);
+                return;
+            }
 
             var imagemPrincipal = imagens.Where(i => i.ImgSts).OrderBy(i => i.ImgOrdem).FirstOrDefault();
             var imageUrl = imagemPrincipal != null
@@ -202,7 +217,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Facebook
                             title = $"{veiculo.VeiMarca} {veiculo.VeiModelo} {veiculo.VeiAno}",
                             description = $"{veiculo.VeiMarca} {veiculo.VeiModelo} {veiculo.VeiAno}, {veiculo.VeiCor}, {veiculo.VeiKm:N0} km",
                             image_link = imageUrl,
-                            link = $"{baseUrl}/catalogo/{slug}/veiculo/{veiculoId}",
+                            link = CatalogoUrl.Veiculo(baseUrl, slug, veiculoId),
                             brand = veiculo.VeiMarca,
                             vehicle_type = "car",
                             year = veiculo.VeiAno,
