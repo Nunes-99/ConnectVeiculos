@@ -1,4 +1,4 @@
-using ConnectVeiculos.Application.InputModels.Veiculos;
+﻿using ConnectVeiculos.Application.InputModels.Veiculos;
 using ConnectVeiculos.Application.Interfaces.Veiculos;
 using ConnectVeiculos.Core.Entities.Publicacoes;
 using ConnectVeiculos.Core.Entities.Veiculos;
@@ -28,6 +28,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
         private readonly ITenantContext _tenantContext;
          private readonly ILimiteService _limiteService;
          private readonly IIndexNowService _indexNowService;
+         private readonly ITenantBackgroundRunner _backgroundRunner;
 
         public CadastrarVeiculoUseCase(
             IVeiculoRepository veiculoRepository,
@@ -44,7 +45,8 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             IFavoritoNotificacaoService favoritoNotificacaoService,
              ITenantContext tenantContext,
              ILimiteService limiteService,
-             IIndexNowService indexNowService)
+             IIndexNowService indexNowService,
+             ITenantBackgroundRunner backgroundRunner)
         {
             _veiculoRepository = veiculoRepository;
             _unitOfWork = unitOfWork;
@@ -61,6 +63,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             _tenantContext = tenantContext;
              _limiteService = limiteService;
              _indexNowService = indexNowService;
+             _backgroundRunner = backgroundRunner;
         }
 
         public async Task<int> Execute(VeiculoInputModel inputModel)
@@ -120,7 +123,9 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                 // Notificar quem favoritou veiculos similares (fire-and-forget)
                 if (inputModel.VeiSts == "D")
                 {
-                    _ = Task.Run(() => _favoritoNotificacaoService.NotificarVeiculoSimilarAsync(id));
+                    _backgroundRunner.Enqueue<IFavoritoNotificacaoService>(
+                        s => s.NotificarVeiculoSimilarAsync(id),
+                        $"notificar veiculo similar {id}");
                 }
 
                 // IndexNow — notifica Bing/Yandex/DuckDuckGo que existe nova URL
@@ -128,7 +133,10 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                 // veiculos disponiveis no catalogo publico (sts=D).
                 if (inputModel.VeiSts == "D")
                 {
-                    _ = Task.Run(() => _indexNowService.NotifyVeiculoAsync(_tenantContext.TenantSlug, id));
+                    var slugParaIndexNow = _tenantContext.TenantSlug;
+                    _backgroundRunner.Enqueue<IIndexNowService>(
+                        s => s.NotifyVeiculoAsync(slugParaIndexNow, id),
+                        $"IndexNow veiculo {id}");
                 }
 
                 // Publicar nas plataformas externas se disponivel

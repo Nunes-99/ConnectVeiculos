@@ -1,4 +1,4 @@
-using ConnectVeiculos.Application.Interfaces.Veiculos;
+﻿using ConnectVeiculos.Application.Interfaces.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Database.Common;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Publicacoes;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
@@ -20,6 +20,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
         private readonly ITenantContext _tenantContext;
         private readonly ILogger<InativarVeiculoUseCase> _logger;
         private readonly IIndexNowService _indexNowService;
+        private readonly ITenantBackgroundRunner _backgroundRunner;
 
         public InativarVeiculoUseCase(
             IVeiculoRepository veiculoRepository,
@@ -31,7 +32,8 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             IVeiculoPublicacaoRepository publicacaoRepository,
             ITenantContext tenantContext,
             ILogger<InativarVeiculoUseCase> logger,
-            IIndexNowService indexNowService)
+            IIndexNowService indexNowService,
+            ITenantBackgroundRunner backgroundRunner)
         {
             _veiculoRepository = veiculoRepository;
             _unitOfWork = unitOfWork;
@@ -43,6 +45,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             _tenantContext = tenantContext;
             _logger = logger;
             _indexNowService = indexNowService;
+            _backgroundRunner = backgroundRunner;
         }
 
         public async Task Execute(int id)
@@ -65,7 +68,10 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                 // IndexNow — veiculo saiu do catalogo publico, pede recrawl
                 // pra remover do indice. Notifica apenas a home (sem veiculoId)
                 // pra o crawler perceber a remocao via 404.
-                _ = Task.Run(() => _indexNowService.NotifyVeiculoAsync(_tenantContext.TenantSlug, null));
+                var slugParaIndexNow = _tenantContext.TenantSlug;
+                _backgroundRunner.Enqueue<IIndexNowService>(
+                    s => s.NotifyVeiculoAsync(slugParaIndexNow, null),
+                    "IndexNow catalogo (veiculo inativado)");
 
                 // Notificar catalogo publico
                 await _catalogoHubService.NotificarAtualizacaoCatalogo(_tenantContext.TenantSlug, lojaId, "VEICULO_REMOVIDO", new

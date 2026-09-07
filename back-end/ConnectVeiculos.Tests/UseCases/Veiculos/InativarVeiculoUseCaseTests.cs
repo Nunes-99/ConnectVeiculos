@@ -43,7 +43,8 @@ namespace ConnectVeiculos.Tests.UseCases.Veiculos
                 _publicacaoRepositoryMock.Object,
                  tenantContextMock.Object,
                 NullLogger<InativarVeiculoUseCase>.Instance,
-                 new Mock<IIndexNowService>().Object);
+                 new Mock<IIndexNowService>().Object,
+                 new Mock<ITenantBackgroundRunner>().Object);
         }
 
         [Fact]

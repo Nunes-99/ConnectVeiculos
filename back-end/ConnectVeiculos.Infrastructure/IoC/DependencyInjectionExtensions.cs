@@ -1,4 +1,4 @@
-using ConnectVeiculos.Application.Interfaces.Acessos;
+﻿using ConnectVeiculos.Application.Interfaces.Acessos;
 using ConnectVeiculos.Application.Interfaces.Auth;
 using ConnectVeiculos.Core.Interfaces.Tenancy;
 using ConnectVeiculos.Infrastructure.Tenancy;
@@ -105,6 +105,9 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.AddScoped<ITenantContext, TenantContext>();
             services.AddScoped<ITenantConnectionFactory, TenantConnectionFactory>();
             services.AddSingleton<TenantsMigrationsRunner>();
+            // Scoped porque le o ITenantContext da request atual pra copiar o
+            // tenant antes de abrir o escopo novo do trabalho em background.
+            services.AddScoped<ITenantBackgroundRunner, TenantBackgroundRunner>();
             // ===== fim tenancy
 
             // Email Service

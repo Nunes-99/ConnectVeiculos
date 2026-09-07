@@ -50,7 +50,8 @@ namespace ConnectVeiculos.Tests.UseCases.Veiculos
                  new Mock<IFavoritoNotificacaoService>().Object,
                  new Mock<ITenantContext>().Object,
                  new Mock<ILimiteService>().Object,
-                 new Mock<IIndexNowService>().Object);
+                 new Mock<IIndexNowService>().Object,
+                 new Mock<ITenantBackgroundRunner>().Object);
         }
 
         [Fact]

@@ -1,4 +1,4 @@
-using ConnectVeiculos.Application.InputModels.Veiculos;
+﻿using ConnectVeiculos.Application.InputModels.Veiculos;
 using ConnectVeiculos.Application.Interfaces.Veiculos;
 using ConnectVeiculos.Core.Entities.Publicacoes;
 using ConnectVeiculos.Core.Interfaces.Database.Common;
@@ -24,6 +24,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
         private readonly IFavoritoNotificacaoService _favoritoNotificacaoService;
         private readonly ITenantContext _tenantContext;
         private readonly IIndexNowService _indexNowService;
+        private readonly ITenantBackgroundRunner _backgroundRunner;
 
         public AtualizarVeiculoUseCase(
             IVeiculoRepository veiculoRepository,
@@ -37,7 +38,8 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             ILogger<AtualizarVeiculoUseCase> logger,
             IFavoritoNotificacaoService favoritoNotificacaoService,
             ITenantContext tenantContext,
-            IIndexNowService indexNowService)
+            IIndexNowService indexNowService,
+            ITenantBackgroundRunner backgroundRunner)
         {
             _veiculoRepository = veiculoRepository;
             _unitOfWork = unitOfWork;
@@ -51,6 +53,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             _tenantContext = tenantContext;
             _favoritoNotificacaoService = favoritoNotificacaoService;
             _indexNowService = indexNowService;
+            _backgroundRunner = backgroundRunner;
         }
 
         public async Task Execute(VeiculoInputModel inputModel)
@@ -96,7 +99,11 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                 // IndexNow — preço/status/foto mudou, pede recrawl. Mesmo se o
                 // veiculo virou vendido/reservado vale notificar (a listagem
                 // muda). Fire-and-forget; falha nao quebra o update.
-                _ = Task.Run(() => _indexNowService.NotifyVeiculoAsync(_tenantContext.TenantSlug, inputModel.VeiId));
+                var slugParaIndexNow = _tenantContext.TenantSlug;
+                var idParaIndexNow = inputModel.VeiId;
+                _backgroundRunner.Enqueue<IIndexNowService>(
+                    s => s.NotifyVeiculoAsync(slugParaIndexNow, idParaIndexNow),
+                    $"IndexNow veiculo {idParaIndexNow}");
 
                 // Notificar se veiculo foi reservado (usuarios internos)
                 if (statusAnterior != "R" && inputModel.VeiSts == "R")
@@ -133,7 +140,11 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                 // Notificar favoritos se preco caiu (fire-and-forget, nao bloqueia o response)
                 if (inputModel.VeiPreco < precoAnterior)
                 {
-                    _ = Task.Run(() => _favoritoNotificacaoService.NotificarPrecoAlteradoAsync(inputModel.VeiId, precoAnterior, inputModel.VeiPreco));
+                    var idParaNotificar = inputModel.VeiId;
+                    var precoNovo = inputModel.VeiPreco;
+                    _backgroundRunner.Enqueue<IFavoritoNotificacaoService>(
+                        s => s.NotificarPrecoAlteradoAsync(idParaNotificar, precoAnterior, precoNovo),
+                        $"notificar queda de preco do veiculo {idParaNotificar}");
                 }
 
                 // Integracoes externas
