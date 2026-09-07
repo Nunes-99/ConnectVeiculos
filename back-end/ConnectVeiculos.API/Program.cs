@@ -336,12 +336,11 @@ app.UseResponseCaching();
 
 app.UseRouting();
 
-// Multi-tenant: resolve o tenant pelo subdomain do request e popula o
-// ITenantContext. Skip de rotas que nao precisam (health, swagger, ACME)
-// esta dentro do proprio middleware. Plugado ANTES de Authentication
-// pra que claims tenham acesso ao tenant resolvido.
-app.UseTenantResolution();
-
+// CORS vem ANTES do TenantResolution de proposito: quando o tenant nao
+// existe, o middleware curto-circuita com 404 e, se o CORS rodasse depois,
+// essa resposta sairia sem Access-Control-Allow-Origin. O browser entao
+// esconde o JSON de erro e o front mostra "Failed to fetch" em vez de
+// "Loja nao encontrada".
 // CORS — multi-tenant aware.
 // ALLOWED_ROOT_DOMAINS (env, comma-separated) lista os dominios raiz aceitos.
 // Qualquer subdomain de um dominio raiz lista esta permitido (ex: acme.connectveiculos.dev.br
@@ -382,6 +381,13 @@ app.UseCors(options => options
     .AllowAnyMethod()
     .AllowAnyHeader()
     .AllowCredentials());
+
+// Multi-tenant: resolve o tenant pelo subdomain do request e popula o
+// ITenantContext. Skip de rotas que nao precisam (health, swagger, ACME)
+// esta dentro do proprio middleware. Plugado ANTES de Authentication
+// pra que claims tenham acesso ao tenant resolvido.
+app.UseTenantResolution();
+
 
 // Rate Limiting
 app.UseRateLimiter();
