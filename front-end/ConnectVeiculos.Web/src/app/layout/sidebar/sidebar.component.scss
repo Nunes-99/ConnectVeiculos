@@ -46,6 +46,75 @@
   }
 }
 
+// Wrapper do nav: segura os gradientes que indicam conteudo fora da area
+// visivel. Precisa de min-height:0 para poder encolher dentro do flex column
+// do .sidebar — sem isso o nav nao rola, so transborda.
+.sidebar-nav-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+
+  // Os gradientes sao decorativos: nao capturam clique.
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 28px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 1;
+  }
+
+  &::before {
+    top: 0;
+    background: linear-gradient(to bottom, var(--sidebar-bg), transparent);
+  }
+
+  &::after {
+    bottom: 0;
+    background: linear-gradient(to top, var(--sidebar-bg), transparent);
+  }
+
+  &.tem-mais-acima::before { opacity: 1; }
+  &.tem-mais-abaixo::after { opacity: 1; }
+}
+
+// O gradiente sozinho quase nao aparece sobre o azul escuro do menu, e a barra
+// de rolagem do Chrome e' overlay (largura 0, some quando parado). O chevron e'
+// a pista que de fato se ve — e clicavel, pra ja levar ao resto do menu.
+.nav-mais {
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.85);
+  transition: background-color 0.2s ease;
+
+  .material-icons {
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.26);
+  }
+}
+
 // Navigation
 .sidebar-nav {
   flex: 1;

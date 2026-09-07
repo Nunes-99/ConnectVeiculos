@@ -12,7 +12,10 @@
     </div>
   </div>
 
-  <nav class="sidebar-nav">
+  <div class="sidebar-nav-wrap"
+       [class.tem-mais-acima]="temMaisAcima()"
+       [class.tem-mais-abaixo]="temMaisAbaixo()">
+  <nav class="sidebar-nav" #navEl (scroll)="atualizarPistasDeRolagem()">
     @for (group of menuGroups; track group.title) {
       <div class="nav-group">
         <span class="nav-group-title">{{ group.title }}</span>
@@ -28,6 +31,13 @@
       </div>
     }
   </nav>
+    @if (temMaisAbaixo()) {
+      <button type="button" class="nav-mais" (click)="rolarMenu()"
+              aria-label="Mostrar mais itens do menu">
+        <span class="material-icons">keyboard_arrow_down</span>
+      </button>
+    }
+  </div>
 
   <div class="catalogo-section">
     <div class="catalogo-list">

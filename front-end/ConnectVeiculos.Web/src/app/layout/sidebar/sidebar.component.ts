@@ -1,4 +1,4 @@
-import { Component, EventEmitter, inject, Input, Output, PLATFORM_ID, signal } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, EventEmitter, HostListener, inject, Input, OnDestroy, Output, PLATFORM_ID, ViewChild, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
@@ -23,7 +23,58 @@ interface MenuItem {
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.scss'
 })
-export class SidebarComponent {
+export class SidebarComponent implements AfterViewInit, OnDestroy {
+  // O menu tem mais itens do que cabe em telas de ~720px de altura (notebook
+  // comum): "Integracoes", "Meu plano" e "Logs" ficam abaixo da dobra. O <nav>
+  // rola, mas a barra de rolagem so aparece no hover — sem nenhuma pista, o
+  // usuario conclui que aquelas telas nao existem.
+  @ViewChild('navEl') navEl?: ElementRef<HTMLElement>;
+
+  temMaisAbaixo = signal(false);
+  temMaisAcima = signal(false);
+
+  private observer?: ResizeObserver;
+
+  ngAfterViewInit(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+
+    this.atualizarPistasDeRolagem();
+
+    // Recalcula quando a janela ou o proprio conteudo do menu mudam de tamanho
+    // (ex: itens que aparecem/somem conforme a permissao do usuario).
+    const el = this.navEl?.nativeElement;
+    if (el && typeof ResizeObserver !== 'undefined') {
+      this.observer = new ResizeObserver(() => this.atualizarPistasDeRolagem());
+      this.observer.observe(el);
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.observer?.disconnect();
+  }
+
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    this.atualizarPistasDeRolagem();
+  }
+
+  /** Rola o menu ate o fim — o chevron tambem serve de atalho, nao so de aviso. */
+  rolarMenu(): void {
+    const el = this.navEl?.nativeElement;
+    el?.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+  }
+
+  atualizarPistasDeRolagem(): void {
+    const el = this.navEl?.nativeElement;
+    if (!el) return;
+
+    // 2px de folga: arredondamento de zoom/DPI faz scrollHeight passar do
+    // clientHeight por fracoes de pixel sem haver nada pra rolar.
+    const restaAbaixo = el.scrollHeight - el.clientHeight - el.scrollTop;
+    this.temMaisAbaixo.set(restaAbaixo > 2);
+    this.temMaisAcima.set(el.scrollTop > 2);
+  }
+
   authService = inject(AuthService);
   themeService = inject(ThemeService);
   private lojaService = inject(LojaService);
