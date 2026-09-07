@@ -1,4 +1,4 @@
-namespace ConnectVeiculos.Application.ViewModels.Dashboard
+﻿namespace ConnectVeiculos.Application.ViewModels.Dashboard
 {
     /// <summary>
     /// Vendas por periodo (para grafico de linha)
@@ -63,6 +63,16 @@ namespace ConnectVeiculos.Application.ViewModels.Dashboard
         public decimal VariacaoFaturamento { get; set; }
         public decimal VariacaoQuantidade { get; set; }
         public decimal VariacaoTicketMedio { get; set; }
+
+        /// <summary>
+        /// True quando o mes atual ainda esta em curso — nesse caso os dois
+        /// lados cobrem so do dia 1 ate <see cref="DiaDeCorte"/>, senao a
+        /// comparacao seria de alguns dias contra um mes inteiro.
+        /// </summary>
+        public bool ComparacaoParcial { get; set; }
+
+        /// <summary>Ultimo dia incluido nos dois periodos comparados.</summary>
+        public int DiaDeCorte { get; set; }
     }
 
     public class ComparativoMesViewModel

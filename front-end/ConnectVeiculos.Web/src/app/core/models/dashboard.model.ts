@@ -78,6 +78,9 @@ export interface ComparativoMensal {
   variacaoFaturamento: number;
   variacaoQuantidade: number;
   variacaoTicketMedio: number;
+  /** Mes corrente ainda em curso: os dois lados cobrem so ate diaDeCorte. */
+  comparacaoParcial: boolean;
+  diaDeCorte: number;
 }
 
 export interface ComparativoMes {

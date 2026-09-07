@@ -222,6 +222,11 @@
     @if (comparativoMensal) {
       <div class="section-title">
         <h2>Comparativo Mensal</h2>
+        @if (comparativoMensal.comparacaoParcial) {
+          <span class="section-hint">
+            comparando do dia 1 ao dia {{ comparativoMensal.diaDeCorte }} nos dois meses
+          </span>
+        }
       </div>
       <div class="comparativo-grid">
         <div class="comparativo-card">

@@ -1,4 +1,4 @@
-using ConnectVeiculos.Application.Interfaces.Dashboard;
+﻿using ConnectVeiculos.Application.Interfaces.Dashboard;
 using ConnectVeiculos.Application.ViewModels.Dashboard;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Vendas;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
@@ -29,14 +29,30 @@ namespace ConnectVeiculos.Application.UseCases.Dashboard
             var hoje = DateTime.Today;
             var inicioMesAtual = new DateTime(hoje.Year, hoje.Month, 1);
             var inicioMesAnterior = inicioMesAtual.AddMonths(-1);
-            var fimMesAnterior = inicioMesAtual.AddDays(-1);
+
+            // Compara periodos do mesmo tamanho. Antes o mes corrente (parcial)
+            // era medido contra o anterior inteiro, entao todo dia 1 o painel
+            // exibia -100% em tudo e so voltava ao normal no fim do mes.
+            var diasNoMesAtual = DateTime.DaysInMonth(hoje.Year, hoje.Month);
+            var comparacaoParcial = hoje.Day < diasNoMesAtual;
+
+            // Fevereiro nao tem dia 31: limita ao ultimo dia do mes anterior.
+            var diasNoMesAnterior = DateTime.DaysInMonth(inicioMesAnterior.Year, inicioMesAnterior.Month);
+            var diaDeCorte = Math.Min(hoje.Day, diasNoMesAnterior);
+
+            var fimMesAtual = inicioMesAtual.AddDays(hoje.Day - 1);
+            var fimMesAnterior = inicioMesAnterior.AddDays(diaDeCorte - 1);
 
             var vendasMesAtual = todasVendas
-                .Where(v => v.VenStatus == "A" && v.VenDtVenda >= inicioMesAtual)
+                .Where(v => v.VenStatus == "A"
+                         && v.VenDtVenda >= inicioMesAtual
+                         && v.VenDtVenda.Date <= fimMesAtual)
                 .ToList();
 
             var vendasMesAnterior = todasVendas
-                .Where(v => v.VenStatus == "A" && v.VenDtVenda >= inicioMesAnterior && v.VenDtVenda <= fimMesAnterior)
+                .Where(v => v.VenStatus == "A"
+                         && v.VenDtVenda >= inicioMesAnterior
+                         && v.VenDtVenda.Date <= fimMesAnterior)
                 .ToList();
 
             var mesAtual = CalcularComparativo(vendasMesAtual, veiculosDict, inicioMesAtual);
@@ -54,7 +70,9 @@ namespace ConnectVeiculos.Application.UseCases.Dashboard
                     : mesAtual.QuantidadeVendas > 0 ? 100 : 0,
                 VariacaoTicketMedio = mesAnterior.TicketMedio > 0
                     ? ((mesAtual.TicketMedio - mesAnterior.TicketMedio) / mesAnterior.TicketMedio) * 100
-                    : mesAtual.TicketMedio > 0 ? 100 : 0
+                    : mesAtual.TicketMedio > 0 ? 100 : 0,
+                ComparacaoParcial = comparacaoParcial,
+                DiaDeCorte = diaDeCorte
             };
         }
 
