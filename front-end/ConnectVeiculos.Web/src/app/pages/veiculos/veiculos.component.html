@@ -461,9 +461,20 @@
             </div>
           </div>
         </div>
+        @if (mostrarPendencias && camposPendentes.length) {
+          <div class="aviso-pendencias" role="alert">
+            <span class="material-icons">error_outline</span>
+            <span>
+              Preencha para salvar:
+              <strong>{{ camposPendentes.join(', ') }}</strong>
+            </span>
+          </div>
+        }
         <div class="modal-footer">
           <button type="button" class="btn-secondary" (click)="closeModal()">Cancelar</button>
-          <button type="submit" class="btn-primary" [disabled]="form.invalid">Salvar</button>
+          <!-- Sem [disabled]: botao desabilitado nao diz o que falta. O save()
+               valida, aponta os campos e rola ate o primeiro pendente. -->
+          <button type="submit" class="btn-primary">Salvar</button>
         </div>
       </form>
     </div>

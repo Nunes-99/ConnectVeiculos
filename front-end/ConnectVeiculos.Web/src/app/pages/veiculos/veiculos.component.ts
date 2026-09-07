@@ -214,6 +214,32 @@ export class VeiculosComponent implements OnInit {
     veiDonoCelular: ['']
   });
 
+  // Rotulo de cada campo obrigatorio, pra dizer ao operador o que falta em vez
+  // de so desabilitar o botao Salvar sem explicacao.
+  private readonly rotulosCampos: Record<string, string> = {
+    r_LojId: 'Loja',
+    r_CatId: 'Categoria',
+    veiMarca: 'Marca',
+    veiModelo: 'Modelo',
+    veiAno: 'Ano',
+    veiPlaca: 'Placa',
+    veiCor: 'Cor',
+    veiPreco: 'Preço de venda',
+    veiSts: 'Status',
+    veiKm: 'Quilometragem',
+    veiPrecoCompra: 'Preço de compra',
+    veiPrecoFipe: 'Preço FIPE',
+    veiChassi: 'Chassi'
+  };
+
+  mostrarPendencias = false;
+
+  get camposPendentes(): string[] {
+    return Object.keys(this.form.controls)
+      .filter(nome => this.form.get(nome)?.invalid)
+      .map(nome => this.rotulosCampos[nome] ?? nome);
+  }
+
   opcionaisDisponiveis = [
     'Ar-condicionado', 'Direção hidráulica', 'Direção elétrica', 'Vidros elétricos',
     'Travas elétricas', 'Alarme', 'Airbag', 'ABS', 'Câmbio automático', 'Câmbio CVT',
@@ -426,8 +452,20 @@ export class VeiculosComponent implements OnInit {
   save(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      this.mostrarPendencias = true;
+
+      // Rola ate o primeiro campo invalido — o formulario e' longo e o campo
+      // que falta costuma estar fora da area visivel do modal.
+      const primeiro = Object.keys(this.form.controls).find(n => this.form.get(n)?.invalid);
+      if (primeiro) {
+        const el = document.querySelector(`[formControlName="${primeiro}"]`) as HTMLElement | null;
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el?.focus();
+      }
       return;
     }
+
+    this.mostrarPendencias = false;
 
     const raw = this.form.value;
     const kmLimpo = String(raw.veiKm || '0').replace(/\./g, '').replace(/,/g, '');
