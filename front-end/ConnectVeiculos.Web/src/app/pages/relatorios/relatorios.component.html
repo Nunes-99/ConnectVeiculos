@@ -16,11 +16,11 @@
   <div class="page-header no-print">
     <h1>Relatórios</h1>
     <div class="header-actions">
-      <button class="btn-export" (click)="exportarPDF()" [disabled]="loading" title="Exportar PDF">
+      <button class="btn-export" (click)="exportarPDF()" [disabled]="loading || exportando" title="Exportar PDF">
         <span class="material-icons">picture_as_pdf</span>
         PDF
       </button>
-      <button class="btn-export excel" (click)="exportarExcel()" [disabled]="loading" title="Exportar Excel">
+      <button class="btn-export excel" (click)="exportarExcel()" [disabled]="loading || exportando" title="Exportar Excel">
         <span class="material-icons">table_chart</span>
         Excel
       </button>

@@ -1,11 +1,18 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RelatorioService, LojaService, CategoriaService } from '../../core/services';
+import { RelatorioService, LojaService, CategoriaService, ToastService } from '../../core/services';
 import { RelatorioVendas, RelatorioEstoque, RelatorioFinanceiro, Loja, Categoria } from '../../core/models';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import * as XLSX from 'xlsx';
+// jsPDF + jspdf-autotable + xlsx somam ~1 MB e so servem aos botoes de
+// exportar. Como 'import type' e' apagado na compilacao, o bundle da tela nao
+// carrega nada disso — as libs entram sob demanda no clique (ver exportarPDF /
+// exportarExcel).
+import type jsPDF from 'jspdf';
+import type autoTable from 'jspdf-autotable';
+import type * as XLSX from 'xlsx';
+
+type AutoTable = typeof autoTable;
+type XlsxModule = typeof XLSX;
 
 @Component({
   selector: 'app-relatorios',
@@ -16,6 +23,7 @@ import * as XLSX from 'xlsx';
 })
 export class RelatoriosComponent implements OnInit {
   private relatorioService = inject(RelatorioService);
+  private toast = inject(ToastService);
   private lojaService = inject(LojaService);
   private categoriaService = inject(CategoriaService);
 
@@ -178,8 +186,26 @@ export class RelatoriosComponent implements OnInit {
 
   // ==================== EXPORTACAO PDF ====================
 
-  exportarPDF(): void {
-    const doc = new jsPDF();
+  exportando = false;
+
+  async exportarPDF(): Promise<void> {
+    if (this.exportando) return;
+    this.exportando = true;
+    try {
+      const [pdfMod, autoTableMod] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable')
+      ]);
+      this.gerarPDF(pdfMod.default, autoTableMod.default);
+    } catch {
+      this.toast.error('Não foi possível carregar o gerador de PDF. Verifique sua conexão e tente de novo.');
+    } finally {
+      this.exportando = false;
+    }
+  }
+
+  private gerarPDF(jsPDFCtor: typeof jsPDF, autoTableFn: AutoTable): void {
+    const doc = new jsPDFCtor();
     const titulo = this.getTituloRelatorio();
     const periodo = this.getPeriodoRelatorio();
 
@@ -197,17 +223,17 @@ export class RelatoriosComponent implements OnInit {
     let startY = this.filtroLoja ? 55 : 48;
 
     if (this.activeTab === 'vendas' && this.relatorioVendas) {
-      this.exportarVendasPDF(doc, startY);
+      this.exportarVendasPDF(doc, startY, autoTableFn);
     } else if (this.activeTab === 'estoque' && this.relatorioEstoque) {
-      this.exportarEstoquePDF(doc, startY);
+      this.exportarEstoquePDF(doc, startY, autoTableFn);
     } else if (this.activeTab === 'financeiro' && this.relatorioFinanceiro) {
-      this.exportarFinanceiroPDF(doc, startY);
+      this.exportarFinanceiroPDF(doc, startY, autoTableFn);
     }
 
     doc.save(`${titulo.toLowerCase().replace(/ /g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
   }
 
-  private exportarVendasPDF(doc: jsPDF, startY: number): void {
+  private exportarVendasPDF(doc: jsPDF, startY: number, autoTable: AutoTable): void {
     const r = this.relatorioVendas!;
 
     // Resumo
@@ -258,7 +284,7 @@ export class RelatoriosComponent implements OnInit {
     }
   }
 
-  private exportarEstoquePDF(doc: jsPDF, startY: number): void {
+  private exportarEstoquePDF(doc: jsPDF, startY: number, autoTable: AutoTable): void {
     const r = this.relatorioEstoque!;
 
     // Resumo
@@ -308,7 +334,7 @@ export class RelatoriosComponent implements OnInit {
     }
   }
 
-  private exportarFinanceiroPDF(doc: jsPDF, startY: number): void {
+  private exportarFinanceiroPDF(doc: jsPDF, startY: number, autoTable: AutoTable): void {
     const r = this.relatorioFinanceiro!;
 
     // Resumo
@@ -365,22 +391,35 @@ export class RelatoriosComponent implements OnInit {
 
   // ==================== EXPORTACAO EXCEL ====================
 
-  exportarExcel(): void {
-    const wb = XLSX.utils.book_new();
+  async exportarExcel(): Promise<void> {
+    if (this.exportando) return;
+    this.exportando = true;
+    try {
+      const xlsx = await import('xlsx');
+      this.gerarExcel(xlsx);
+    } catch {
+      this.toast.error('Não foi possível carregar o gerador de Excel. Verifique sua conexão e tente de novo.');
+    } finally {
+      this.exportando = false;
+    }
+  }
+
+  private gerarExcel(xlsx: XlsxModule): void {
+    const wb = xlsx.utils.book_new();
     const titulo = this.getTituloRelatorio();
 
     if (this.activeTab === 'vendas' && this.relatorioVendas) {
-      this.exportarVendasExcel(wb);
+      this.exportarVendasExcel(wb, xlsx);
     } else if (this.activeTab === 'estoque' && this.relatorioEstoque) {
-      this.exportarEstoqueExcel(wb);
+      this.exportarEstoqueExcel(wb, xlsx);
     } else if (this.activeTab === 'financeiro' && this.relatorioFinanceiro) {
-      this.exportarFinanceiroExcel(wb);
+      this.exportarFinanceiroExcel(wb, xlsx);
     }
 
-    XLSX.writeFile(wb, `${titulo.toLowerCase().replace(/ /g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    xlsx.writeFile(wb, `${titulo.toLowerCase().replace(/ /g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`);
   }
 
-  private exportarVendasExcel(wb: XLSX.WorkBook): void {
+  private exportarVendasExcel(wb: XLSX.WorkBook, XLSX: XlsxModule): void {
     const r = this.relatorioVendas!;
 
     // Resumo
@@ -428,7 +467,7 @@ export class RelatoriosComponent implements OnInit {
     }
   }
 
-  private exportarEstoqueExcel(wb: XLSX.WorkBook): void {
+  private exportarEstoqueExcel(wb: XLSX.WorkBook, XLSX: XlsxModule): void {
     const r = this.relatorioEstoque!;
 
     // Resumo
@@ -476,7 +515,7 @@ export class RelatoriosComponent implements OnInit {
     }
   }
 
-  private exportarFinanceiroExcel(wb: XLSX.WorkBook): void {
+  private exportarFinanceiroExcel(wb: XLSX.WorkBook, XLSX: XlsxModule): void {
     const r = this.relatorioFinanceiro!;
 
     // Resumo
