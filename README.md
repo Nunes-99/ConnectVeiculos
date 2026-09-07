@@ -34,7 +34,7 @@ dotnet run --launch-profile http
 # → http://localhost:5219 (banco SQLite criado automaticamente, admin seeded)
 
 # 3. Frontend (em outro terminal)
-cd front-end/ConnectVeiculos.Web
+cd ../front-end/ConnectVeiculos.Web
 npm install
 npx ng serve
 # → http://localhost:4200
@@ -75,12 +75,16 @@ Sem isso, push fica desligado — resto do sistema funciona normal.
 ## Rodar testes
 
 ```bash
-# Unitarios (197 testes)
+# Unitarios backend (275 testes)
 cd back-end
 dotnet test ConnectVeiculos.sln
 
+cd ../front-end/ConnectVeiculos.Web
+
+# Unitarios frontend (6 testes Karma/Jasmine)
+npx ng test --watch=false --browsers=ChromeHeadless
+
 # E2E (17 testes Playwright) — precisa backend rodando
-cd front-end/ConnectVeiculos.Web
 npx playwright install chromium  # primeira vez
 npx playwright test
 ```
@@ -137,7 +141,7 @@ Detalhes:
 |---|---|
 | Backend builda | ✅ 0 erros, 0 warnings |
 | Frontend builda | ✅ |
-| Testes unitarios | ✅ 197/197 |
+| Testes unitarios | ✅ 275/275 backend + 6/6 frontend |
 | Testes E2E | ✅ 17/17 |
 | Multi-tenant | ✅ ativo em producao com tenant `default` |
 | Deploy em producao | ✅ https://connectveiculos.dev.br (Oracle Free Tier) |
