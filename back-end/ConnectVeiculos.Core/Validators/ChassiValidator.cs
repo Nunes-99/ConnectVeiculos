@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
 namespace ConnectVeiculos.Core.Validators
 {
@@ -24,23 +24,40 @@ namespace ConnectVeiculos.Core.Validators
         };
 
         /// <summary>
-        /// Valida um chassi (VIN)
+        /// Valida o FORMATO de um chassi (VIN): 17 caracteres alfanumericos,
+        /// sem I, O e Q.
+        ///
+        /// Nao exige o digito verificador da posicao 9 de proposito. Aquele
+        /// digito e' obrigatorio so nos EUA, Canada e China (FMVSS 115); os
+        /// veiculos fabricados pra circular no Brasil em geral nao o cumprem.
+        /// Exigi-lo aqui rejeitava chassi legitimo e travava o cadastro — e
+        /// pior, com a mensagem "deve ter 17 caracteres", que mandava o
+        /// operador procurar erro onde nao havia.
+        ///
+        /// Quem quiser o digito verificador (util como aviso de digitacao, nunca
+        /// como bloqueio) tem <see cref="HasValidCheckDigit"/>.
         /// </summary>
         /// <param name="chassi">Chassi a ser validado</param>
-        /// <returns>True se o chassi for valido</returns>
+        /// <returns>True se o formato for valido</returns>
         public static bool IsValid(string chassi)
         {
             if (string.IsNullOrWhiteSpace(chassi))
                 return false;
 
-            chassi = chassi.Trim().ToUpperInvariant();
+            return ChassiRegex.IsMatch(chassi.Trim());
+        }
 
-            // Valida formato basico (17 caracteres, sem I, O, Q)
-            if (!ChassiRegex.IsMatch(chassi))
+        /// <summary>
+        /// True se o chassi tem formato valido E o digito verificador da posicao
+        /// 9 confere (padrao norte-americano). Falso nao significa chassi
+        /// invalido no Brasil — use so pra sinalizar possivel erro de digitacao.
+        /// </summary>
+        public static bool HasValidCheckDigit(string chassi)
+        {
+            if (!IsValid(chassi))
                 return false;
 
-            // Valida digito verificador (posicao 9)
-            return ValidateCheckDigit(chassi);
+            return ValidateCheckDigit(chassi.Trim().ToUpperInvariant());
         }
 
         /// <summary>

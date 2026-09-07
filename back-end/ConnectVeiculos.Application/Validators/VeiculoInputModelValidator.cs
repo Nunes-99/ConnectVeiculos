@@ -1,4 +1,4 @@
-using ConnectVeiculos.Application.InputModels.Veiculos;
+﻿using ConnectVeiculos.Application.InputModels.Veiculos;
 using ConnectVeiculos.Core.Validators;
 using FluentValidation;
 
@@ -32,7 +32,7 @@ namespace ConnectVeiculos.Application.Validators
 
             RuleFor(x => x.VeiChassi)
                 .Must(chassi => string.IsNullOrEmpty(chassi) || ChassiValidator.IsValid(chassi))
-                .WithMessage("Chassi invalido. Deve ter 17 caracteres alfanumericos.");
+                .WithMessage("Chassi invalido. Deve ter 17 caracteres alfanumericos, sem as letras I, O e Q.");
 
             RuleFor(x => x.VeiCor)
                 .NotEmpty().WithMessage("A cor e obrigatoria.")

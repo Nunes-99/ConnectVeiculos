@@ -1,4 +1,4 @@
-using ConnectVeiculos.Core.Validators;
+﻿using ConnectVeiculos.Core.Validators;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -81,6 +81,10 @@ namespace ConnectVeiculos.API.Controllers
             {
                 chassi,
                 valido = isValid,
+                // Digito verificador norte-americano: informativo. Chassi
+                // brasileiro legitimo costuma vir com false aqui — serve pra UI
+                // avisar "confira a digitacao", nunca pra bloquear.
+                digitoVerificadorConfere = ChassiValidator.HasValidCheckDigit(chassi),
                 info
             });
         }
