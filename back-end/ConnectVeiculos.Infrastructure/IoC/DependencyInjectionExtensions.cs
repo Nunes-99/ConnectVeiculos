@@ -192,7 +192,10 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.AddScoped<NotificacaoHubService>();
             services.AddScoped<INotificacaoHubService>(sp => sp.GetRequiredService<NotificacaoHubService>());
             services.AddScoped<INotificacaoService>(sp => sp.GetRequiredService<NotificacaoHubService>());
-            services.AddSingleton<ICatalogoHubService, CatalogoHubService>();
+            // Scoped (era Singleton): passou a depender de ICacheService, que e'
+            // Scoped por causa do prefixo por tenant. Singleton capturaria o
+            // primeiro tenant da aplicacao e invalidaria o cache errado.
+            services.AddScoped<ICatalogoHubService, CatalogoHubService>();
 
             // Operations
             services.AddTransient<IUsuarioOperations, UsuarioOperations>();

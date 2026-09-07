@@ -18,7 +18,8 @@ export class CatalogoService {
     precoMin?: number,
     precoMax?: number,
     lojaId?: number,
-    tenantSlug?: string
+    tenantSlug?: string,
+    ignorarCache = false
   ): Observable<CatalogoResultado> {
     let params = new HttpParams();
 
@@ -30,6 +31,12 @@ export class CatalogoService {
     if (lojaId) params = params.set('lojaId', lojaId.toString());
     if (tenantSlug) params = params.set('tenant', tenantSlug);
 
+    // O endpoint manda Cache-Control: max-age=30, otimo pra navegacao normal.
+    // Mas quando o SignalR avisa que o catalogo mudou nos SABEMOS que a copia do
+    // navegador esta velha — o parametro faz a URL diferir e forca ida ao
+    // servidor. Nao e' lido pelo controller.
+    if (ignorarCache) params = params.set('_ts', Date.now().toString());
+
     return this.http.get<CatalogoResultado>(this.baseUrl, { params });
   }
 
@@ -40,7 +47,8 @@ export class CatalogoService {
     anoMax?: number,
     precoMin?: number,
     precoMax?: number,
-    tenantSlug?: string
+    tenantSlug?: string,
+    ignorarCache = false
   ): Observable<CatalogoResultado> {
     let params = new HttpParams();
 
@@ -50,6 +58,8 @@ export class CatalogoService {
     if (precoMin) params = params.set('precoMin', precoMin.toString());
     if (precoMax) params = params.set('precoMax', precoMax.toString());
     if (tenantSlug) params = params.set('tenant', tenantSlug);
+
+    if (ignorarCache) params = params.set('_ts', Date.now().toString());
 
     return this.http.get<CatalogoResultado>(`${this.baseUrl}/slug/${slug}`, { params });
   }

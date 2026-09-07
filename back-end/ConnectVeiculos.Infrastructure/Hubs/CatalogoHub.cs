@@ -1,4 +1,5 @@
-using ConnectVeiculos.Core.Interfaces.Services;
+﻿using ConnectVeiculos.Core.Interfaces.Services;
+using ConnectVeiculos.Infrastructure.Cache;
 using Microsoft.AspNetCore.SignalR;
 
 namespace ConnectVeiculos.Infrastructure.Hubs
@@ -51,16 +52,34 @@ namespace ConnectVeiculos.Infrastructure.Hubs
     public class CatalogoHubService : ICatalogoHubService
     {
         private readonly IHubContext<CatalogoHub> _hubContext;
+        private readonly ICacheService _cacheService;
 
-        public CatalogoHubService(IHubContext<CatalogoHub> hubContext)
+        public CatalogoHubService(IHubContext<CatalogoHub> hubContext, ICacheService cacheService)
         {
             _hubContext = hubContext;
+            _cacheService = cacheService;
         }
 
         public async Task NotificarAtualizacaoCatalogo(string tenantSlug, int lojaId, string tipoEvento, object dados)
         {
             var slug = string.IsNullOrWhiteSpace(tenantSlug) ? "default" : tenantSlug.ToLowerInvariant();
             var notificacao = new { tipo = tipoEvento, dados, timestamp = DateTime.UtcNow };
+
+            // Derruba o cache do catalogo ANTES de avisar os clients. O
+            // CatalogoController guarda o resultado por 1 minuto e nada invalidava
+            // isso: o evento chegava na hora, o navegador refazia a busca na hora,
+            // e a API devolvia a lista velha — carro novo levava ate 1 min pra
+            // aparecer, com o selo "Em tempo real" na tela.
+            //
+            // Fica aqui, e nao nos use cases, por dois motivos: ICacheService vive
+            // em Infrastructure e Application so referencia Core; e este metodo e'
+            // o ponto por onde TODA mudanca do catalogo ja passa, entao nao da pra
+            // esquecer de invalidar ao adicionar um fluxo novo.
+            //
+            // RemoveByPrefix pega as duas familias de chave do controller
+            // ("catalogo_{lojaId}_..." e "catalogo_slug_{slug}_...") e o decorator
+            // TenantAwareCacheService limita ao tenant atual.
+            _cacheService.RemoveByPrefix(CacheKeys.Catalogo);
 
             // Notificar grupo da loja especifica (escopo por tenant)
             await _hubContext.Clients.Group($"tenant_{slug}_catalogo_loja_{lojaId}")

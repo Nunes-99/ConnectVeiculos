@@ -243,11 +243,11 @@ export class CatalogoComponent implements OnInit, OnDestroy {
 
     this.hubConnection.on('CatalogoAtualizado', () => {
       this.atualizacaoRecente = true;
-      this.loadCatalogo();
+      this.loadCatalogo(true);
       setTimeout(() => this.atualizacaoRecente = false, 5000);
     });
 
-    this.hubConnection.onreconnected(() => { this.conectado = true; this.loadCatalogo(); });
+    this.hubConnection.onreconnected(() => { this.conectado = true; this.loadCatalogo(true); });
     this.hubConnection.onclose(() => this.conectado = false);
 
     this.hubConnection.start().then(() => {
@@ -266,7 +266,11 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     this.conectado = false;
   }
 
-  loadCatalogo(): void {
+  /**
+   * @param ignorarCache true quando a chamada vem de um evento do SignalR: nesse
+   * caso sabemos que o catalogo mudou, e a copia de 30s do navegador esta velha.
+   */
+  loadCatalogo(ignorarCache = false): void {
     this.loading = true;
     const request$ = this.lojaSlug
       ? this.catalogoService.getCatalogoBySlug(
@@ -276,7 +280,8 @@ export class CatalogoComponent implements OnInit, OnDestroy {
           this.anoMaxSelecionado || undefined,
           this.precoMinSelecionado || undefined,
           this.precoMaxSelecionado || undefined,
-          this.tenantSlug || undefined
+          this.tenantSlug || undefined,
+          ignorarCache
         )
       : this.catalogoService.getCatalogo(
           this.marcaSelecionada || undefined,
@@ -285,7 +290,8 @@ export class CatalogoComponent implements OnInit, OnDestroy {
           this.precoMinSelecionado || undefined,
           this.precoMaxSelecionado || undefined,
           this.filtroLojaId || this.lojaId || undefined,
-          this.tenantSlug || undefined
+          this.tenantSlug || undefined,
+          ignorarCache
         );
     request$.subscribe({
       next: (resultado) => {
