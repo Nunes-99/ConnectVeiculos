@@ -114,13 +114,17 @@ builder.Services.AddRateLimiter(options =>
         return $"{host}:{ip}";
     }
 
-    // Login: 5 tentativas / min, particao = host + IP (anti brute-force isolado por tenant)
+    // Login: teto por host + IP. Deliberadamente folgado (20/min): numa revenda
+    // atras de NAT todos os funcionarios compartilham o mesmo IP publico, e um
+    // limite apertado aqui trancava o colega que so errou a senha. O freio real
+    // de forca bruta e' por CONTA (ITentativasLoginService), que o limiter nao
+    // consegue aplicar por nao ter acesso ao corpo da request.
     options.AddPolicy("login", httpContext =>
         System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: TenantPartitionKey(httpContext),
             factory: _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
             {
-                PermitLimit = 5,
+                PermitLimit = 20,
                 Window = TimeSpan.FromMinutes(1),
                 QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst,
                 QueueLimit = 0

@@ -1,10 +1,11 @@
-using ConnectVeiculos.Application.Exceptions;
+﻿using ConnectVeiculos.Application.Exceptions;
 using ConnectVeiculos.Application.InputModels.Auth;
 using ConnectVeiculos.Application.InputModels.RecuperacaoSenha;
 using ConnectVeiculos.Application.Interfaces.Auth;
 using ConnectVeiculos.Application.Interfaces.RecuperacaoSenha;
 using ConnectVeiculos.Core.Entities.Tenants;
 using ConnectVeiculos.Core.Entities.Usuarios;
+using ConnectVeiculos.Core.Interfaces.Services;
 using ConnectVeiculos.Core.Interfaces.Tenancy;
 using ConnectVeiculos.Infrastructure.Database.EntityFramework;
 using ConnectVeiculos.Infrastructure.Database.Interceptors;
@@ -408,6 +409,7 @@ namespace ConnectVeiculos.API.Controllers
             [FromServices] SoftDeleteInterceptor softDeleteInterceptor,
             [FromServices] IConfiguration configuration,
             [FromServices] ILogger<AuthController> logger,
+            [FromServices] ITentativasLoginService tentativas,
             [FromBody] LoginInputModel input,
             CancellationToken ct)
         {
@@ -415,6 +417,20 @@ namespace ConnectVeiculos.API.Controllers
                 return BadRequest("Email e senha são obrigatórios.");
 
             var emailNormalizado = input.Email.Trim().ToLowerInvariant();
+
+            // Freio por conta: segue o e-mail mesmo que o atacante troque de IP,
+            // e nao pune o colega que divide o IP publico da loja.
+            var bloqueio = tentativas.SegundosBloqueioRestantes(emailNormalizado);
+            if (bloqueio.HasValue)
+            {
+                Response.Headers.RetryAfter = bloqueio.Value.ToString();
+                return StatusCode(StatusCodes.Status429TooManyRequests, new
+                {
+                    error = "conta_bloqueada",
+                    mensagem = $"Muitas tentativas. Tente novamente em {Math.Ceiling(bloqueio.Value / 60.0)} minuto(s).",
+                    segundosRestantes = bloqueio.Value
+                });
+            }
 
             // Busca cross-tenant: itera todos os tenants ativos procurando o e-mail.
             // Pra cada match, valida a senha; primeiro hit valido vence.
@@ -468,6 +484,7 @@ namespace ConnectVeiculos.API.Controllers
                 writeCtx.RefreshTokens.Add(refresh);
                 await writeCtx.SaveChangesAsync(ct);
 
+                tentativas.LimparFalhas(emailNormalizado);
                 logger.LogInformation("Login OK: usuario {Email} no tenant {Slug}", emailNormalizado, tenant.TenSlug);
 
                 return Ok(new Application.ViewModels.Auth.LoginViewModel
@@ -485,6 +502,7 @@ namespace ConnectVeiculos.API.Controllers
                 });
             }
 
+            tentativas.RegistrarFalha(emailNormalizado);
             logger.LogInformation("Login FALHOU: e-mail {Email} nao encontrado em nenhum tenant ativo", emailNormalizado);
             return Unauthorized("Email ou senha inválidos.");
         }

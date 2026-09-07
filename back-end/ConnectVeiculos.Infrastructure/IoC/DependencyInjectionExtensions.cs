@@ -87,6 +87,9 @@ namespace ConnectVeiculos.Infrastructure.IoC
             // quando ha tenant resolvido. Sem isso, dois tenants compartilhariam
             // chaves identicas (ex: "dashboard") e haveria vazamento.
             services.AddMemoryCache();
+            // Singleton: o contador de falhas de login precisa sobreviver entre
+            // requests (e nao ha estado por tenant — a chave e' o e-mail).
+            services.AddSingleton<Core.Interfaces.Services.ITentativasLoginService, Services.Auth.TentativasLoginService>();
             services.AddSingleton<MemoryCacheService>();
             services.AddScoped<ICacheService, TenantAwareCacheService>();
 
