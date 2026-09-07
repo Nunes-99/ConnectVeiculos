@@ -6,7 +6,10 @@
 .main-content {
   flex: 1;
   margin-left: 16.25rem; // 260px
-  background: #f5f5f5;
+  // Fixo em #f5f5f5 o dark mode nao alcancava a area de conteudo: o texto
+  // ficava claro (--text-primary) sobre fundo claro, e o titulo da pagina
+  // sumia. So nao se via nas telas em que os cards cobrem a area toda.
+  background: var(--bg-secondary);
   padding: 1.5rem;
   min-height: 100vh;
   box-sizing: border-box;

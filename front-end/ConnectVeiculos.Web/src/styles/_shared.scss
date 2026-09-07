@@ -382,11 +382,14 @@ table {
 
 // Mobile responsive
 @media (max-width: 768px) {
+  // Empilhado no mobile: com flex-direction:row o h1 fica ao lado das acoes e
+  // sobra pouca largura pro .header-actions, que tem width:100% mais abaixo.
+  // O resultado era o bloco de botoes transbordando pra fora da viewport — em
+  // 390px o "Novo Veiculo" terminava em x=433, fora da tela e sem scroll.
   .page-header {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
 
     h1 {
       font-size: 1.375rem;
