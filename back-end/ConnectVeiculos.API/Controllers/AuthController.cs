@@ -390,12 +390,14 @@ namespace ConnectVeiculos.API.Controllers
         /// <param name="softDeleteInterceptor">Interceptor pra filtrar soft-deleted</param>
         /// <param name="configuration">Configuracao da app (JWT settings)</param>
         /// <param name="logger">Logger</param>
+        /// <param name="tentativas">Freio de forca bruta por conta</param>
         /// <param name="input">Credenciais do usuario (email e senha)</param>
         /// <param name="ct">Cancellation token</param>
         /// <returns>Token JWT e dados do usuario autenticado</returns>
         /// <response code="200">Login realizado com sucesso</response>
         /// <response code="400">Dados de entrada invalidos</response>
         /// <response code="401">Email ou senha incorretos</response>
+        /// <response code="429">Conta temporariamente bloqueada por excesso de tentativas</response>
         [HttpPost("login")]
         [AllowAnonymous]
         [EnableRateLimiting("login")]
