@@ -1,9 +1,17 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Login', () => {
-  test('redireciona / nao autenticado para /login', async ({ page }) => {
-    await page.goto('/');
+  // '/' e a landing page publica desde que o site ganhou marketing/planos.
+  // O que importa testar e que rota protegida nao abre sem sessao.
+  test('redireciona rota protegida nao autenticada para /login', async ({ page }) => {
+    await page.goto('/dashboard');
     await expect(page).toHaveURL(/.*login/);
+  });
+
+  test('/ serve a landing publica sem exigir login', async ({ page }) => {
+    await page.goto('/');
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole('button', { name: /^entrar$/i }).first()).toBeVisible();
   });
 
   test('exibe formulario de login', async ({ page }) => {

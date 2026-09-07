@@ -1,4 +1,4 @@
-using ConnectVeiculos.Application.UseCases.Veiculos;
+﻿using ConnectVeiculos.Application.UseCases.Veiculos;
 using ConnectVeiculos.Core.Entities.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Database.Common;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Publicacoes;
@@ -42,7 +42,8 @@ namespace ConnectVeiculos.Tests.UseCases.Veiculos
                 _googleServiceMock.Object,
                 _publicacaoRepositoryMock.Object,
                  tenantContextMock.Object,
-                NullLogger<InativarVeiculoUseCase>.Instance);
+                NullLogger<InativarVeiculoUseCase>.Instance,
+                 new Mock<IIndexNowService>().Object);
         }
 
         [Fact]

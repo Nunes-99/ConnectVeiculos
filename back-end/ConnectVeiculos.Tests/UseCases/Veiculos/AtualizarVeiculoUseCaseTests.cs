@@ -1,4 +1,4 @@
-using ConnectVeiculos.Application.InputModels.Veiculos;
+﻿using ConnectVeiculos.Application.InputModels.Veiculos;
 using ConnectVeiculos.Application.UseCases.Veiculos;
 using ConnectVeiculos.Core.Entities.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Database.Common;
@@ -46,7 +46,8 @@ namespace ConnectVeiculos.Tests.UseCases.Veiculos
                 _publicacaoRepositoryMock.Object,
                 NullLogger<AtualizarVeiculoUseCase>.Instance,
                  new Mock<IFavoritoNotificacaoService>().Object,
-                 new Mock<ITenantContext>().Object);
+                 new Mock<ITenantContext>().Object,
+                 new Mock<IIndexNowService>().Object);
         }
 
         [Fact]

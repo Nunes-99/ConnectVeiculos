@@ -5,6 +5,10 @@ const API = 'http://localhost:5219';
 let token = '';
 
 test.beforeAll(async () => {
+  // O retry abaixo espera 60s quando toma 429, mas o timeout padrao do hook e
+  // 30s — sem isso o hook estoura antes de terminar a espera e a suite inteira
+  // falha em vez de cair no test.skip('Sem token').
+  test.setTimeout(150_000);
   const ctx = await pwRequest.newContext();
   for (let attempt = 0; attempt < 3; attempt++) {
     const r = await ctx.post(`${API}/api/auth/login`, {
@@ -54,15 +58,9 @@ test.describe('Admin (autenticado via API)', () => {
     expect(body).toHaveProperty('configurado');
   });
 
-  test('GET /api/detran/status retorna nao configurado', async ({ request }) => {
-    test.skip(!token, 'Sem token');
-    const r = await request.get(`${API}/api/detran/status`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    expect(r.ok()).toBeTruthy();
-    const body = await r.json();
-    expect(body.configurado).toBe(false);
-  });
+  // Removido: /api/detran/status nao existe mais. A consulta ao Detran virou
+  // redirect pro site oficial do estado, resolvido no front
+  // (shared/utils/detran-links.util.ts) — nao ha endpoint pra testar aqui.
 
   test('GET /api/integracoes/mercadolivre/status', async ({ request }) => {
     test.skip(!token, 'Sem token');
