@@ -1,4 +1,4 @@
-using ConnectVeiculos.Application.Interfaces.Imagens;
+﻿using ConnectVeiculos.Application.Interfaces.Imagens;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
@@ -88,7 +88,10 @@ namespace ConnectVeiculos.API.Controllers
 
         [AllowAnonymous]
         [HttpGet("file")]
-        [ResponseCache(Duration = 86400, Location = ResponseCacheLocation.Any)]
+        // VaryByQueryKeys e obrigatorio: sem ele o ResponseCaching usa so o path da rota
+        // como chave e TODAS as imagens passam a servir a primeira resposta cacheada.
+        [ResponseCache(Duration = 86400, Location = ResponseCacheLocation.Any,
+                       VaryByQueryKeys = new[] { "path", "max", "format" })]
         public async Task<IActionResult> GetImageFile(
             [FromQuery] string path,
             [FromQuery] int? max = null,
