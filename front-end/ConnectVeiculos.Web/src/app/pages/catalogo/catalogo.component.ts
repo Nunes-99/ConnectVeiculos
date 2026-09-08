@@ -542,11 +542,29 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   }
 
   // WhatsApp
+  /**
+   * Numero que o botao de WhatsApp usaria, na mesma ordem de fallback do
+   * abrirWhatsApp(). Guarda e acao compartilham esta funcao de proposito: se
+   * divergirem, volta o bug de exibir um botao que nao faz nada.
+   */
+  private telefoneWhatsApp(veiculo?: CatalogoVeiculo | null): string {
+    const v = veiculo || this.veiculoSelecionado;
+    return v?.lojaWhatsApp?.replace(/\D/g, '')
+        || this.loja?.lojWhatsApp?.replace(/\D/g, '')
+        || this.loja?.lojTel1?.replace(/\D/g, '')
+        || '';
+  }
+
+  /** So mostra o botao de WhatsApp quando ha numero pra onde mandar. */
+  temWhatsApp(veiculo?: CatalogoVeiculo | null): boolean {
+    return this.telefoneWhatsApp(veiculo).length > 0;
+  }
+
   abrirWhatsApp(veiculo?: CatalogoVeiculo): void {
     if (!isPlatformBrowser(this.platformId)) return;
     const v = veiculo || this.veiculoSelecionado;
     if (!v) return;
-    const telefone = v.lojaWhatsApp?.replace(/\D/g, '') || this.loja?.lojWhatsApp?.replace(/\D/g, '') || this.loja?.lojTel1?.replace(/\D/g, '') || '';
+    const telefone = this.telefoneWhatsApp(v);
     if (!telefone) return;
     const mensagem = encodeURIComponent(
       `Olá! Tenho interesse no veículo ${v.veiMarca} ${v.veiModelo} ${v.veiAno} - ${this.formatarPreco(v.veiPreco)}`
