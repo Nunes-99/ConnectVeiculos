@@ -87,7 +87,8 @@
         <h2>{{ editId ? 'Editar Documento' : 'Novo Documento' }}</h2>
         <button class="modal-close" (click)="fecharModal()"><span class="material-icons">close</span></button>
       </div>
-      <form [formGroup]="form" (ngSubmit)="salvar()" class="modal-body">
+      <form [formGroup]="form" (ngSubmit)="salvar()">
+        <div class="modal-body">
         <div class="form-row">
           <div class="form-group">
             <label class="required">Veículo</label>
@@ -128,6 +129,7 @@
         <div class="form-group">
           <label>Observação</label>
           <textarea formControlName="observacao" rows="3"></textarea>
+        </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn-secondary" (click)="fecharModal()">Cancelar</button>

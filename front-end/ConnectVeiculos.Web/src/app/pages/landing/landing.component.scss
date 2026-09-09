@@ -586,5 +586,70 @@ $border: #e5e7eb;
     .footer-inner { grid-template-columns: 1fr; gap: 32px; }
 
     .header-actions .btn-link { display: none; }
+
+    // O logo e o CTA nao encolhiam (min-width:auto), entao "ConnectVeiculos"
+    // vazava a propria caixa e ficava por baixo do botao "Cadastrar minha
+    // revenda" — medido: texto terminando em x=216 com o botao comecando em
+    // x=208.
+    //
+    // O logo continua completo (carro + "ConnectVeiculos"), igual ao desktop:
+    // o que muda e' a escala. Icone, texto e botao encolhem o suficiente pra
+    // caberem os tres na mesma linha, em vez de esconder a marca no mobile.
+    .header-inner {
+      gap: 10px;
+    }
+
+    .logo {
+      min-width: 0;
+      flex: 0 1 auto;
+      gap: 6px;
+      font-size: 15px;
+
+      .logo-img {
+        width: 26px;
+        height: 26px;
+        flex: 0 0 auto;
+      }
+
+      .logo-text {
+        white-space: nowrap;
+      }
+    }
+
+    .header-actions {
+      flex: 0 0 auto;
+
+      .btn {
+        white-space: nowrap;
+        padding: 9px 12px;
+        font-size: 13px;
+      }
+    }
+  }
+
+  // Deslogado o CTA e' "Cadastrar minha revenda", bem mais largo que o
+  // "Acessar Dashboard" de quem ja entrou: em 382px ele ainda encostava no
+  // logo. Este degrau extra aperta so o suficiente pros dois caberem em
+  // telas estreitas (360px), sem esconder a marca.
+  @media (max-width: 420px) {
+    // Menos respiro lateral so no cabecalho: em 352px sobrava 1px entre o logo
+    // e o botao, e qualquer fonte um pouco maior no aparelho voltaria a
+    // encostar. Com 14px de padding a folga vai pra ~21px.
+    .header-inner {
+      padding-left: 14px;
+      padding-right: 14px;
+    }
+
+    .logo {
+      font-size: 13px;
+      gap: 5px;
+
+      .logo-img { width: 22px; height: 22px; }
+    }
+
+    .header-actions .btn {
+      padding: 8px 10px;
+      font-size: 12px;
+    }
   }
 }
