@@ -33,6 +33,10 @@
 
 .filtros {
   display: flex;
+  // Sem wrap os dois selects de min-width:200px somavam 400px+gap dentro de um
+  // container de 366px em 390px de tela: a barra transbordava 177px e o filtro
+  // "Proximos" ficava cortado fora da viewport.
+  flex-wrap: wrap;
   gap: 16px;
   align-items: center;
   margin-bottom: 16px;
@@ -46,12 +50,17 @@
     font-size: 12px;
     color: #555;
     gap: 4px;
+    // Cresce pra ocupar a linha no desktop e quebra pra linha propria quando
+    // nao couber; min-width:0 deixa encolher abaixo da largura do <select>.
+    flex: 1 1 12rem;
+    min-width: 0;
 
     select {
       padding: 7px 10px;
       border-radius: 4px;
       border: 1px solid #ccc;
-      min-width: 200px;
+      width: 100%;
+      min-width: 0;
     }
   }
 }
@@ -153,6 +162,13 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
+
+    // Item de grid tem min-width:auto por padrao, entao a coluna cresce ate a
+    // largura intrinseca do <select> em vez de respeitar o 1fr. Era isso que
+    // fazia o campo "Tipo" terminar 55px fora do modal.
+    > * {
+      min-width: 0;
+    }
   }
 
   .form-group {
@@ -174,6 +190,8 @@
       border: 1px solid #ccc;
       font-size: 14px;
       font-family: inherit;
+      width: 100%;
+      min-width: 0;
     }
   }
 
@@ -193,5 +211,29 @@
     }
     .btn-secondary { background: #e5e7eb; color: #374151; }
     .btn-primary { background: #1a237e; color: #fff; }
+  }
+}
+
+// O _shared.scss ja empilha .form-row no mobile, mas ali a regra e' `.form-row`
+// (0,1,0) e aqui e' `.modal .form-row` (0,2,0) — a do componente vence mesmo
+// dentro da media query. Por isso a versao mobile precisa ser declarada aqui.
+@media (max-width: 768px) {
+  .modal {
+    max-width: calc(100% - 1.5rem);
+
+    .form-row {
+      grid-template-columns: 1fr;
+    }
+
+    .modal-footer {
+      // Em 390px os dois botoes lado a lado espremiam o rotulo; empilhar da
+      // area de toque cheia pra cada um.
+      flex-direction: column-reverse;
+
+      button {
+        width: 100%;
+        padding: 0.75rem 1rem;
+      }
+    }
   }
 }

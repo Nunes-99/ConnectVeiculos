@@ -382,17 +382,40 @@ table {
 
 // Mobile responsive
 @media (max-width: 768px) {
-  // Empilhado no mobile: com flex-direction:row o h1 fica ao lado das acoes e
-  // sobra pouca largura pro .header-actions, que tem width:100% mais abaixo.
-  // O resultado era o bloco de botoes transbordando pra fora da viewport — em
-  // 390px o "Novo Veiculo" terminava em x=433, fora da tela e sem scroll.
+  // O que transbordava a viewport em 390px nao era o flex-direction:row, e sim
+  // o .header-actions com width:100% mais abaixo: com h1 do lado, sobrava pouca
+  // largura e o bloco de botoes terminava em x=433, fora da tela. Empilhar tudo
+  // resolveu o transbordo mas jogou pra linha de baixo tambem o header que tem
+  // um botao so ("+ Nova Venda", "+ Novo documento"), que cabia ao lado.
+  //
+  // Aqui a linha do titulo volta a ser row e quem decide a quebra e' o conteudo:
+  // botao solto fica ao lado do h1; bloco .header-actions (Veiculos, Lojas e
+  // Relatorios tem 3-4 acoes) pega flex-basis:100% e desce inteiro pra proxima
+  // linha, sem nunca disputar largura com o titulo.
   .page-header {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
     gap: 0.75rem;
 
     h1 {
       font-size: 1.375rem;
+      // flex-basis 0 (e nao auto) e' o que segura o botao na linha do titulo:
+      // com wrap ligado o flex quebra a linha ANTES de encolher o item, entao
+      // um h1 de base automatica ("Categorias de Veiculos") empurrava o botao
+      // pra baixo. Com base 0 o h1 so ocupa a sobra e quebra o proprio texto.
+      // O min-width:0 impede que o conteudo reimponha uma largura minima.
+      flex: 1 1 0;
+      min-width: 0;
+    }
+
+    > button,
+    > a {
+      flex: 0 0 auto;
+    }
+
+    > .header-actions {
+      flex: 1 1 100%;
     }
   }
 
