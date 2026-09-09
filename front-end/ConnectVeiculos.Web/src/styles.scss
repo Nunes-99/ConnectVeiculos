@@ -126,3 +126,39 @@ input[type="number"] {
     display: block !important;
   }
 }
+
+// ==========================================
+// TRAVA DE ROLAGEM COM MODAL ABERTO
+// ==========================================
+// Os overlays sao position:fixed, entao ficam parados enquanto a pagina atras
+// continua rolando. No mobile isso aparece como "arrastar pra cima e ver o que
+// tem embaixo": o conteudo desliza sob o overlay e vaza nas bordas durante o
+// overscroll e o esconde-mostra da barra do navegador.
+//
+// So o modal de detalhes do catalogo travava o body (via TypeScript). Em vez de
+// repetir isso em cada um dos ~20 componentes com modal, a trava e' declarada
+// aqui uma vez: `:has()` deixa o CSS reagir a presenca do overlay no DOM.
+//
+// Os seletores cobrem apenas overlay que existe so quando aberto (todos estao
+// dentro de @if). Ficam de fora, de proposito:
+//   .slide-overlay   — decorativo do login/registro, sempre no DOM
+//   .loading-overlay — spinner, pode ser inline dentro de um card
+// e .sidebar-overlay entra so com .active, porque o elemento e' permanente.
+// O elemento que rola e' o <html>, nao o <body>: travar so o body deixa a
+// pagina rolar do mesmo jeito (medido — rolou 500px com body:overflow:hidden).
+// Por isso a regra vale para os dois.
+html:has(.modal-overlay),
+html:has(.detalhes-overlay),
+html:has(.galeria-overlay),
+html:has(.scanner-overlay),
+html:has(.sidebar-overlay.active),
+body:has(.modal-overlay),
+body:has(.detalhes-overlay),
+body:has(.galeria-overlay),
+body:has(.scanner-overlay),
+body:has(.sidebar-overlay.active) {
+  overflow: hidden;
+  // Impede que o gesto continue no scroll da pagina quando o conteudo do modal
+  // chega ao fim (scroll chaining).
+  overscroll-behavior: contain;
+}

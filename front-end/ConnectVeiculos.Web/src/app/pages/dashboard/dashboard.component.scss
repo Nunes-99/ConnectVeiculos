@@ -988,3 +988,19 @@
   font-weight: 400;
   color: var(--text-secondary);
 }
+
+@media (max-width: 768px) {
+  // Lado a lado, o space-between espremia o h2 e "Comparativo Mensal" quebrava
+  // em duas linhas com a legenda ocupando a direita. Empilhado, o titulo cabe
+  // inteiro na primeira linha e a legenda fica embaixo, alinhada a esquerda.
+  .section-title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+
+    .section-hint {
+      margin-left: 0;
+      text-align: left;
+    }
+  }
+}

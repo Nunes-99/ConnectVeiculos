@@ -488,7 +488,19 @@
         <div class="comp-label">Categoria</div>
         @for (v of comparando; track v.veiId) { <div class="comp-value">{{ v.categoriaNome || '-' }}</div> }
         <div class="comp-label">Opcionais</div>
-        @for (v of comparando; track v.veiId) { <div class="comp-value comp-opcionais">{{ v.veiOpcionais || '-' }}</div> }
+        @for (v of comparando; track v.veiId) {
+          <div class="comp-value comp-opcionais">
+            @if (v.veiOpcionais) {
+              <ul>
+                @for (opcional of v.veiOpcionais.split(','); track opcional) {
+                  <li>{{ opcional.trim() }}</li>
+                }
+              </ul>
+            } @else {
+              -
+            }
+          </div>
+        }
         <div class="comp-label">Loja</div>
         @for (v of comparando; track v.veiId) { <div class="comp-value">{{ v.lojaNome }}</div> }
       </div>

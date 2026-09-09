@@ -553,7 +553,15 @@
 }
 .comparador-grid {
   display: grid; gap: 1px; background: #e0e0e0;
-  & > div { background: white; padding: 0.75rem 1rem; display: flex; align-items: center; }
+  // Sem overflow-wrap, texto que nao tem onde quebrar transborda a celula e
+  // pinta por cima da coluna vizinha (era o caso dos opcionais, que vinham
+  // "a,b,c" sem espaco depois da virgula). break-word e nao anywhere: quebra
+  // so quando a palavra sozinha nao cabe, senao "Volkswagen" era partido no
+  // meio mesmo havendo espaco.
+  & > div {
+    background: white; padding: 0.75rem 1rem; display: flex; align-items: center;
+    overflow-wrap: break-word;
+  }
 }
 .comp-label { font-weight: 600; color: #555; font-size: 0.9rem; background: #f9f9f9 !important; }
 .comp-header {
@@ -568,6 +576,26 @@
 }
 .comp-value { font-size: 0.9rem; color: #333; justify-content: center;
   &.highlight { font-weight: 700; color: #1a237e; font-size: 1rem; }
+}
+
+// Opcionais viravam um paredao de texto sem espaco depois da virgula, que a
+// coluna nao conseguia quebrar. Agora e' uma lista: um item por linha, com
+// marcador, alinhada ao topo em vez de centralizada.
+.comp-opcionais {
+  align-items: flex-start;
+  justify-content: flex-start;
+
+  ul {
+    margin: 0;
+    padding-left: 1.1em;
+    text-align: left;
+    width: 100%;
+  }
+
+  li {
+    margin-bottom: 0.2rem;
+    line-height: 1.35;
+  }
 }
 
 // ==========================================
