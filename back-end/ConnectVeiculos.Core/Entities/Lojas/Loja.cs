@@ -30,6 +30,21 @@ namespace ConnectVeiculos.Core.Entities.Lojas
         public string LojUrlCatalogo { get; private set; }
         public bool LojPadraoCatalogo { get; private set; }
 
+        // ===== Personalizacao do catalogo publico =====
+        // Ficam fora do SetProperties (que ja tem 24 parametros) e sao gravados
+        // por SetPersonalizacao, para nao arrastar todos os chamadores atuais.
+        public string LojTema { get; private set; }
+        public string LojCorFundo { get; private set; }
+        public string LojBannerImg { get; private set; }
+        public string LojBannerTitulo { get; private set; }
+        public string LojBannerSubtitulo { get; private set; }
+        public string LojFavicon { get; private set; }
+        public string LojHorario { get; private set; }
+        public string LojSobre { get; private set; }
+        public string LojLinkVenderCarro { get; private set; }
+        public bool LojMostrarMarcas { get; private set; }
+        public bool LojMostrarMapa { get; private set; }
+
         public Loja() { }
 
         public Loja(int lojId, string lojNome, string lojLogradouro, string lojNumero,
@@ -86,6 +101,50 @@ namespace ConnectVeiculos.Core.Entities.Lojas
         public void SetUrlCatalogo(string url)
         {
             LojUrlCatalogo = url;
+        }
+
+        /// <summary>
+        /// Aparencia do catalogo publico desta loja. Tudo opcional: o catalogo
+        /// tem padrao para cada item, entao a loja que nao personaliza nada
+        /// continua funcionando igual.
+        /// </summary>
+        public void SetPersonalizacao(
+            string tema = null, string corFundo = null,
+            string bannerImg = null, string bannerTitulo = null, string bannerSubtitulo = null,
+            string favicon = null, string horario = null, string sobre = null,
+            string linkVenderCarro = null,
+            bool mostrarMarcas = true, bool mostrarMapa = true)
+        {
+            // Qualquer valor diferente de "claro" cai no escuro, que e' o padrao
+            // do catalogo — evita tema invalido vindo do banco quebrar a tela.
+            LojTema = tema == "claro" ? "claro" : "escuro";
+            LojCorFundo = corFundo;
+            LojBannerImg = bannerImg;
+            LojBannerTitulo = bannerTitulo;
+            LojBannerSubtitulo = bannerSubtitulo;
+            LojFavicon = favicon;
+            LojHorario = horario;
+            LojSobre = sobre;
+            LojLinkVenderCarro = linkVenderCarro;
+            LojMostrarMarcas = mostrarMarcas;
+            LojMostrarMapa = mostrarMapa;
+
+            ValidatePersonalizacao();
+        }
+
+        private void ValidatePersonalizacao()
+        {
+            if (!string.IsNullOrWhiteSpace(LojBannerTitulo) && LojBannerTitulo.Length > 80)
+                throw new LojaException("O título do banner deve ter no máximo 80 caracteres.");
+
+            if (!string.IsNullOrWhiteSpace(LojBannerSubtitulo) && LojBannerSubtitulo.Length > 160)
+                throw new LojaException("O subtítulo do banner deve ter no máximo 160 caracteres.");
+
+            if (!string.IsNullOrWhiteSpace(LojHorario) && LojHorario.Length > 120)
+                throw new LojaException("O horário de atendimento deve ter no máximo 120 caracteres.");
+
+            if (!string.IsNullOrWhiteSpace(LojSobre) && LojSobre.Length > 1000)
+                throw new LojaException("O texto sobre a loja deve ter no máximo 1000 caracteres.");
         }
 
         public void DefinirComoPadraoCatalogo(bool padrao)

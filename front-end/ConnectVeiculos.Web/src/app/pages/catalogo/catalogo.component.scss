@@ -1272,3 +1272,334 @@
   .empty-state { color: #777; }
 }
 
+
+// ==========================================
+// APARENCIA PERSONALIZADA POR LOJA
+// ==========================================
+// As cores vem de custom properties definidas em CatalogoComponent.estiloTema,
+// aplicadas no .catalogo-container. Assim a loja escolhe fundo/destaque no
+// cadastro e o catalogo inteiro acompanha, sem binding em cada elemento.
+.catalogo-container {
+  background: var(--cat-fundo, #171717);
+  color: var(--cat-texto, #fafafa);
+}
+
+.cat-horario {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  background: var(--cat-destaque, #1a237e);
+  color: var(--cat-destaque-texto, #fff);
+  font-size: 0.85rem;
+  text-align: center;
+
+  .material-icons { font-size: 1rem; }
+  strong { font-weight: 700; }
+}
+
+.cat-navbar {
+  background: var(--cat-superficie, #202020);
+  border-bottom: 1px solid var(--cat-borda, #2f2f2f);
+}
+
+.cat-navbar-menu {
+  display: flex;
+  gap: 1.5rem;
+  padding: 0 1.5rem 0.75rem;
+  flex-wrap: wrap;
+}
+
+.cat-menu-link {
+  color: var(--cat-texto, #fafafa);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-decoration: none;
+  cursor: pointer;
+  padding-bottom: 2px;
+  border-bottom: 2px solid transparent;
+
+  &:hover { border-bottom-color: var(--cat-destaque, #1a237e); }
+}
+
+.cat-nav-zap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #25d366;
+  color: #fff;
+  flex: 0 0 auto;
+}
+
+.cat-banner {
+  position: relative;
+  display: block;
+
+  img {
+    display: block;
+    width: 100%;
+    max-height: 420px;
+    object-fit: cover;
+  }
+}
+
+.cat-banner-texto {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  text-align: center;
+  // A imagem e' escolhida pela loja e pode ser clara: o veu garante contraste
+  // do texto sem depender da foto enviada.
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.6) 100%);
+
+  h2 {
+    margin: 0;
+    color: #fff;
+    font-size: clamp(1.5rem, 6vw, 3rem);
+    font-weight: 800;
+    line-height: 1.1;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+  }
+
+  p {
+    margin: 0;
+    color: #f0f0f0;
+    font-size: clamp(0.9rem, 3vw, 1.15rem);
+  }
+}
+
+.cat-banner-acoes {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem 0;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.cat-cta {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0.85rem 1rem;
+  border: 2px solid var(--cat-destaque, #1a237e);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+
+  &.cat-cta-cheio {
+    background: var(--cat-destaque, #1a237e);
+    color: var(--cat-destaque-texto, #fff);
+  }
+
+  &.cat-cta-vazado {
+    background: transparent;
+    color: var(--cat-destaque, #1a237e);
+  }
+}
+
+.cat-busca-titulo {
+  margin: 0 0 0.75rem;
+  font-size: clamp(1.1rem, 4vw, 1.6rem);
+  font-weight: 700;
+  color: var(--cat-texto, #fafafa);
+}
+
+.cat-marcas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 0.6rem;
+  padding: 0 1.5rem 1rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.cat-marca {
+  padding: 0.7rem 0.5rem;
+  border: 1px solid var(--cat-borda, #2f2f2f);
+  border-radius: 8px;
+  background: var(--cat-superficie, #202020);
+  color: var(--cat-texto, #fafafa);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  // Nome de marca longo nao pode empurrar a coluna do grid.
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &:hover {
+    border-color: var(--cat-destaque, #1a237e);
+    color: var(--cat-destaque, #1a237e);
+  }
+}
+
+.footer-sobre {
+  opacity: 0.85;
+  line-height: 1.5;
+}
+
+.footer-mapa {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1.5rem 1.5rem;
+
+  iframe {
+    width: 100%;
+    height: 280px;
+    border: 0;
+    border-radius: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .cat-navbar-menu { gap: 1rem; padding: 0 0.75rem 0.6rem; }
+  .cat-banner img { max-height: 220px; }
+  .cat-banner-acoes { padding: 0.75rem 0.75rem 0; }
+  .cat-marcas {
+    grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+    padding: 0 0.75rem 0.75rem;
+  }
+  .footer-mapa { padding: 0 0.75rem 1rem; iframe { height: 200px; } }
+}
+
+// ==========================================
+// CAMADA DE TEMA
+// ==========================================
+// O catalogo foi escrito com cores claras fixas (#fff, #f5f5f5, #333). Em vez
+// de caçar cada uma no arquivo inteiro — arriscado e ruidoso —, as superficies
+// que definem a identidade sao reapontadas aqui para as custom properties.
+// Este bloco fica no fim de proposito: mesma especificidade, ordem decide.
+.catalogo-container {
+  .cat-searchbar {
+    background: var(--cat-superficie, #202020);
+    border-bottom-color: var(--cat-borda, #2f2f2f);
+  }
+
+  .cat-search-box {
+    background: var(--cat-fundo, #171717);
+    border-color: var(--cat-borda, #2f2f2f);
+
+    &:focus-within {
+      background: var(--cat-fundo, #171717);
+      border-color: var(--cat-destaque, #1a237e);
+    }
+
+    input { color: var(--cat-texto, #fafafa); }
+    > .material-icons { color: var(--cat-texto-suave, #b0b0b0); }
+  }
+
+  .cat-search-meta {
+    color: var(--cat-texto-suave, #b0b0b0);
+    strong { color: var(--cat-texto, #fafafa); }
+  }
+
+  .filtros-sidebar {
+    background: var(--cat-superficie, #202020);
+    color: var(--cat-texto, #fafafa);
+
+    h3 { color: var(--cat-destaque, #1a237e); border-bottom-color: var(--cat-destaque, #1a237e); }
+  }
+
+  .filtro-grupo {
+    label { color: var(--cat-texto, #fafafa); }
+
+    select, input {
+      background: var(--cat-fundo, #171717);
+      border-color: var(--cat-borda, #2f2f2f);
+      color: var(--cat-texto, #fafafa);
+    }
+  }
+
+  .resultados-info { color: var(--cat-texto-suave, #b0b0b0); }
+
+  .veiculo-card {
+    background: var(--cat-superficie, #202020);
+    border: 1px solid var(--cat-borda, #2f2f2f);
+  }
+
+  .card-info {
+    h3 { color: var(--cat-texto, #fafafa); }
+    .preco { color: var(--cat-destaque, #1a237e); }
+
+    .detalhes .detalhe-item {
+      background: var(--cat-fundo, #171717);
+      color: var(--cat-texto-suave, #b0b0b0);
+      .material-icons { color: var(--cat-destaque, #1a237e); }
+    }
+
+    .loja-info { color: var(--cat-texto-suave, #b0b0b0); }
+  }
+
+  .badge-categoria { background: var(--cat-destaque, #1a237e); color: var(--cat-destaque-texto, #fff); }
+}
+
+// Tema claro: a loja que escolher "claro" volta ao visual original de fundo
+// claro, so que com as cores dela — por isso o tema mora nas mesmas variaveis.
+.catalogo-container.tema-claro {
+  .card-imagem { background: #e6e6e6; }
+}
+
+// Controles que ficaram brancos fixos e destoavam no tema escuro.
+// (As camadas translucidas sobre a navbar — logo-icon, nav-btn, status — ficam
+// como estao: rgba branco sobre superficie escura ja da o realce certo.)
+.catalogo-container {
+  .cat-sort-select,
+  .filtros-toggle {
+    background: var(--cat-superficie, #202020);
+    border-color: var(--cat-borda, #2f2f2f);
+    color: var(--cat-texto, #fafafa);
+  }
+
+  .toolbar-btn,
+  .view-toggle button {
+    background: var(--cat-superficie, #202020);
+    border-color: var(--cat-borda, #2f2f2f);
+    color: var(--cat-texto, #fafafa);
+
+    &.active {
+      background: var(--cat-destaque, #1a237e);
+      border-color: var(--cat-destaque, #1a237e);
+      color: var(--cat-destaque-texto, #fff);
+    }
+  }
+}
+
+// A navbar nasceu com texto branco fixo (sempre houve fundo escuro em
+// gradiente). Com tema claro isso vira branco no branco — as cores passam a
+// vir do tema, e os realces translucidos invertem junto.
+.catalogo-container {
+  .cat-navbar-title {
+    h1 { color: var(--cat-texto, #fafafa); }
+    small { color: var(--cat-texto-suave, #b0b0b0); }
+  }
+
+  .cat-navbar-logo-icon {
+    background: var(--cat-realce, rgba(255, 255, 255, 0.15));
+    .material-icons { color: var(--cat-texto, #fafafa); }
+  }
+
+  .cat-nav-btn {
+    background: var(--cat-realce, rgba(255, 255, 255, 0.1));
+    color: var(--cat-texto, #fafafa);
+    &:hover { background: var(--cat-realce-forte, rgba(255, 255, 255, 0.2)); }
+  }
+
+  .cat-nav-icon {
+    color: var(--cat-texto-suave, #b0b0b0);
+    &:hover { background: var(--cat-realce, rgba(255, 255, 255, 0.12)); color: var(--cat-texto, #fafafa); }
+  }
+
+  .status-indicator { background: var(--cat-realce, rgba(255, 255, 255, 0.15)); }
+}

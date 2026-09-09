@@ -23,6 +23,18 @@ export interface Loja {
   lojFacebook?: string;
   lojUrlCatalogo?: string;
   lojPadraoCatalogo?: boolean;
+  // Personalizacao do catalogo publico
+  lojTema?: 'claro' | 'escuro';
+  lojCorFundo?: string;
+  lojBannerImg?: string;
+  lojBannerTitulo?: string;
+  lojBannerSubtitulo?: string;
+  lojFavicon?: string;
+  lojHorario?: string;
+  lojSobre?: string;
+  lojLinkVenderCarro?: string;
+  lojMostrarMarcas?: boolean;
+  lojMostrarMapa?: boolean;
 }
 
 export interface LojaInput {
@@ -50,4 +62,16 @@ export interface LojaInput {
   lojFacebook?: string;
   lojUrlCatalogo?: string;
   lojPadraoCatalogo?: boolean;
+  // Personalizacao do catalogo publico
+  lojTema?: 'claro' | 'escuro';
+  lojCorFundo?: string;
+  lojBannerImg?: string;
+  lojBannerTitulo?: string;
+  lojBannerSubtitulo?: string;
+  lojFavicon?: string;
+  lojHorario?: string;
+  lojSobre?: string;
+  lojLinkVenderCarro?: string;
+  lojMostrarMarcas?: boolean;
+  lojMostrarMapa?: boolean;
 }

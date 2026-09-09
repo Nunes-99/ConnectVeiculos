@@ -21,6 +21,17 @@ export class ImagemService {
     return this.http.get<VeiculoImagem[]>(`${this.baseUrl}/imagens/veiculo/${veiculoId}`);
   }
 
+  /**
+   * Sobe banner ou favicon da loja. Devolve o caminho relativo gravado; o
+   * arquivo em si nao vai no registro da loja (ao contrario do logo, que e'
+   * base64), pra nao inchar a resposta do catalogo publico.
+   */
+  uploadLoja(lojaId: number, arquivo: File, tipo: 'banner' | 'favicon'): Observable<{ caminho: string }> {
+    const formData = new FormData();
+    formData.append('arquivo', arquivo);
+    return this.http.post<{ caminho: string }>(`${this.baseUrl}/imagens/loja/${lojaId}?tipo=${tipo}`, formData);
+  }
+
   upload(veiculoId: number, arquivo: File): Observable<VeiculoImagem> {
     const formData = new FormData();
     formData.append('arquivo', arquivo);

@@ -55,6 +55,19 @@ namespace ConnectVeiculos.Application.ViewModels.Catalogo
         public string LojCorSecundaria { get; set; }
         public string LojInstagram { get; set; }
         public string LojFacebook { get; set; }
+
+        // Personalizacao do catalogo definida pelo admin no cadastro da loja.
+        public string LojTema { get; set; }
+        public string LojCorFundo { get; set; }
+        public string LojBannerImg { get; set; }
+        public string LojBannerTitulo { get; set; }
+        public string LojBannerSubtitulo { get; set; }
+        public string LojFavicon { get; set; }
+        public string LojHorario { get; set; }
+        public string LojSobre { get; set; }
+        public string LojLinkVenderCarro { get; set; }
+        public bool LojMostrarMarcas { get; set; }
+        public bool LojMostrarMapa { get; set; }
         public string LojSlug { get; set; }
         public string LojUrlCatalogo { get; set; }
     }

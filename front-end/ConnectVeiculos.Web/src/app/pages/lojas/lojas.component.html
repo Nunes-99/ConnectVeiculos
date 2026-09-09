@@ -283,6 +283,107 @@
               <small class="check-help">Quando marcada, os dados desta loja (logo, telefone, endereço, redes sociais, cores) aparecem no topo e no rodapé do catálogo público quando o cliente visualiza todas as lojas. Apenas uma loja pode ser a padrão por vez.</small>
             </div>
           </div>
+
+          <h3 class="secao-titulo">Aparência do catálogo</h3>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Tema</label>
+              <select formControlName="lojTema">
+                <option value="escuro">Escuro</option>
+                <option value="claro">Claro</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Cor de fundo</label>
+              <div class="color-picker-wrapper">
+                <input type="color" formControlName="lojCorFundo" />
+                <input type="text" formControlName="lojCorFundo" placeholder="#171717" />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group" style="grid-column: 1/-1;">
+              <label>Banner de destaque</label>
+              <div class="upload-arquivo">
+                @if (bannerPreview) {
+                  <img [src]="bannerPreview" alt="Banner" class="banner-preview" />
+                  <button type="button" class="btn-remover-img" (click)="removerBanner()">
+                    <span class="material-icons" aria-hidden="true">delete</span> Remover
+                  </button>
+                } @else {
+                  <label class="btn-upload">
+                    <span class="material-icons" aria-hidden="true">image</span>
+                    Escolher imagem
+                    <input type="file" accept="image/*" (change)="onBannerSelected($event)" hidden />
+                  </label>
+                }
+              </div>
+              <small class="check-help">Imagem larga que aparece no topo do catálogo. Recomendado 1920x600.</small>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Título do banner</label>
+              <input type="text" formControlName="lojBannerTitulo" maxlength="80" placeholder="Descubra novos caminhos" />
+            </div>
+            <div class="form-group">
+              <label>Subtítulo do banner</label>
+              <input type="text" formControlName="lojBannerSubtitulo" maxlength="160" placeholder="Explore nosso estoque!" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Horário de atendimento</label>
+              <input type="text" formControlName="lojHorario" maxlength="120" placeholder="Seg a Sábado - 8h às 19h" />
+              <small class="check-help">Aparece na barra no topo do catálogo.</small>
+            </div>
+            <div class="form-group">
+              <label>Ícone do catálogo (favicon)</label>
+              <div class="upload-arquivo">
+                @if (faviconPreview) {
+                  <img [src]="faviconPreview" alt="Ícone" class="favicon-preview" />
+                  <button type="button" class="btn-remover-img" (click)="removerFavicon()">
+                    <span class="material-icons" aria-hidden="true">delete</span> Remover
+                  </button>
+                } @else {
+                  <label class="btn-upload">
+                    <span class="material-icons" aria-hidden="true">star</span>
+                    Escolher ícone
+                    <input type="file" accept="image/*" (change)="onFaviconSelected($event)" hidden />
+                  </label>
+                }
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Link "Venda seu carro"</label>
+              <input type="text" formControlName="lojLinkVenderCarro" maxlength="500" placeholder="https://wa.me/5511999998888" />
+              <small class="check-help">Deixe em branco para usar o WhatsApp da loja.</small>
+            </div>
+            <div class="form-group">
+              <label>Sobre a loja</label>
+              <textarea formControlName="lojSobre" maxlength="1000" rows="3" placeholder="Texto exibido no rodapé do catálogo"></textarea>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group form-group-check" style="grid-column: 1/-1;">
+              <label class="check-label">
+                <input type="checkbox" formControlName="lojMostrarMarcas" />
+                <span>Mostrar grade de marcas no catálogo</span>
+              </label>
+              <label class="check-label">
+                <input type="checkbox" formControlName="lojMostrarMapa" />
+                <span>Mostrar mapa da localização no rodapé</span>
+              </label>
+            </div>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn-secondary" (click)="closeModal()">Cancelar</button>

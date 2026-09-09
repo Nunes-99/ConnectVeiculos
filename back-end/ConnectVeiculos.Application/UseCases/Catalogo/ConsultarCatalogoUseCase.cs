@@ -133,7 +133,18 @@ namespace ConnectVeiculos.Application.UseCases.Catalogo
                     LojCorSecundaria = lojaInfo.LojCorSecundaria ?? "#25d366",
                     LojInstagram = lojaInfo.LojInstagram,
                     LojFacebook = lojaInfo.LojFacebook,
-                    LojUrlCatalogo = lojaInfo.LojUrlCatalogo
+                    LojUrlCatalogo = lojaInfo.LojUrlCatalogo,
+                    LojTema = lojaInfo.LojTema ?? "escuro",
+                    LojCorFundo = lojaInfo.LojCorFundo,
+                    LojBannerImg = lojaInfo.LojBannerImg,
+                    LojBannerTitulo = lojaInfo.LojBannerTitulo,
+                    LojBannerSubtitulo = lojaInfo.LojBannerSubtitulo,
+                    LojFavicon = lojaInfo.LojFavicon,
+                    LojHorario = lojaInfo.LojHorario,
+                    LojSobre = lojaInfo.LojSobre,
+                    LojLinkVenderCarro = lojaInfo.LojLinkVenderCarro,
+                    LojMostrarMarcas = lojaInfo.LojMostrarMarcas,
+                    LojMostrarMapa = lojaInfo.LojMostrarMapa
                 };
             }
 

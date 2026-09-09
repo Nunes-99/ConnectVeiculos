@@ -54,6 +54,11 @@ export class LojasComponent implements OnInit {
   cnpjInvalido = false;
   logoPreview: string | null = null;
   logoFile: File | null = null;
+  bannerPreview: string | null = null;
+  bannerFile: File | null = null;
+  faviconPreview: string | null = null;
+  faviconFile: File | null = null;
+  salvando = false;
   showPreview = false;
 
   // Modal de confirmacao
@@ -91,7 +96,20 @@ export class LojasComponent implements OnInit {
     lojInstagram: [''],
     lojFacebook: [''],
     lojUrlCatalogo: ['', Validators.maxLength(500)],
-    lojPadraoCatalogo: [false]
+    lojPadraoCatalogo: [false],
+
+    // Personalizacao do catalogo publico
+    lojTema: ['escuro'],
+    lojCorFundo: ['#171717'],
+    lojBannerImg: [''],
+    lojBannerTitulo: ['', Validators.maxLength(80)],
+    lojBannerSubtitulo: ['', Validators.maxLength(160)],
+    lojFavicon: [''],
+    lojHorario: ['', Validators.maxLength(120)],
+    lojSobre: ['', Validators.maxLength(1000)],
+    lojLinkVenderCarro: ['', Validators.maxLength(500)],
+    lojMostrarMarcas: [true],
+    lojMostrarMapa: [true]
   });
 
   ngOnInit(): void {
@@ -141,15 +159,31 @@ export class LojasComponent implements OnInit {
         lojInstagram: loja.lojInstagram || '',
         lojFacebook: loja.lojFacebook || '',
         lojUrlCatalogo: loja.lojUrlCatalogo || '',
-        lojPadraoCatalogo: loja.lojPadraoCatalogo ?? false
+        lojPadraoCatalogo: loja.lojPadraoCatalogo ?? false,
+        lojTema: loja.lojTema || 'escuro',
+        lojCorFundo: loja.lojCorFundo || '#171717',
+        lojBannerImg: loja.lojBannerImg || '',
+        lojBannerTitulo: loja.lojBannerTitulo || '',
+        lojBannerSubtitulo: loja.lojBannerSubtitulo || '',
+        lojFavicon: loja.lojFavicon || '',
+        lojHorario: loja.lojHorario || '',
+        lojSobre: loja.lojSobre || '',
+        lojLinkVenderCarro: loja.lojLinkVenderCarro || '',
+        lojMostrarMarcas: loja.lojMostrarMarcas ?? true,
+        lojMostrarMapa: loja.lojMostrarMapa ?? true
       });
+      this.bannerPreview = loja.lojBannerImg ? this.imagemService.getImageUrl(loja.lojBannerImg) : null;
+      this.faviconPreview = loja.lojFavicon ? this.imagemService.getImageUrl(loja.lojFavicon) : null;
+      this.bannerFile = null;
+      this.faviconFile = null;
       this.logoPreview = loja.lojImg ? (loja.lojImg.startsWith('data:') ? loja.lojImg : this.imagemService.getImageUrl(loja.lojImg)) : null;
       this.logoFile = null;
     } else {
       this.editId = null;
       // Herdar URL do catálogo da primeira loja existente
       const urlCatalogo = this.lojas.find(l => l.lojUrlCatalogo)?.lojUrlCatalogo || '';
-      this.form.reset({ lojSts: true, lojSlug: '', lojCorPrimaria: '#1a237e', lojCorSecundaria: '#25d366', lojImg: '', lojInstagram: '', lojFacebook: '', lojUrlCatalogo: urlCatalogo, lojPadraoCatalogo: false });
+      this.form.reset({ lojSts: true, lojSlug: '', lojCorPrimaria: '#1a237e', lojCorSecundaria: '#25d366', lojImg: '', lojInstagram: '', lojFacebook: '', lojUrlCatalogo: urlCatalogo, lojPadraoCatalogo: false, lojTema: 'escuro', lojCorFundo: '#171717', lojBannerImg: '', lojBannerTitulo: '', lojBannerSubtitulo: '', lojFavicon: '', lojHorario: '', lojSobre: '', lojLinkVenderCarro: '', lojMostrarMarcas: true, lojMostrarMapa: true });
+      this.bannerPreview = null; this.faviconPreview = null; this.bannerFile = null; this.faviconFile = null;
       this.logoPreview = null;
       this.logoFile = null;
     }
@@ -160,7 +194,7 @@ export class LojasComponent implements OnInit {
 
   closeModal(): void {
     this.showModal = false;
-    this.form.reset({ lojSts: true, lojSlug: '', lojCorPrimaria: '#1a237e', lojCorSecundaria: '#25d366', lojImg: '', lojInstagram: '', lojFacebook: '', lojUrlCatalogo: '', lojPadraoCatalogo: false });
+    this.form.reset({ lojSts: true, lojSlug: '', lojCorPrimaria: '#1a237e', lojCorSecundaria: '#25d366', lojImg: '', lojInstagram: '', lojFacebook: '', lojUrlCatalogo: '', lojPadraoCatalogo: false, lojTema: 'escuro', lojCorFundo: '#171717', lojBannerImg: '', lojBannerTitulo: '', lojBannerSubtitulo: '', lojFavicon: '', lojHorario: '', lojSobre: '', lojLinkVenderCarro: '', lojMostrarMarcas: true, lojMostrarMapa: true });
     this.editId = null;
     this.logoPreview = null;
     this.logoFile = null;
@@ -182,6 +216,38 @@ export class LojasComponent implements OnInit {
       };
       reader.readAsDataURL(this.logoFile);
     }
+  }
+
+  onBannerSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      this.bannerFile = input.files[0];
+      const reader = new FileReader();
+      reader.onload = (e) => { this.bannerPreview = e.target?.result as string; };
+      reader.readAsDataURL(this.bannerFile);
+    }
+  }
+
+  removerBanner(): void {
+    this.bannerPreview = null;
+    this.bannerFile = null;
+    this.form.patchValue({ lojBannerImg: '' });
+  }
+
+  onFaviconSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      this.faviconFile = input.files[0];
+      const reader = new FileReader();
+      reader.onload = (e) => { this.faviconPreview = e.target?.result as string; };
+      reader.readAsDataURL(this.faviconFile);
+    }
+  }
+
+  removerFavicon(): void {
+    this.faviconPreview = null;
+    this.faviconFile = null;
+    this.form.patchValue({ lojFavicon: '' });
   }
 
   removerLogo(): void {
@@ -235,22 +301,62 @@ export class LojasComponent implements OnInit {
       this.form.patchValue({ lojImg: this.logoPreview });
     }
     const data = this.form.getRawValue();
+    this.salvando = true;
 
-    if (this.editMode && this.editId) {
-      this.lojaService.update(this.editId, data).subscribe({
-        next: () => {
-          this.loadData();
-          this.closeModal();
+    const salvo$ = this.editMode && this.editId
+      ? this.lojaService.update(this.editId, data)
+      : this.lojaService.create(data);
+
+    salvo$.subscribe({
+      next: (loja) => {
+        const id = loja?.lojId ?? this.editId;
+
+        // Banner e favicon so podem subir depois que a loja tem id, e o caminho
+        // devolvido precisa voltar pro registro — por isso o segundo update.
+        if (id && (this.bannerFile || this.faviconFile)) {
+          this.enviarImagensDaLoja(id, data);
+          return;
         }
-      });
-    } else {
-      this.lojaService.create(data).subscribe({
-        next: () => {
-          this.loadData();
-          this.closeModal();
-        }
-      });
+
+        this.salvando = false;
+        this.loadData();
+        this.closeModal();
+      },
+      error: () => { this.salvando = false; }
+    });
+  }
+
+  private enviarImagensDaLoja(lojaId: number, data: Record<string, unknown>): void {
+    const envios: Promise<void>[] = [];
+
+    if (this.bannerFile) {
+      envios.push(new Promise<void>((resolve) => {
+        this.imagemService.uploadLoja(lojaId, this.bannerFile as File, 'banner').subscribe({
+          next: (r) => { data['lojBannerImg'] = r.caminho; resolve(); },
+          error: () => resolve()
+        });
+      }));
     }
+
+    if (this.faviconFile) {
+      envios.push(new Promise<void>((resolve) => {
+        this.imagemService.uploadLoja(lojaId, this.faviconFile as File, 'favicon').subscribe({
+          next: (r) => { data['lojFavicon'] = r.caminho; resolve(); },
+          error: () => resolve()
+        });
+      }));
+    }
+
+    Promise.all(envios).then(() => {
+      this.lojaService.update(lojaId, data as never).subscribe({
+        next: () => {
+          this.salvando = false;
+          this.loadData();
+          this.closeModal();
+        },
+        error: () => { this.salvando = false; }
+      });
+    });
   }
 
   remove(id: number): void {

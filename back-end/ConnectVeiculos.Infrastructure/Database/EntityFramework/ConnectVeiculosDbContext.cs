@@ -114,6 +114,15 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
                 entity.Property(e => e.LojSlug).HasMaxLength(100);
                 entity.HasIndex(e => e.LojSlug).IsUnique();
                 entity.Property(e => e.LojUrlCatalogo).HasMaxLength(500);
+                entity.Property(e => e.LojTema).HasMaxLength(10);
+                entity.Property(e => e.LojCorFundo).HasMaxLength(20);
+                entity.Property(e => e.LojBannerImg).HasMaxLength(500);
+                entity.Property(e => e.LojBannerTitulo).HasMaxLength(80);
+                entity.Property(e => e.LojBannerSubtitulo).HasMaxLength(160);
+                entity.Property(e => e.LojFavicon).HasMaxLength(500);
+                entity.Property(e => e.LojHorario).HasMaxLength(120);
+                entity.Property(e => e.LojSobre).HasMaxLength(1000);
+                entity.Property(e => e.LojLinkVenderCarro).HasMaxLength(500);
                 entity.Property(e => e.LojPadraoCatalogo).HasDefaultValue(false);
             });
 

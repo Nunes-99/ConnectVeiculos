@@ -50,6 +50,20 @@ namespace ConnectVeiculos.Application.UseCases.Lojas
                 inputModel.LojPadraoCatalogo
             );
 
+            loja.SetPersonalizacao(
+                inputModel.LojTema,
+                inputModel.LojCorFundo,
+                inputModel.LojBannerImg,
+                inputModel.LojBannerTitulo,
+                inputModel.LojBannerSubtitulo,
+                inputModel.LojFavicon,
+                inputModel.LojHorario,
+                inputModel.LojSobre,
+                inputModel.LojLinkVenderCarro,
+                inputModel.LojMostrarMarcas,
+                inputModel.LojMostrarMapa
+            );
+
             _unitOfWork.BeginTransaction();
 
             try

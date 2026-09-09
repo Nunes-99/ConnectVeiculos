@@ -42,6 +42,19 @@ export interface CatalogoLoja {
   lojInstagram?: string;
   lojFacebook?: string;
   lojUrlCatalogo?: string;
+
+  // Personalizacao definida pelo admin no cadastro da loja.
+  lojTema?: 'claro' | 'escuro';
+  lojCorFundo?: string;
+  lojBannerImg?: string;
+  lojBannerTitulo?: string;
+  lojBannerSubtitulo?: string;
+  lojFavicon?: string;
+  lojHorario?: string;
+  lojSobre?: string;
+  lojLinkVenderCarro?: string;
+  lojMostrarMarcas?: boolean;
+  lojMostrarMapa?: boolean;
 }
 
 export interface CatalogoLojaResumo {

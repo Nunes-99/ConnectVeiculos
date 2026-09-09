@@ -401,6 +401,30 @@
   }
 }
 
+// So aparece quando o navegador guardou o convite de instalacao (ver
+// PwaInstallService): sai da tela sozinho depois que o app e' instalado.
+.btn-instalar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  .material-icons { font-size: 18px; }
+
+  &:hover { background: rgba(255, 255, 255, 0.16); }
+}
+
 .footer-actions {
   display: flex;
   gap: 6px;

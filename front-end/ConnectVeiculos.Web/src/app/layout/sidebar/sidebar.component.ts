@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { AuthService, ThemeService, LojaService, ToastService } from '../../core/services';
+import { PwaInstallService } from '../../core/services/pwa-install.service';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { NotificationsComponent } from '../../shared/components/notifications/notifications.component';
@@ -77,6 +78,7 @@ export class SidebarComponent implements AfterViewInit, OnDestroy {
 
   authService = inject(AuthService);
   themeService = inject(ThemeService);
+  pwaInstall = inject(PwaInstallService);
   private lojaService = inject(LojaService);
   private fb = inject(FormBuilder);
   private toast = inject(ToastService);
@@ -262,5 +264,12 @@ export class SidebarComponent implements AfterViewInit, OnDestroy {
   hasErrorSenha(field: string, error: string): boolean {
     const ctrl = this.formSenha.get(field);
     return !!(ctrl && ctrl.hasError(error) && ctrl.touched);
+  }
+
+  async instalarApp(): Promise<void> {
+    const aceitou = await this.pwaInstall.instalar();
+    if (aceitou) {
+      this.toast.success('App instalado! Procure o icone na tela inicial.');
+    }
   }
 }

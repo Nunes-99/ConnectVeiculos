@@ -68,6 +68,13 @@
       </div>
     </div>
 
+    @if (pwaInstall.podeInstalar()) {
+      <button class="btn-instalar" (click)="instalarApp()">
+        <span class="material-icons" aria-hidden="true">install_mobile</span>
+        Instalar aplicativo
+      </button>
+    }
+
     <div class="footer-actions">
       <button class="btn-footer" (click)="toggleTheme()" title="Alternar tema">
         <span class="material-icons">{{ themeService.isDarkMode() ? 'light_mode' : 'dark_mode' }}</span>

@@ -388,3 +388,68 @@ input.cep-auto:disabled {
     .material-icons { font-size: 1.2rem; }
   }
 }
+
+// ===== Personalizacao do catalogo =====
+.secao-titulo {
+  grid-column: 1 / -1;
+  margin: 24px 0 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-primary);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.upload-arquivo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn-upload {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px dashed var(--border-primary);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary);
+
+  .material-icons { font-size: 18px; }
+  &:hover { border-color: var(--brand-primary); color: var(--brand-primary); }
+}
+
+.banner-preview {
+  width: 100%;
+  max-width: 320px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--border-primary);
+}
+
+.favicon-preview {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border-radius: 6px;
+  border: 1px solid var(--border-primary);
+}
+
+.btn-remover-img {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: #dc2626;
+  cursor: pointer;
+  font-size: 12px;
+
+  .material-icons { font-size: 16px; }
+}

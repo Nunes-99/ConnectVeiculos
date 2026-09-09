@@ -100,6 +100,87 @@ namespace ConnectVeiculos.API.Controllers
             return CreatedAtAction(nameof(ConsultarImagens), new { veiculoId }, imagem);
         }
 
+        /// <summary>
+        /// Upload de imagem da loja (banner do catalogo e favicon). Diferente do
+        /// upload de veiculo, nao grava linha em tabela: devolve o caminho e quem
+        /// chama guarda no campo correspondente da Loja.
+        ///
+        /// O logo da loja continua indo em base64 dentro do proprio registro. Aqui
+        /// nao da: o banner e' grande e viajaria em toda resposta do catalogo
+        /// publico, que e' a rota mais quente do sistema.
+        /// </summary>
+        /// <param name="lojaId">Loja dona do arquivo.</param>
+        /// <param name="tipo">"banner" ou "favicon" — define o tamanho maximo.</param>
+        /// <param name="arquivo">Imagem enviada.</param>
+        /// <response code="200">Caminho relativo do arquivo gravado.</response>
+        /// <response code="400">Arquivo ausente, grande demais, tipo invalido ou corrompido.</response>
+        [HttpPost("loja/{lojaId}")]
+        [RequestSizeLimit(TamanhoMaximoBytes)]
+        [RequestFormLimits(MultipartBodyLengthLimit = TamanhoMaximoBytes)]
+        public async Task<IActionResult> UploadImagemLoja(
+            int lojaId,
+            [FromQuery] string tipo,
+            IFormFile arquivo)
+        {
+            if (arquivo == null || arquivo.Length == 0)
+                return BadRequest("Arquivo não enviado.");
+
+            if (arquivo.Length > TamanhoMaximoBytes)
+                return BadRequest($"Arquivo muito grande. Maximo {TamanhoMaximoBytes / (1024 * 1024)} MB.");
+
+            var extensoesPermitidas = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+            var extensao = Path.GetExtension(arquivo.FileName).ToLowerInvariant();
+
+            if (!extensoesPermitidas.Contains(extensao))
+                return BadRequest("Tipo de arquivo não permitido. Use JPG, PNG, GIF ou WEBP.");
+
+            var ehFavicon = string.Equals(tipo, "favicon", StringComparison.OrdinalIgnoreCase);
+            var nomeTipo = ehFavicon ? "favicon" : "banner";
+            // Favicon aparece em 32px; guardar 1920 seria desperdicio de banda.
+            var ladoMaximo = ehFavicon ? 256 : LadoMaximoPx;
+
+            var uploadPath = Path.Combine(_environment.ContentRootPath, "uploads", "lojas", lojaId.ToString());
+            if (!Directory.Exists(uploadPath))
+                Directory.CreateDirectory(uploadPath);
+
+            string caminhoRelativo;
+
+            try
+            {
+                using var image = await Image.LoadAsync(arquivo.OpenReadStream());
+
+                if (image.Width > ladoMaximo || image.Height > ladoMaximo)
+                {
+                    image.Mutate(x => x.Resize(new ResizeOptions
+                    {
+                        Mode = ResizeMode.Max,
+                        Size = new Size(ladoMaximo, ladoMaximo)
+                    }));
+                }
+
+                // PNG no favicon preserva transparencia; o banner vai a JPEG, que
+                // fica bem menor numa foto de fundo.
+                var nomeArquivo = ehFavicon ? $"{nomeTipo}-{Guid.NewGuid()}.png" : $"{nomeTipo}-{Guid.NewGuid()}.jpg";
+                var caminhoCompleto = Path.Combine(uploadPath, nomeArquivo);
+                caminhoRelativo = $"/uploads/lojas/{lojaId}/{nomeArquivo}";
+
+                if (ehFavicon)
+                    await image.SaveAsPngAsync(caminhoCompleto);
+                else
+                    await image.SaveAsJpegAsync(caminhoCompleto, new JpegEncoder { Quality = 85 });
+            }
+            catch (UnknownImageFormatException)
+            {
+                return BadRequest("Arquivo não é uma imagem válida.");
+            }
+            catch (InvalidImageContentException)
+            {
+                return BadRequest("Imagem corrompida ou ilegível.");
+            }
+
+            return Ok(new { caminho = caminhoRelativo });
+        }
+
         [HttpPut("{imagemId}/principal")]
         public async Task<IActionResult> DefinirPrincipal(
             [FromServices] IDefinirImagemPrincipalUseCase definirPrincipalUseCase,

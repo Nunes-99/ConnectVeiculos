@@ -26,5 +26,18 @@ namespace ConnectVeiculos.Application.ViewModels.Lojas
         public string LojSlug { get; set; }
         public string LojUrlCatalogo { get; set; }
         public bool LojPadraoCatalogo { get; set; }
+
+        // Personalizacao do catalogo publico (ver Loja.SetPersonalizacao)
+        public string LojTema { get; set; }
+        public string LojCorFundo { get; set; }
+        public string LojBannerImg { get; set; }
+        public string LojBannerTitulo { get; set; }
+        public string LojBannerSubtitulo { get; set; }
+        public string LojFavicon { get; set; }
+        public string LojHorario { get; set; }
+        public string LojSobre { get; set; }
+        public string LojLinkVenderCarro { get; set; }
+        public bool LojMostrarMarcas { get; set; } = true;
+        public bool LojMostrarMapa { get; set; } = true;
     }
 }

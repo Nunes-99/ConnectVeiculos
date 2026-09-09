@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription, SubscriptionLike } from 'rxjs';
-import { Title } from '@angular/platform-browser';
+import { Title, DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { AuthService, CatalogoService, ImagemService, TestDriveService, LeadService, FavoritoService, ToastService } from '../../core/services';
 import { SeoService } from '../../core/services/seo.service';
 import { CurrencyMaskDirective } from '../../shared/directives';
@@ -38,7 +38,7 @@ const NO_IMAGE_PLACEHOLDER = `data:image/svg+xml;base64,${btoa(`<svg xmlns="http
 })
 export class CatalogoComponent implements OnInit, OnDestroy {
   private catalogoService = inject(CatalogoService);
-  private imagemService = inject(ImagemService);
+  imagemService = inject(ImagemService);
   private testDriveService = inject(TestDriveService);
   private leadService = inject(LeadService);
   private favoritoService = inject(FavoritoService);
@@ -46,6 +46,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private location = inject(Location);
   private titleService = inject(Title);
+  private sanitizer = inject(DomSanitizer);
   private toast = inject(ToastService);
   private seoService = inject(SeoService);
   private platformId = inject(PLATFORM_ID);
@@ -305,6 +306,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
           this.lojaId = this.loja.lojId;
         }
         this.categorias = [...new Set(this.veiculos.map(v => v.categoriaNome).filter(c => c))];
+        this.aplicarFavicon();
         this.filtrarPorTexto();
         this.loading = false;
         // SEO: meta tags e dados estruturados
@@ -547,7 +549,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
    * abrirWhatsApp(). Guarda e acao compartilham esta funcao de proposito: se
    * divergirem, volta o bug de exibir um botao que nao faz nada.
    */
-  private telefoneWhatsApp(veiculo?: CatalogoVeiculo | null): string {
+  telefoneWhatsApp(veiculo?: CatalogoVeiculo | null): string {
     const v = veiculo || this.veiculoSelecionado;
     return v?.lojaWhatsApp?.replace(/\D/g, '')
         || this.loja?.lojWhatsApp?.replace(/\D/g, '')
@@ -973,5 +975,121 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     const v = this.shareVeiculo;
     const texto = encodeURIComponent(`Confira: ${v.veiMarca} ${v.veiModelo} ${v.veiAno} - ${this.formatarPreco(v.veiPreco)}\n${this.getShareUrl(v)}`);
     window.open(`https://wa.me/?text=${texto}`, '_blank');
+  }
+
+  // ==========================================
+  // APARENCIA PERSONALIZADA DA LOJA
+  // ==========================================
+
+  /** Loja configurada com tema claro. Sem loja ou sem escolha, o catalogo e' escuro. */
+  get temaClaro(): boolean {
+    return this.loja?.lojTema === 'claro';
+  }
+
+  /**
+   * Paleta do catalogo como custom properties, aplicada no container.
+   * Deixar em CSS var em vez de [style] espalhado permite que o SCSS use as
+   * mesmas cores em qualquer profundidade sem repassar valor por binding.
+   */
+  get estiloTema(): Record<string, string> {
+    const claro = this.temaClaro;
+    const destaque = this.loja?.lojCorPrimaria || '#1a237e';
+    const fundo = this.loja?.lojCorFundo || (claro ? '#f5f5f5' : '#171717');
+
+    return {
+      '--cat-fundo': fundo,
+      '--cat-superficie': claro ? '#ffffff' : '#202020',
+      '--cat-borda': claro ? '#e0e0e0' : '#2f2f2f',
+      '--cat-texto': claro ? '#1a1a1a' : '#fafafa',
+      '--cat-texto-suave': claro ? '#5f6368' : '#b0b0b0',
+      '--cat-destaque': destaque,
+      '--cat-destaque-texto': this.corLegivelSobre(destaque),
+      // Realce dos botoes da navbar: clarear no escuro, escurecer no claro.
+      '--cat-realce': claro ? 'rgba(0, 0, 0, 0.06)' : 'rgba(255, 255, 255, 0.12)',
+      '--cat-realce-forte': claro ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.22)'
+    };
+  }
+
+  /**
+   * Preto ou branco sobre a cor de destaque, pelo brilho percebido (YIQ).
+   * A loja escolhe a cor livremente e um texto branco sobre amarelo fica
+   * ilegivel — este calculo evita depender do bom senso de quem configura.
+   */
+  private corLegivelSobre(hex: string): string {
+    const limpo = (hex || '').replace('#', '');
+    if (limpo.length !== 6) return '#ffffff';
+    const r = parseInt(limpo.slice(0, 2), 16);
+    const g = parseInt(limpo.slice(2, 4), 16);
+    const b = parseInt(limpo.slice(4, 6), 16);
+    return (r * 299 + g * 587 + b * 114) / 1000 >= 140 ? '#111111' : '#ffffff';
+  }
+
+  /** Marcas em estoque, para a grade de atalhos de busca. */
+  get marcasDisponiveis(): string[] {
+    return [...new Set(this.veiculos.map(v => v.veiMarca).filter(m => !!m))].sort();
+  }
+
+  /** Aplica na busca a marca clicada na grade. */
+  filtrarPorMarca(marca: string): void {
+    this.buscaTexto = marca;
+    this.filtrarPorTexto();
+    if (isPlatformBrowser(this.platformId)) {
+      document.querySelector('.cat-resultados')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  /** Destino do "Venda seu carro": link configurado ou o WhatsApp da loja. */
+  get linkVenderCarro(): string | null {
+    if (this.loja?.lojLinkVenderCarro) return this.loja.lojLinkVenderCarro;
+    const zap = this.telefoneWhatsApp();
+    return zap ? `https://wa.me/${zap}?text=${encodeURIComponent('Ola! Quero vender meu carro.')}` : null;
+  }
+
+  /** Endereco da loja no Google Maps, para o mapa do rodape. */
+  get urlMapa(): string | null {
+    if (!this.loja?.lojEndereco) return null;
+    return `https://www.google.com/maps?q=${encodeURIComponent(this.loja.lojEndereco)}&output=embed`;
+  }
+
+  /**
+   * Troca o favicon pelo icone da loja. O <link> do index.html e' unico para
+   * todo o sistema, entao aqui ele e' reescrito em runtime — so no catalogo
+   * publico, que e' a unica tela com identidade propria por loja.
+   */
+  private aplicarFavicon(): void {
+    if (!isPlatformBrowser(this.platformId) || !this.loja?.lojFavicon) return;
+
+    const url = this.imagemService.getImageUrl(this.loja.lojFavicon);
+    let link = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'icon';
+      document.head.appendChild(link);
+    }
+    link.href = url;
+  }
+
+  /** Leva ate a listagem, usada pelos botoes "Estoque" do topo. */
+  irParaEstoque(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    document.querySelector('.cat-resultados')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  private _mapaCache: { endereco: string; url: SafeResourceUrl } | null = null;
+
+  /**
+   * URL do mapa ja sanitizada. Memoizada porque bypassSecurityTrustResourceUrl
+   * devolve um objeto novo a cada chamada: usado direto no template, o Angular
+   * veria valor diferente em todo ciclo e recarregaria o iframe sem parar.
+   */
+  get urlMapaSeguro(): SafeResourceUrl | null {
+    const url = this.urlMapa;
+    if (!url) return null;
+
+    const endereco = this.loja?.lojEndereco || '';
+    if (!this._mapaCache || this._mapaCache.endereco !== endereco) {
+      this._mapaCache = { endereco, url: this.sanitizer.bypassSecurityTrustResourceUrl(url) };
+    }
+    return this._mapaCache.url;
   }
 }

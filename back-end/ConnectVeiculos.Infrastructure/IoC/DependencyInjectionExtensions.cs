@@ -433,6 +433,22 @@ namespace ConnectVeiculos.Infrastructure.IoC
                 // Marca uma loja como padrao para exibicao dos dados de contato no catalogo publico
                 AddColumnIfNotExists(connection, "Loja", "LojPadraoCatalogo", "INTEGER DEFAULT 0");
 
+                // ===== Personalizacao do catalogo publico por loja =====
+                // Tudo opcional: NULL cai no padrao do catalogo. As duas flags
+                // entram com DEFAULT 1 para que loja que ja existe continue
+                // mostrando marcas e mapa em vez de perder as secoes na subida.
+                AddColumnIfNotExists(connection, "Loja", "LojTema", "TEXT");
+                AddColumnIfNotExists(connection, "Loja", "LojCorFundo", "TEXT");
+                AddColumnIfNotExists(connection, "Loja", "LojBannerImg", "TEXT");
+                AddColumnIfNotExists(connection, "Loja", "LojBannerTitulo", "TEXT");
+                AddColumnIfNotExists(connection, "Loja", "LojBannerSubtitulo", "TEXT");
+                AddColumnIfNotExists(connection, "Loja", "LojFavicon", "TEXT");
+                AddColumnIfNotExists(connection, "Loja", "LojHorario", "TEXT");
+                AddColumnIfNotExists(connection, "Loja", "LojSobre", "TEXT");
+                AddColumnIfNotExists(connection, "Loja", "LojLinkVenderCarro", "TEXT");
+                AddColumnIfNotExists(connection, "Loja", "LojMostrarMarcas", "INTEGER DEFAULT 1");
+                AddColumnIfNotExists(connection, "Loja", "LojMostrarMapa", "INTEGER DEFAULT 1");
+
                 // Preco FIPE do veiculo (consulta automatica/manual)
                 AddColumnIfNotExists(connection, "Veiculo", "VeiPrecoFipe", "REAL");
 
