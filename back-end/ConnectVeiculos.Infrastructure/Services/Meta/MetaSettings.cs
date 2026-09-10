@@ -29,5 +29,22 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
         /// manualmente no painel Meta conseguem usar mesmo em Development Mode).
         /// </summary>
         public bool InstagramEnabled { get; set; } = false;
+
+        /// <summary>
+        /// Permissoes pedidas no OAuth, separadas por virgula.
+        ///
+        /// Precisa casar com os casos de uso habilitados no app da Meta: pedir um
+        /// escopo que o app nao concede faz a Meta recusar a tela inteira com
+        /// "Invalid Scopes" — para quem tem papel no app, isso bloqueia a conexao.
+        /// O default cobre publicar na Page e no Instagram. catalog_management e
+        /// business_management ficam de fora de proposito: o catalogo e' alimentado
+        /// por feed publico, que nao usa OAuth, e essas duas exigem verificacao da
+        /// empresa e analise do app.
+        ///
+        /// Configuravel (MetaSettings__Scopes) para ajustar sem reconstruir a imagem.
+        /// </summary>
+        public string Scopes { get; set; } =
+            "pages_show_list,pages_read_engagement,pages_manage_posts," +
+            "instagram_basic,instagram_content_publish";
     }
 }

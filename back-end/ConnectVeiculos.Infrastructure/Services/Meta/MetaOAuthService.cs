@@ -21,12 +21,6 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
         public const string KEY_IG_BUSINESS_ID = "META_IG_BUSINESS_ID";
         public const string KEY_IG_USERNAME = "META_IG_USERNAME";
 
-        // Escopos: pages_show_list pra listar; manage_posts pra publicar na timeline;
-        // instagram_basic + content_publish pra IG; catalog_management pra Catalog.
-        private const string SCOPES =
-            "pages_show_list,pages_read_engagement,pages_manage_posts," +
-            "instagram_basic,instagram_content_publish," +
-            "catalog_management,business_management";
 
         private readonly HttpClient _httpClient;
         private readonly MetaSettings _settings;
@@ -66,7 +60,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             var url = $"https://www.facebook.com/{_settings.ApiVersion}/dialog/oauth" +
                       $"?client_id={_settings.AppId}" +
                       $"&redirect_uri={Uri.EscapeDataString(redirectUri)}" +
-                      $"&scope={Uri.EscapeDataString(SCOPES)}" +
+                      $"&scope={Uri.EscapeDataString(EscoposEfetivos())}" +
                       $"&state={Uri.EscapeDataString(state)}" +
                       $"&response_type=code";
 
@@ -315,5 +309,15 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
                 return "";
             }
         }
+        /// <summary>
+        /// Escopos configurados, com rede de seguranca: uma variavel de ambiente
+        /// vazia (facil de acontecer num compose com default em branco) montaria
+        /// a URL sem scope nenhum e o OAuth voltaria sem permissao alguma.
+        /// </summary>
+        private string EscoposEfetivos() =>
+            string.IsNullOrWhiteSpace(_settings.Scopes)
+                ? "pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish"
+                : _settings.Scopes.Trim();
+
     }
 }
