@@ -510,6 +510,38 @@ _{{6}}_`;
   }
   cancelarDesconectar(): void { this.showDesconectarModal = false; }
 
+  mlRemovendo = false;
+
+  /**
+   * Encerra no ML todos os anuncios que o sistema criou. Confirma antes: e' uma
+   * acao em massa e nao tem volta pela mesma tela — republicar cria anuncios
+   * novos, com outros ids.
+   */
+  removerTodosMlAnuncios(): void {
+    if (this.mlRemovendo) return;
+    if (!confirm('Encerrar no Mercado Livre todos os anuncios criados por este sistema?')) return;
+
+    this.mlRemovendo = true;
+    this.integracaoService.removerTodosMercadoLivre().subscribe({
+      next: (res) => {
+        this.mlRemovendo = false;
+        this.mlSincronizacaoResult = null;
+        if (res.removidos > 0) {
+          this.toast.success(`${res.removidos} anuncio(s) removido(s) do Mercado Livre.`);
+        } else {
+          this.toast.info('Nenhum anuncio ativo para remover.');
+        }
+        if (res.falhas?.length) {
+          this.toast.error(`${res.falhas.length} anuncio(s) falharam ao remover.`);
+        }
+      },
+      error: (e) => {
+        this.mlRemovendo = false;
+        this.toast.error(e?.error?.error || 'Erro ao remover anuncios do Mercado Livre.');
+      }
+    });
+  }
+
   sincronizarMlDisponiveis(): void {
     if (this.mlSincronizando) return;
     this.mlSincronizando = true;
@@ -519,7 +551,19 @@ _{{6}}_`;
         this.mlSincronizacaoResult = res;
         this.mlSincronizando = false;
         if (res.novosPublicados > 0) {
-          this.toast.success(`${res.novosPublicados} veiculo(s) publicado(s) no Mercado Livre.`);
+          // O ML cria o anuncio mas o deixa invisivel ate a taxa ser paga
+          // (HTTP 402). Dizer so "publicado" fazia o operador acreditar que o
+          // carro estava na vitrine quando nao estava.
+          const pendentes = res.aguardandoPagamento || 0;
+          if (pendentes > 0) {
+            this.toast.warning(
+              pendentes === res.novosPublicados
+                ? `${pendentes} anuncio(s) criado(s) — pendentes de pagamento da taxa do ML para ficarem visiveis.`
+                : `${res.novosPublicados} anuncio(s) criado(s), ${pendentes} aguardando pagamento da taxa do ML.`
+            );
+          } else {
+            this.toast.success(`${res.novosPublicados} veiculo(s) publicado(s) no Mercado Livre.`);
+          }
         } else if (res.totalDisponiveis === 0) {
           this.toast.success('Nenhum veiculo disponivel para publicar.');
         } else if (res.falhas.length === 0) {

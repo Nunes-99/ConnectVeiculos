@@ -155,12 +155,19 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
             if (existente != null)
                 return BadRequest("Veiculo ja possui anuncio ativo no Mercado Livre.");
 
-            var (externoId, url) = await mlService.PublicarVeiculoAsync(veiculoId);
+            var (externoId, url, aguardandoPagamento) = await mlService.PublicarVeiculoAsync(veiculoId);
 
-            var publicacao = new VeiculoPublicacao(veiculoId, "MercadoLivre", externoId, url);
+            var publicacao = new VeiculoPublicacao(veiculoId, "MercadoLivre", externoId, url, aguardandoPagamento);
             await pubRepo.CreateAsync(publicacao);
 
-            return Ok(new { externoId, url, mensagem = "Anuncio publicado com sucesso!" });
+            // Dizer "publicado com sucesso" num anuncio que o ML nao vai exibir
+            // ate a taxa ser paga faz o operador achar que o carro esta na
+            // vitrine quando nao esta.
+            var mensagem = aguardandoPagamento
+                ? "Anuncio criado, mas so fica visivel depois de pagar a taxa do Mercado Livre."
+                : "Anuncio publicado com sucesso!";
+
+            return Ok(new { externoId, url, aguardandoPagamento, mensagem });
         }
 
         [HttpPost("mercadolivre/sincronizar-disponiveis")]
@@ -179,6 +186,7 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
 
             int novosPublicados = 0;
             int jaPublicados = 0;
+            int aguardandoPagamentoCount = 0;
             var falhas = new List<object>();
 
             foreach (var veiculo in disponiveis)
@@ -188,9 +196,10 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
                     var existente = await pubRepo.GetAtivaByVeiculoEPlataformaAsync(veiculo.VeiId, "MercadoLivre");
                     if (existente != null) { jaPublicados++; continue; }
 
-                    var (externoId, url) = await mlService.PublicarVeiculoAsync(veiculo.VeiId);
-                    await pubRepo.CreateAsync(new VeiculoPublicacao(veiculo.VeiId, "MercadoLivre", externoId, url));
+                    var (externoId, url, aguardandoPagamento) = await mlService.PublicarVeiculoAsync(veiculo.VeiId);
+                    await pubRepo.CreateAsync(new VeiculoPublicacao(veiculo.VeiId, "MercadoLivre", externoId, url, aguardandoPagamento));
                     novosPublicados++;
+                    if (aguardandoPagamento) aguardandoPagamentoCount++;
                 }
                 catch (Exception ex)
                 {
@@ -209,14 +218,72 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
                 totalDisponiveis = disponiveis.Count,
                 novosPublicados,
                 jaPublicados,
+                // Quantos dos recem-criados o ML deixou invisiveis aguardando a
+                // taxa. Sem esse numero a tela dizia "publicados" pra anuncio
+                // nenhum no ar.
+                aguardandoPagamento = aguardandoPagamentoCount,
                 falhas
             });
+        }
+
+        /// <summary>
+        /// Encerra no Mercado Livre todos os anuncios que o sistema conhece,
+        /// inclusive os que aguardam pagamento da taxa.
+        /// </summary>
+        /// <remarks>
+        /// Existia o endpoint de remover um por vez, mas nenhuma tela o chamava:
+        /// pra tirar os anuncios do ar era preciso ir no painel do ML ou inativar
+        /// o veiculo, o que tambem o some do catalogo publico.
+        /// </remarks>
+        /// <response code="200">Quantos foram encerrados e quais falharam.</response>
+        /// <response code="400">Mercado Livre nao conectado.</response>
+        [HttpPost("mercadolivre/remover-todos")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> RemoverTodosMercadoLivre(
+            [FromServices] IMercadoLivreService mlService,
+            [FromServices] IVeiculoPublicacaoRepository pubRepo,
+            [FromServices] IVeiculoRepository veiculoRepo,
+            [FromServices] ILogger<IntegracoesController> logger)
+        {
+            if (!await mlService.IsConnectedAsync())
+                return BadRequest(new { error = "Mercado Livre nao esta conectado." });
+
+            var veiculos = await veiculoRepo.GetAllAsync();
+
+            int removidos = 0;
+            var falhas = new List<object>();
+
+            foreach (var veiculo in veiculos)
+            {
+                var publicacao = await pubRepo.GetAtivaByVeiculoEPlataformaAsync(veiculo.VeiId, "MercadoLivre");
+                if (publicacao == null) continue;
+
+                try
+                {
+                    await mlService.RemoverAnuncioAsync(publicacao.PubExternoId);
+                    publicacao.Remover();
+                    await pubRepo.UpdateAsync(publicacao);
+                    removidos++;
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Erro ao remover anuncio {ExternoId} do ML", publicacao.PubExternoId);
+                    falhas.Add(new
+                    {
+                        veiculoId = veiculo.VeiId,
+                        descricao = $"{veiculo.VeiMarca} {veiculo.VeiModelo} {veiculo.VeiAno}",
+                        erro = ex.Message
+                    });
+                }
+            }
+
+            return Ok(new { removidos, falhas });
         }
 
         [HttpPost("mercadolivre/notifications")]
         [AllowAnonymous]
         public async Task<IActionResult> MercadoLivreNotifications(
-            [FromServices] IMercadoLivreService mlService,
+            [FromServices] IMercadoLivreWebhookRouter router,
             [FromServices] ILogger<IntegracoesController> logger,
             [FromBody] System.Text.Json.JsonElement payload)
         {
@@ -228,7 +295,17 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
             {
                 var topic = payload.TryGetProperty("topic", out var t) ? t.GetString() : null;
                 var resource = payload.TryGetProperty("resource", out var r) ? r.GetString() : null;
-                await mlService.ProcessarNotificacaoAsync(topic ?? "", resource ?? "");
+
+                // user_id (o seller) e' o unico vinculo com o tenant: a chamada e'
+                // anonima e o middleware resolveria pro tenant padrao, processando
+                // o evento no banco de outra loja. Vem como numero no payload.
+                var userId = payload.TryGetProperty("user_id", out var u)
+                    ? (u.ValueKind == System.Text.Json.JsonValueKind.Number
+                        ? u.GetRawText()
+                        : u.GetString())
+                    : null;
+
+                await router.RotearAsync(topic ?? "", resource ?? "", userId ?? "");
             }
             catch (Exception ex)
             {

@@ -52,6 +52,13 @@ input.cep-auto:disabled {
 }
 
 .form-group-check {
+  // Empilhado: com .check-label em inline-flex, dois checkboxes no mesmo grupo
+  // ficavam lado a lado e o rotulo do primeiro encostava na caixa do segundo.
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+
   .check-label {
     display: inline-flex;
     align-items: center;
@@ -81,7 +88,8 @@ input.cep-auto:disabled {
     display: block;
     font-size: 0.75rem;
     color: var(--text-secondary, #666);
-    margin-top: 6px;
+    // O gap do container ja separa; margin-top somaria e afastaria demais.
+    margin-top: 0;
     line-height: 1.4;
   }
 }

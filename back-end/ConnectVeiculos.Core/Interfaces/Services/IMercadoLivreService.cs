@@ -9,7 +9,16 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         Task<bool> IsConnectedAsync();
         Task<MercadoLivreContaInfo?> GetContaInfoAsync();
         Task DesconectarAsync();
-        Task<(string ExternoId, string Url)> PublicarVeiculoAsync(int veiculoId);
+        /// <summary>
+        /// Publica o veiculo no Mercado Livre.
+        /// </summary>
+        /// <returns>
+        /// Id e url do anuncio, mais <c>AguardandoPagamento</c>: o ML responde 402
+        /// quando o item e' criado mas so entra no ar depois que o vendedor paga a
+        /// taxa. Quem chama precisa saber, senao registra como no ar um anuncio
+        /// que ninguem consegue ver.
+        /// </returns>
+        Task<(string ExternoId, string Url, bool AguardandoPagamento)> PublicarVeiculoAsync(int veiculoId);
         Task RemoverAnuncioAsync(string externoId);
         Task AtualizarAnuncioAsync(string externoId, int veiculoId);
 

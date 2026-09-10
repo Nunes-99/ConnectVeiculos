@@ -548,6 +548,9 @@
     .sep { color: #9ca3af; }
     .ok { color: #15803d; }
     .fail { color: #b91c1c; }
+    // Ambar: o anuncio existe no ML mas ninguem consegue ve-lo ate a taxa ser
+    // paga — nao e' sucesso verde nem falha vermelha.
+    .pendente { color: #b45309; }
   }
   .ml-sync-fails {
     margin-top: 8px;

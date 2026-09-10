@@ -26,6 +26,13 @@ export interface MercadoLivreSincronizacaoResult {
   totalDisponiveis: number;
   novosPublicados: number;
   jaPublicados: number;
+  /** Quantos dos novos o ML deixou invisiveis ate a taxa ser paga (HTTP 402). */
+  aguardandoPagamento?: number;
+  falhas: { veiculoId: number; descricao: string; erro: string }[];
+}
+
+export interface MercadoLivreRemocaoResult {
+  removidos: number;
   falhas: { veiculoId: number; descricao: string; erro: string }[];
 }
 
@@ -209,6 +216,11 @@ export class IntegracaoService {
 
   sincronizarMercadoLivreDisponiveis(): Observable<MercadoLivreSincronizacaoResult> {
     return this.http.post<MercadoLivreSincronizacaoResult>(`${this.baseUrl}/integracoes/mercadolivre/sincronizar-disponiveis`, {});
+  }
+
+  /** Encerra no ML todos os anuncios conhecidos, inclusive os pendentes de taxa. */
+  removerTodosMercadoLivre(): Observable<MercadoLivreRemocaoResult> {
+    return this.http.post<MercadoLivreRemocaoResult>(`${this.baseUrl}/integracoes/mercadolivre/remover-todos`, {});
   }
 
   removerMercadoLivre(veiculoId: number): Observable<any> {

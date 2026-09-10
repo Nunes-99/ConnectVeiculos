@@ -26,16 +26,28 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework.Repositories
                 .ToListAsync();
         }
 
+        // "Ativa" aqui significa "o anuncio existe na plataforma": inclui o que
+        // aguarda pagamento da taxa. Filtrar so por ATIVO faria a sincronizacao
+        // nao enxergar esses anuncios e criar um item DUPLICADO no ML a cada
+        // clique em "Publicar veiculos disponiveis".
+        private static readonly string[] StatusPublicado =
+        {
+            VeiculoPublicacao.StatusAtivo,
+            VeiculoPublicacao.StatusAguardandoPagamento
+        };
+
         public async Task<VeiculoPublicacao> GetAtivaByVeiculoEPlataformaAsync(int veiculoId, string plataforma)
         {
             return await _context.VeiculoPublicacoes
-                .FirstOrDefaultAsync(p => p.R_VeiId == veiculoId && p.PubPlataforma == plataforma && p.PubStatus == "ATIVO");
+                .FirstOrDefaultAsync(p => p.R_VeiId == veiculoId && p.PubPlataforma == plataforma
+                                          && StatusPublicado.Contains(p.PubStatus));
         }
 
          public async Task<VeiculoPublicacao> GetAtivaByExternoIdAsync(string externoId, string plataforma)
          {
              return await _context.VeiculoPublicacoes
-                 .FirstOrDefaultAsync(p => p.PubExternoId == externoId && p.PubPlataforma == plataforma && p.PubStatus == "ATIVO");
+                 .FirstOrDefaultAsync(p => p.PubExternoId == externoId && p.PubPlataforma == plataforma
+                                           && StatusPublicado.Contains(p.PubStatus));
          }
 
         public async Task<int> CreateAsync(VeiculoPublicacao publicacao)

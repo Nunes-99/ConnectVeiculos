@@ -442,7 +442,7 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
              }
         }
 
-        public async Task<(string ExternoId, string Url)> PublicarVeiculoAsync(int veiculoId)
+        public async Task<(string ExternoId, string Url, bool AguardandoPagamento)> PublicarVeiculoAsync(int veiculoId)
         {
             await EnsureTokenAsync();
 
@@ -605,7 +605,7 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
                  _logger.LogInformation("Veiculo {VeiculoId} publicado no ML: {ExternoId}", veiculoId, externoId);
              }
 
-            return (externoId, permalink);
+            return (externoId, permalink, isPaymentRequired);
         }
 
         public async Task RemoverAnuncioAsync(string externoId)
@@ -721,10 +721,17 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
             var veiculo = await _veiculoRepository.GetByIdAsync(veiculoId);
             if (veiculo == null) return;
 
+            var loja = await _lojaRepository.GetByIdAsync(veiculo.R_LojId);
+
             var json = JsonSerializer.Serialize(new
             {
-                price = veiculo.VeiPreco,
-                title = $"{veiculo.VeiMarca} {veiculo.VeiModelo} {veiculo.VeiAno}"
+                 // Mesmo cast da publicacao: o ML rejeita decimal nesta categoria
+                 // com 'item.price.invalid'. Enviar VeiPreco cru fazia toda
+                 // atualizacao de preco falhar — e, como a resposta era ignorada,
+                 // falhar em silencio.
+                 price = (long)veiculo.VeiPreco,
+                title = $"{veiculo.VeiMarca} {veiculo.VeiModelo} {veiculo.VeiAno}",
+                available_quantity = veiculo.VeiSts == "D" ? 1 : 0
             });
 
             var content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -733,7 +740,52 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
             request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _settings.AccessToken);
             request.Content = content;
 
-            await _httpClient.SendAsync(request);
+            var response = await _httpClient.SendAsync(request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var corpo = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Erro ao atualizar anuncio ML {ExternoId}: {Response}", externoId, corpo);
+                await LogAsync(NivelIntegracaoLog.Error, "item.atualizar.erro",
+                    $"Falha ao atualizar anuncio {externoId} (HTTP {(int)response.StatusCode}).",
+                    new { veiculoId, externoId, status = (int)response.StatusCode, body = corpo });
+                return;
+            }
+
+            // Descricao tem endpoint proprio no ML — nao vai no PUT do item.
+            await AtualizarDescricaoAsync(externoId, veiculo, loja);
+
+            await LogAsync(NivelIntegracaoLog.Info, "item.atualizar.sucesso",
+                $"Anuncio {externoId} atualizado a partir do veiculo {veiculoId}.",
+                new { veiculoId, externoId, preco = (long)veiculo.VeiPreco });
+        }
+
+        /// <summary>
+        /// A descricao do anuncio nao pode ir junto no PUT /items: o ML exige o
+        /// recurso separado /items/{id}/description. Falha aqui nao derruba a
+        /// atualizacao do resto — preco e titulo ja foram gravados.
+        /// </summary>
+        private async Task AtualizarDescricaoAsync(string externoId, Core.Entities.Veiculos.Veiculo veiculo, Core.Entities.Lojas.Loja loja)
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(new { plain_text = MontarDescricao(veiculo, loja) });
+                var req = new HttpRequestMessage(HttpMethod.Put, $"/items/{externoId}/description")
+                {
+                    Content = new StringContent(json, Encoding.UTF8, "application/json")
+                };
+                req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _settings.AccessToken);
+
+                var resp = await _httpClient.SendAsync(req);
+                if (!resp.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("ML recusou a descricao do anuncio {ExternoId}: {Status}", externoId, resp.StatusCode);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Erro ao atualizar descricao do anuncio ML {ExternoId}", externoId);
+            }
         }
 
         private async Task RefreshTokenAsync()

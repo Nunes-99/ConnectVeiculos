@@ -146,8 +146,8 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                     {
                         if (await _mercadoLivreService.IsConnectedAsync())
                         {
-                            var (externoId, url) = await _mercadoLivreService.PublicarVeiculoAsync(id);
-                            await _publicacaoRepository.CreateAsync(new VeiculoPublicacao(id, "MercadoLivre", externoId, url));
+                            var (externoId, url, aguardandoPagamento) = await _mercadoLivreService.PublicarVeiculoAsync(id);
+                            await _publicacaoRepository.CreateAsync(new VeiculoPublicacao(id, "MercadoLivre", externoId, url, aguardandoPagamento));
                         }
                     }
                     catch (Exception ex)

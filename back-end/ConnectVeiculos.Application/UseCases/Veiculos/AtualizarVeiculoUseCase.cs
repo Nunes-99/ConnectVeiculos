@@ -158,8 +158,8 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                             var existente = await _publicacaoRepository.GetAtivaByVeiculoEPlataformaAsync(inputModel.VeiId, "MercadoLivre");
                             if (existente == null)
                             {
-                                var (externoId, url) = await _mercadoLivreService.PublicarVeiculoAsync(inputModel.VeiId);
-                                await _publicacaoRepository.CreateAsync(new VeiculoPublicacao(inputModel.VeiId, "MercadoLivre", externoId, url));
+                                var (externoId, url, aguardandoPagamento) = await _mercadoLivreService.PublicarVeiculoAsync(inputModel.VeiId);
+                                await _publicacaoRepository.CreateAsync(new VeiculoPublicacao(inputModel.VeiId, "MercadoLivre", externoId, url, aguardandoPagamento));
                             }
                         }
 
@@ -189,6 +189,21 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                     else if (statusAnterior == "D" && inputModel.VeiSts == "D")
                     {
                         // Continua disponivel mas pode ter mudado preco/info: atualizar
+                        //
+                        // O Mercado Livre estava de fora deste ramo: so Facebook e
+                        // Google eram atualizados. Na pratica, mudar o preco aqui
+                        // deixava o anuncio do ML com o valor antigo indefinidamente,
+                        // porque a integracao so agia na transicao pra "disponivel".
+                        try
+                        {
+                            var publicacaoAtual = await _publicacaoRepository
+                                .GetAtivaByVeiculoEPlataformaAsync(inputModel.VeiId, "MercadoLivre");
+
+                            if (publicacaoAtual != null && await _mercadoLivreService.IsConnectedAsync())
+                                await _mercadoLivreService.AtualizarAnuncioAsync(publicacaoAtual.PubExternoId, inputModel.VeiId);
+                        }
+                        catch (Exception ex) { _logger.LogError(ex, "Erro ao atualizar anuncio no Mercado Livre"); }
+
                         try { await _facebookService.PublicarVeiculoAsync(inputModel.VeiId); } catch { }
                         try { await _googleService.PublicarVeiculoAsync(inputModel.VeiId); } catch { }
                     }

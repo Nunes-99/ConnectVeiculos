@@ -312,6 +312,13 @@ namespace ConnectVeiculos.Infrastructure.IoC
             // TaskCanceledException no popup.
             services.AddHttpClient<Core.Interfaces.Services.IMercadoLivreService, Services.MercadoLivre.MercadoLivreService>()
                 .ConfigureHttpClient(client => client.Timeout = TimeSpan.FromSeconds(30));
+
+            // Singleton: o webhook do ML e' anonimo e precisa descobrir o tenant
+            // dono da conta antes de abrir qualquer escopo — nao pode depender do
+            // ITenantContext scoped da request, que aponta pro tenant padrao.
+            services.AddSingleton<Core.Interfaces.Services.IMercadoLivreWebhookRouter,
+                                  Services.MercadoLivre.MercadoLivreWebhookRouter>();
+
             services.AddTransient<Core.Interfaces.Services.IFeedService, Services.Feed.FeedService>();
 
             // Services - Facebook Catalog (push instantaneo)

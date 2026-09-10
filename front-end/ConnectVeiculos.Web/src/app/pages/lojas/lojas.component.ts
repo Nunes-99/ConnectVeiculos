@@ -4,7 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { LojaService, ImagemService, AuthService } from '../../core/services';
+import { LojaService, ImagemService, AuthService, ToastService } from '../../core/services';
 import { Loja } from '../../core/models';
 import { MaskDirective } from '../../shared/directives';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
@@ -24,6 +24,7 @@ export class LojasComponent implements OnInit {
   private fb = inject(FormBuilder);
   private http = inject(HttpClient);
   private imagemService = inject(ImagemService);
+  private toast = inject(ToastService);
   private sanitizer = inject(DomSanitizer);
   private authService = inject(AuthService);
 
@@ -289,11 +290,24 @@ export class LojasComponent implements OnInit {
     return this._previewUrlCache.url;
   }
 
+  /** Rotulos amigaveis dos campos, pra dizer na mensagem o que falta. */
+  private readonly rotulosCampos: Record<string, string> = {
+    lojNome: 'Nome', lojSlug: 'Identificador', lojLogradouro: 'Endereço',
+    lojNumero: 'Número', lojBairro: 'Bairro', lojCidade: 'Cidade',
+    lojEstado: 'Estado', lojCEP: 'CEP', lojComplemento: 'Complemento',
+    lojEmail: 'E-mail', lojTel1: 'Telefone', lojTel2: 'Telefone 2',
+    lojWhatsApp: 'WhatsApp', lojCNPJ: 'CNPJ', lojIE: 'Inscrição Estadual',
+    lojUrlCatalogo: 'URL do catálogo', lojBannerTitulo: 'Título do banner',
+    lojBannerSubtitulo: 'Subtítulo do banner', lojHorario: 'Horário de atendimento',
+    lojSobre: 'Sobre a loja', lojLinkVenderCarro: 'Link "Venda seu carro"'
+  };
+
   save(): void {
     this.validarCnpj();
 
     if (this.form.invalid || this.cnpjInvalido) {
       this.form.markAllAsTouched();
+      this.avisarCamposPendentes();
       return;
     }
 
@@ -423,5 +437,37 @@ export class LojasComponent implements OnInit {
   hasError(field: string, error: string): boolean {
     const control = this.form.get(field);
     return control ? control.hasError(error) && control.touched : false;
+  }
+
+  /**
+   * Diz o que impede o salvamento e leva ate o campo.
+   *
+   * Antes este caminho so fazia markAllAsTouched e um return: o clique em
+   * Salvar nao mandava requisicao nenhuma e nada aparecia na tela, entao a
+   * impressao era de botao quebrado. Foi o que aconteceu com o CNPJ invalido
+   * de uma loja — o unico sinal era o campo marcado, fora da area visivel do
+   * modal.
+   */
+  private avisarCamposPendentes(): void {
+    const pendentes = Object.keys(this.form.controls)
+      .filter(nome => this.form.get(nome)?.invalid)
+      .map(nome => this.rotulosCampos[nome] || nome);
+
+    if (this.cnpjInvalido) pendentes.unshift('CNPJ (dígitos não conferem)');
+
+    this.toast.error(
+      pendentes.length
+        ? `Revise antes de salvar: ${pendentes.join(', ')}.`
+        : 'Há campos inválidos no formulário.'
+    );
+
+    const primeiro = this.cnpjInvalido
+      ? 'lojCNPJ'
+      : Object.keys(this.form.controls).find(nome => this.form.get(nome)?.invalid);
+
+    if (!primeiro) return;
+    const el = document.querySelector<HTMLElement>(`[formcontrolname="${primeiro}"]`);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el?.focus({ preventScroll: true });
   }
 }
