@@ -778,6 +778,8 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
         [AllowAnonymous]
         public async Task<IActionResult> MetaCallback(
             [FromServices] IMetaOAuthService meta,
+            [FromServices] IOAuthStateProtector stateProtector,
+            [FromServices] ITenantContext tenantContext,
             [FromQuery] string? code,
             [FromQuery] string? state,
             [FromQuery(Name = "error")] string? oauthError,
@@ -787,6 +789,31 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
                 return Content(BuildCallbackHtml(false, $"{oauthError}: {oauthErrorDesc}"), "text/html");
             if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(state))
                 return Content(BuildCallbackHtml(false, "Code ou state ausente."), "text/html");
+
+            // Mesmo tratamento do callback do Mercado Livre logo acima: a Meta so
+            // aceita redirect_uri no dominio raiz, entao o retorno chega sempre
+            // resolvido como tenant "default", enquanto o state cifrado carrega o
+            // slug de quem iniciou. Sem redirecionar, a validacao do state falha
+            // com "State pertence a outro tenant" depois de a pessoa ja ter
+            // autorizado tudo na Meta — o pior momento possivel pra quebrar.
+            try
+            {
+                var payload = stateProtector.Decifrar(state);
+                var slugAtual = tenantContext.IsResolved ? tenantContext.TenantSlug : "default";
+                var slugAlvo = payload.TenantSlug;
+
+                if (!string.IsNullOrEmpty(slugAlvo)
+                    && !string.Equals(slugAlvo, slugAtual, StringComparison.OrdinalIgnoreCase))
+                {
+                    var query = System.Web.HttpUtility.ParseQueryString(Request.QueryString.Value ?? "");
+                    query["tenant"] = slugAlvo;
+                    return Redirect($"{Request.Scheme}://{Request.Host}{Request.Path}?{query}");
+                }
+            }
+            catch (OAuthStateException ex)
+            {
+                return Content(BuildCallbackHtml(false, ex.Message), "text/html");
+            }
 
             try
             {
