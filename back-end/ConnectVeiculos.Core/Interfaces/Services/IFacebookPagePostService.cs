@@ -21,15 +21,19 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         Task<PublicacaoResult?> PublicarManualAsync(int veiculoId);
 
         /// <summary>
-        /// Reescreve a legenda de um post ja publicado marcando o veiculo como
-        /// vendido ou reservado. O post continua no feed — apagar perderia os
-        /// comentarios e o alcance ja conquistado.
+        /// Reescreve a legenda de um post ja publicado com os dados atuais do
+        /// veiculo. Serve pra tres coisas: carimbar VENDIDO / RESERVADO quando o
+        /// carro sai, tirar o carimbo se a venda for estornada, e corrigir o preco
+        /// depois de uma alteracao — o valor fica escrito na legenda, entao sem
+        /// isso o post anuncia um preco que nao vale mais.
+        ///
+        /// O selo vem de <paramref name="statusVeiculo"/>: "D" nao carimba nada.
         ///
         /// So o Facebook permite isso. O Instagram nao tem endpoint pra editar
         /// legenda de midia publicada (a Graph API so deixa ligar/desligar
         /// comentarios), entao la o post fica como esta.
         /// </summary>
-        Task<bool> MarcarPostComoIndisponivelAsync(string postId, int veiculoId, string novoStatus);
+        Task<bool> AtualizarLegendaDoPostAsync(string postId, int veiculoId, string statusVeiculo);
     }
 
     public class FacebookPagePostConfigInfo

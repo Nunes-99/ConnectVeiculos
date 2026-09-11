@@ -192,7 +192,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             }
         }
 
-        public async Task<bool> MarcarPostComoIndisponivelAsync(string postId, int veiculoId, string novoStatus)
+        public async Task<bool> AtualizarLegendaDoPostAsync(string postId, int veiculoId, string statusVeiculo)
         {
             if (string.IsNullOrWhiteSpace(postId)) return false;
 
@@ -206,7 +206,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             var veiculo = await _veiculoRepository.GetByIdAsync(veiculoId);
             if (veiculo == null) return false;
 
-            var selo = novoStatus == "R" ? "🔒 RESERVADO" : "✅ VENDIDO";
+            var selo = SeloDoStatus(statusVeiculo);
             var loja = await _lojaRepository.GetByIdAsync(veiculo.R_LojId);
             var baseUrl = NormalizeBaseUrl(loja?.LojUrlCatalogo) ?? NormalizeBaseUrl(_settings?.PublicSiteUrl);
             var slug = loja?.LojSlug ?? veiculo.R_LojId.ToString();
@@ -214,7 +214,8 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
 
             // Mantem a legenda original abaixo do selo: quem ja viu o post
             // reconhece o anuncio, e quem chega depois entende que acabou.
-            var legenda = selo + "\n\n" + MontarLegenda(veiculo, loja, linkVeiculo);
+            var textoBase = MontarLegenda(veiculo, loja, linkVeiculo);
+            var legenda = selo.Length == 0 ? textoBase : selo + "\n\n" + textoBase;
 
             try
             {
@@ -226,21 +227,33 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
                 if (!resp.IsSuccessStatusCode)
                 {
                     _logger.LogWarning(
-                        "Nao consegui marcar o post {PostId} do veiculo {VeiculoId} como {Selo}: {Body}",
-                        postId, veiculoId, selo, await resp.Content.ReadAsStringAsync());
+                        "Nao consegui atualizar a legenda do post {PostId} do veiculo {VeiculoId} (status {Status}): {Body}",
+                        postId, veiculoId, statusVeiculo, await resp.Content.ReadAsStringAsync());
                     return false;
                 }
 
                 _logger.LogInformation(
-                    "Post {PostId} do veiculo {VeiculoId} marcado como {Selo}.", postId, veiculoId, selo);
+                    "Legenda do post {PostId} do veiculo {VeiculoId} atualizada (status {Status}).",
+                    postId, veiculoId, statusVeiculo);
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao marcar post {PostId} do veiculo {VeiculoId}", postId, veiculoId);
+                _logger.LogError(ex, "Erro ao atualizar legenda do post {PostId} do veiculo {VeiculoId}", postId, veiculoId);
                 return false;
             }
         }
+
+        /// <summary>
+        /// Faixa que abre a legenda. Disponivel nao ganha nada: e o anuncio normal.
+        /// </summary>
+        private static string SeloDoStatus(string status) => status switch
+        {
+            "D" => "",
+            "V" => "✅ VENDIDO",
+            "R" => "🔒 RESERVADO",
+            _ => "⛔ INDISPONÍVEL"
+        };
 
         // Legenda otimizada pra engajamento no Facebook: emoji + titulo + dados + link + hashtags.
         // Fica em torno de 400-500 chars (FB tolera ate 63K).

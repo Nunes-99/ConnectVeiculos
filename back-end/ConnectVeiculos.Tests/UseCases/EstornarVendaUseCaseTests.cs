@@ -5,6 +5,8 @@ using ConnectVeiculos.Core.Exceptions;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Vendas;
 using ConnectVeiculos.Core.Interfaces.Email;
+using ConnectVeiculos.Core.Interfaces.Tenancy;
+using ConnectVeiculos.Core.Interfaces.Services;
 using FluentAssertions;
 using Moq;
 using Xunit;
@@ -16,6 +18,7 @@ namespace ConnectVeiculos.Tests.UseCases
         private readonly Mock<IVendaRepository> _vendaRepositoryMock;
         private readonly Mock<IVeiculoRepository> _veiculoRepositoryMock;
         private readonly Mock<IEmailService> _emailServiceMock;
+        private readonly Mock<ITenantBackgroundRunner> _backgroundRunnerMock;
         private readonly EstornarVendaUseCase _useCase;
 
         public EstornarVendaUseCaseTests()
@@ -23,12 +26,39 @@ namespace ConnectVeiculos.Tests.UseCases
             _vendaRepositoryMock = new Mock<IVendaRepository>();
             _veiculoRepositoryMock = new Mock<IVeiculoRepository>();
             _emailServiceMock = new Mock<IEmailService>();
+            _backgroundRunnerMock = new Mock<ITenantBackgroundRunner>();
             _emailServiceMock.Setup(x => x.SendVendaEstornadaAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                 .ReturnsAsync(true);
             _useCase = new EstornarVendaUseCase(
                 _vendaRepositoryMock.Object,
                 _veiculoRepositoryMock.Object,
-                _emailServiceMock.Object);
+                _emailServiceMock.Object,
+                _backgroundRunnerMock.Object);
+        }
+
+        /// <summary>
+        /// Estornar devolvia o carro pro estoque mas nao avisava ninguem: o
+        /// anuncio do Mercado Livre continuava encerrado e o post do Facebook
+        /// seguia carimbado de VENDIDO.
+        /// </summary>
+        [Fact]
+        public async Task Estornar_DeveDevolverOVeiculoAsPlataformas()
+        {
+            var venda = new Venda(1, 1, 1, DateTime.Now, "VW", "Jetta", 2016,
+                "9BWZZZ377VT004251", 75000m, 5m, 3750m, "Joao Silva");
+            var veiculo = new Veiculo(1, 1, 1, "VW", "Jetta", 2016, "GKD1A27", "9BWZZZ377VT004251",
+                "Branco", 80000, 75000m, DateTime.Now, "V", "D", 65000m);
+
+            _vendaRepositoryMock.Setup(x => x.GetByIdAsync(1)).ReturnsAsync(venda);
+            _veiculoRepositoryMock.Setup(x => x.GetByIdAsync(1)).ReturnsAsync(veiculo);
+
+            await _useCase.Execute(1);
+
+            _backgroundRunnerMock.Verify(
+                x => x.Enqueue(
+                    It.IsAny<Func<IPublicacaoAutomaticaService, Task>>(),
+                    It.IsAny<string>()),
+                Times.Once);
         }
 
         [Fact]

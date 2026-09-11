@@ -17,10 +17,7 @@ namespace ConnectVeiculos.Tests.UseCases.Veiculos
         private readonly Mock<IVeiculoRepository> _veiculoRepositoryMock;
         private readonly Mock<IUnitOfWork> _unitOfWorkMock;
         private readonly Mock<ICatalogoHubService> _catalogoHubServiceMock;
-        private readonly Mock<IMercadoLivreService> _mercadoLivreServiceMock;
-        private readonly Mock<IFacebookCatalogService> _facebookServiceMock;
-        private readonly Mock<IGoogleMerchantService> _googleServiceMock;
-        private readonly Mock<IVeiculoPublicacaoRepository> _publicacaoRepositoryMock;
+        private readonly Mock<IPublicacaoAutomaticaService> _publicacaoAutomaticaServiceMock;
         private readonly InativarVeiculoUseCase _useCase;
 
         public InativarVeiculoUseCaseTests()
@@ -28,23 +25,35 @@ namespace ConnectVeiculos.Tests.UseCases.Veiculos
             _veiculoRepositoryMock = new Mock<IVeiculoRepository>();
             _unitOfWorkMock = new Mock<IUnitOfWork>();
             _catalogoHubServiceMock = new Mock<ICatalogoHubService>();
-            _mercadoLivreServiceMock = new Mock<IMercadoLivreService>();
-            _facebookServiceMock = new Mock<IFacebookCatalogService>();
-            _googleServiceMock = new Mock<IGoogleMerchantService>();
-            _publicacaoRepositoryMock = new Mock<IVeiculoPublicacaoRepository>();
+            _publicacaoAutomaticaServiceMock = new Mock<IPublicacaoAutomaticaService>();
              var tenantContextMock = new Mock<ITenantContext>();
             _useCase = new InativarVeiculoUseCase(
                 _veiculoRepositoryMock.Object,
                 _unitOfWorkMock.Object,
                 _catalogoHubServiceMock.Object,
-                _mercadoLivreServiceMock.Object,
-                _facebookServiceMock.Object,
-                _googleServiceMock.Object,
-                _publicacaoRepositoryMock.Object,
+                _publicacaoAutomaticaServiceMock.Object,
                  tenantContextMock.Object,
                 NullLogger<InativarVeiculoUseCase>.Instance,
                  new Mock<IIndexNowService>().Object,
                  new Mock<ITenantBackgroundRunner>().Object);
+        }
+
+        /// <summary>
+        /// Inativar encerrava o anuncio do Mercado Livre e limpava os catalogos,
+        /// mas deixava o post da Page no ar anunciando um carro apagado. A rotina
+        /// e a mesma de vender ou reservar, entao passou a ser compartilhada.
+        /// </summary>
+        [Fact]
+        public async Task Execute_AoInativar_DeveTirarOVeiculoDasPlataformas()
+        {
+            _veiculoRepositoryMock.Setup(x => x.GetByIdAsync(5)).ReturnsAsync(
+                new Veiculo(5, 1, 1, "VW", "Gol", 2021, "TST0D04", "9BWZZZ377VT004251",
+                            "Branco", 40000, 52000m, DateTime.Now, "D", "D", 45000m));
+
+            await _useCase.Execute(5);
+
+            _publicacaoAutomaticaServiceMock.Verify(
+                x => x.MarcarVeiculoIndisponivelAsync(5, "I"), Times.Once);
         }
 
         [Fact]

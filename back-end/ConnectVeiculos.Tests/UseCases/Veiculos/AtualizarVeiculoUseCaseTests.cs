@@ -74,6 +74,36 @@ namespace ConnectVeiculos.Tests.UseCases.Veiculos
                 x => x.MarcarVeiculoIndisponivelAsync(1, novoStatus), Times.Once);
         }
 
+        /// <summary>
+        /// O preco fica escrito na legenda do post da Page. Sem reescrever, baixar
+        /// o preco deixava o Facebook anunciando o valor antigo pra sempre.
+        /// </summary>
+        [Fact]
+        public async Task Execute_QuandoOPrecoMuda_DeveAtualizarOPostDoFacebook()
+        {
+            _veiculoRepositoryMock.Setup(x => x.GetByIdAsync(1)).ReturnsAsync(VeiculoDisponivel());
+
+            var input = InputComStatus("D");
+            input.VeiPreco = 139000m;   // o veiculo esta a 145.000
+
+            await _useCase.Execute(input);
+
+            _publicacaoAutomaticaServiceMock.Verify(
+                x => x.AtualizarPostDoVeiculoAsync(1, "D"), Times.Once);
+        }
+
+        [Fact]
+        public async Task Execute_SemMudarOPreco_NaoDeveMexerNoPost()
+        {
+            // Corrigir a cor ou a quilometragem nao justifica reescrever o post.
+            _veiculoRepositoryMock.Setup(x => x.GetByIdAsync(1)).ReturnsAsync(VeiculoDisponivel());
+
+            await _useCase.Execute(InputComStatus("D"));
+
+            _publicacaoAutomaticaServiceMock.Verify(
+                x => x.AtualizarPostDoVeiculoAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
+        }
+
         [Fact]
         public async Task Execute_QuandoVeiculoContinuaDisponivel_NaoDeveMarcarNada()
         {

@@ -151,7 +151,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Publicacoes
             {
                 var fb = await _publicacaoRepository.GetAtivaByVeiculoEPlataformaAsync(veiculoId, "FacebookPage");
                 if (fb != null)
-                    await _facebookPagePostService.MarcarPostComoIndisponivelAsync(fb.PubExternoId, veiculoId, novoStatus);
+                    await _facebookPagePostService.AtualizarLegendaDoPostAsync(fb.PubExternoId, veiculoId, novoStatus);
             }
             catch (Exception ex) { _logger.LogError(ex, "Erro ao marcar post do Facebook do veiculo {VeiculoId}", veiculoId); }
 
@@ -170,6 +170,53 @@ namespace ConnectVeiculos.Infrastructure.Services.Publicacoes
                 }
             }
             catch (Exception ex) { _logger.LogDebug(ex, "Falha ao consultar publicacao do Instagram do veiculo {VeiculoId}", veiculoId); }
+        }
+
+        public async Task ReativarVeiculoAsync(int veiculoId)
+        {
+            var veiculo = await _veiculoRepository.GetByIdAsync(veiculoId);
+            if (veiculo == null || veiculo.VeiSts != "D")
+            {
+                _logger.LogInformation(
+                    "Reativacao do veiculo {VeiculoId} cancelada: nao existe mais ou nao esta disponivel.", veiculoId);
+                return;
+            }
+
+            _logger.LogInformation("Veiculo {VeiculoId} voltou a ficar disponivel; devolvendo as plataformas.", veiculoId);
+
+            // Mercado Livre: o anuncio anterior foi encerrado de verdade, entao
+            // aqui nasce um anuncio novo. PublicarMercadoLivreAsync ja desiste se
+            // por algum motivo ainda houver um ativo.
+            await PublicarMercadoLivreAsync(veiculoId);
+            await PublicarFacebookCatalogoAsync(veiculoId);
+            await PublicarGoogleAsync(veiculoId);
+
+            // Facebook Page: o post continua la, so carimbado. Tirar o carimbo e
+            // melhor que publicar de novo — mantem curtidas, comentarios e alcance.
+            try
+            {
+                var fb = await _publicacaoRepository.GetAtivaByVeiculoEPlataformaAsync(veiculoId, "FacebookPage");
+                if (fb != null)
+                    await _facebookPagePostService.AtualizarLegendaDoPostAsync(fb.PubExternoId, veiculoId, "D");
+                else
+                    await PublicarFacebookPageAsync(veiculoId);
+            }
+            catch (Exception ex) { _logger.LogError(ex, "Erro ao reativar post do Facebook do veiculo {VeiculoId}", veiculoId); }
+        }
+
+        public async Task AtualizarPostDoVeiculoAsync(int veiculoId, string statusVeiculo)
+        {
+            try
+            {
+                var fb = await _publicacaoRepository.GetAtivaByVeiculoEPlataformaAsync(veiculoId, "FacebookPage");
+                if (fb == null) return;
+
+                await _facebookPagePostService.AtualizarLegendaDoPostAsync(fb.PubExternoId, veiculoId, statusVeiculo);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao atualizar post do Facebook do veiculo {VeiculoId}", veiculoId);
+            }
         }
 
         /// <summary>

@@ -13,10 +13,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
         private readonly IVeiculoRepository _veiculoRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICatalogoHubService _catalogoHubService;
-        private readonly IMercadoLivreService _mercadoLivreService;
-        private readonly IFacebookCatalogService _facebookService;
-        private readonly IGoogleMerchantService _googleService;
-        private readonly IVeiculoPublicacaoRepository _publicacaoRepository;
+        private readonly IPublicacaoAutomaticaService _publicacaoAutomaticaService;
         private readonly ITenantContext _tenantContext;
         private readonly ILogger<InativarVeiculoUseCase> _logger;
         private readonly IIndexNowService _indexNowService;
@@ -26,10 +23,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             IVeiculoRepository veiculoRepository,
             IUnitOfWork unitOfWork,
             ICatalogoHubService catalogoHubService,
-            IMercadoLivreService mercadoLivreService,
-            IFacebookCatalogService facebookService,
-            IGoogleMerchantService googleService,
-            IVeiculoPublicacaoRepository publicacaoRepository,
+            IPublicacaoAutomaticaService publicacaoAutomaticaService,
             ITenantContext tenantContext,
             ILogger<InativarVeiculoUseCase> logger,
             IIndexNowService indexNowService,
@@ -38,10 +32,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             _veiculoRepository = veiculoRepository;
             _unitOfWork = unitOfWork;
             _catalogoHubService = catalogoHubService;
-            _mercadoLivreService = mercadoLivreService;
-            _facebookService = facebookService;
-            _googleService = googleService;
-            _publicacaoRepository = publicacaoRepository;
+            _publicacaoAutomaticaService = publicacaoAutomaticaService;
             _tenantContext = tenantContext;
             _logger = logger;
             _indexNowService = indexNowService;
@@ -79,29 +70,10 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                     veiculoId = id
                 });
 
-                // Remover anuncio do ML se existir
-                try
-                {
-                    var publicacao = await _publicacaoRepository.GetAtivaByVeiculoEPlataformaAsync(id, "MercadoLivre");
-                    if (publicacao != null)
-                    {
-                        await _mercadoLivreService.RemoverAnuncioAsync(publicacao.PubExternoId);
-                        publicacao.Remover();
-                        await _publicacaoRepository.UpdateAsync(publicacao);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Erro ao remover anuncio ML do veiculo {VeiculoId}", id);
-                }
-
-                // Remover do Facebook
-                try { await _facebookService.RemoverVeiculoAsync(id); }
-                catch (Exception ex) { _logger.LogError(ex, "Erro ao remover do Facebook"); }
-
-                // Remover do Google
-                try { await _googleService.RemoverVeiculoAsync(id); }
-                catch (Exception ex) { _logger.LogError(ex, "Erro ao remover do Google"); }
+                // Tirar das plataformas. A rotina e a mesma de vender ou
+                // reservar; aqui ela tambem carimba o post da Page, coisa que este
+                // caso nao fazia — o post seguia anunciando um carro apagado.
+                await _publicacaoAutomaticaService.MarcarVeiculoIndisponivelAsync(id, "I");
             }
             catch
             {

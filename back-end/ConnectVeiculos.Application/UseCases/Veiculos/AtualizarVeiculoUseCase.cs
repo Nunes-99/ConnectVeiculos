@@ -201,6 +201,15 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
 
                         try { await _facebookService.PublicarVeiculoAsync(inputModel.VeiId); } catch { }
                         try { await _googleService.PublicarVeiculoAsync(inputModel.VeiId); } catch { }
+
+                        // O preco fica escrito na legenda do post da Page. Sem
+                        // reescrever, baixar o preco aqui deixava o Facebook
+                        // anunciando o valor antigo pra sempre.
+                        if (inputModel.VeiPreco != precoAnterior)
+                        {
+                            await _publicacaoAutomaticaService
+                                .AtualizarPostDoVeiculoAsync(inputModel.VeiId, inputModel.VeiSts);
+                        }
                     }
                 }
                 catch (Exception ex)

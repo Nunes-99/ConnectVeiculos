@@ -3,6 +3,8 @@ using ConnectVeiculos.Core.Exceptions;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Vendas;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Email;
+using ConnectVeiculos.Core.Interfaces.Services;
+using ConnectVeiculos.Core.Interfaces.Tenancy;
 
 namespace ConnectVeiculos.Application.UseCases.Vendas
 {
@@ -11,15 +13,18 @@ namespace ConnectVeiculos.Application.UseCases.Vendas
         private readonly IVendaRepository _vendaRepository;
         private readonly IVeiculoRepository _veiculoRepository;
         private readonly IEmailService _emailService;
+        private readonly ITenantBackgroundRunner _backgroundRunner;
 
         public EstornarVendaUseCase(
             IVendaRepository vendaRepository,
             IVeiculoRepository veiculoRepository,
-            IEmailService emailService)
+            IEmailService emailService,
+            ITenantBackgroundRunner backgroundRunner)
         {
             _vendaRepository = vendaRepository;
             _veiculoRepository = veiculoRepository;
             _emailService = emailService;
+            _backgroundRunner = backgroundRunner;
         }
 
         public async Task Execute(int vendaId)
@@ -44,6 +49,14 @@ namespace ConnectVeiculos.Application.UseCases.Vendas
             {
                 veiculo.AlterarStatus("D");
                 await _veiculoRepository.UpdateAsync(veiculo);
+
+                // O carro voltava pro estoque mas continuava fora do ar: anuncio
+                // do Mercado Livre encerrado e post do Facebook ainda carimbado
+                // de VENDIDO. Em background porque sao varias chamadas de rede.
+                var idParaPlataformas = veiculo.VeiId;
+                _backgroundRunner.Enqueue<IPublicacaoAutomaticaService>(
+                    s => s.ReativarVeiculoAsync(idParaPlataformas),
+                    $"devolver veiculo {idParaPlataformas} as plataformas apos o estorno");
             }
 
             // Enviar email de notificacao de estorno
