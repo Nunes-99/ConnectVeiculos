@@ -5,7 +5,7 @@ import { VeiculoService, LojaService, CategoriaService, ImagemService, VeiculoIm
 import { IntegracaoService, MetaFeatureFlags } from '../../core/services/integracao.service';
 import { CompartilharInstagramService } from '../../core/services/compartilhar-instagram.service';
 import { Veiculo, Loja, Categoria } from '../../core/models';
-import { MaskDirective, CurrencyMaskDirective } from '../../shared/directives';
+import { MaskDirective, CurrencyMaskDirective, SalvandoDirective } from '../../shared/directives';
 import { PaginationComponent, ConfirmModalComponent } from '../../shared/components';
 import { ScannerDocumentoComponent, CrlvExtraido } from '../../shared/components/scanner-documento/scanner-documento.component';
 import { getDetranLink, DetranLink } from '../../shared/utils/detran-links.util';
@@ -14,7 +14,7 @@ import * as XLSX from 'xlsx';
 @Component({
   selector: 'app-veiculos',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaskDirective, CurrencyMaskDirective, PaginationComponent, ConfirmModalComponent, ScannerDocumentoComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaskDirective, CurrencyMaskDirective, PaginationComponent, ConfirmModalComponent, ScannerDocumentoComponent, SalvandoDirective],
   templateUrl: './veiculos.component.html',
   styleUrl: './veiculos.component.scss'
 })
@@ -57,6 +57,9 @@ export class VeiculosComponent implements OnInit {
 
   // Modal de confirmacao
   showConfirmModal = false;
+  // Trava o formulario durante a gravacao: sem isso dava pra editar os
+  // campos no meio do envio e clicar em Salvar de novo.
+  salvando = false;
   veiculoParaExcluir: number | null = null;
 
   // Scanner CRLV
@@ -544,30 +547,35 @@ export class VeiculosComponent implements OnInit {
       veiDonoCelular: raw.veiDonoCelular || ''
     };
 
+    // Trava o modal ate terminar. O envio inclui o upload das fotos, que e a
+    // parte demorada — sem a trava dava pra mexer nos campos no meio, clicar
+    // em Salvar de novo e cadastrar o mesmo carro duas vezes.
+    this.salvando = true;
+
     if (this.editMode && this.editId) {
       this.veiculoService.update(this.editId, data).subscribe({
-        next: () => {
-          this.uploadPendingImages(this.editId!).then(() => {
-            this.loadData();
-            this.closeModal();
-          });
-        }
+        next: () => this.concluirGravacao(this.editId!),
+        error: () => this.salvando = false
       });
     } else {
       this.veiculoService.create(data).subscribe({
-        next: (result: any) => {
-          const veiculoId = result?.id || result?.veiId;
-          if (veiculoId && this.imagensPreview.length > 0) {
-            this.uploadPendingImages(veiculoId).then(() => {
-              this.loadData();
-              this.closeModal();
-            });
-          } else {
-            this.loadData();
-            this.closeModal();
-          }
-        }
+        next: (result: any) => this.concluirGravacao(result?.id || result?.veiId),
+        error: () => this.salvando = false
       });
+    }
+  }
+
+  // Sobe as fotos pendentes e fecha o modal. O `salvando` so cai no fim: pro
+  // usuario, gravar o veiculo e enviar as imagens sao uma coisa so.
+  private async concluirGravacao(veiculoId: number | undefined): Promise<void> {
+    try {
+      if (veiculoId && this.imagensPreview.length > 0) {
+        await this.uploadPendingImages(veiculoId);
+      }
+    } finally {
+      this.salvando = false;
+      this.loadData();
+      this.closeModal();
     }
   }
 

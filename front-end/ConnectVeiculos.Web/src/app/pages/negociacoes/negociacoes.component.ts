@@ -3,13 +3,13 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NegociacaoService, Negociacao, VeiculoService, LojaService, ToastService } from '../../core/services';
 import { Veiculo, Loja } from '../../core/models';
-import { MaskDirective, CurrencyMaskDirective } from '../../shared/directives';
+import { MaskDirective, CurrencyMaskDirective, SalvandoDirective } from '../../shared/directives';
 import { PaginationComponent, ConfirmModalComponent } from '../../shared/components';
 
 @Component({
   selector: 'app-negociacoes',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaskDirective, CurrencyMaskDirective, PaginationComponent, ConfirmModalComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaskDirective, CurrencyMaskDirective, PaginationComponent, ConfirmModalComponent, SalvandoDirective],
   templateUrl: './negociacoes.component.html',
   styleUrl: './negociacoes.component.scss'
 })
@@ -26,6 +26,9 @@ export class NegociacoesComponent implements OnInit {
   lojas: Loja[] = [];
   loading = false;
   showModal = false;
+  // Trava o formulario durante a gravacao: sem isso dava pra editar os
+  // campos no meio do envio e clicar em Salvar de novo.
+  salvando = false;
   editMode = false;
   editId: number | null = null;
 
@@ -140,23 +143,33 @@ export class NegociacoesComponent implements OnInit {
       valorProposta: Number(raw.valorProposta) || 0
     };
 
+    this.salvando = true;
+
     if (this.editMode && this.editId) {
       this.negociacaoService.atualizar(this.editId, data).subscribe({
         next: () => {
+          this.salvando = false;
           this.toast.success('Negociação atualizada!');
           this.loadData();
           this.closeModal();
         },
-        error: () => this.toast.error('Erro ao atualizar negociação.')
+        error: () => {
+          this.salvando = false;
+          this.toast.error('Erro ao atualizar negociação.');
+        }
       });
     } else {
       this.negociacaoService.registrar(data).subscribe({
         next: () => {
+          this.salvando = false;
           this.toast.success('Negociação registrada!');
           this.loadData();
           this.closeModal();
         },
-        error: () => this.toast.error('Erro ao registrar negociação.')
+        error: () => {
+          this.salvando = false;
+          this.toast.error('Erro ao registrar negociação.');
+        }
       });
     }
   }

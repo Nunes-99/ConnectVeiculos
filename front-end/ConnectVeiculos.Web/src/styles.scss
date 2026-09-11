@@ -162,3 +162,48 @@ body:has(.sidebar-overlay.active) {
   // chega ao fim (scroll chaining).
   overscroll-behavior: contain;
 }
+
+/* Gravacao em andamento -----------------------------------------------------
+   Aplicado pela SalvandoDirective. O `inert` ja bloqueia clique, Tab e leitor
+   de tela; aqui entra so o sinal visual de que a tela esta ocupada. */
+.esta-salvando {
+  position: relative;
+  cursor: progress;
+
+  /* Os campos apagam, mas o rodape com "Salvando..." continua legivel:
+     e ele que diz ao usuario que a gravacao esta em andamento. */
+  .modal-body,
+  .form-row,
+  .form-group {
+    opacity: .55;
+    transition: opacity .15s ease;
+  }
+
+  .btn-primary,
+  button[type="submit"] {
+    /* Botao desabilitado costuma sumir no fundo; aqui ele precisa ser visto. */
+    opacity: 1;
+    cursor: progress;
+  }
+}
+
+/* Spinner ao lado do texto "Salvando..." */
+.spinner-salvando {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  margin-right: 7px;
+  vertical-align: -2px;
+  border: 2px solid rgba(255, 255, 255, .45);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: girar-salvando .7s linear infinite;
+}
+
+@keyframes girar-salvando {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner-salvando { animation-duration: 2.5s; }
+}

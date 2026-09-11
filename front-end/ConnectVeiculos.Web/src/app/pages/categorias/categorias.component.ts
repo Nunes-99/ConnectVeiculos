@@ -1,5 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { SalvandoDirective } from '../../shared/directives';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { CategoriaService } from '../../core/services';
@@ -10,7 +11,7 @@ import { ConfirmModalComponent } from '../../shared/components/confirm-modal/con
 @Component({
   selector: 'app-categorias',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, PaginationComponent, ConfirmModalComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, PaginationComponent, ConfirmModalComponent, SalvandoDirective],
   templateUrl: './categorias.component.html',
   styleUrl: './categorias.component.scss'
 })
@@ -26,6 +27,9 @@ export class CategoriasComponent implements OnInit {
 
   // Modal de confirmacao
   showConfirmModal = false;
+  // Trava o formulario durante a gravacao: sem isso dava pra editar os
+  // campos no meio do envio e clicar em Salvar de novo.
+  salvando = false;
   categoriaParaExcluir: number | null = null;
 
   // Paginação
@@ -100,21 +104,21 @@ export class CategoriasComponent implements OnInit {
 
     const data = this.form.value;
 
-    if (this.editMode && this.editId) {
-      this.categoriaService.update(this.editId, data).subscribe({
-        next: () => {
-          this.loadData();
-          this.closeModal();
-        }
-      });
-    } else {
-      this.categoriaService.create(data).subscribe({
-        next: () => {
-          this.loadData();
-          this.closeModal();
-        }
-      });
-    }
+    this.salvando = true;
+
+    const gravacao = this.editMode && this.editId
+      ? this.categoriaService.update(this.editId, data)
+      : this.categoriaService.create(data);
+
+    gravacao.subscribe({
+      next: () => {
+        this.salvando = false;
+        this.loadData();
+        this.closeModal();
+      },
+      // Sem isto o formulario ficaria trancado pra sempre se a gravacao falhar.
+      error: () => this.salvando = false
+    });
   }
 
   remove(id: number): void {

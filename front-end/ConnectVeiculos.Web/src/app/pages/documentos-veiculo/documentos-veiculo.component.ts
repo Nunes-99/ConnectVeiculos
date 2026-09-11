@@ -1,5 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { SalvandoDirective } from '../../shared/directives';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   VeiculoDocumentoService, VeiculoDocumento,
@@ -12,7 +13,7 @@ import { ConfirmModalComponent } from '../../shared/components';
 @Component({
   selector: 'app-documentos-veiculo',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, ConfirmModalComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, ConfirmModalComponent, SalvandoDirective],
   templateUrl: './documentos-veiculo.component.html',
   styleUrl: './documentos-veiculo.component.scss'
 })
@@ -30,6 +31,9 @@ export class DocumentosVeiculoComponent implements OnInit {
   loading = false;
 
   showModal = false;
+  // Trava o formulario durante a gravacao: sem isso dava pra editar os
+  // campos no meio do envio e clicar em Salvar de novo.
+  salvando = false;
   editId: number | null = null;
   showConfirm = false;
   idParaExcluir: number | null = null;
@@ -110,12 +114,17 @@ export class DocumentosVeiculoComponent implements OnInit {
       ? this.docService.atualizar(this.editId, payload)
       : this.docService.criar(payload);
 
+    this.salvando = true;
+
     obs.subscribe({
       next: () => {
+        this.salvando = false;
         this.toast.success(this.editId ? 'Documento atualizado.' : 'Documento criado.');
         this.fecharModal();
         this.carregar();
-      }
+      },
+      // Sem isto o formulario ficaria trancado pra sempre se a gravacao falhar.
+      error: () => this.salvando = false
     });
   }
 

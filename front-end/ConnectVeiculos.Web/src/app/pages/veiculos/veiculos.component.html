@@ -162,7 +162,7 @@
 
 @if (showModal) {
   <div class="modal-overlay">
-    <div class="modal modal-lg">
+    <div class="modal modal-lg" [appSalvando]="salvando">
       <div class="modal-header">
         <h2>{{ editMode ? 'Editar' : 'Novo' }} Veículo</h2>
         <button class="btn-close" (click)="closeModal()">
@@ -469,9 +469,10 @@
         }
         <div class="modal-footer">
           <button type="button" class="btn-secondary" (click)="closeModal()">Cancelar</button>
-          <!-- Sem [disabled]: botao desabilitado nao diz o que falta. O save()
-               valida, aponta os campos e rola ate o primeiro pendente. -->
-          <button type="submit" class="btn-primary">Salvar</button>
+          <!-- Nao desabilita por formulario invalido: botao desabilitado nao diz
+               o que falta. O save() valida, aponta os campos e rola ate o
+               primeiro pendente. So desabilita durante a gravacao. -->
+          <button type="submit" class="btn-primary" [disabled]="salvando">@if (salvando) { <span class="spinner-salvando"></span> }{{ salvando ? 'Salvando…' : 'Salvar' }}</button>
         </div>
       </form>
     </div>

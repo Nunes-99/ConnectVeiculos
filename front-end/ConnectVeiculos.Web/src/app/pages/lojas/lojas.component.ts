@@ -6,7 +6,7 @@ import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { LojaService, ImagemService, AuthService, ToastService } from '../../core/services';
 import { Loja } from '../../core/models';
-import { MaskDirective } from '../../shared/directives';
+import { MaskDirective, SalvandoDirective } from '../../shared/directives';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal.component';
 import { DocumentoValidator } from '../../shared/validators/documento.validator';
@@ -15,7 +15,7 @@ import { TelefonePipe } from '../../shared/pipes';
 @Component({
   selector: 'app-lojas',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, MaskDirective, PaginationComponent, ConfirmModalComponent, TelefonePipe],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, MaskDirective, PaginationComponent, ConfirmModalComponent, TelefonePipe, SalvandoDirective],
   templateUrl: './lojas.component.html',
   styleUrl: './lojas.component.scss'
 })

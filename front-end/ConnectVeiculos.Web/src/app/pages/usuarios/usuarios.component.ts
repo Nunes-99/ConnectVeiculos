@@ -7,13 +7,13 @@ import { environment } from '../../../environments/environment';
 import { Usuario, UsuarioInput, Loja, Acesso, PagedResult } from '../../core/models';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal.component';
-import { MaskDirective } from '../../shared/directives';
+import { MaskDirective, SalvandoDirective } from '../../shared/directives';
 import { DocumentoValidator } from '../../shared/validators/documento.validator';
 
 @Component({
   selector: 'app-usuarios',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent, ConfirmModalComponent, MaskDirective],
+  imports: [CommonModule, FormsModule, PaginationComponent, ConfirmModalComponent, MaskDirective, SalvandoDirective],
   templateUrl: './usuarios.component.html',
   styleUrl: './usuarios.component.scss'
 })
@@ -64,6 +64,9 @@ export class UsuariosComponent implements OnInit {
 
   // Modal de confirmacao
   showConfirmModal = false;
+  // Trava o formulario durante a gravacao: sem isso dava pra editar os
+  // campos no meio do envio e clicar em Salvar de novo.
+  salvando = false;
   usuarioParaExcluir: number | null = null;
 
   // Paginacao
@@ -239,21 +242,21 @@ export class UsuariosComponent implements OnInit {
       this.formData.usuFuncao = acessoSelecionado.acsNome;
     }
 
-    if (this.editMode && this.formData.usuId) {
-      this.usuarioService.update(this.formData.usuId, this.formData).subscribe({
-        next: () => {
-          this.loadData();
-          this.closeModal();
-        }
-      });
-    } else {
-      this.usuarioService.create(this.formData).subscribe({
-        next: () => {
-          this.loadData();
-          this.closeModal();
-        }
-      });
-    }
+    this.salvando = true;
+
+    const gravacao = this.editMode && this.formData.usuId
+      ? this.usuarioService.update(this.formData.usuId, this.formData)
+      : this.usuarioService.create(this.formData);
+
+    gravacao.subscribe({
+      next: () => {
+        this.salvando = false;
+        this.loadData();
+        this.closeModal();
+      },
+      // Sem isto o formulario ficaria trancado pra sempre se a gravacao falhar.
+      error: () => this.salvando = false
+    });
   }
 
   remove(id: number): void {

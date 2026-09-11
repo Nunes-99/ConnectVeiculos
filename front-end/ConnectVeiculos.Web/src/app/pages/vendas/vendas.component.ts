@@ -5,13 +5,13 @@ import { Observable } from 'rxjs';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { VendaService, VeiculoService, UsuarioService, ToastService } from '../../core/services';
 import { Venda, Veiculo, Usuario } from '../../core/models';
-import { MaskDirective, CurrencyMaskDirective } from '../../shared/directives';
+import { MaskDirective, CurrencyMaskDirective, SalvandoDirective } from '../../shared/directives';
 import { PaginationComponent, ConfirmModalComponent } from '../../shared/components';
 
 @Component({
   selector: 'app-vendas',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MaskDirective, CurrencyMaskDirective, PaginationComponent, ConfirmModalComponent],
+  imports: [CommonModule, ReactiveFormsModule, MaskDirective, CurrencyMaskDirective, PaginationComponent, ConfirmModalComponent, SalvandoDirective],
   templateUrl: './vendas.component.html',
   styleUrl: './vendas.component.scss'
 })
@@ -30,6 +30,9 @@ export class VendasComponent implements OnInit {
   loading = false;
   loadingCep = false;
   showModal = false;
+  // Trava o formulario durante a gravacao: sem isso dava pra editar os
+  // campos no meio do envio e clicar em Salvar de novo.
+  salvando = false;
   editId: number | null = null;
 
   /**
@@ -227,6 +230,8 @@ export class VendasComponent implements OnInit {
     delete data.uf;
     delete data.numero;
 
+    this.salvando = true;
+
     const isEdit = this.editId !== null;
     const obs$: Observable<unknown> = isEdit
       ? this.vendaService.update(this.editId!, data)
@@ -234,11 +239,13 @@ export class VendasComponent implements OnInit {
 
     obs$.subscribe({
       next: () => {
+        this.salvando = false;
         this.loadData();
         this.closeModal();
         this.toast.success(isEdit ? 'Venda atualizada!' : 'Venda registrada com sucesso!');
       },
       error: (err: any) => {
+        this.salvando = false;
         this.toast.error(err.error?.message || (isEdit ? 'Erro ao atualizar venda' : 'Erro ao registrar venda'));
       }
     });

@@ -68,7 +68,7 @@
 
 @if (showModal) {
   <div class="modal-overlay">
-    <div class="modal">
+    <div class="modal" [appSalvando]="salvando">
       <div class="modal-header">
         <h2>{{ editMode ? 'Editar' : 'Novo' }} Acesso</h2>
         <button class="btn-close" (click)="closeModal()">
@@ -107,7 +107,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn-secondary" (click)="closeModal()">Cancelar</button>
-          <button type="submit" class="btn-primary" [disabled]="form.invalid">Salvar</button>
+          <button type="submit" class="btn-primary" [disabled]="form.invalid">@if (salvando) { <span class="spinner-salvando"></span> }{{ salvando ? 'Salvando…' : 'Salvar' }}</button>
         </div>
       </form>
     </div>
