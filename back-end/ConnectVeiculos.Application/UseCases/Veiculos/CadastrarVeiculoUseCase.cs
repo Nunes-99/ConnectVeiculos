@@ -1,13 +1,10 @@
-﻿using ConnectVeiculos.Application.InputModels.Veiculos;
+using ConnectVeiculos.Application.InputModels.Veiculos;
 using ConnectVeiculos.Application.Interfaces.Veiculos;
-using ConnectVeiculos.Core.Entities.Publicacoes;
 using ConnectVeiculos.Core.Entities.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Database.Common;
-using ConnectVeiculos.Core.Interfaces.Database.Repositories.Publicacoes;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Services;
 using ConnectVeiculos.Core.Interfaces.Tenancy;
-using Microsoft.Extensions.Logging;
 
 namespace ConnectVeiculos.Application.UseCases.Veiculos
 {
@@ -17,58 +14,31 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
         private readonly IUnitOfWork _unitOfWork;
         private readonly INotificacaoService _notificacaoService;
         private readonly ICatalogoHubService _catalogoHubService;
-        private readonly IMercadoLivreService _mercadoLivreService;
-        private readonly IFacebookCatalogService _facebookService;
-        private readonly IFacebookPagePostService _facebookPagePostService;
-        private readonly IInstagramPostService _instagramPostService;
-        private readonly IGoogleMerchantService _googleService;
-        private readonly IVeiculoPublicacaoRepository _publicacaoRepository;
-        private readonly ILogger<CadastrarVeiculoUseCase> _logger;
-        private readonly IFavoritoNotificacaoService _favoritoNotificacaoService;
         private readonly ITenantContext _tenantContext;
-         private readonly ILimiteService _limiteService;
-         private readonly IIndexNowService _indexNowService;
-         private readonly ITenantBackgroundRunner _backgroundRunner;
+        private readonly ILimiteService _limiteService;
+        private readonly ITenantBackgroundRunner _backgroundRunner;
 
         public CadastrarVeiculoUseCase(
             IVeiculoRepository veiculoRepository,
             IUnitOfWork unitOfWork,
             INotificacaoService notificacaoService,
             ICatalogoHubService catalogoHubService,
-            IMercadoLivreService mercadoLivreService,
-            IFacebookCatalogService facebookService,
-            IFacebookPagePostService facebookPagePostService,
-            IInstagramPostService instagramPostService,
-            IGoogleMerchantService googleService,
-            IVeiculoPublicacaoRepository publicacaoRepository,
-            ILogger<CadastrarVeiculoUseCase> logger,
-            IFavoritoNotificacaoService favoritoNotificacaoService,
-             ITenantContext tenantContext,
-             ILimiteService limiteService,
-             IIndexNowService indexNowService,
-             ITenantBackgroundRunner backgroundRunner)
+            ITenantContext tenantContext,
+            ILimiteService limiteService,
+            ITenantBackgroundRunner backgroundRunner)
         {
             _veiculoRepository = veiculoRepository;
             _unitOfWork = unitOfWork;
             _notificacaoService = notificacaoService;
             _catalogoHubService = catalogoHubService;
-            _mercadoLivreService = mercadoLivreService;
-            _facebookService = facebookService;
-            _facebookPagePostService = facebookPagePostService;
-            _instagramPostService = instagramPostService;
-            _googleService = googleService;
-            _publicacaoRepository = publicacaoRepository;
-            _logger = logger;
-            _favoritoNotificacaoService = favoritoNotificacaoService;
             _tenantContext = tenantContext;
-             _limiteService = limiteService;
-             _indexNowService = indexNowService;
-             _backgroundRunner = backgroundRunner;
+            _limiteService = limiteService;
+            _backgroundRunner = backgroundRunner;
         }
 
         public async Task<int> Execute(VeiculoInputModel inputModel)
         {
-             await _limiteService.GarantirPodeCriarVeiculoAsync();
+            await _limiteService.GarantirPodeCriarVeiculoAsync();
 
             var veiculo = new Veiculo(
                 inputModel.VeiId,
@@ -139,43 +109,18 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                         $"IndexNow veiculo {id}");
                 }
 
-                // Publicar nas plataformas externas se disponivel
+                // Publicar nas plataformas externas se disponivel.
+                //
+                // Em background, e nao aqui direto: o cadastro sao duas requisicoes
+                // — primeiro o veiculo, depois as fotos, porque o upload precisa do
+                // id. Publicando na hora, o veiculo ainda nao tinha imagem nenhuma:
+                // o Instagram desistia em "sem imagens" e a Facebook Page postava so
+                // o texto. O servico espera as fotos chegarem antes de publicar.
                 if (inputModel.VeiSts == "D")
                 {
-                    try
-                    {
-                        if (await _mercadoLivreService.IsConnectedAsync())
-                        {
-                            var (externoId, url, aguardandoPagamento) = await _mercadoLivreService.PublicarVeiculoAsync(id);
-                            await _publicacaoRepository.CreateAsync(new VeiculoPublicacao(id, "MercadoLivre", externoId, url, aguardandoPagamento));
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Erro ao publicar veiculo {VeiculoId} no ML", id);
-                    }
-
-                    try { await _facebookService.PublicarVeiculoAsync(id); }
-                    catch (Exception ex) { _logger.LogError(ex, "Erro ao publicar veiculo {VeiculoId} no Facebook Catalog", id); }
-
-                    try
-                    {
-                        var r = await _facebookPagePostService.PublicarVeiculoAsync(id);
-                        if (r != null)
-                            await _publicacaoRepository.CreateAsync(new VeiculoPublicacao(id, "FacebookPage", r.ExternoId, r.Url));
-                    }
-                    catch (Exception ex) { _logger.LogError(ex, "Erro ao postar veiculo {VeiculoId} na Facebook Page", id); }
-
-                    try
-                    {
-                        var r = await _instagramPostService.PublicarVeiculoAsync(id);
-                        if (r != null)
-                            await _publicacaoRepository.CreateAsync(new VeiculoPublicacao(id, "Instagram", r.ExternoId, r.Url));
-                    }
-                    catch (Exception ex) { _logger.LogError(ex, "Erro ao postar veiculo {VeiculoId} no Instagram", id); }
-
-                    try { await _googleService.PublicarVeiculoAsync(id); }
-                    catch (Exception ex) { _logger.LogError(ex, "Erro ao publicar veiculo {VeiculoId} no Google", id); }
+                    _backgroundRunner.Enqueue<IPublicacaoAutomaticaService>(
+                        s => s.PublicarNovoVeiculoAsync(id),
+                        $"publicar veiculo {id} nas plataformas externas");
                 }
 
                 return id;

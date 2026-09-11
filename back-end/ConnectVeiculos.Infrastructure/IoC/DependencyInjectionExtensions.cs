@@ -348,6 +348,12 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.AddHttpClient<Core.Interfaces.Services.IInstagramPostService, Services.Meta.InstagramPostService>()
                 .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(30));
 
+            // Services - publicacao automatica de veiculo novo. Roda em background
+            // e espera as fotos serem enviadas antes de postar (o upload e uma
+            // requisicao separada, posterior ao cadastro).
+            services.AddScoped<Core.Interfaces.Services.IPublicacaoAutomaticaService,
+                               Services.Publicacoes.PublicacaoAutomaticaService>();
+
             // Services - Google Merchant (push instantaneo)
             services.Configure<Services.Google.GoogleMerchantSettings>(configuration.GetSection("GoogleMerchantSettings"));
             services.AddHttpClient<Core.Interfaces.Services.IGoogleMerchantService, Services.Google.GoogleMerchantService>()

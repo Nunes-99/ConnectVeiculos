@@ -2,12 +2,10 @@
 using ConnectVeiculos.Application.UseCases.Veiculos;
 using ConnectVeiculos.Core.Entities.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Database.Common;
-using ConnectVeiculos.Core.Interfaces.Database.Repositories.Publicacoes;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Services;
 using ConnectVeiculos.Core.Interfaces.Tenancy;
 using FluentAssertions;
-using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 
@@ -19,10 +17,7 @@ namespace ConnectVeiculos.Tests.UseCases.Veiculos
         private readonly Mock<IUnitOfWork> _unitOfWorkMock;
         private readonly Mock<INotificacaoService> _notificacaoServiceMock;
         private readonly Mock<ICatalogoHubService> _catalogoHubServiceMock;
-        private readonly Mock<IMercadoLivreService> _mercadoLivreServiceMock;
-        private readonly Mock<IFacebookCatalogService> _facebookServiceMock;
-        private readonly Mock<IGoogleMerchantService> _googleServiceMock;
-        private readonly Mock<IVeiculoPublicacaoRepository> _publicacaoRepositoryMock;
+        private readonly Mock<ITenantBackgroundRunner> _backgroundRunnerMock;
         private readonly CadastrarVeiculoUseCase _useCase;
 
         public CadastrarVeiculoUseCaseTests()
@@ -31,28 +26,66 @@ namespace ConnectVeiculos.Tests.UseCases.Veiculos
             _unitOfWorkMock = new Mock<IUnitOfWork>();
             _notificacaoServiceMock = new Mock<INotificacaoService>();
             _catalogoHubServiceMock = new Mock<ICatalogoHubService>();
-            _mercadoLivreServiceMock = new Mock<IMercadoLivreService>();
-            _facebookServiceMock = new Mock<IFacebookCatalogService>();
-            _googleServiceMock = new Mock<IGoogleMerchantService>();
-            _publicacaoRepositoryMock = new Mock<IVeiculoPublicacaoRepository>();
+            _backgroundRunnerMock = new Mock<ITenantBackgroundRunner>();
             _useCase = new CadastrarVeiculoUseCase(
                 _veiculoRepositoryMock.Object,
                 _unitOfWorkMock.Object,
                 _notificacaoServiceMock.Object,
                 _catalogoHubServiceMock.Object,
-                _mercadoLivreServiceMock.Object,
-                _facebookServiceMock.Object,
-                new Mock<IFacebookPagePostService>().Object,
-                new Mock<IInstagramPostService>().Object,
-                _googleServiceMock.Object,
-                _publicacaoRepositoryMock.Object,
-                NullLogger<CadastrarVeiculoUseCase>.Instance,
-                 new Mock<IFavoritoNotificacaoService>().Object,
-                 new Mock<ITenantContext>().Object,
-                 new Mock<ILimiteService>().Object,
-                 new Mock<IIndexNowService>().Object,
-                 new Mock<ITenantBackgroundRunner>().Object);
+                new Mock<ITenantContext>().Object,
+                new Mock<ILimiteService>().Object,
+                _backgroundRunnerMock.Object);
         }
+
+        /// <summary>
+        /// O cadastro publicava nas plataformas na propria requisicao, antes das
+        /// fotos existirem — o upload so acontece depois, porque precisa do id do
+        /// veiculo. O resultado era Instagram sem post nenhum e Facebook postando
+        /// so texto. Agora o cadastro apenas agenda; quem espera as fotos e publica
+        /// e o IPublicacaoAutomaticaService.
+        /// </summary>
+        [Fact]
+        public async Task Execute_ComVeiculoDisponivel_DeveAgendarAPublicacaoEmVezDePublicarNaHora()
+        {
+            var input = NovoInput("D");
+            _veiculoRepositoryMock.Setup(x => x.CreateAsync(It.IsAny<Veiculo>())).ReturnsAsync(7);
+
+            await _useCase.Execute(input);
+
+            _backgroundRunnerMock.Verify(
+                x => x.Enqueue(
+                    It.IsAny<Func<IPublicacaoAutomaticaService, Task>>(),
+                    It.Is<string>(d => d.Contains("7"))),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task Execute_ComVeiculoQueNaoEntraNoCatalogo_NaoDeveAgendarPublicacao()
+        {
+            // Vendido/reservado nao vai pro catalogo publico nem pras redes.
+            var input = NovoInput("V");
+            _veiculoRepositoryMock.Setup(x => x.CreateAsync(It.IsAny<Veiculo>())).ReturnsAsync(8);
+
+            await _useCase.Execute(input);
+
+            _backgroundRunnerMock.Verify(
+                x => x.Enqueue(It.IsAny<Func<IPublicacaoAutomaticaService, Task>>(), It.IsAny<string>()),
+                Times.Never);
+        }
+
+        private static VeiculoInputModel NovoInput(string status) => new()
+        {
+            R_LojId = 1,
+            R_CatId = 1,
+            VeiMarca = "Toyota",
+            VeiModelo = "Corolla",
+            VeiAno = 2024,
+            VeiPlaca = "ABC1D23",
+            VeiPreco = 120000.00m,
+            VeiDtEntrada = DateTime.Now,
+            VeiSts = status,
+            VeiSitSts = "D"
+        };
 
         [Fact]
         public async Task Execute_ComDadosValidos_DeveCadastrarVeiculo()

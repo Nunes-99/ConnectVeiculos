@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, HostListener, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { VeiculoService, LojaService, CategoriaService, ImagemService, VeiculoImagem, ToastService, FipeService, FipeMarca, FipeModelo } from '../../core/services';
@@ -36,6 +36,13 @@ export class VeiculosComponent implements OnInit {
   // Set de veiculoId em publicacao no momento (pra desabilitar o botao durante request).
   publicandoIg = new Set<number>();
   publicandoFb = new Set<number>();
+  publicandoMl = new Set<number>();
+  mlConectado = false;
+
+  // Menu de acoes da linha. A tabela tinha 9 icones por linha, ilegivel no
+  // celular; sobraram os quatro do dia a dia e o resto veio pra ca.
+  menuVeiculo: Veiculo | null = null;
+  menuPos = { top: 0, left: 0 };
 
   veiculos: Veiculo[] = [];
   veiculosPaginados: Veiculo[] = [];
@@ -267,6 +274,70 @@ export class VeiculosComponent implements OnInit {
     this.integracaoService.getMetaFeatureFlags().subscribe({
       next: (flags) => this.metaFlags = flags,
       error: () => { /* silencioso — mantem defaults (botoes ocultos) */ }
+    });
+    this.integracaoService.getMercadoLivreStatus().subscribe({
+      next: (r) => this.mlConectado = !!r?.conectado,
+      error: () => { /* sem conexao com o ML o item nem aparece no menu */ }
+    });
+  }
+
+  private readonly MENU_LARGURA = 240;
+  private readonly MENU_ALTURA_MAX = 420;
+
+  abrirMenuAcoes(evento: MouseEvent, veiculo: Veiculo): void {
+    evento.stopPropagation();
+
+    if (this.menuVeiculo?.veiId === veiculo.veiId) {
+      this.fecharMenuAcoes();
+      return;
+    }
+
+    const botao = (evento.currentTarget as HTMLElement).getBoundingClientRect();
+
+    // position:fixed a partir do botao. Se nao couber abaixo ou a direita,
+    // vira pro outro lado — senao o menu sai da tela nas ultimas linhas.
+    const cabeAbaixo = window.innerHeight - botao.bottom > this.MENU_ALTURA_MAX;
+    const top = cabeAbaixo
+      ? botao.bottom + 4
+      : Math.max(8, botao.top - this.MENU_ALTURA_MAX - 4);
+    const left = Math.max(8, Math.min(
+      botao.right - this.MENU_LARGURA,
+      window.innerWidth - this.MENU_LARGURA - 8));
+
+    this.menuPos = { top, left };
+    this.menuVeiculo = veiculo;
+  }
+
+  fecharMenuAcoes(): void {
+    this.menuVeiculo = null;
+  }
+
+  // O menu e' ancorado em coordenadas da viewport: rolar ou redimensionar o
+  // deixaria solto no meio da tela.
+  @HostListener('window:scroll')
+  @HostListener('window:resize')
+  onViewportMudou(): void {
+    if (this.menuVeiculo) this.fecharMenuAcoes();
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.menuVeiculo) this.fecharMenuAcoes();
+  }
+
+  publicarNoMercadoLivre(veiculoId: number): void {
+    if (this.publicandoMl.has(veiculoId)) return;
+    this.publicandoMl.add(veiculoId);
+    this.integracaoService.publicarMercadoLivre(veiculoId).subscribe({
+      next: (r: any) => {
+        this.publicandoMl.delete(veiculoId);
+        this.toast.success(r?.mensagem || 'Publicado no Mercado Livre!');
+        this.loadData();
+      },
+      error: (err) => {
+        this.publicandoMl.delete(veiculoId);
+        this.toast.error(err?.error?.error || 'Falha ao publicar no Mercado Livre. Veja a tela de Integrações.');
+      }
     });
   }
 
