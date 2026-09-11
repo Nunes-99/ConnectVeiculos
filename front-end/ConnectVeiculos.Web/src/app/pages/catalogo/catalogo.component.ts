@@ -119,6 +119,9 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   favoritoTelefone: string = '';
   showFavoritoCadastro = false;
   favoritoPendente: number | null = null; // veiculoId waiting for email registration
+
+  // Alguem abriu o link de um veiculo que nao esta mais no catalogo.
+  veiculoIndisponivel = false;
   favoritoLogado = false; // true when visitor has provided email
 
   // Compare
@@ -322,6 +325,14 @@ export class CatalogoComponent implements OnInit, OnDestroy {
             if (isPlatformBrowser(this.platformId)) {
               this.abrirDetalhes(v);
             }
+          } else {
+            // O veiculo saiu do catalogo (vendido, reservado ou excluido) mas a
+            // URL continua viva: ela foi pro post do Facebook, pro WhatsApp do
+            // cliente e pro indice do Google enquanto o carro estava a venda.
+            // Antes caia aqui em silencio — ficava o titulo generico da
+            // plataforma e a pagina mostrava o catalogo como se nada fosse.
+            this.veiculoIndisponivel = true;
+            this.seoService.setVehicleUnavailablePage(this.loja, this.router.url);
           }
           this.autoOpenVeiculoId = null;
         } else {

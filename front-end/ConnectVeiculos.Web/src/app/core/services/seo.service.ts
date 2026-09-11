@@ -165,6 +165,53 @@ export class SeoService {
     this.setJsonLd(jsonLd);
   }
 
+  /**
+   * Veiculo que nao esta mais no catalogo (vendido, reservado ou excluido).
+   *
+   * A URL continua existindo e continua sendo acessada: ela foi para o post do
+   * Facebook, para o WhatsApp do cliente e para o indice do Google enquanto o
+   * carro estava a venda. Sem este caso a pagina caia no titulo generico da
+   * plataforma — quem clicava no anuncio do carro via "Plataforma SaaS completa
+   * para revendedores".
+   *
+   * Vai com noindex: nao faz sentido disputar busca com um carro que acabou,
+   * e o Google remove a URL do indice em vez de manter um resultado morto.
+   */
+  setVehicleUnavailablePage(loja?: any, pageUrl?: string): void {
+    const origin = this.resolveOrigin(pageUrl);
+    const canonicalUrl = this.resolveCanonicalUrl(origin, pageUrl);
+    const nomeLoja = loja?.lojNome || 'a loja';
+    const titleText = `Veículo não disponível - ${loja?.lojNome || 'ConnectVeículos'}`;
+    const description = `Este veículo não está mais disponível. Veja o estoque atual de ${nomeLoja}.`;
+
+    this.title.setTitle(titleText);
+    this.meta.updateTag({ name: 'description', content: description });
+    this.meta.updateTag({ name: 'robots', content: 'noindex, follow' });
+    this.setCanonical(canonicalUrl);
+
+    this.meta.updateTag({ property: 'og:title', content: titleText });
+    this.meta.updateTag({ property: 'og:description', content: description });
+    this.meta.updateTag({ property: 'og:type', content: 'website' });
+    this.meta.updateTag({ property: 'og:url', content: canonicalUrl });
+    this.meta.updateTag({ property: 'og:site_name', content: loja?.lojNome || 'ConnectVeiculos' });
+    this.meta.updateTag({ property: 'og:locale', content: 'pt_BR' });
+
+    const imageUrl = this.resolveLojaLogo(origin, loja?.lojImg);
+    if (imageUrl) {
+      this.meta.updateTag({ property: 'og:image', content: imageUrl });
+      this.meta.updateTag({ property: 'og:image:secure_url', content: imageUrl });
+      this.meta.updateTag({ property: 'og:image:alt', content: `Logo ${loja?.lojNome || 'Loja'}` });
+    }
+
+    this.meta.updateTag({ name: 'twitter:card', content: imageUrl ? 'summary_large_image' : 'summary' });
+    this.meta.updateTag({ name: 'twitter:title', content: titleText });
+    this.meta.updateTag({ name: 'twitter:description', content: description });
+
+    // Sem JSON-LD: nao ha oferta pra descrever. Se a pagina anterior deixou um
+    // (navegacao client-side de um carro pro outro), ele sai daqui.
+    this.doc.querySelector('script[type="application/ld+json"]')?.remove();
+  }
+
   setCatalogPage(loja?: any, pageUrl?: string): void {
     const origin = this.resolveOrigin(pageUrl);
     const canonicalUrl = this.resolveCanonicalUrl(origin, pageUrl);

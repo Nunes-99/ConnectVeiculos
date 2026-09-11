@@ -1605,3 +1605,52 @@
 
   .status-indicator { background: var(--cat-realce, rgba(255, 255, 255, 0.15)); }
 }
+
+/* Aviso de veiculo que saiu do catalogo. Usa as cores do tema da loja pra nao
+   parecer erro do site — o carro acabou, a loja continua aberta. */
+.aviso-indisponivel {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  border: 1px solid rgba(180, 83, 9, .3);
+  border-left: 4px solid #b45309;
+  border-radius: 10px;
+  background: rgba(251, 191, 36, .12);
+
+  > .material-icons {
+    flex-shrink: 0;
+    color: #b45309;
+  }
+
+  div {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  strong {
+    display: block;
+    font-size: .95rem;
+    color: #92400e;
+  }
+
+  p {
+    margin: 2px 0 0;
+    font-size: .85rem;
+    color: #92400e;
+    opacity: .85;
+  }
+
+  .btn-fechar-aviso {
+    flex-shrink: 0;
+    padding: 2px;
+    border: 0;
+    background: transparent;
+    color: #92400e;
+    cursor: pointer;
+    line-height: 0;
+
+    .material-icons { font-size: 18px; }
+  }
+}

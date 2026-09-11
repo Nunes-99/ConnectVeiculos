@@ -213,6 +213,24 @@
     </aside>
 
     <main class="veiculos-grid">
+      <!-- Link de um veiculo que ja saiu do catalogo. Acontece o tempo todo:
+           o endereco foi pro post do Facebook e pro WhatsApp do cliente
+           enquanto o carro estava a venda. Sem este aviso, a pessoa caia no
+           catalogo inteiro sem entender por que o carro do anuncio sumiu. -->
+      @if (veiculoIndisponivel) {
+        <div class="aviso-indisponivel" role="status">
+          <span class="material-icons">directions_car</span>
+          <div>
+            <strong>Este veículo não está mais disponível.</strong>
+            <p>Ele foi vendido ou saiu do estoque. Veja abaixo o que temos hoje.</p>
+          </div>
+          <button type="button" class="btn-fechar-aviso"
+                  (click)="veiculoIndisponivel = false" aria-label="Fechar aviso">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+      }
+
       @if (loading) {
         <div class="loading">
           <div class="loading-spinner"></div>
