@@ -41,7 +41,15 @@ const LINKS: Record<string, DetranLink> = {
   RS: { uf: 'RS', nome: 'Detran-RS', url: 'https://www.detran.rs.gov.br/sec/inicial?p=publico-veiculos-consulta-cobranca' },
   SC: { uf: 'SC', nome: 'Detran-SC', url: 'https://www.detran.sc.gov.br' },
   SE: { uf: 'SE', nome: 'Detran-SE', url: 'https://www.detran.se.gov.br' },
-  SP: { uf: 'SP', nome: 'Detran-SP', url: 'https://www.detran.sp.gov.br/wps/portal/portaldetran/cidadao/veiculos/inf_servicos_veiculos/consulta_debitos' },
+  // O deep-link antigo do portal WPS do Detran-SP morreu: hoje qualquer
+  // caminho /wps/portal/... responde "Restricoes de seguranca impedem o acesso"
+  // porque o portal passou a exigir login gov.br. Quem consolida debito de
+  // veiculo em SP (IPVA + multas + licenciamento) e a Fazenda estadual.
+  SP: {
+    uf: 'SP', nome: 'Detran-SP / Fazenda-SP',
+    url: 'https://www.ipva.fazenda.sp.gov.br/IPVANet_Consulta/',
+    observacao: 'Clique em "Consulta de debito de veiculos". SP exige login gov.br.'
+  },
   TO: { uf: 'TO', nome: 'Detran-TO', url: 'https://www.detran.to.gov.br' }
 };
 
