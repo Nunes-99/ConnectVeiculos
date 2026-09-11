@@ -982,7 +982,14 @@
           </div>
         }
 
-        <!-- Toggle Facebook Catalog (Vehicle Ads pago) -->
+        <!-- Facebook Catalog (Vehicle Ads pago) — OCULTO.
+             O interruptor nao liga nada: depende de Catalog ID + Token que nunca
+             foram configurados, e o proprio card avisava que "toggle nao tera
+             efeito". Controle morto gera duvida em quem usa a tela.
+             Alem disso o caminho de anuncio pago nunca foi testado aqui.
+             Ao religar: trocar o interruptor pelos campos de Catalog ID e Token,
+             e validar uma campanha de verdade antes de oferecer. -->
+        @if (mostrarCatalogoAdsPago) {
         <div class="info-block">
           <h4><span class="material-icons">shopping_cart</span> 3. Facebook Catalog (Vehicle Ads pago)</h4>
           <p>Catálogo de produtos que alimenta o programa <strong>Dynamic Ads for Auto</strong> (anúncios pagos no Marketplace, Feed e Instagram). Funciona no Brasil mas o tenant paga clique no Ads Manager. Requer Catalog ID + Token configurados separadamente abaixo.</p>
@@ -998,6 +1005,7 @@
             }
           </div>
         </div>
+        }
 
         <div class="card-actions">
           <button class="btn-danger-outline" (click)="desconectarMeta()">
@@ -1009,7 +1017,7 @@
     </div>
     <div class="card-footer">
       <span class="material-icons">info</span>
-      <small>Os posts da Page e do Instagram são publicações orgânicas (gratuitas). O Catalog alimenta anúncios pagos — você só paga se rodar campanha no Ads Manager. Tokens cifrados no banco; Page Token não expira.</small>
+      <small>Os posts da Page e do Instagram são publicações orgânicas e gratuitas. Tokens cifrados no banco; Page Token não expira.</small>
     </div>
   </div>
   }

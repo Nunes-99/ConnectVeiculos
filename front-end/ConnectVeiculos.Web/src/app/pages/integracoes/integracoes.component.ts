@@ -21,6 +21,10 @@ export class IntegracoesComponent implements OnInit {
   // e nenhum dos dois vale pra veiculo. Ver o comentario no template.
   readonly mostrarCatalogoFeed = false;
 
+  // Catalog de anuncios pagos. Desligado junto com o card de feed: o
+  // interruptor dependia de Catalog ID e Token que nunca foram configurados.
+  readonly mostrarCatalogoAdsPago = false;
+
   private integracaoService = inject(IntegracaoService);
   private toast = inject(ToastService);
   private platformId = inject(PLATFORM_ID);
