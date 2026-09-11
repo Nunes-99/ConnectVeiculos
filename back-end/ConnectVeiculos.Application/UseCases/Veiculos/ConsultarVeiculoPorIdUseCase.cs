@@ -32,6 +32,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                 VeiAno = veiculo.VeiAno,
                 VeiPlaca = veiculo.VeiPlaca,
                 VeiChassi = veiculo.VeiChassi,
+                VeiRenavam = veiculo.VeiRenavam,
                 VeiCor = veiculo.VeiCor,
                 VeiKm = veiculo.VeiKm,
                 VeiPreco = veiculo.VeiPreco,

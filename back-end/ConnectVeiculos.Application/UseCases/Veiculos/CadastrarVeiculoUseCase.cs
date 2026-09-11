@@ -60,7 +60,8 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                 inputModel.VeiDonoAtual,
                 inputModel.VeiDonoCelular,
                 inputModel.VeiOpcionais,
-                inputModel.VeiPrecoFipe
+                inputModel.VeiPrecoFipe,
+                inputModel.VeiRenavam
             );
 
             _unitOfWork.BeginTransaction();

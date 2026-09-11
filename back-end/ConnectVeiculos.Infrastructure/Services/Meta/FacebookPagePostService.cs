@@ -192,6 +192,56 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             }
         }
 
+        public async Task<bool> MarcarPostComoIndisponivelAsync(string postId, int veiculoId, string novoStatus)
+        {
+            if (string.IsNullOrWhiteSpace(postId)) return false;
+
+            var (token, pageId) = await ResolvePageCredentialsAsync();
+            if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(pageId))
+            {
+                _logger.LogDebug("Facebook Page nao configurado; post do veiculo {VeiculoId} fica como esta.", veiculoId);
+                return false;
+            }
+
+            var veiculo = await _veiculoRepository.GetByIdAsync(veiculoId);
+            if (veiculo == null) return false;
+
+            var selo = novoStatus == "R" ? "🔒 RESERVADO" : "✅ VENDIDO";
+            var loja = await _lojaRepository.GetByIdAsync(veiculo.R_LojId);
+            var baseUrl = NormalizeBaseUrl(loja?.LojUrlCatalogo) ?? NormalizeBaseUrl(_settings?.PublicSiteUrl);
+            var slug = loja?.LojSlug ?? veiculo.R_LojId.ToString();
+            var linkVeiculo = baseUrl == null ? "" : CatalogoUrl.Veiculo(baseUrl, slug, veiculoId);
+
+            // Mantem a legenda original abaixo do selo: quem ja viu o post
+            // reconhece o anuncio, e quem chega depois entende que acabou.
+            var legenda = selo + "\n\n" + MontarLegenda(veiculo, loja, linkVeiculo);
+
+            try
+            {
+                var url = $"https://graph.facebook.com/{_settings.ApiVersion}/{postId}";
+                var payload = new { message = legenda, access_token = token };
+                var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+                var resp = await _httpClient.PostAsync(url, content);
+
+                if (!resp.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning(
+                        "Nao consegui marcar o post {PostId} do veiculo {VeiculoId} como {Selo}: {Body}",
+                        postId, veiculoId, selo, await resp.Content.ReadAsStringAsync());
+                    return false;
+                }
+
+                _logger.LogInformation(
+                    "Post {PostId} do veiculo {VeiculoId} marcado como {Selo}.", postId, veiculoId, selo);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao marcar post {PostId} do veiculo {VeiculoId}", postId, veiculoId);
+                return false;
+            }
+        }
+
         // Legenda otimizada pra engajamento no Facebook: emoji + titulo + dados + link + hashtags.
         // Fica em torno de 400-500 chars (FB tolera ate 63K).
         private static string MontarLegenda(Veiculo veiculo, Loja? loja, string linkVeiculo)

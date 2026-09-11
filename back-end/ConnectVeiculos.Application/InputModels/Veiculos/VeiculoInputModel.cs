@@ -12,6 +12,7 @@ namespace ConnectVeiculos.Application.InputModels.Veiculos
         public short VeiAno { get; set; }
         public string VeiPlaca { get; set; }
         public string VeiChassi { get; set; }
+        public string VeiRenavam { get; set; }
         public string VeiCor { get; set; }
         public int VeiKm { get; set; }
         public decimal VeiPreco { get; set; }

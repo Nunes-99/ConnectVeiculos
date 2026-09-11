@@ -50,6 +50,13 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework.Repositories
                                            && StatusPublicado.Contains(p.PubStatus));
          }
 
+        public async Task<IEnumerable<VeiculoPublicacao>> GetAtivasAsync()
+        {
+            return await _context.VeiculoPublicacoes
+                .Where(p => StatusPublicado.Contains(p.PubStatus))
+                .ToListAsync();
+        }
+
         public async Task<int> CreateAsync(VeiculoPublicacao publicacao)
         {
             _context.VeiculoPublicacoes.Add(publicacao);

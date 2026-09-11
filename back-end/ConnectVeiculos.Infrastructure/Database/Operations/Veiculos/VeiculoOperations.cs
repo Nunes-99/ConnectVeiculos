@@ -27,6 +27,7 @@ namespace ConnectVeiculos.Infrastructure.Database.Operations.Veiculos
                     v.VeiAno,
                     v.VeiPlaca,
                     v.VeiChassi,
+                    v.VeiRenavam,
                     v.VeiCor,
                     v.VeiKm,
                     v.VeiPreco,

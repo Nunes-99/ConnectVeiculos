@@ -2,16 +2,21 @@ using System.Globalization;
 using ConnectVeiculos.Application.Interfaces.Veiculos;
 using ConnectVeiculos.Application.ViewModels.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Database.Operations.Veiculos;
+using ConnectVeiculos.Core.Interfaces.Database.Repositories.Publicacoes;
 
 namespace ConnectVeiculos.Application.UseCases.Veiculos
 {
     public class ConsultarVeiculosUseCase : IConsultarVeiculosUseCase
     {
         private readonly IVeiculoOperations _veiculoOperations;
+        private readonly IVeiculoPublicacaoRepository _publicacaoRepository;
 
-        public ConsultarVeiculosUseCase(IVeiculoOperations veiculoOperations)
+        public ConsultarVeiculosUseCase(
+            IVeiculoOperations veiculoOperations,
+            IVeiculoPublicacaoRepository publicacaoRepository)
         {
             _veiculoOperations = veiculoOperations;
+            _publicacaoRepository = publicacaoRepository;
         }
 
         public async Task<List<VeiculoViewModel>> Execute(string pesquisa, int? lojaId, string inicio, string intervalo)
@@ -20,6 +25,13 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
 
             if (result == null)
                 return new List<VeiculoViewModel>();
+
+            // Uma consulta so pras publicacoes de todos os veiculos. A tela pinta
+            // o icone da rede conforme o que ja foi publicado; perguntar por
+            // veiculo seria N+1.
+            var publicacoes = (await _publicacaoRepository.GetAtivasAsync())
+                .GroupBy(p => p.R_VeiId)
+                .ToDictionary(g => g.Key, g => g.ToList());
 
             var veiculos = ((IEnumerable<dynamic>)result).Select(v => new VeiculoViewModel
             {
@@ -33,6 +45,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                 VeiAno = (short)(long)v.VeiAno,
                 VeiPlaca = v.VeiPlaca,
                 VeiChassi = v.VeiChassi,
+                VeiRenavam = v.VeiRenavam,
                 VeiCor = v.VeiCor,
                 VeiKm = (int)(long)v.VeiKm,
                 VeiPreco = ParseDecimal(v.VeiPreco),
@@ -50,6 +63,25 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                 VeiDtPostagemInsta = v.VeiDtPostagemInsta is DateTime dti ? dti : v.VeiDtPostagemInsta is string si && DateTime.TryParse(si, out var parsedInsta) ? parsedInsta : null,
                 VeiDtPostagemFace = v.VeiDtPostagemFace is DateTime dtf ? dtf : v.VeiDtPostagemFace is string sf && DateTime.TryParse(sf, out var parsedFace) ? parsedFace : null
             }).ToList();
+
+            foreach (var veiculo in veiculos)
+            {
+                if (!publicacoes.TryGetValue(veiculo.VeiId, out var doVeiculo)) continue;
+
+                var ig = doVeiculo.FirstOrDefault(p => p.PubPlataforma == "Instagram");
+                if (ig != null)
+                {
+                    veiculo.PublicacaoInstagramUrl = ig.PubUrl;
+                    veiculo.PublicacaoInstagramEm = ig.PubDtPublicacao;
+                }
+
+                var fb = doVeiculo.FirstOrDefault(p => p.PubPlataforma == "FacebookPage");
+                if (fb != null)
+                {
+                    veiculo.PublicacaoFacebookUrl = fb.PubUrl;
+                    veiculo.PublicacaoFacebookEm = fb.PubDtPublicacao;
+                }
+            }
 
             return veiculos;
         }

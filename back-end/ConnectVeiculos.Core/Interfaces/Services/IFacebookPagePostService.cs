@@ -19,6 +19,17 @@ namespace ConnectVeiculos.Core.Interfaces.Services
 
         /// <summary>Variante manual — ignora auto-post desabilitado.</summary>
         Task<PublicacaoResult?> PublicarManualAsync(int veiculoId);
+
+        /// <summary>
+        /// Reescreve a legenda de um post ja publicado marcando o veiculo como
+        /// vendido ou reservado. O post continua no feed — apagar perderia os
+        /// comentarios e o alcance ja conquistado.
+        ///
+        /// So o Facebook permite isso. O Instagram nao tem endpoint pra editar
+        /// legenda de midia publicada (a Graph API so deixa ligar/desligar
+        /// comentarios), entao la o post fica como esta.
+        /// </summary>
+        Task<bool> MarcarPostComoIndisponivelAsync(string postId, int veiculoId, string novoStatus);
     }
 
     public class FacebookPagePostConfigInfo

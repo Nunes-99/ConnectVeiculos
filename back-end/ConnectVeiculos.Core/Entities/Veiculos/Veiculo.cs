@@ -17,6 +17,10 @@ namespace ConnectVeiculos.Core.Entities.Veiculos
         public short VeiAno { get; private set; }
         public string VeiPlaca { get; private set; }
         public string VeiChassi { get; private set; }
+        // Numero do Registro Nacional de Veiculos Automotores. O Detran-SP pede
+        // Renavam + placa pra consultar debito, e o scanner de CRLV ja le esse
+        // numero — antes ele era extraido e jogado fora.
+        public string VeiRenavam { get; private set; }
         public string VeiCor { get; private set; }
         public int VeiKm { get; private set; }
         public decimal VeiPreco { get; private set; }
@@ -52,7 +56,7 @@ namespace ConnectVeiculos.Core.Entities.Veiculos
             short veiAno, string veiPlaca, string veiChassi, string veiCor, int veiKm,
             decimal veiPreco, DateTime veiDtEntrada, string veiSts, string veiSitSts, decimal veiPrecoCompra,
             string veiObservacao = null, string veiDonoAtual = null, string veiDonoCelular = null,
-            string veiOpcionais = null, decimal? veiPrecoFipe = null)
+            string veiOpcionais = null, decimal? veiPrecoFipe = null, string veiRenavam = null)
         {
             Caracteristicas = new List<VeiculoCaracteristica>();
             Observacoes = new List<VeiculoObservacao>();
@@ -60,14 +64,14 @@ namespace ConnectVeiculos.Core.Entities.Veiculos
 
             SetProperties(veiId, rLojId, rCatId, veiMarca, veiModelo, veiAno, veiPlaca, veiChassi,
                 veiCor, veiKm, veiPreco, veiDtEntrada, veiSts, veiSitSts, veiPrecoCompra, veiObservacao,
-                veiDonoAtual, veiDonoCelular, veiOpcionais, veiPrecoFipe);
+                veiDonoAtual, veiDonoCelular, veiOpcionais, veiPrecoFipe, veiRenavam);
         }
 
         public void SetProperties(int veiId, int rLojId, int rCatId, string veiMarca, string veiModelo,
             short veiAno, string veiPlaca, string veiChassi, string veiCor, int veiKm,
             decimal veiPreco, DateTime veiDtEntrada, string veiSts, string veiSitSts, decimal veiPrecoCompra,
             string veiObservacao = null, string veiDonoAtual = null, string veiDonoCelular = null,
-            string veiOpcionais = null, decimal? veiPrecoFipe = null)
+            string veiOpcionais = null, decimal? veiPrecoFipe = null, string veiRenavam = null)
         {
             VeiId = veiId;
             R_LojId = rLojId;
@@ -77,6 +81,7 @@ namespace ConnectVeiculos.Core.Entities.Veiculos
             VeiAno = veiAno;
             VeiPlaca = veiPlaca;
             VeiChassi = veiChassi;
+            VeiRenavam = veiRenavam;
             VeiCor = veiCor;
             VeiKm = veiKm;
             VeiPreco = veiPreco;
@@ -112,6 +117,11 @@ namespace ConnectVeiculos.Core.Entities.Veiculos
 
             if (!string.IsNullOrWhiteSpace(VeiChassi) && VeiChassi.Length > 20)
                 throw new VeiculoException("O chassi deve ter no máximo 20 caracteres.");
+
+            // Renavam tem 11 digitos; documento antigo pode trazer 9. Guardamos so
+            // digitos, entao o limite e' generoso de proposito.
+            if (!string.IsNullOrWhiteSpace(VeiRenavam) && VeiRenavam.Length > 15)
+                throw new VeiculoException("O Renavam deve ter no máximo 15 caracteres.");
         }
 
         public void AlterarStatus(string novoStatus)

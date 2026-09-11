@@ -53,6 +53,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                 VeiAno = v.VeiAno,
                 VeiPlaca = v.VeiPlaca,
                 VeiChassi = v.VeiChassi,
+                VeiRenavam = v.VeiRenavam,
                 VeiCor = v.VeiCor,
                 VeiKm = v.VeiKm,
                 VeiPreco = v.VeiPreco,

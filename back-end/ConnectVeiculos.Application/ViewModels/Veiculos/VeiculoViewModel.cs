@@ -12,6 +12,15 @@ namespace ConnectVeiculos.Application.ViewModels.Veiculos
         public short VeiAno { get; set; }
         public string VeiPlaca { get; set; }
         public string VeiChassi { get; set; }
+        public string VeiRenavam { get; set; }
+
+        // Estado real nas redes, vindo de VeiculoPublicacao. Diferente de
+        // VeiPostadoInsta/VeiPostadoFace, que sao marcacao manual do operador e
+        // existem desde antes da integracao.
+        public string PublicacaoInstagramUrl { get; set; }
+        public string PublicacaoFacebookUrl { get; set; }
+        public DateTime? PublicacaoInstagramEm { get; set; }
+        public DateTime? PublicacaoFacebookEm { get; set; }
         public string VeiCor { get; set; }
         public int VeiKm { get; set; }
         public decimal VeiPreco { get; set; }

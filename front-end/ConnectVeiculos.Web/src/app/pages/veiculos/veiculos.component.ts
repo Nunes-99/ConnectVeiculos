@@ -69,6 +69,7 @@ export class VeiculosComponent implements OnInit {
     const patch: any = {};
     if (dados.placa) patch.veiPlaca = dados.placa.replace(/[^A-Z0-9]/gi, '').toUpperCase();
     if (dados.chassi) patch.veiChassi = dados.chassi.toUpperCase();
+    if (dados.renavam) patch.veiRenavam = dados.renavam.replace(/\D/g, '');
     if (dados.marca) patch.veiMarca = dados.marca;
     if (dados.modelo) patch.veiModelo = dados.modelo;
     if (dados.anoModelo || dados.anoFabricacao) patch.veiAno = dados.anoModelo || dados.anoFabricacao;
@@ -203,6 +204,7 @@ export class VeiculosComponent implements OnInit {
     veiAno: [null, [Validators.required, Validators.min(1900), Validators.max(2100)]],
     veiPlaca: ['', Validators.required],
     veiChassi: [''],
+    veiRenavam: [''],
     veiCor: ['', Validators.required],
     veiKm: [null, Validators.min(0)],
     veiPreco: [0, [Validators.required, Validators.min(0)]],
@@ -230,7 +232,8 @@ export class VeiculosComponent implements OnInit {
     veiKm: 'Quilometragem',
     veiPrecoCompra: 'Preço de compra',
     veiPrecoFipe: 'Preço FIPE',
-    veiChassi: 'Chassi'
+    veiChassi: 'Chassi',
+    veiRenavam: 'Renavam'
   };
 
   mostrarPendencias = false;
@@ -269,6 +272,59 @@ export class VeiculosComponent implements OnInit {
       next: (flags) => this.metaFlags = flags,
       error: () => { /* silencioso — mantem defaults (botoes ocultos) */ }
     });
+  }
+
+  // Enquanto o veiculo nao foi publicado o icone fica apagado; depois assume a
+  // cor da rede. Assim da pra varrer a lista e ver o que falta postar.
+  private readonly COR_APAGADA = '#c9ced6';
+
+  corInstagram(veiculo: Veiculo): string {
+    if (this.publicandoIg.has(veiculo.veiId)) return this.COR_APAGADA;
+    return veiculo.publicacaoInstagramUrl ? '#E1306C' : this.COR_APAGADA;
+  }
+
+  corFacebook(veiculo: Veiculo): string {
+    if (this.publicandoFb.has(veiculo.veiId)) return this.COR_APAGADA;
+    return veiculo.publicacaoFacebookUrl ? '#1877F2' : this.COR_APAGADA;
+  }
+
+  tituloInstagram(veiculo: Veiculo): string {
+    if (this.publicandoIg.has(veiculo.veiId)) return 'Publicando no Instagram…';
+    if (veiculo.publicacaoInstagramUrl)
+      return `Publicado no Instagram${this.quando(veiculo.publicacaoInstagramEm)} — clique para ver o post`;
+    return 'Publicar no Instagram';
+  }
+
+  tituloFacebook(veiculo: Veiculo): string {
+    if (this.publicandoFb.has(veiculo.veiId)) return 'Publicando no Facebook…';
+    if (veiculo.publicacaoFacebookUrl)
+      return `Publicado no Facebook${this.quando(veiculo.publicacaoFacebookEm)} — clique para ver o post`;
+    return 'Publicar na Página do Facebook';
+  }
+
+  private quando(data?: string): string {
+    if (!data) return '';
+    const d = new Date(data);
+    if (isNaN(d.getTime())) return '';
+    return ` em ${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+  }
+
+  // Ja publicado: abre o post. Ainda nao: publica. O mesmo icone serve pros dois
+  // casos porque publicar duas vezes o mesmo carro e sempre engano.
+  acaoInstagram(veiculo: Veiculo): void {
+    if (veiculo.publicacaoInstagramUrl) {
+      window.open(veiculo.publicacaoInstagramUrl, '_blank', 'noopener');
+      return;
+    }
+    this.publicarNoInstagram(veiculo.veiId);
+  }
+
+  acaoFacebook(veiculo: Veiculo): void {
+    if (veiculo.publicacaoFacebookUrl) {
+      window.open(veiculo.publicacaoFacebookUrl, '_blank', 'noopener');
+      return;
+    }
+    this.publicarNaFacebookPage(veiculo.veiId);
   }
 
   publicarNoInstagram(veiculoId: number): void {
@@ -362,6 +418,7 @@ export class VeiculosComponent implements OnInit {
         veiAno: veiculo.veiAno,
         veiPlaca: veiculo.veiPlaca,
         veiChassi: veiculo.veiChassi,
+        veiRenavam: veiculo.veiRenavam,
         veiCor: veiculo.veiCor,
         veiKm: veiculo.veiKm,
         veiPreco: veiculo.veiPreco,
@@ -720,7 +777,8 @@ export class VeiculosComponent implements OnInit {
         v.veiMarca?.toLowerCase().includes(texto) ||
         v.veiModelo?.toLowerCase().includes(texto) ||
         v.veiPlaca?.toLowerCase().includes(texto) ||
-        v.veiChassi?.toLowerCase().includes(texto)
+        v.veiChassi?.toLowerCase().includes(texto) ||
+        v.veiRenavam?.includes(texto)
       );
     }
 
@@ -776,6 +834,7 @@ export class VeiculosComponent implements OnInit {
         v.veiAno,
         v.veiPlaca || '',
         v.veiChassi || '',
+        v.veiRenavam || '',
         v.veiCor || '',
         v.veiKm || 0,
         v.veiPrecoCompra || 0,
@@ -1086,6 +1145,7 @@ export class VeiculosComponent implements OnInit {
         veiAno: getNumber('ano', 2024),
         veiPlaca: getString('placa', ''),
         veiChassi: getString('chassi', ''),
+        veiRenavam: getString('renavam', ''),
         veiCor: getString('cor', ''),
         veiKm: getNumber('km', 0),
         veiPreco: getNumber('preco'),
@@ -1180,9 +1240,18 @@ export class VeiculosComponent implements OnInit {
   }
 
   copiarPlaca(): void {
-    if (!this.detranVeiculo?.veiPlaca) return;
-    navigator.clipboard.writeText(this.detranVeiculo.veiPlaca).then(() => {
-      this.toast.success(`Placa ${this.detranVeiculo!.veiPlaca} copiada.`);
-    });
+    this.copiar(this.detranVeiculo?.veiPlaca, 'Placa');
+  }
+
+  copiarRenavam(): void {
+    this.copiar(this.detranVeiculo?.veiRenavam, 'Renavam');
+  }
+
+  private copiar(valor: string | undefined | null, rotulo: string): void {
+    if (!valor) return;
+    navigator.clipboard.writeText(valor).then(
+      () => this.toast.success(`${rotulo} ${valor} copiado.`),
+      () => this.toast.error(`Não consegui copiar. Selecione o ${rotulo.toLowerCase()} e copie manualmente.`)
+    );
   }
 }

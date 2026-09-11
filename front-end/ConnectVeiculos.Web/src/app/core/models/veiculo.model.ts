@@ -9,6 +9,13 @@ export interface Veiculo {
   veiAno: number;
   veiPlaca: string;
   veiChassi: string;
+  veiRenavam?: string;
+  // Estado real nas redes (tabela VeiculoPublicacao), nao a marcacao manual
+  // veiPostadoInsta / veiPostadoFace.
+  publicacaoInstagramUrl?: string;
+  publicacaoFacebookUrl?: string;
+  publicacaoInstagramEm?: string;
+  publicacaoFacebookEm?: string;
   veiCor: string;
   veiKm: number;
   veiPreco: number;
@@ -37,6 +44,7 @@ export interface VeiculoInput {
   veiAno: number;
   veiPlaca?: string;
   veiChassi?: string;
+  veiRenavam?: string;
   veiCor?: string;
   veiKm?: number;
   veiPreco: number;

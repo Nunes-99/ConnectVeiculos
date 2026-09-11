@@ -431,6 +431,7 @@ namespace ConnectVeiculos.Infrastructure.IoC
                 AddColumnIfNotExists(connection, "Loja", "LojSlug", "TEXT");
 
                 // Adicionar colunas de status de postagem no Veiculo
+                AddColumnIfNotExists(connection, "Veiculo", "VeiRenavam", "TEXT");
                 AddColumnIfNotExists(connection, "Veiculo", "VeiPostadoInsta", "INTEGER DEFAULT 0");
                 AddColumnIfNotExists(connection, "Veiculo", "VeiPostadoFace", "INTEGER DEFAULT 0");
                 AddColumnIfNotExists(connection, "Veiculo", "VeiDtPostagemInsta", "TEXT");

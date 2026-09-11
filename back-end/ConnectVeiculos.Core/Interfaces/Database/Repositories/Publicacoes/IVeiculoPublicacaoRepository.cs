@@ -11,6 +11,13 @@ namespace ConnectVeiculos.Core.Interfaces.Database.Repositories.Publicacoes
          // pra publicacao local. Retorna null se o ID externo nao bate com nada nosso
          // (anuncio criado fora do sistema ou ja excluido).
          Task<VeiculoPublicacao> GetAtivaByExternoIdAsync(string externoId, string plataforma);
+        /// <summary>
+        /// Todas as publicacoes que existem hoje nas plataformas, de todos os
+        /// veiculos. A lista de veiculos precisa saber o que ja foi publicado pra
+        /// colorir o icone da rede; uma consulta por veiculo seria N+1.
+        /// </summary>
+        Task<IEnumerable<VeiculoPublicacao>> GetAtivasAsync();
+
         Task<int> CreateAsync(VeiculoPublicacao publicacao);
         Task UpdateAsync(VeiculoPublicacao publicacao);
 
