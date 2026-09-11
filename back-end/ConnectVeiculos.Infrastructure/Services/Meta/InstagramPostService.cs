@@ -24,6 +24,18 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
         // Instagram Carrossel: minimo 2, maximo 10 itens. Single Photo se for 1.
         private const int MaxImagensCarrossel = 10;
 
+        // O Instagram recusa imagem fora da faixa 4:5 .. 1.91:1 ("The aspect ratio
+        // is not supported") e, num carrossel, exige que todos os itens tenham a
+        // MESMA proporcao. Foto de carro chega em qualquer formato, entao todas sao
+        // encaixadas numa moldura 4:5 — o formato vertical que ocupa mais tela no
+        // feed. O encaixe e por padding (ver ImagensController), sem cortar o carro.
+        private const string ProporcaoFeed = "4:5";
+
+        // Depois do POST /media o container ainda esta sendo processado pela Meta.
+        // Publicar antes do status virar FINISHED devolve "Media ID is not available".
+        private const int TentativasStatusContainer = 20;
+        private const int IntervaloStatusMs = 1500;
+
         // Rate limit oficial Meta: 25 publicacoes/24h por conta IG Business
         // (https://developers.facebook.com/docs/instagram-api/reference/ig-user/media_publish).
         // Calculado via VeiculoPublicacao (plataforma=Instagram, ATIVO, ultimas 24h).
@@ -177,10 +189,17 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             var slug = loja?.LojSlug ?? veiculo.R_LojId.ToString();
             // ?max=1440 invoca o resize on-the-fly do ImagensController (IG aceita
             // ate 1440px lado, JPEG <= 8MB). Sem o param, imagem original pode falhar.
+            // ?ratio normaliza a proporcao — sem isso o container e' recusado.
             var imageUrls = imagens
                 .Take(MaxImagensCarrossel)
-                .Select(i => $"{baseUrl}/api/imagens/file?path={Uri.EscapeDataString(i.ImgCaminho)}&max=1440&format=jpeg")
+                .Select(i => $"{baseUrl}/api/imagens/file?path={Uri.EscapeDataString(i.ImgCaminho)}&max=1440&format=jpeg&ratio={ProporcaoFeed}")
                 .ToList();
+
+            // Aquece o cache em disco de cada variante antes de entregar as URLs a
+            // Meta. O downloader dela desiste por volta de 10s ("O download da midia
+            // demora muito") e o primeiro acesso, que ainda redimensiona, chegava
+            // perto disso numa VM de 1 OCPU.
+            await AquecerImagensAsync(imageUrls);
 
             var legenda = MontarLegenda(veiculo, loja, baseUrl, slug);
 
@@ -235,6 +254,12 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
                 return null;
             }
 
+            // 1b. Espera cada child terminar de ser processado. O container pai
+            // referencia os filhos; se algum ainda estiver em processamento, a
+            // publicacao falha com "Media ID is not available".
+            foreach (var childId in childIds)
+                await AguardarContainerPronto(childId, token, veiculoId);
+
             // 2. Cria container do carrossel referenciando os children.
             var url = $"https://graph.facebook.com/{_settings.ApiVersion}/{igId}/media";
             var payload = new Dictionary<string, string>
@@ -282,6 +307,9 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
 
         private async Task<string?> PublishContainerAsync(string igId, string token, string creationId, int veiculoId)
         {
+            if (!await AguardarContainerPronto(creationId, token, veiculoId))
+                return null;
+
             var url = $"https://graph.facebook.com/{_settings.ApiVersion}/{igId}/media_publish";
             var payload = new Dictionary<string, string>
             {
@@ -298,6 +326,76 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             _logger.LogInformation("Instagram publish veiculo {VeiculoId}: OK", veiculoId);
             using var doc = JsonDocument.Parse(body);
             return doc.RootElement.TryGetProperty("id", out var id) ? id.GetString() : null;
+        }
+
+        /// <summary>
+        /// Bloqueia ate o container sair de IN_PROGRESS. Devolve false quando a Meta
+        /// reporta ERROR/EXPIRED ou quando estoura o tempo — em ambos os casos
+        /// publicar so geraria o erro generico "Media ID is not available".
+        /// </summary>
+        private async Task<bool> AguardarContainerPronto(string creationId, string token, int veiculoId)
+        {
+            for (var tentativa = 0; tentativa < TentativasStatusContainer; tentativa++)
+            {
+                try
+                {
+                    var url = $"https://graph.facebook.com/{_settings.ApiVersion}/{creationId}"
+                            + $"?fields=status_code,status&access_token={Uri.EscapeDataString(token)}";
+                    var resp = await _httpClient.GetAsync(url);
+                    if (resp.IsSuccessStatusCode)
+                    {
+                        using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+                        var status = doc.RootElement.TryGetProperty("status_code", out var sc) ? sc.GetString() : null;
+
+                        if (status == "FINISHED") return true;
+
+                        if (status == "ERROR" || status == "EXPIRED")
+                        {
+                            var detalhe = doc.RootElement.TryGetProperty("status", out var st) ? st.GetString() : status;
+                            _logger.LogWarning(
+                                "Instagram container {CreationId} do veiculo {VeiculoId} terminou em {Status}: {Detalhe}",
+                                creationId, veiculoId, status, detalhe);
+                            return false;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Uma consulta de status que falha nao significa container ruim;
+                    // segue tentando ate o limite.
+                    _logger.LogDebug(ex, "Falha ao consultar status do container {CreationId}", creationId);
+                }
+
+                await Task.Delay(IntervaloStatusMs);
+            }
+
+            _logger.LogWarning(
+                "Instagram container {CreationId} do veiculo {VeiculoId} nao ficou pronto em {Segundos}s.",
+                creationId, veiculoId, TentativasStatusContainer * IntervaloStatusMs / 1000);
+            return false;
+        }
+
+        /// <summary>
+        /// Baixa cada URL uma vez para que o ImagensController grave a variante em
+        /// disco. Sequencial de proposito: a VM tem 1 OCPU e paralelizar so faria as
+        /// conversoes competirem entre si.
+        /// </summary>
+        private async Task AquecerImagensAsync(IEnumerable<string> urls)
+        {
+            foreach (var url in urls)
+            {
+                try
+                {
+                    using var resp = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+                    if (resp.IsSuccessStatusCode)
+                        await resp.Content.CopyToAsync(Stream.Null);
+                }
+                catch (Exception ex)
+                {
+                    // Aquecer e' otimizacao. Se falhar, a Meta ainda tenta baixar.
+                    _logger.LogDebug(ex, "Falha ao aquecer cache da imagem {Url}", url);
+                }
+            }
         }
 
         private async Task<string?> ResolverPermalinkAsync(string mediaId, string token)

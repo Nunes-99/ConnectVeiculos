@@ -1,4 +1,6 @@
-﻿using ConnectVeiculos.Application.Interfaces.Imagens;
+﻿using System.Globalization;
+using System.Text;
+using ConnectVeiculos.Application.Interfaces.Imagens;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
@@ -204,11 +206,12 @@ namespace ConnectVeiculos.API.Controllers
         // VaryByQueryKeys e obrigatorio: sem ele o ResponseCaching usa so o path da rota
         // como chave e TODAS as imagens passam a servir a primeira resposta cacheada.
         [ResponseCache(Duration = 86400, Location = ResponseCacheLocation.Any,
-                       VaryByQueryKeys = new[] { "path", "max", "format" })]
+                       VaryByQueryKeys = new[] { "path", "max", "format", "ratio" })]
         public async Task<IActionResult> GetImageFile(
             [FromQuery] string path,
             [FromQuery] int? max = null,
-            [FromQuery] string? format = null)
+            [FromQuery] string? format = null,
+            [FromQuery] string? ratio = null)
         {
             if (string.IsNullOrEmpty(path))
                 return NotFound();
@@ -220,18 +223,53 @@ namespace ConnectVeiculos.API.Controllers
 
             // Sem transformacao: serve direto (path do disco, zero alocacao).
             // Default path usado por catalogo publico, ML, Google etc.
-            if (!max.HasValue && string.IsNullOrEmpty(format))
+            if (!max.HasValue && string.IsNullOrEmpty(format) && string.IsNullOrEmpty(ratio))
                 return PhysicalFile(filePath, GetContentType(filePath));
 
             // Com transformacao: usado pelo Instagram/Facebook Page que precisam
             // de JPEG <= 8MB e lado maximo 1440px. Sanitiza inputs antes.
             var alvo = Math.Clamp(max ?? 1440, 100, 2048);
             var fmt = (format ?? "jpeg").ToLowerInvariant();
+            var proporcao = ParseRatio(ratio);
+
+            // Cache em disco: o Instagram baixa cada imagem do carrossel e derruba
+            // o post com "O download da midia demora muito" quando a resposta passa
+            // de ~10s. Redimensionar a cada request nao cabe nesse orcamento numa VM
+            // de 1 OCPU, entao a variante transformada fica gravada.
+            var cachePath = CaminhoDoCache(filePath, alvo, fmt, proporcao);
+            if (cachePath != null && System.IO.File.Exists(cachePath)
+                && System.IO.File.GetLastWriteTimeUtc(cachePath) >= System.IO.File.GetLastWriteTimeUtc(filePath))
+            {
+                return PhysicalFile(cachePath, "image/jpeg");
+            }
 
             try
             {
                 using var image = await Image.LoadAsync(filePath);
-                if (image.Width > alvo || image.Height > alvo)
+
+                if (proporcao.HasValue)
+                {
+                    // O Instagram so aceita entre 4:5 e 1.91:1 e, num carrossel, todos
+                    // os itens precisam da MESMA proporcao. Foto de carro vem em tudo
+                    // quanto e formato, entao a imagem e encaixada inteira numa moldura
+                    // fixa em vez de cortada — cortar comeria a frente do veiculo.
+                    var (rw, rh) = proporcao.Value;
+                    var largura = alvo;
+                    var altura = (int)Math.Round(alvo * rh / rw);
+                    if (altura > alvo)
+                    {
+                        altura = alvo;
+                        largura = (int)Math.Round(alvo * rw / rh);
+                    }
+
+                    image.Mutate(x => x.Resize(new ResizeOptions
+                    {
+                        Mode = ResizeMode.Pad,
+                        Size = new Size(largura, altura),
+                        PadColor = Color.White
+                    }));
+                }
+                else if (image.Width > alvo || image.Height > alvo)
                 {
                     image.Mutate(x => x.Resize(new ResizeOptions
                     {
@@ -240,18 +278,19 @@ namespace ConnectVeiculos.API.Controllers
                     }));
                 }
 
-                var ms = new MemoryStream();
                 if (fmt == "jpeg" || fmt == "jpg")
                 {
                     // Quality 85 da boa relacao qualidade/tamanho. IG limita 8MB;
                     // mesmo fotos grandes ficam <2MB nesse setup.
+                    var ms = new MemoryStream();
                     await image.SaveAsync(ms, new JpegEncoder { Quality = 85 });
                     ms.Position = 0;
+
+                    if (cachePath != null) await GravarNoCacheAsync(cachePath, ms);
                     return File(ms, "image/jpeg");
                 }
 
                 // Fallback: serve original se format desconhecido.
-                ms.Dispose();
                 return PhysicalFile(filePath, GetContentType(filePath));
             }
             catch
@@ -259,6 +298,54 @@ namespace ConnectVeiculos.API.Controllers
                 // Se decodificacao falhar (arquivo corrompido), cai pro original.
                 return PhysicalFile(filePath, GetContentType(filePath));
             }
+        }
+
+        /// <summary>
+        /// Le "1:1", "4:5", "1.91:1". Devolve null quando ausente ou invalido — nesse
+        /// caso vale o comportamento antigo de apenas limitar o lado maior.
+        /// </summary>
+        private static (double Largura, double Altura)? ParseRatio(string? raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return null;
+            var partes = raw.Split(':');
+            if (partes.Length != 2) return null;
+            if (!double.TryParse(partes[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var w)) return null;
+            if (!double.TryParse(partes[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var h)) return null;
+            if (w <= 0 || h <= 0 || w / h > 10 || h / w > 10) return null;
+            return (w, h);
+        }
+
+        private string? CaminhoDoCache(string origem, int alvo, string fmt, (double Largura, double Altura)? proporcao)
+        {
+            if (fmt != "jpeg" && fmt != "jpg") return null;
+            try
+            {
+                var r = proporcao.HasValue
+                    ? proporcao.Value.Largura.ToString(CultureInfo.InvariantCulture) + "x" +
+                      proporcao.Value.Altura.ToString(CultureInfo.InvariantCulture)
+                    : "livre";
+                var chave = origem.ToLowerInvariant() + "|" + alvo + "|" + r;
+                var hash = Convert.ToHexString(
+                    System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(chave)))[..32];
+                return Path.Combine(_environment.ContentRootPath, "uploads", "_cache", hash + ".jpg");
+            }
+            catch { return null; }
+        }
+
+        private static async Task GravarNoCacheAsync(string cachePath, MemoryStream conteudo)
+        {
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(cachePath)!);
+                // Grava em temporario e move: duas requisicoes simultaneas pra mesma
+                // variante nao podem servir um JPEG pela metade.
+                var temp = cachePath + "." + Guid.NewGuid().ToString("N")[..8] + ".tmp";
+                await using (var fs = System.IO.File.Create(temp))
+                    await conteudo.CopyToAsync(fs);
+                System.IO.File.Move(temp, cachePath, overwrite: true);
+            }
+            catch { /* cache e otimizacao: falhar aqui nao pode derrubar o request */ }
+            finally { conteudo.Position = 0; }
         }
 
         private static string GetContentType(string path)
