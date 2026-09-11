@@ -118,11 +118,14 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
              // State protege contra CSRF (atacante nao consegue forjar callback porque
              // nao tem a chave do DataProtection) e contra cross-tenant (state carrega
              // o slug e o callback valida que confere com o tenant resolvido).
-             // offline_access e OBRIGATORIO para receber refresh_token — sem ele o ML
-             // so devolve access_token de 6h e nao da pra renovar automaticamente.
+             // Sem parametro `scope`. Mandavamos "offline_access read write" e o ML
+             // devolvia access_token sem refresh_token, obrigando a reconectar a cada
+             // 6h. O Integrador da ACSN, que recebe refresh_token normalmente do mesmo
+             // ML, monta a URL so com response_type, client_id, redirect_uri e state —
+             // as permissoes vem da configuracao da aplicacao no DevCenter, nao da URL.
+             // Pedir escopo explicito aqui aparentemente restringe a concessao.
              return $"{AuthUrl}?response_type=code&client_id={_settings.AppId}" +
                     $"&redirect_uri={Uri.EscapeDataString(_settings.RedirectUri)}" +
-                    $"&scope=offline_access+read+write" +
                     $"&state={Uri.EscapeDataString(state)}";
         }
 
