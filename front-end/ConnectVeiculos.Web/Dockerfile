@@ -4,8 +4,19 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 
+# A imagem e construida na propria VM de producao, que tem 1 nucleo e 954MB de
+# RAM. Sem teto, o Node do `ng build` cresce ate o limite da maquina, empurra o
+# container do SSR pro swap e o site passa a responder em segundos ou a devolver
+# 504 no meio do deploy — foi o que aconteceu em producao.
+#
+# 640MB de heap e o suficiente pra este bundle e deixa folga pro resto da VM.
+# Se o build passar a falhar com "JavaScript heap out of memory", o caminho nao
+# e subir este numero: e construir a imagem fora da VM.
+ENV NODE_OPTIONS=--max-old-space-size=640
+
 COPY package*.json ./
-RUN npm ci
+# --prefer-offline e --no-audit cortam trabalho e rede que nao mudam o resultado.
+RUN npm ci --prefer-offline --no-audit --no-fund
 
 COPY . .
 RUN npx ng build --configuration=production
@@ -30,7 +41,7 @@ RUN cp ./dist/connect-veiculos.web/browser/index.csr.html \
 COPY --from=build /app/package*.json ./
 
 # Instalar somente prod deps necessarias pelo SSR (express principalmente)
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev --prefer-offline --no-audit --no-fund
 
 ENV NODE_ENV=production
 ENV PORT=4000
