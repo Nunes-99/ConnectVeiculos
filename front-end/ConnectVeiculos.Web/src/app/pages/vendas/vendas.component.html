@@ -226,7 +226,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn-secondary" (click)="closeModal()">Cancelar</button>
-          <button type="submit" class="btn-primary" [disabled]="form.invalid">@if (salvando) { <span class="spinner-salvando"></span> }{{ salvando ? 'Salvando…' : '{{ editId ? \'Salvar alterações\' : \'Registrar Venda\' }}' }}</button>
+          <button type="submit" class="btn-primary" [disabled]="form.invalid">@if (salvando) { <span class="spinner-salvando"></span> }{{ salvando ? 'Salvando…' : (editId ? 'Salvar alterações' : 'Registrar Venda') }}</button>
         </div>
       </form>
     </div>
