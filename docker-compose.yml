@@ -83,6 +83,12 @@ services:
       # cifrados antigos viram lixo (ML "desconecta" sozinho em cada deploy).
       - ./dpkeys:/root/.aspnet/DataProtection-Keys
     restart: unless-stopped
+    # Peso de CPU. A VM tem 1 nucleo e a imagem e construida nela mesma; o
+    # `ng build` do front-end ocupava a CPU inteira e o site respondia em 7s ou
+    # caia em 504 no meio do deploy. cpu_shares e um peso relativo: os
+    # containers do BuildKit ficam no padrao (1024), entao producao passa a ter
+    # 4x mais prioridade quando ha disputa. Sem disputa, nao limita nada.
+    cpu_shares: 4096
     deploy:
       resources:
         limits:
@@ -108,6 +114,9 @@ services:
     depends_on:
       - backend-cliente
     restart: unless-stopped
+    # Ver comentario em backend-cliente. O SSR e quem mais sofria: e ele que
+    # renderiza as paginas do catalogo que o Googlebot visita.
+    cpu_shares: 4096
     deploy:
       resources:
         limits:
@@ -117,6 +126,8 @@ services:
   # NGINX - reverse proxy + HTTPS
   # ============================
   nginx:
+    # Se o proxy fica sem CPU, nem a pagina de erro sai direito.
+    cpu_shares: 4096
     build:
       context: ./nginx
       dockerfile: Dockerfile
