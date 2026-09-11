@@ -119,6 +119,12 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.AddTransient<Core.Interfaces.Services.IFavoritoNotificacaoService, Services.Notificacao.FavoritoNotificacaoService>();
             services.AddTransient<Core.Interfaces.Services.ITestDriveNotificacaoService, Services.Notificacao.TestDriveNotificacaoService>();
             services.AddTransient<Core.Interfaces.Services.IPushNotificationService, Services.Push.PushNotificationService>();
+            // Vale pra TODO HttpClient da aplicacao: registrar cliente a cliente
+            // deixaria de fora qualquer um adicionado depois, e basta um
+            // esquecido pra credencial voltar a vazar no log.
+            services.AddTransient<Security.RedacaoDeSegredosHandler>();
+            services.ConfigureHttpClientDefaults(b => b.AddHttpMessageHandler<Security.RedacaoDeSegredosHandler>());
+
             services.AddHttpClient<Core.Interfaces.Services.IWhatsAppService, Services.WhatsApp.WhatsAppService>()
                 .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(10));
 

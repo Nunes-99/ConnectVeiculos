@@ -21,6 +21,11 @@ Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
     .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
+    // O log nativo do HttpClient escreve a URL inteira em Information, e as
+    // integracoes passam credenciais na query (client_secret da Meta, tokens de
+    // cada tenant). Silenciado aqui; RedacaoDeSegredosHandler registra as mesmas
+    // chamadas com a query redigida.
+    .MinimumLevel.Override("System.Net.Http.HttpClient", LogEventLevel.Warning)
     .Enrich.FromLogContext()
     .Enrich.WithEnvironmentName()
     .Enrich.WithMachineName()
