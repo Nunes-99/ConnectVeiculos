@@ -739,10 +739,18 @@
     (confirmar)="confirmarDesconectar()"
     (cancelar)="cancelarDesconectar()" />
 
-  <!-- Facebook Catalog via Feed XML (FUNCIONA SEM OAUTH/MEI/APP REVIEW) -->
-  <!-- Alimenta Marketplace + Vehicle Ads + Shop on Instagram + Dynamic Ads.
-       Caminho recomendado pra qualquer tenant. Cada um cola a URL no Business
-       Manager dele uma vez; Facebook puxa 1x/dia automaticamente. -->
+  <!-- Catalogo Facebook via Feed XML — OCULTO ate ser testado de verdade.
+       O card prometia "Facebook Marketplace (listagens organicas)" e "Shop on
+       Instagram" como gratuitos e sem App Review. Nenhum dos dois vale pra
+       veiculo: anuncio de veiculo no Marketplace vindo de catalogo exige o
+       programa de parceiros da Meta, com aprovacao, e a politica de comercio
+       da Meta nao aceita veiculos no Instagram Shopping. O que o feed entrega
+       de fato e' o Catalog no Business Manager e, a partir dele, Dynamic /
+       Vehicle Ads — que sao pagos.
+       Quem publica no Facebook e no Instagram hoje e' o card de posts abaixo.
+       Ao religar: corrigir os bullets, rever o selo RECOMENDADO e testar o
+       caminho ponta a ponta antes de oferecer. -->
+  @if (mostrarCatalogoFeed) {
   <div class="integracao-card">
     <div class="card-header">
       <div class="platform-info">
@@ -803,6 +811,7 @@
       <small>Veículos aparecem no Catalog em até 24h após primeira sincronização. Custo: <strong>gratuito</strong>. Anúncios pagos (Vehicle Ads, Marketplace Ads) são opcionais e contratados diretamente pelo tenant no Ads Manager.</small>
     </div>
   </div>
+  }
 
   <!-- Meta (Facebook Page Post + Instagram Post + Catalog Push API)
        Controlado por MetaSettings__InstagramEnabled (default false).

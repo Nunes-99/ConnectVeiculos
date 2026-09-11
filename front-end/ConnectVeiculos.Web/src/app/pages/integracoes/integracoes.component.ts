@@ -16,6 +16,11 @@ import { environment } from '../../../environments/environment';
   styleUrl: './integracoes.component.scss'
 })
 export class IntegracoesComponent implements OnInit {
+  // Card do catalogo via feed. Desligado ate o caminho ser testado de ponta a
+  // ponta: o texto prometia Marketplace organico e Shop on Instagram gratuitos,
+  // e nenhum dos dois vale pra veiculo. Ver o comentario no template.
+  readonly mostrarCatalogoFeed = false;
+
   private integracaoService = inject(IntegracaoService);
   private toast = inject(ToastService);
   private platformId = inject(PLATFORM_ID);
