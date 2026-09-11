@@ -22,7 +22,7 @@ namespace ConnectVeiculos.Tests.UseCases.Veiculos
         private readonly Mock<ICatalogoHubService> _catalogoHubServiceMock;
         private readonly Mock<IMercadoLivreService> _mercadoLivreServiceMock;
         private readonly Mock<IFacebookCatalogService> _facebookServiceMock;
-        private readonly Mock<IFacebookPagePostService> _facebookPagePostServiceMock;
+        private readonly Mock<IPublicacaoAutomaticaService> _publicacaoAutomaticaServiceMock;
         private readonly Mock<IGoogleMerchantService> _googleServiceMock;
         private readonly Mock<IVeiculoPublicacaoRepository> _publicacaoRepositoryMock;
         private readonly AtualizarVeiculoUseCase _useCase;
@@ -35,7 +35,7 @@ namespace ConnectVeiculos.Tests.UseCases.Veiculos
             _catalogoHubServiceMock = new Mock<ICatalogoHubService>();
             _mercadoLivreServiceMock = new Mock<IMercadoLivreService>();
             _facebookServiceMock = new Mock<IFacebookCatalogService>();
-            _facebookPagePostServiceMock = new Mock<IFacebookPagePostService>();
+            _publicacaoAutomaticaServiceMock = new Mock<IPublicacaoAutomaticaService>();
             _googleServiceMock = new Mock<IGoogleMerchantService>();
             _publicacaoRepositoryMock = new Mock<IVeiculoPublicacaoRepository>();
             _useCase = new AtualizarVeiculoUseCase(
@@ -45,7 +45,7 @@ namespace ConnectVeiculos.Tests.UseCases.Veiculos
                 _catalogoHubServiceMock.Object,
                 _mercadoLivreServiceMock.Object,
                 _facebookServiceMock.Object,
-                _facebookPagePostServiceMock.Object,
+                _publicacaoAutomaticaServiceMock.Object,
                 _googleServiceMock.Object,
                 _publicacaoRepositoryMock.Object,
                 NullLogger<AtualizarVeiculoUseCase>.Instance,
@@ -56,25 +56,22 @@ namespace ConnectVeiculos.Tests.UseCases.Veiculos
         }
 
         /// <summary>
-        /// Quando o carro e vendido, o post que ficou no Facebook continua
-        /// anunciando um veiculo que nao existe mais. A legenda e reescrita com o
-        /// selo em vez de o post ser apagado — apagar levaria junto os
-        /// comentarios e o alcance ja conquistados.
+        /// Quando o carro sai de disponivel, as plataformas precisam saber: o
+        /// anuncio do Mercado Livre e encerrado e o post do Facebook ganha o selo
+        /// de vendido. A rotina vive no PublicacaoAutomaticaService porque
+        /// registrar uma venda chega no mesmo ponto por outro caminho.
         /// </summary>
         [Theory]
         [InlineData("V")]
         [InlineData("R")]
-        public async Task Execute_QuandoVeiculoSaiDeDisponivel_DeveMarcarOPostDoFacebook(string novoStatus)
+        public async Task Execute_QuandoVeiculoSaiDeDisponivel_DeveAvisarAsPlataformas(string novoStatus)
         {
             _veiculoRepositoryMock.Setup(x => x.GetByIdAsync(1)).ReturnsAsync(VeiculoDisponivel());
-            _publicacaoRepositoryMock
-                .Setup(x => x.GetAtivaByVeiculoEPlataformaAsync(1, "FacebookPage"))
-                .ReturnsAsync(new VeiculoPublicacao(1, "FacebookPage", "1175_122110", "https://fb/p"));
 
             await _useCase.Execute(InputComStatus(novoStatus));
 
-            _facebookPagePostServiceMock.Verify(
-                x => x.MarcarPostComoIndisponivelAsync("1175_122110", 1, novoStatus), Times.Once);
+            _publicacaoAutomaticaServiceMock.Verify(
+                x => x.MarcarVeiculoIndisponivelAsync(1, novoStatus), Times.Once);
         }
 
         [Fact]
@@ -85,37 +82,18 @@ namespace ConnectVeiculos.Tests.UseCases.Veiculos
 
             await _useCase.Execute(InputComStatus("D"));
 
-            _facebookPagePostServiceMock.Verify(
-                x => x.MarcarPostComoIndisponivelAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>()),
-                Times.Never);
+            _publicacaoAutomaticaServiceMock.Verify(
+                x => x.MarcarVeiculoIndisponivelAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
         }
 
         [Fact]
-        public async Task Execute_SemPostNoFacebook_NaoDeveChamarAMeta()
-        {
-            _veiculoRepositoryMock.Setup(x => x.GetByIdAsync(1)).ReturnsAsync(VeiculoDisponivel());
-            _publicacaoRepositoryMock
-                .Setup(x => x.GetAtivaByVeiculoEPlataformaAsync(1, "FacebookPage"))
-                .ReturnsAsync((VeiculoPublicacao)null);
-
-            await _useCase.Execute(InputComStatus("V"));
-
-            _facebookPagePostServiceMock.Verify(
-                x => x.MarcarPostComoIndisponivelAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>()),
-                Times.Never);
-        }
-
-        [Fact]
-        public async Task Execute_QuandoAMetaFalha_NaoDevePerderAAtualizacaoDoVeiculo()
+        public async Task Execute_QuandoAsPlataformasFalham_NaoDevePerderAAtualizacaoDoVeiculo()
         {
             // Token da Page expirado nao pode impedir o operador de marcar o carro
             // como vendido no sistema.
             _veiculoRepositoryMock.Setup(x => x.GetByIdAsync(1)).ReturnsAsync(VeiculoDisponivel());
-            _publicacaoRepositoryMock
-                .Setup(x => x.GetAtivaByVeiculoEPlataformaAsync(1, "FacebookPage"))
-                .ReturnsAsync(new VeiculoPublicacao(1, "FacebookPage", "1175_122110", "https://fb/p"));
-            _facebookPagePostServiceMock
-                .Setup(x => x.MarcarPostComoIndisponivelAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>()))
+            _publicacaoAutomaticaServiceMock
+                .Setup(x => x.MarcarVeiculoIndisponivelAsync(It.IsAny<int>(), It.IsAny<string>()))
                 .ThrowsAsync(new Exception("token expirado"));
 
             var acao = async () => await _useCase.Execute(InputComStatus("V"));

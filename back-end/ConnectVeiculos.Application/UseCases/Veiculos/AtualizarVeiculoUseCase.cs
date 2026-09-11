@@ -18,7 +18,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
         private readonly ICatalogoHubService _catalogoHubService;
         private readonly IMercadoLivreService _mercadoLivreService;
         private readonly IFacebookCatalogService _facebookService;
-        private readonly IFacebookPagePostService _facebookPagePostService;
+        private readonly IPublicacaoAutomaticaService _publicacaoAutomaticaService;
         private readonly IGoogleMerchantService _googleService;
         private readonly IVeiculoPublicacaoRepository _publicacaoRepository;
         private readonly ILogger<AtualizarVeiculoUseCase> _logger;
@@ -34,7 +34,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             ICatalogoHubService catalogoHubService,
             IMercadoLivreService mercadoLivreService,
             IFacebookCatalogService facebookService,
-            IFacebookPagePostService facebookPagePostService,
+            IPublicacaoAutomaticaService publicacaoAutomaticaService,
             IGoogleMerchantService googleService,
             IVeiculoPublicacaoRepository publicacaoRepository,
             ILogger<AtualizarVeiculoUseCase> logger,
@@ -49,7 +49,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             _catalogoHubService = catalogoHubService;
             _mercadoLivreService = mercadoLivreService;
             _facebookService = facebookService;
-            _facebookPagePostService = facebookPagePostService;
+            _publicacaoAutomaticaService = publicacaoAutomaticaService;
             _googleService = googleService;
             _publicacaoRepository = publicacaoRepository;
             _logger = logger;
@@ -175,49 +175,11 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                     }
                     else if (statusAnterior == "D" && inputModel.VeiSts != "D")
                     {
-                        // Veiculo saiu de disponivel: remover de todos
-                        var publicacao = await _publicacaoRepository.GetAtivaByVeiculoEPlataformaAsync(inputModel.VeiId, "MercadoLivre");
-                        if (publicacao != null)
-                        {
-                            await _mercadoLivreService.RemoverAnuncioAsync(publicacao.PubExternoId);
-                            publicacao.Remover();
-                            await _publicacaoRepository.UpdateAsync(publicacao);
-                        }
-
-                        try { await _facebookService.RemoverVeiculoAsync(inputModel.VeiId); }
-                        catch (Exception ex) { _logger.LogError(ex, "Erro ao remover do Facebook"); }
-
-                        try { await _googleService.RemoverVeiculoAsync(inputModel.VeiId); }
-                        catch (Exception ex) { _logger.LogError(ex, "Erro ao remover do Google"); }
-
-                        // Post da Page: reescreve a legenda com o selo de vendido /
-                        // reservado em vez de apagar. Apagar levaria junto os
-                        // comentarios e o alcance que o post ja tinha.
-                        try
-                        {
-                            var postFb = await _publicacaoRepository
-                                .GetAtivaByVeiculoEPlataformaAsync(inputModel.VeiId, "FacebookPage");
-
-                            if (postFb != null)
-                            {
-                                await _facebookPagePostService.MarcarPostComoIndisponivelAsync(
-                                    postFb.PubExternoId, inputModel.VeiId, inputModel.VeiSts);
-                            }
-                        }
-                        catch (Exception ex) { _logger.LogError(ex, "Erro ao marcar post do Facebook como indisponivel"); }
-
-                        // O Instagram nao entra aqui: a Graph API nao tem como
-                        // editar legenda de midia publicada. O post permanece no
-                        // perfil anunciando um carro que ja saiu.
-                        var postIg = await _publicacaoRepository
-                            .GetAtivaByVeiculoEPlataformaAsync(inputModel.VeiId, "Instagram");
-                        if (postIg != null)
-                        {
-                            _logger.LogInformation(
-                                "Veiculo {VeiculoId} saiu de disponivel, mas o post do Instagram {PostId} nao pode ser alterado: "
-                                + "a Graph API nao permite editar legenda de midia publicada.",
-                                inputModel.VeiId, postIg.PubExternoId);
-                        }
+                        // Veiculo saiu de disponivel. A rotina vive no
+                        // PublicacaoAutomaticaService porque registrar uma venda
+                        // chega no mesmo ponto por outro caminho.
+                        await _publicacaoAutomaticaService
+                            .MarcarVeiculoIndisponivelAsync(inputModel.VeiId, inputModel.VeiSts);
                     }
                     else if (statusAnterior == "D" && inputModel.VeiSts == "D")
                     {

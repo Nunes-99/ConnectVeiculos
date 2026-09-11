@@ -18,6 +18,7 @@ namespace ConnectVeiculos.Application.UseCases.Vendas
         private readonly INotificacaoService _notificacaoService;
         private readonly ICatalogoHubService _catalogoHubService;
         private readonly ITenantContext _tenantContext;
+        private readonly ITenantBackgroundRunner _backgroundRunner;
 
         public RegistrarVendaUseCase(
             IVendaRepository vendaRepository,
@@ -25,7 +26,8 @@ namespace ConnectVeiculos.Application.UseCases.Vendas
             IEmailService emailService,
             INotificacaoService notificacaoService,
             ICatalogoHubService catalogoHubService,
-            ITenantContext tenantContext)
+            ITenantContext tenantContext,
+            ITenantBackgroundRunner backgroundRunner)
         {
             _vendaRepository = vendaRepository;
             _veiculoRepository = veiculoRepository;
@@ -33,6 +35,7 @@ namespace ConnectVeiculos.Application.UseCases.Vendas
             _notificacaoService = notificacaoService;
             _catalogoHubService = catalogoHubService;
             _tenantContext = tenantContext;
+            _backgroundRunner = backgroundRunner;
         }
 
         public async Task<int> Execute(VendaInputModel inputModel)
@@ -48,6 +51,17 @@ namespace ConnectVeiculos.Application.UseCases.Vendas
             // Marcar veículo como vendido ANTES de criar a venda (evita venda duplicada)
             veiculo.AlterarStatus("V");
             await _veiculoRepository.UpdateAsync(veiculo);
+
+            // Registrar a venda aqui nao avisava nenhuma plataforma: o anuncio do
+            // Mercado Livre seguia aberto e o post do Facebook continuava
+            // anunciando o carro. So o caminho de editar o veiculo fazia isso.
+            //
+            // Em background porque sao varias chamadas de rede: a venda nao pode
+            // depender do Facebook estar de pe.
+            var idParaPlataformas = veiculo.VeiId;
+            _backgroundRunner.Enqueue<IPublicacaoAutomaticaService>(
+                s => s.MarcarVeiculoIndisponivelAsync(idParaPlataformas, "V"),
+                $"tirar veiculo {idParaPlataformas} das plataformas apos a venda");
 
             // Validar comissão
             if (inputModel.VenComissaoPorc < 0) inputModel.VenComissaoPorc = 0;

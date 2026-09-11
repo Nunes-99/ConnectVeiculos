@@ -21,6 +21,7 @@ namespace ConnectVeiculos.Tests.UseCases.Vendas
         private readonly Mock<IEmailService> _emailServiceMock;
         private readonly Mock<INotificacaoService> _notificacaoServiceMock;
         private readonly Mock<ICatalogoHubService> _catalogoHubServiceMock;
+        private readonly Mock<ITenantBackgroundRunner> _backgroundRunnerMock;
         private readonly RegistrarVendaUseCase _useCase;
 
         public RegistrarVendaUseCaseTests()
@@ -30,6 +31,7 @@ namespace ConnectVeiculos.Tests.UseCases.Vendas
             _emailServiceMock = new Mock<IEmailService>();
             _notificacaoServiceMock = new Mock<INotificacaoService>();
             _catalogoHubServiceMock = new Mock<ICatalogoHubService>();
+            _backgroundRunnerMock = new Mock<ITenantBackgroundRunner>();
              var tenantContextMock = new Mock<ITenantContext>();
             _useCase = new RegistrarVendaUseCase(
                 _vendaRepositoryMock.Object,
@@ -37,7 +39,38 @@ namespace ConnectVeiculos.Tests.UseCases.Vendas
                 _emailServiceMock.Object,
                 _notificacaoServiceMock.Object,
                  _catalogoHubServiceMock.Object,
-                 tenantContextMock.Object);
+                 tenantContextMock.Object,
+                 _backgroundRunnerMock.Object);
+        }
+
+        /// <summary>
+        /// Registrar a venda nao avisava nenhuma plataforma: o anuncio do Mercado
+        /// Livre seguia aberto e o post do Facebook continuava anunciando o carro.
+        /// So o caminho de editar o veiculo fazia isso, e quem vende usa a tela de
+        /// Vendas.
+        /// </summary>
+        [Fact]
+        public async Task Execute_AoRegistrarVenda_DeveTirarOVeiculoDasPlataformas()
+        {
+            var veiculo = new Veiculo(7, 1, 1, "VW", "Jetta", 2016, "GKD1A27", "9BWZZZ377VT004251",
+                "Branco", 80000, 75000m, DateTime.Now, "D", "D", 65000m);
+            _veiculoRepositoryMock.Setup(x => x.GetByIdAsync(7)).ReturnsAsync(veiculo);
+            _vendaRepositoryMock.Setup(x => x.CreateAsync(It.IsAny<Venda>())).ReturnsAsync(1);
+
+            await _useCase.Execute(new VendaInputModel
+            {
+                R_VeiId = 7,
+                R_UsuId = 1,
+                VenValor = 75000m,
+                VenDtVenda = DateTime.Now,
+                VenCompradorNome = "Comprador Teste"
+            });
+
+            _backgroundRunnerMock.Verify(
+                x => x.Enqueue(
+                    It.IsAny<Func<IPublicacaoAutomaticaService, Task>>(),
+                    It.Is<string>(d => d.Contains("7"))),
+                Times.Once);
         }
 
         [Fact]

@@ -120,6 +120,58 @@ namespace ConnectVeiculos.Infrastructure.Services.Publicacoes
             await PublicarGoogleAsync(veiculoId);
         }
 
+        public async Task MarcarVeiculoIndisponivelAsync(int veiculoId, string novoStatus)
+        {
+            _logger.LogInformation(
+                "Veiculo {VeiculoId} saiu de disponivel (status {Status}); atualizando as plataformas.",
+                veiculoId, novoStatus);
+
+            // Mercado Livre: encerra o anuncio de verdade.
+            try
+            {
+                var ml = await _publicacaoRepository.GetAtivaByVeiculoEPlataformaAsync(veiculoId, "MercadoLivre");
+                if (ml != null)
+                {
+                    await _mercadoLivreService.RemoverAnuncioAsync(ml.PubExternoId);
+                    ml.Remover();
+                    await _publicacaoRepository.UpdateAsync(ml);
+                }
+            }
+            catch (Exception ex) { _logger.LogError(ex, "Erro ao encerrar anuncio do veiculo {VeiculoId} no Mercado Livre", veiculoId); }
+
+            try { await _facebookCatalogService.RemoverVeiculoAsync(veiculoId); }
+            catch (Exception ex) { _logger.LogError(ex, "Erro ao remover veiculo {VeiculoId} do catalogo do Facebook", veiculoId); }
+
+            try { await _googleService.RemoverVeiculoAsync(veiculoId); }
+            catch (Exception ex) { _logger.LogError(ex, "Erro ao remover veiculo {VeiculoId} do Google", veiculoId); }
+
+            // Post da Page: reescreve a legenda com o selo em vez de apagar —
+            // apagar levaria junto os comentarios e o alcance ja conquistados.
+            try
+            {
+                var fb = await _publicacaoRepository.GetAtivaByVeiculoEPlataformaAsync(veiculoId, "FacebookPage");
+                if (fb != null)
+                    await _facebookPagePostService.MarcarPostComoIndisponivelAsync(fb.PubExternoId, veiculoId, novoStatus);
+            }
+            catch (Exception ex) { _logger.LogError(ex, "Erro ao marcar post do Facebook do veiculo {VeiculoId}", veiculoId); }
+
+            // Instagram fica de fora: a Graph API nao permite editar legenda de
+            // midia publicada (so ligar/desligar comentarios). O post continua no
+            // perfil anunciando um carro que ja saiu.
+            try
+            {
+                var ig = await _publicacaoRepository.GetAtivaByVeiculoEPlataformaAsync(veiculoId, "Instagram");
+                if (ig != null)
+                {
+                    _logger.LogInformation(
+                        "Post do Instagram {PostId} do veiculo {VeiculoId} nao pode ser alterado: "
+                        + "a Graph API nao permite editar legenda de midia publicada.",
+                        ig.PubExternoId, veiculoId);
+                }
+            }
+            catch (Exception ex) { _logger.LogDebug(ex, "Falha ao consultar publicacao do Instagram do veiculo {VeiculoId}", veiculoId); }
+        }
+
         /// <summary>
         /// Espera as fotos aparecerem e o upload estabilizar. Devolve quantas
         /// fotos havia, ou 0 se nenhuma chegou dentro da janela.
