@@ -530,11 +530,16 @@ namespace ConnectVeiculos.API.Controllers
 
             try
             {
-                var token = await useCase.ExecutarAsync(input);
+                // O token NAO volta na resposta. Ele voltava "pra teste" e nunca
+                // foi removido: qualquer pessoa podia postar o e-mail de outra e
+                // receber o token pra trocar a senha dela, sem acesso a caixa de
+                // entrada. O token so existe no e-mail enviado.
+                await useCase.ExecutarAsync(input);
+
                 // Sempre retorna sucesso por seguranca (nao revela se e-mail existe)
-                return Ok(new {
-                    mensagem = "Se o e-mail estiver cadastrado, você receberá as instruções para recuperação.",
-                    token // Remover em producao
+                return Ok(new
+                {
+                    mensagem = "Se o e-mail estiver cadastrado, você receberá as instruções para recuperação."
                 });
             }
             catch (Exception ex)

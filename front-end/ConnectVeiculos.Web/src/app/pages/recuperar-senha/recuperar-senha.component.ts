@@ -35,12 +35,10 @@ export class RecuperarSenhaComponent {
       next: (response) => {
         this.loading = false;
         this.enviado = true;
+        // O token nunca aparece aqui: ele chega por e-mail e so. A API
+        // devolvia "pra teste", entao bastava digitar o e-mail de outra
+        // pessoa pra conseguir trocar a senha dela.
         this.mensagem = response.mensagem;
-        // Em ambiente de desenvolvimento, mostramos o token
-        // Em producao, o token seria enviado por email
-        if (response.token) {
-          this.mensagem += ` Token para teste: ${response.token.substring(0, 20)}...`;
-        }
       },
       error: (err) => {
         this.loading = false;

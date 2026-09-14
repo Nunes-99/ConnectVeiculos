@@ -12,6 +12,7 @@ namespace ConnectVeiculos.Infrastructure.Email
     {
         private readonly EmailSettings _settings;
         private readonly IConfiguracaoSistemaRepository _configRepository;
+        private readonly Core.Interfaces.Database.Repositories.Lojas.ILojaRepository _lojaRepository;
         private readonly ILogger<SmtpEmailService> _logger;
 
         // Chaves no ConfiguracaoSistema
@@ -26,11 +27,34 @@ namespace ConnectVeiculos.Infrastructure.Email
         public SmtpEmailService(
             IOptions<EmailSettings> settings,
             IConfiguracaoSistemaRepository configRepository,
+            Core.Interfaces.Database.Repositories.Lojas.ILojaRepository lojaRepository,
             ILogger<SmtpEmailService> logger)
         {
             _settings = settings.Value;
             _configRepository = configRepository;
+            _lojaRepository = lojaRepository;
             _logger = logger;
+        }
+
+        /// <summary>
+        /// Endereco publico do sistema, tirado do catalogo da loja — e a unica
+        /// URL que o tenant conhece. O template de recuperacao tinha um link
+        /// fixo pra connectveiculos.com.br, dominio que nao e o nosso, e que
+        /// nem chegava a ser usado no corpo do e-mail.
+        /// </summary>
+        private async Task<string> ResolverUrlBaseAsync()
+        {
+            try
+            {
+                var loja = (await _lojaRepository.GetAllAsync())
+                    .FirstOrDefault(l => !string.IsNullOrWhiteSpace(l.LojUrlCatalogo));
+
+                if (loja?.LojUrlCatalogo is not string url) return "";
+                if (!Uri.TryCreate(url.Trim().TrimEnd('/'), UriKind.Absolute, out var uri)) return "";
+
+                return $"{uri.Scheme}://{uri.Authority}";
+            }
+            catch { return ""; }
         }
 
         // Precedencia: env var > banco > appsettings
@@ -208,8 +232,8 @@ namespace ConnectVeiculos.Infrastructure.Email
 
         public async Task<bool> SendRecuperacaoSenhaAsync(string to, string usuarioNome, string token)
         {
-            var subject = "ConnectVeiculos - Recuperacao de Senha";
-            var body = GetRecuperacaoSenhaTemplate(usuarioNome, token);
+            var subject = "Redefinição de senha - ConnectVeículos";
+            var body = GetRecuperacaoSenhaTemplate(usuarioNome, token, await ResolverUrlBaseAsync());
             return await SendEmailAsync(to, subject, body);
         }
 
@@ -376,48 +400,54 @@ namespace ConnectVeiculos.Infrastructure.Email
 </body>
 </html>";
         }
-        private static string GetRecuperacaoSenhaTemplate(string usuarioNome, string token)
+        private static string GetRecuperacaoSenhaTemplate(string usuarioNome, string token, string urlBase)
         {
-            var resetUrl = $"https://connectveiculos.com.br/redefinir-senha?token={token}";
-            return $@"
-<!DOCTYPE html>
-<html>
-<head>
-    <style>
-        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-        .header {{ background: #1a237e; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }}
-        .content {{ padding: 20px; background: #f9f9f9; }}
-        .btn {{ display: inline-block; background: #1a237e; color: white !important; padding: 14px 30px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px; margin: 15px 0; }}
-        .warning {{ background: #fff3e0; padding: 12px; border-radius: 5px; margin: 15px 0; color: #e65100; font-size: 13px; }}
-        .token-box {{ background: #e3f2fd; padding: 12px; border-radius: 5px; margin: 15px 0; font-family: monospace; word-break: break-all; font-size: 13px; }}
-        .footer {{ padding: 15px; text-align: center; font-size: 12px; color: #666; }}
-    </style>
-</head>
-<body>
-    <div class='container'>
-        <div class='header'>
-            <h1>ConnectVeiculos</h1>
-        </div>
-        <div class='content'>
-            <h2>Recuperacao de Senha</h2>
-            <p>Ola <strong>{usuarioNome}</strong>,</p>
-            <p>Recebemos uma solicitacao para redefinir a senha da sua conta.</p>
-            <p>Utilize o codigo abaixo para redefinir sua senha:</p>
-            <div class='token-box'>
-                <strong>Codigo:</strong> {token}
-            </div>
-            <div class='warning'>
-                <strong>Importante:</strong> Este codigo e valido por 2 horas. Se voce nao solicitou a recuperacao de senha, ignore este e-mail.
-            </div>
-        </div>
-        <div class='footer'>
-            <p>Este e-mail foi enviado automaticamente pelo sistema ConnectVeiculos.</p>
-            <p>Por favor, nao responda a este e-mail.</p>
-        </div>
+            // O e-mail mandava o token cru e pedia pro usuario "utilizar o codigo",
+            // sem dizer onde. A tela /redefinir-senha ja aceita ?token=, entao o
+            // link leva direto pros campos de senha nova e confirmacao.
+            var linkRedefinir = string.IsNullOrEmpty(urlBase)
+                ? ""
+                : $"{urlBase}/redefinir-senha?token={Uri.EscapeDataString(token)}";
+
+            var nome = System.Net.WebUtility.HtmlEncode(usuarioNome ?? "");
+
+            // Sem link montado (loja sem URL de catalogo), o codigo volta a ser a
+            // saida — melhor que um e-mail sem acao nenhuma.
+            var blocoAcao = string.IsNullOrEmpty(linkRedefinir)
+                ? $@"<p style='margin:0 0 8px'>Use o código abaixo na tela de redefinição de senha:</p>
+            <div style='background:#eef2ff;padding:14px;border-radius:6px;margin:0 0 20px;font-family:monospace;word-break:break-all;font-size:13px'>{token}</div>"
+                : $@"<p style='margin:0 0 20px'>
+              <a href='{linkRedefinir}' style='display:inline-block;background:#1a237e;color:#fff;padding:14px 30px;border-radius:8px;text-decoration:none;font-weight:600'>Criar nova senha</a>
+            </p>
+            <p style='margin:0 0 20px;font-size:13px;color:#6b7280'>
+              Se o botão não funcionar, copie e cole este endereço no navegador:<br>
+              <span style='word-break:break-all'>{linkRedefinir}</span>
+            </p>";
+
+            return $@"<!DOCTYPE html><html><body style='margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;line-height:1.6;color:#333'>
+<div style='max-width:600px;margin:0 auto;padding:20px'>
+  <div style='background:#1a237e;color:#fff;padding:20px;text-align:center;border-radius:8px 8px 0 0'>
+    <h1 style='margin:0;font-size:20px'>Redefinição de senha</h1>
+  </div>
+  <div style='padding:24px;background:#fff;border:1px solid #e5e7eb;border-top:0;border-radius:0 0 8px 8px'>
+    <p style='margin:0 0 16px'>Olá <strong>{nome}</strong>,</p>
+    <p style='margin:0 0 20px'>Recebemos um pedido para redefinir a senha da sua conta.
+    Clique no botão abaixo para escolher uma nova.</p>
+
+    {blocoAcao}
+
+    <div style='background:#fef3c7;border-left:4px solid #b45309;padding:14px 16px;border-radius:6px;margin:0 0 20px'>
+      <strong style='display:block;margin-bottom:4px'>O link vale por 2 horas</strong>
+      Se você não pediu a redefinição, ignore este e-mail — sua senha continua a mesma.
     </div>
-</body>
-</html>";
+
+    <p style='margin:0;padding-top:16px;border-top:1px solid #e5e7eb;color:#6b7280;font-size:13px'>
+      Mensagem automática. Por favor, não responda a este e-mail.
+    </p>
+  </div>
+  <p style='text-align:center;color:#9ca3af;font-size:12px;margin:16px 0 0'>ConnectVeículos</p>
+</div>
+</body></html>";
         }
     }
 }
