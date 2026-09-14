@@ -23,13 +23,13 @@ resto abaixo é conviver com o problema.
 - [x] Conectar pelo OAuth
 - [x] Publicar anúncio de um veículo
 - [x] Encerrar todos os anúncios (botão "remover todos")
-- [x] Webhook chegando no tenant certo
+- [x] Webhook chegando no tenant certo, agora respondendo antes de processar
+      (antes o ML cortava a conexão e as notificações se perdiam)
 - [x] Aviso de expiração por e-mail (disparou sozinho em 2026-09-14 05:44)
 - [x] **Republicação automática ao reconectar** — validado em 2026-09-14: cinco
       veículos publicados sozinhos após autorizar, sem clicar em "sincronizar"
       (todos em AGUARDANDO_PAGAMENTO, que é o ML cobrando a taxa da categoria)
-- [ ] Anúncio subindo **com as fotos** (já falhou uma vez; corrigido, não
-      reconferido)
+- [x] Anúncio criado na publicação automática (MLB5234328545)
 - [ ] Atualizar preço de um veículo publicado e ver o valor mudar no anúncio
 - [ ] Vender o veículo e ver o anúncio ser encerrado
 - [ ] Aviso de expiração com o visual novo (o que chegou usava o texto antigo)
@@ -105,11 +105,13 @@ um cliente da Diamante recebendo e-mail desse endereço estranha.
 
 ## 6. Fluxos que cruzam integrações
 
-- [ ] **Cadastrar veículo com fotos e ver publicar sozinho** em Mercado Livre,
-      Facebook e Instagram depois do upload. Nunca testado ponta a ponta — foi
-      exatamente o bug corrigido nesta rodada (o post disparava antes das fotos
-      existirem)
-- [ ] Trava "Salvando…" nas telas além de Vendas
+- [x] **Cadastrar veículo com fotos e ver publicar sozinho** — validado em
+      2026-09-14 com o Jeep Compass (veículo 8, 3 fotos). O log registrou
+      "Publicando veiculo 8 nas plataformas externas (3 foto(s))", ou seja o
+      serviço esperou o upload terminar antes de disparar. Resultado: anúncio no
+      Mercado Livre, post no Facebook com foto e carrossel no Instagram
+- [x] Trava "Salvando…" — vista funcionando no cadastro de veículo (formulário
+      acinzentado e botão com spinner durante o upload das fotos)
 - [ ] Importar planilha — hoje não publica em lugar nenhum; decisão pendente se
       deve publicar em ML e catálogos (Instagram não, pelo limite de 25
       posts/24h)
