@@ -296,35 +296,49 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
 
         [HttpPost("mercadolivre/notifications")]
         [AllowAnonymous]
-        public async Task<IActionResult> MercadoLivreNotifications(
+        public IActionResult MercadoLivreNotifications(
             [FromServices] IMercadoLivreWebhookRouter router,
             [FromServices] ILogger<IntegracoesController> logger,
             [FromBody] System.Text.Json.JsonElement payload)
         {
             // Webhook do ML envia POST com body { topic, resource, user_id, ... }.
-            // Sempre respondemos 200 rapido (ML retenta se nao recebe 2xx em 22s),
-            // entao tratamos excecoes localmente e logamos.
             logger.LogInformation("ML notification recebida: {Payload}", payload.ToString());
-            try
-            {
-                var topic = payload.TryGetProperty("topic", out var t) ? t.GetString() : null;
-                var resource = payload.TryGetProperty("resource", out var r) ? r.GetString() : null;
 
-                // user_id (o seller) e' o unico vinculo com o tenant: a chamada e'
-                // anonima e o middleware resolveria pro tenant padrao, processando
-                // o evento no banco de outra loja. Vem como numero no payload.
-                var userId = payload.TryGetProperty("user_id", out var u)
-                    ? (u.ValueKind == System.Text.Json.JsonValueKind.Number
-                        ? u.GetRawText()
-                        : u.GetString())
-                    : null;
+            var topic = payload.TryGetProperty("topic", out var t) ? t.GetString() : null;
+            var resource = payload.TryGetProperty("resource", out var r) ? r.GetString() : null;
 
-                await router.RotearAsync(topic ?? "", resource ?? "", userId ?? "");
-            }
-            catch (Exception ex)
+            // user_id (o seller) e' o unico vinculo com o tenant: a chamada e'
+            // anonima e o middleware resolveria pro tenant padrao, processando
+            // o evento no banco de outra loja. Vem como numero no payload.
+            var userId = payload.TryGetProperty("user_id", out var u)
+                ? (u.ValueKind == System.Text.Json.JsonValueKind.Number
+                    ? u.GetRawText()
+                    : u.GetString())
+                : null;
+
+            // Responder ANTES de processar. O codigo anterior dizia responder
+            // rapido mas dava await no roteamento, que varre os tenants, abre
+            // banco e chama a API do ML. Durante uma rajada — como a
+            // republicacao de varios anuncios de uma vez — o ML cortava a
+            // conexao antes de a gente terminar, e o Kestrel registrava
+            // "Unexpected end of request content" a cada notificacao. Evento
+            // perdido: venda, pausa ou edicao feita no painel do ML nao chegava
+            // no sistema.
+            //
+            // O router e' singleton e abre o proprio escopo por tenant, entao
+            // nao depende do escopo desta requisicao sobreviver.
+            _ = Task.Run(async () =>
             {
-                logger.LogError(ex, "Erro processando webhook ML — respondendo 200 mesmo assim pra ML nao retentar.");
-            }
+                try
+                {
+                    await router.RotearAsync(topic ?? "", resource ?? "", userId ?? "");
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Erro processando webhook ML (topic {Topic}, seller {UserId})", topic, userId);
+                }
+            });
+
             return Ok();
         }
 

@@ -25,8 +25,9 @@ resto abaixo é conviver com o problema.
 - [x] Encerrar todos os anúncios (botão "remover todos")
 - [x] Webhook chegando no tenant certo
 - [x] Aviso de expiração por e-mail (disparou sozinho em 2026-09-14 05:44)
-- [ ] **Republicação automática ao reconectar** — reconectar e conferir se os
-      veículos disponíveis sobem sozinhos, sem clicar em "sincronizar"
+- [x] **Republicação automática ao reconectar** — validado em 2026-09-14: cinco
+      veículos publicados sozinhos após autorizar, sem clicar em "sincronizar"
+      (todos em AGUARDANDO_PAGAMENTO, que é o ML cobrando a taxa da categoria)
 - [ ] Anúncio subindo **com as fotos** (já falhou uma vez; corrigido, não
       reconferido)
 - [ ] Atualizar preço de um veículo publicado e ver o valor mudar no anúncio
