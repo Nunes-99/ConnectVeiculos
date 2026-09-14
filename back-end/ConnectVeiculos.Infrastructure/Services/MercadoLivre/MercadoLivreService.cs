@@ -136,16 +136,20 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
              // tenant errado). Controller traduz pra mensagem amigavel na pagina de callback.
              _stateProtector.Validar(state, tenantSlug);
 
-            var request = new
+            var request = new Dictionary<string, string>
             {
-                grant_type = "authorization_code",
-                client_id = _settings.AppId,
-                client_secret = _settings.ClientSecret,
-                code = code,
-                redirect_uri = _settings.RedirectUri
+                ["grant_type"] = "authorization_code",
+                ["client_id"] = _settings.AppId,
+                ["client_secret"] = _settings.ClientSecret,
+                ["code"] = code,
+                ["redirect_uri"] = _settings.RedirectUri
             };
 
-            var response = await _httpClient.PostAsJsonAsync("/oauth/token", request);
+            // application/x-www-form-urlencoded, nao JSON. E o que a RFC 6749 e a
+            // documentacao do ML especificam para /oauth/token, e e o que o
+            // Integrador da ACSN usa — ele recebe refresh_token do mesmo ML, e
+            // este era o ultimo ponto em que as duas implementacoes divergiam.
+            var response = await _httpClient.PostAsync("/oauth/token", new FormUrlEncodedContent(request));
 
             // EnsureSuccessStatusCode lanca HttpRequestException com mensagem
             // generica. Lendo o body antes da pra retornar erro descritivo
@@ -797,15 +801,15 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
 
             try
             {
-                var request = new
+                var request = new Dictionary<string, string>
                 {
-                    grant_type = "refresh_token",
-                    client_id = _settings.AppId,
-                    client_secret = _settings.ClientSecret,
-                    refresh_token = _settings.RefreshToken
+                    ["grant_type"] = "refresh_token",
+                    ["client_id"] = _settings.AppId,
+                    ["client_secret"] = _settings.ClientSecret,
+                    ["refresh_token"] = _settings.RefreshToken!
                 };
 
-                var response = await _httpClient.PostAsJsonAsync("/oauth/token", request);
+                var response = await _httpClient.PostAsync("/oauth/token", new FormUrlEncodedContent(request));
                  if (!response.IsSuccessStatusCode)
                  {
                      var body = await response.Content.ReadAsStringAsync();
