@@ -36,6 +36,24 @@
         </div>
       }
 
+      <!-- Prazo do token. O app do ML nao recebe refresh_token, entao a conexao
+           dura 6h e precisa ser refeita na mao. Sem este aviso a loja so
+           percebia a queda quando estranhava que nada tinha sido anunciado. -->
+      @if (mlConectado && mlMinutosRestantes !== null) {
+        <div class="ml-prazo" [class.urgente]="mlExpirando">
+          <span class="material-icons">{{ mlExpirando ? 'warning' : 'schedule' }}</span>
+          <div>
+            @if (mlExpirando) {
+              <strong>A conexão expira em {{ mlMinutosRestantes }} min.</strong>
+              <small>Reconecte para não interromper a publicação de anúncios.</small>
+            } @else {
+              <strong>Conexão válida por mais {{ formatarPrazoMl(mlMinutosRestantes) }}.</strong>
+              <small>O Mercado Livre não fornece renovação automática para este aplicativo — é preciso reconectar quando expirar.</small>
+            }
+          </div>
+        </div>
+      }
+
       <div class="card-actions">
         @if (!mlConectado) {
           <button class="btn-primary" (click)="conectarMercadoLivre()" [disabled]="mlLoading">

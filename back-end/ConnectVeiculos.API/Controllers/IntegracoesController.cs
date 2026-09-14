@@ -41,6 +41,7 @@ namespace ConnectVeiculos.API.Controllers
             [FromServices] IMercadoLivreService mlService,
              [FromServices] IOAuthStateProtector stateProtector,
              [FromServices] ITenantContext tenantContext,
+             [FromServices] ITenantBackgroundRunner backgroundRunner,
             [FromQuery] string? code,
              [FromQuery] string? state,
             [FromQuery(Name = "error")] string? oauthError,
@@ -93,6 +94,18 @@ namespace ConnectVeiculos.API.Controllers
             try
             {
                  await mlService.HandleCallbackAsync(code, state);
+
+                 // Recupera o atraso. Enquanto a conta estava caida — e ela cai a
+                 // cada 6h, porque o app nao recebe refresh_token — todo veiculo
+                 // cadastrado ficou de fora do Mercado Livre. Sem isto o operador
+                 // teria que lembrar de clicar em "sincronizar" toda vez.
+                 //
+                 // Em background: sao uma chamada de rede por veiculo, e o popup
+                 // do OAuth nao pode ficar aberto esperando.
+                 backgroundRunner.Enqueue<IMercadoLivreSincronizacaoService>(
+                     s => s.SincronizarDisponiveisAsync(),
+                     "republicar veiculos disponiveis apos reconectar o Mercado Livre");
+
                 return Content(BuildCallbackHtml(true, null), "text/html");
             }
              catch (OAuthStateException ex)
@@ -125,7 +138,24 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
         public async Task<IActionResult> GetMercadoLivreStatus([FromServices] IMercadoLivreService mlService)
         {
             var conectado = await mlService.IsConnectedAsync();
-            return Ok(new { conectado });
+            var expiraEm = conectado ? await mlService.ObterExpiracaoTokenAsync() : null;
+
+            // O app do ML nao recebe refresh_token, entao o token morre em 6h e
+            // alguem precisa reconectar na mao. A tela usa estes campos pra
+            // avisar antes de cair, em vez de a loja descobrir pela ausencia de
+            // anuncios novos.
+            var minutosRestantes = expiraEm.HasValue
+                ? (int)Math.Floor((expiraEm.Value - DateTime.UtcNow).TotalMinutes)
+                : (int?)null;
+
+            return Ok(new
+            {
+                conectado,
+                expiraEm,
+                minutosRestantes,
+                expirando = minutosRestantes.HasValue && minutosRestantes <= 60 && minutosRestantes > 0,
+                expirado = minutosRestantes.HasValue && minutosRestantes <= 0
+            });
         }
 
         [HttpGet("mercadolivre/info")]
@@ -133,7 +163,23 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
         {
             var info = await mlService.GetContaInfoAsync();
             if (info == null) return Ok(new { conectado = false });
-            return Ok(new { conectado = true, info });
+
+            // Mesmos campos de prazo do endpoint de status: e esta chamada que a
+            // tela de Integracoes usa, e e nela que o aviso de expiracao aparece.
+            var expiraEm = await mlService.ObterExpiracaoTokenAsync();
+            var minutosRestantes = expiraEm.HasValue
+                ? (int)Math.Floor((expiraEm.Value - DateTime.UtcNow).TotalMinutes)
+                : (int?)null;
+
+            return Ok(new
+            {
+                conectado = true,
+                info,
+                expiraEm,
+                minutosRestantes,
+                expirando = minutosRestantes.HasValue && minutosRestantes <= 60 && minutosRestantes > 0,
+                expirado = minutosRestantes.HasValue && minutosRestantes <= 0
+            });
         }
 
         [HttpPost("mercadolivre/desconectar")]
@@ -174,55 +220,23 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
         [Authorize(Roles = "Administrador,Gerente")]
         public async Task<IActionResult> SincronizarDisponiveisMercadoLivre(
             [FromServices] IMercadoLivreService mlService,
-            [FromServices] IVeiculoRepository veiculoRepo,
-            [FromServices] IVeiculoPublicacaoRepository pubRepo,
-            [FromServices] ILogger<IntegracoesController> logger)
+            [FromServices] IMercadoLivreSincronizacaoService sincronizacao)
         {
             if (!await mlService.IsConnectedAsync())
                 return BadRequest(new { error = "Mercado Livre nao esta conectado." });
 
-            var todos = await veiculoRepo.GetAllAsync();
-            var disponiveis = todos.Where(v => v.VeiSts == "D").ToList();
-
-            int novosPublicados = 0;
-            int jaPublicados = 0;
-            int aguardandoPagamentoCount = 0;
-            var falhas = new List<object>();
-
-            foreach (var veiculo in disponiveis)
-            {
-                try
-                {
-                    var existente = await pubRepo.GetAtivaByVeiculoEPlataformaAsync(veiculo.VeiId, "MercadoLivre");
-                    if (existente != null) { jaPublicados++; continue; }
-
-                    var (externoId, url, aguardandoPagamento) = await mlService.PublicarVeiculoAsync(veiculo.VeiId);
-                    await pubRepo.CreateAsync(new VeiculoPublicacao(veiculo.VeiId, "MercadoLivre", externoId, url, aguardandoPagamento));
-                    novosPublicados++;
-                    if (aguardandoPagamento) aguardandoPagamentoCount++;
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Erro ao publicar veiculo {Id} no ML em sincronizacao em massa", veiculo.VeiId);
-                    falhas.Add(new
-                    {
-                        veiculoId = veiculo.VeiId,
-                        descricao = $"{veiculo.VeiMarca} {veiculo.VeiModelo} {veiculo.VeiAno} ({veiculo.VeiPlaca})",
-                        erro = ex.Message
-                    });
-                }
-            }
+            // A rotina vive num servico porque a reconexao do OAuth chama a mesma
+            // coisa: enquanto a conta esta caida os veiculos novos ficam de fora,
+            // e alguem teria que lembrar de clicar aqui depois de reconectar.
+            var r = await sincronizacao.SincronizarDisponiveisAsync();
 
             return Ok(new
             {
-                totalDisponiveis = disponiveis.Count,
-                novosPublicados,
-                jaPublicados,
-                // Quantos dos recem-criados o ML deixou invisiveis aguardando a
-                // taxa. Sem esse numero a tela dizia "publicados" pra anuncio
-                // nenhum no ar.
-                aguardandoPagamento = aguardandoPagamentoCount,
-                falhas
+                totalDisponiveis = r.TotalDisponiveis,
+                novosPublicados = r.NovosPublicados,
+                jaPublicados = r.JaPublicados,
+                aguardandoPagamento = r.AguardandoPagamento,
+                falhas = r.Falhas
             });
         }
 

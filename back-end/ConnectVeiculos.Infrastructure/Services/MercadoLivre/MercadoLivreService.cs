@@ -320,6 +320,12 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
             }
         }
 
+        public async Task<DateTime?> ObterExpiracaoTokenAsync()
+        {
+            var integracao = await _integracaoRepo.GetSingletonAsync();
+            return integracao?.IntAccessTokenExpiraEm;
+        }
+
         public async Task<MercadoLivreContaInfo?> GetContaInfoAsync()
         {
              await EnsureFreshTokenAsync();

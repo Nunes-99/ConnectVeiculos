@@ -8,6 +8,16 @@ namespace ConnectVeiculos.Core.Interfaces.Services
          Task HandleCallbackAsync(string code, string? state);
         Task<bool> IsConnectedAsync();
         Task<MercadoLivreContaInfo?> GetContaInfoAsync();
+
+        /// <summary>
+        /// Quando o access token atual expira, em UTC. Null se nao ha conexao.
+        ///
+        /// A tela precisa disto porque o app nao recebe refresh_token do ML: o
+        /// token morre em 6h e alguem tem que reconectar na mao. Sem mostrar o
+        /// prazo, a loja so descobre que caiu quando estranha que nada foi
+        /// publicado.
+        /// </summary>
+        Task<DateTime?> ObterExpiracaoTokenAsync();
         Task DesconectarAsync();
         /// <summary>
         /// Publica o veiculo no Mercado Livre.

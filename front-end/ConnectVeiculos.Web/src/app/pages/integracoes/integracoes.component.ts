@@ -91,6 +91,9 @@ _{{6}}_`;
   }
 
   mlConectado = false;
+  // Quanto falta pro token do ML vencer. Ver MercadoLivreStatus.
+  mlMinutosRestantes: number | null = null;
+  mlExpirando = false;
   mlConta: MercadoLivreContaInfo | null = null;
   mlLoading = false;
   mlSincronizando = false;
@@ -469,11 +472,21 @@ _{{6}}_`;
   // ============================================================
   // Mercado Livre
   // ============================================================
+  /** "5h 20min" le melhor que "320 min" quando ainda ha bastante tempo. */
+  formatarPrazoMl(minutos: number): string {
+    if (minutos < 60) return `${minutos} min`;
+    const horas = Math.floor(minutos / 60);
+    const resto = minutos % 60;
+    return resto === 0 ? `${horas}h` : `${horas}h ${resto}min`;
+  }
+
   checkMercadoLivreStatus(): void {
     this.mlLoading = true;
     this.integracaoService.getMercadoLivreInfo().subscribe({
       next: (result) => {
         this.mlConectado = result.conectado;
+        this.mlMinutosRestantes = result.minutosRestantes ?? null;
+        this.mlExpirando = !!result.expirando;
         this.mlConta = result.info ?? null;
         this.mlLoading = false;
       },

@@ -658,3 +658,45 @@
     &:hover { background: #0d1853; }
   }
 }
+
+/* Prazo da conexao com o Mercado Livre. Neutro enquanto ha tempo, ambar quando
+   esta perto de cair — vermelho seria alarme falso pra algo que e' rotina. */
+.ml-prazo {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 12px 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+
+  > .material-icons {
+    flex-shrink: 0;
+    font-size: 20px;
+    color: var(--text-secondary);
+  }
+
+  strong {
+    display: block;
+    font-size: .875rem;
+    color: var(--text-primary);
+  }
+
+  small {
+    display: block;
+    margin-top: 2px;
+    font-size: .78rem;
+    color: var(--text-secondary);
+    line-height: 1.35;
+  }
+
+  &.urgente {
+    background: rgba(251, 191, 36, .14);
+    border-color: rgba(180, 83, 9, .35);
+
+    > .material-icons { color: #b45309; }
+    strong { color: #92400e; }
+    small { color: #92400e; opacity: .85; }
+  }
+}

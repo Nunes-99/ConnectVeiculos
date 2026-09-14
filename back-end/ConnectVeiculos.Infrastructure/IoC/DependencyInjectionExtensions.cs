@@ -348,6 +348,17 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.AddHttpClient<Core.Interfaces.Services.IInstagramPostService, Services.Meta.InstagramPostService>()
                 .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(30));
 
+            // Worker que avisa por e-mail antes de a conexao com o ML cair. Sem
+            // refresh_token o token dura 6h, e a loja descobria a queda pela
+            // ausencia de anuncios novos.
+            services.AddHostedService<Services.MercadoLivre.MercadoLivreExpiracaoWorker>();
+
+            // Services - sincronizacao em massa do Mercado Livre. Usada pelo botao
+            // da tela e pela reconexao do OAuth, que precisa recuperar o que ficou
+            // pra tras enquanto o token estava vencido.
+            services.AddScoped<Core.Interfaces.Services.IMercadoLivreSincronizacaoService,
+                               Services.MercadoLivre.MercadoLivreSincronizacaoService>();
+
             // Services - publicacao automatica de veiculo novo. Roda em background
             // e espera as fotos serem enviadas antes de postar (o upload e uma
             // requisicao separada, posterior ao cadastro).

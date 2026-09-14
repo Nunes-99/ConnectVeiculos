@@ -160,12 +160,12 @@ export class IntegracaoService {
     return this.http.get<{ url: string }>(`${this.baseUrl}/integracoes/mercadolivre/auth-url`);
   }
 
-  getMercadoLivreStatus(): Observable<{ conectado: boolean }> {
-    return this.http.get<{ conectado: boolean }>(`${this.baseUrl}/integracoes/mercadolivre/status`);
+  getMercadoLivreStatus(): Observable<MercadoLivreStatus> {
+    return this.http.get<MercadoLivreStatus>(`${this.baseUrl}/integracoes/mercadolivre/status`);
   }
 
-  getMercadoLivreInfo(): Observable<{ conectado: boolean; info?: MercadoLivreContaInfo }> {
-    return this.http.get<{ conectado: boolean; info?: MercadoLivreContaInfo }>(`${this.baseUrl}/integracoes/mercadolivre/info`);
+  getMercadoLivreInfo(): Observable<MercadoLivreStatus & { info?: MercadoLivreContaInfo }> {
+    return this.http.get<MercadoLivreStatus & { info?: MercadoLivreContaInfo }>(`${this.baseUrl}/integracoes/mercadolivre/info`);
   }
 
   desconectarMercadoLivre(): Observable<{ mensagem: string }> {
@@ -364,4 +364,19 @@ export class IntegracaoService {
     return this.http.post<{ externoId: string; url: string; mensagem: string }>(
       `${this.baseUrl}/integracoes/facebook/page-publicar/${veiculoId}`, {});
   }
+}
+
+/**
+ * Estado da conexao com o Mercado Livre.
+ *
+ * O prazo importa porque o app nao recebe refresh_token do ML: o token dura 6h
+ * e alguem precisa reconectar na mao. Sem mostrar quanto falta, a loja so
+ * percebe a queda quando estranha que nenhum veiculo novo foi anunciado.
+ */
+export interface MercadoLivreStatus {
+  conectado: boolean;
+  expiraEm?: string | null;
+  minutosRestantes?: number | null;
+  expirando?: boolean;
+  expirado?: boolean;
 }
