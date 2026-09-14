@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text;
 using System.Net.Mail;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Configuracoes;
 using ConnectVeiculos.Core.Interfaces.Email;
@@ -81,11 +82,18 @@ namespace ConnectVeiculos.Infrastructure.Email
                     EnableSsl = s.EnableSsl
                 };
 
+                // UTF-8 explicito no assunto e no corpo. Sem isto o .NET escolhe a
+                // codificacao sozinho e acento vira caractere quebrado dependendo do
+                // cliente de e-mail — motivo pelo qual os textos do sistema vinham
+                // todos sem acento.
                 var message = new MailMessage
                 {
                     From = new MailAddress(s.SenderEmail, s.SenderName),
                     Subject = subject,
+                    SubjectEncoding = Encoding.UTF8,
                     Body = body,
+                    BodyEncoding = Encoding.UTF8,
+                    HeadersEncoding = Encoding.UTF8,
                     IsBodyHtml = true
                 };
                 message.To.Add(to);
