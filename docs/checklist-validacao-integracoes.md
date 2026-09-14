@@ -70,19 +70,23 @@ aplicativo comum), número dedicado a ela, e templates aprovados pela Meta.
 
 ## 4. E-mail (SMTP)
 
+> Achado durante a validação: a API devolvia o token de redefinição no corpo da
+> resposta e a tela o exibia. Qualquer pessoa podia pedir recuperação com o
+> e-mail de outra e trocar a senha dela sem acesso à caixa de entrada. Corrigido.
+
 Remetente atual: `mecanto.app@gmail.com` via `smtp.gmail.com:587`. É provisório —
 um cliente da Diamante recebendo e-mail desse endereço estranha.
 
 - [x] Teste de configuração da tela de Integrações
 - [x] Aviso de expiração do Mercado Livre
-- [ ] **Recuperação de senha** — o mais crítico: sem ele ninguém recupera acesso
+- [x] **Recuperação de senha** — validado em 2026-09-14, ponta a ponta (pedido,
+      e-mail com link, tela de nova senha, login com a senha nova)
 - [ ] Venda confirmada
 - [ ] Venda estornada
 - [ ] Queda de preço para quem favoritou um veículo
 - [ ] Novo veículo similar para quem favoritou
 - [ ] Novo usuário (senha temporária)
-- [ ] Acentuação nos demais templates — a codificação já permite; falta trocar
-      as strings, que foram escritas sem acento
+- [x] Acentuação e visual padronizados em todos os templates
 
 ## 5. Google
 
