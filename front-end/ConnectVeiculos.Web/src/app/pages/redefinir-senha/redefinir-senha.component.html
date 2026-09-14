@@ -1,22 +1,28 @@
 <div class="redefinir-container">
   <div class="redefinir-card">
     <div class="redefinir-header">
-      <h1>Redefinir Senha</h1>
-      <p>Informe sua nova senha</p>
+      <h1>Redefinir senha</h1>
+      <p>Escolha a sua nova senha</p>
     </div>
 
     @if (!sucesso) {
       <form (ngSubmit)="redefinir()">
-        <div class="form-group">
-          <label for="token">Token de Recuperacao</label>
-          <input
-            type="text"
-            id="token"
-            [(ngModel)]="token"
-            name="token"
-            placeholder="Cole aqui o token recebido"
-            [disabled]="loading" />
-        </div>
+        <!-- Quem chega pelo link do e-mail ja trouxe o token na URL; mostrar
+             o campo so daria a impressao de que falta preencher alguma coisa.
+             Ele aparece apenas quando nao veio token nenhum — caso do e-mail
+             que caiu no modo alternativo e mandou o codigo em vez do botao. -->
+        @if (!tokenVeioDaUrl) {
+          <div class="form-group">
+            <label for="token">Código de recuperação</label>
+            <input
+              type="text"
+              id="token"
+              [(ngModel)]="token"
+              name="token"
+              placeholder="Cole aqui o código recebido por e-mail"
+              [disabled]="loading" />
+          </div>
+        }
 
         <div class="form-group">
           <label for="novaSenha">Nova Senha</label>
@@ -25,7 +31,7 @@
             id="novaSenha"
             [(ngModel)]="novaSenha"
             name="novaSenha"
-            placeholder="Mínimo 6 caracteres"
+            placeholder="Mínimo de 6 caracteres"
             [disabled]="loading"
             autocomplete="new-password" />
         </div>
@@ -48,7 +54,7 @@
 
         <button type="submit" class="btn-primary" [disabled]="loading">
           @if (loading) {
-            <span>Redefinindo...</span>
+            <span>Redefinindo…</span>
           } @else {
             <span>Redefinir Senha</span>
           }
@@ -58,7 +64,7 @@
       <div class="success-message">
         <span class="material-icons">check_circle</span>
         <p>{{ mensagem }}</p>
-        <p class="redirect-msg">Redirecionando para o login...</p>
+        <p class="redirect-msg">Redirecionando para o login…</p>
       </div>
     }
 

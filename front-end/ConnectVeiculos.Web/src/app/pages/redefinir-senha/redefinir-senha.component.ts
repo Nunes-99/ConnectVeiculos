@@ -17,6 +17,8 @@ export class RedefinirSenhaComponent implements OnInit {
   private route = inject(ActivatedRoute);
 
   token = '';
+  /// Token veio pela URL (link do e-mail). Nesse caso o campo fica oculto.
+  tokenVeioDaUrl = false;
   novaSenha = '';
   confirmarSenha = '';
   loading = false;
@@ -29,6 +31,7 @@ export class RedefinirSenhaComponent implements OnInit {
     this.route.queryParams.subscribe(params => {
       if (params['token']) {
         this.token = params['token'];
+        this.tokenVeioDaUrl = true;
       }
     });
   }

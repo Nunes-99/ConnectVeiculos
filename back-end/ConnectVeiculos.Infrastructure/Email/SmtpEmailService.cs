@@ -177,29 +177,28 @@ namespace ConnectVeiculos.Infrastructure.Email
         public async Task<EmailTestResult> TestarEnvioAsync(string destinatario)
         {
             if (string.IsNullOrWhiteSpace(destinatario))
-                return new EmailTestResult { Sucesso = false, Mensagem = "Destinatario obrigatorio." };
+                return new EmailTestResult { Sucesso = false, Mensagem = "Informe um destinatário." };
 
             try
             {
                 var s = await ResolveSettingsAsync();
                 if (string.IsNullOrEmpty(s.SmtpServer) || string.IsNullOrEmpty(s.SenderEmail))
-                    return new EmailTestResult { Sucesso = false, Mensagem = "SMTP nao configurado. Preencha os campos antes de testar." };
+                    return new EmailTestResult { Sucesso = false, Mensagem = "SMTP não configurado. Preencha os campos e salve antes de testar." };
+
+                var conteudoTeste = @"
+    <p style='margin:0 0 16px'>Este é um e-mail de teste enviado pelo painel de Integrações.</p>
+    <p style='margin:0 0 20px'>Se você está vendo esta mensagem, a configuração está <strong>correta</strong>:
+    o sistema consegue enviar avisos de venda, recuperação de senha e notificações de
+    queda de preço para quem favoritou um veículo.</p>";
 
                 var ok = await SendEmailAsync(destinatario,
-                    "ConnectVeiculos - Teste de configuracao SMTP",
-                    @"<!DOCTYPE html><html><body style='font-family:Arial,sans-serif;line-height:1.6;color:#333'>
-<div style='max-width:600px;margin:0 auto;padding:20px'>
-<div style='background:#16a34a;color:white;padding:20px;text-align:center;border-radius:8px 8px 0 0'>
-<h1>SMTP funcionando!</h1></div>
-<div style='padding:20px;background:#f9f9f9'>
-<p>Este e um e-mail de teste enviado pelo painel de Integracoes do ConnectVeiculos.</p>
-<p>Se voce esta vendo isso, sua configuracao SMTP esta <strong>correta</strong>: o sistema consegue enviar e-mails de notificacao para os clientes que favoritaram veiculos.</p>
-</div></div></body></html>");
+                    "Teste de configuração de e-mail - ConnectVeículos",
+                    MontarEmail("Envio funcionando", Verde, conteudoTeste));
 
                 return new EmailTestResult
                 {
                     Sucesso = ok,
-                    Mensagem = ok ? "E-mail de teste enviado. Verifique a caixa de entrada (e a pasta de spam)." : "Falha no envio. Verifique servidor, porta, usuario e senha."
+                    Mensagem = ok ? "E-mail de teste enviado. Verifique a caixa de entrada e a pasta de spam." : "Falha no envio. Confira servidor, porta, usuário e senha."
                 };
             }
             catch (Exception ex)
@@ -211,21 +210,21 @@ namespace ConnectVeiculos.Infrastructure.Email
 
         public async Task<bool> SendVendaConfirmadaAsync(string to, string compradorNome, string veiculoDescricao, decimal valorVenda)
         {
-            var subject = "ConnectVeiculos - Confirmacao de Venda";
+            var subject = "Venda confirmada - ConnectVeículos";
             var body = GetVendaConfirmadaTemplate(compradorNome, veiculoDescricao, valorVenda);
             return await SendEmailAsync(to, subject, body);
         }
 
         public async Task<bool> SendVendaEstornadaAsync(string to, string compradorNome, string veiculoDescricao)
         {
-            var subject = "ConnectVeiculos - Venda Estornada";
+            var subject = "Venda estornada - ConnectVeículos";
             var body = GetVendaEstornadaTemplate(compradorNome, veiculoDescricao);
             return await SendEmailAsync(to, subject, body);
         }
 
         public async Task<bool> SendNovoUsuarioAsync(string to, string usuarioNome, string senhaTemporaria)
         {
-            var subject = "ConnectVeiculos - Bem-vindo ao Sistema";
+            var subject = "Sua conta no ConnectVeículos está pronta";
             var body = GetNovoUsuarioTemplate(usuarioNome, senhaTemporaria);
             return await SendEmailAsync(to, subject, body);
         }
@@ -241,165 +240,114 @@ namespace ConnectVeiculos.Infrastructure.Email
         {
             var queda = precoAntigo - precoNovo;
             var pct = precoAntigo > 0 ? Math.Round(queda / precoAntigo * 100, 1) : 0;
-            var subject = $"O preco baixou! {veiculoDesc} agora por {precoNovo:C}";
-            var body = $@"<!DOCTYPE html><html><body style='font-family:Arial,sans-serif;line-height:1.6;color:#333'>
-<div style='max-width:600px;margin:0 auto;padding:20px'>
-<div style='background:#16a34a;color:white;padding:20px;text-align:center;border-radius:8px 8px 0 0'><h1>O preco baixou!</h1></div>
-<div style='padding:20px;background:#f9f9f9'>
-<p>Ola{(string.IsNullOrEmpty(nome) ? "" : ", " + nome)}!</p>
-<p>O veiculo que voce favoritou teve o preco reduzido:</p>
-<div style='background:#d1fae5;padding:15px;border-radius:6px;margin:15px 0'>
-<strong>{System.Net.WebUtility.HtmlEncode(veiculoDesc)}</strong><br>
-<span style='text-decoration:line-through;color:#888'>{precoAntigo:C}</span>
-&nbsp;&nbsp;<span style='font-size:20px;color:#16a34a;font-weight:bold'>{precoNovo:C}</span><br>
-<small>Economia de {queda:C} ({pct}%)</small>
-</div>
-<a href='{linkCatalogo}' style='display:inline-block;background:#1a237e;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600'>Ver veiculo no catalogo</a>
-</div>
-<div style='padding:15px;text-align:center;font-size:12px;color:#666'>Voce esta recebendo este e-mail porque favoritou este veiculo.</div>
-</div></body></html>";
-            return await SendEmailAsync(to, subject, body);
+
+            var conteudo = $@"
+    <p style='margin:0 0 16px'>Olá{(string.IsNullOrEmpty(nome) ? "" : " <strong>" + E(nome) + "</strong>")},</p>
+    <p style='margin:0 0 20px'>O veículo que você favoritou ficou mais barato.</p>
+    {Destaque($@"<strong style='display:block;margin-bottom:6px'>{E(veiculoDesc)}</strong>
+      <span style='text-decoration:line-through;color:#6b7280'>{precoAntigo:C}</span>
+      &nbsp;<span style='font-size:20px;color:{Verde};font-weight:bold'>{precoNovo:C}</span><br>
+      <span style='font-size:13px;color:#6b7280'>Economia de {queda:C} ({pct}%)</span>", Verde, "#dcfce7")}
+    {Botao(linkCatalogo, "Ver veículo")}";
+
+            var body = MontarEmail("O preço baixou", Verde, conteudo,
+                "Você está recebendo este e-mail porque favoritou este veículo.");
+
+            return await SendEmailAsync(to, $"O preço baixou: {veiculoDesc} por {precoNovo:C}", body);
         }
 
         public async Task<bool> SendVeiculoSimilarAsync(string to, string nome, string veiculoDesc, decimal preco, string linkCatalogo)
         {
-            var subject = $"Novo veiculo similar disponivel: {veiculoDesc}";
-            var body = $@"<!DOCTYPE html><html><body style='font-family:Arial,sans-serif;line-height:1.6;color:#333'>
-<div style='max-width:600px;margin:0 auto;padding:20px'>
-<div style='background:#1a237e;color:white;padding:20px;text-align:center;border-radius:8px 8px 0 0'><h1>Novo veiculo similar!</h1></div>
-<div style='padding:20px;background:#f9f9f9'>
-<p>Ola{(string.IsNullOrEmpty(nome) ? "" : ", " + nome)}!</p>
-<p>Acabou de chegar um veiculo parecido com os que voce favoritou:</p>
-<div style='background:#dbeafe;padding:15px;border-radius:6px;margin:15px 0'>
-<strong>{System.Net.WebUtility.HtmlEncode(veiculoDesc)}</strong><br>
-<span style='font-size:20px;color:#1a237e;font-weight:bold'>{preco:C}</span>
-</div>
-<a href='{linkCatalogo}' style='display:inline-block;background:#1a237e;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600'>Ver no catalogo</a>
-</div>
-<div style='padding:15px;text-align:center;font-size:12px;color:#666'>Voce esta recebendo este e-mail porque favoritou veiculos similares.</div>
-</div></body></html>";
-            return await SendEmailAsync(to, subject, body);
+            var conteudo = $@"
+    <p style='margin:0 0 16px'>Olá{(string.IsNullOrEmpty(nome) ? "" : " <strong>" + E(nome) + "</strong>")},</p>
+    <p style='margin:0 0 20px'>Acabou de chegar um veículo parecido com os que você favoritou.</p>
+    {Destaque($@"<strong style='display:block;margin-bottom:6px'>{E(veiculoDesc)}</strong>
+      <span style='font-size:20px;color:{AzulMarca};font-weight:bold'>{preco:C}</span>", AzulMarca, "#eef2ff")}
+    {Botao(linkCatalogo, "Ver no catálogo")}";
+
+            var body = MontarEmail("Novo veículo no estoque", AzulMarca, conteudo,
+                "Você está recebendo este e-mail porque favoritou veículos parecidos.");
+
+            return await SendEmailAsync(to, $"Chegou um veículo parecido: {veiculoDesc}", body);
         }
+
+        // ==========================================================
+        // MOLDE DOS E-MAILS
+        // ==========================================================
+
+        private const string AzulMarca = "#1a237e";
+        private const string Verde = "#16a34a";
+        private const string Ambar = "#b45309";
+
+        /// <summary>
+        /// Casca comum a todos os e-mails: cabecalho colorido, corpo em cartao
+        /// branco e rodape. Cada template so escreve o proprio conteudo.
+        ///
+        /// Antes cada um repetia o seu <style> e a sua estrutura, com resultados
+        /// diferentes entre si — e nenhum tinha acento, porque o MailMessage ia
+        /// sem BodyEncoding e a acentuacao quebrava dependendo do cliente.
+        /// </summary>
+        private static string MontarEmail(string titulo, string corCabecalho, string conteudo, string? rodapeExtra = null)
+        {
+            var rodape = rodapeExtra ?? "Mensagem automática. Por favor, não responda a este e-mail.";
+
+            return $@"<!DOCTYPE html><html><body style='margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;line-height:1.6;color:#333'>
+<div style='max-width:600px;margin:0 auto;padding:20px'>
+  <div style='background:{corCabecalho};color:#fff;padding:20px;text-align:center;border-radius:8px 8px 0 0'>
+    <h1 style='margin:0;font-size:20px'>{titulo}</h1>
+  </div>
+  <div style='padding:24px;background:#fff;border:1px solid #e5e7eb;border-top:0;border-radius:0 0 8px 8px'>
+    {conteudo}
+    <p style='margin:0;padding-top:16px;border-top:1px solid #e5e7eb;color:#6b7280;font-size:13px'>{rodape}</p>
+  </div>
+  <p style='text-align:center;color:#9ca3af;font-size:12px;margin:16px 0 0'>ConnectVeículos</p>
+</div>
+</body></html>";
+        }
+
+        /// <summary>Bloco em destaque, para dados do veiculo ou avisos.</summary>
+        private static string Destaque(string conteudo, string cor, string fundo) =>
+            $@"<div style='background:{fundo};border-left:4px solid {cor};padding:14px 16px;border-radius:6px;margin:0 0 20px'>{conteudo}</div>";
+
+        private static string Botao(string url, string texto) =>
+            $@"<p style='margin:0 0 20px'><a href='{url}' style='display:inline-block;background:{AzulMarca};color:#fff;padding:14px 30px;border-radius:8px;text-decoration:none;font-weight:600'>{texto}</a></p>";
+
+        private static string E(string? texto) => System.Net.WebUtility.HtmlEncode(texto ?? "");
 
         private static string GetVendaConfirmadaTemplate(string compradorNome, string veiculoDescricao, decimal valorVenda)
         {
-            return $@"
-<!DOCTYPE html>
-<html>
-<head>
-    <style>
-        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-        .header {{ background: #1a237e; color: white; padding: 20px; text-align: center; }}
-        .content {{ padding: 20px; background: #f9f9f9; }}
-        .highlight {{ background: #e8f5e9; padding: 15px; border-radius: 5px; margin: 15px 0; }}
-        .footer {{ padding: 15px; text-align: center; font-size: 12px; color: #666; }}
-    </style>
-</head>
-<body>
-    <div class='container'>
-        <div class='header'>
-            <h1>ConnectVeiculos</h1>
-        </div>
-        <div class='content'>
-            <h2>Venda Confirmada!</h2>
-            <p>Prezado(a) <strong>{compradorNome}</strong>,</p>
-            <p>E com grande satisfacao que confirmamos a venda do veiculo:</p>
-            <div class='highlight'>
-                <strong>Veiculo:</strong> {veiculoDescricao}<br>
-                <strong>Valor:</strong> {valorVenda:C}
-            </div>
-            <p>Em breve entraremos em contato para os proximos passos.</p>
-            <p>Agradecemos pela preferencia!</p>
-        </div>
-        <div class='footer'>
-            <p>Este e-mail foi enviado automaticamente pelo sistema ConnectVeiculos.</p>
-            <p>Por favor, nao responda a este e-mail.</p>
-        </div>
-    </div>
-</body>
-</html>";
+            var conteudo = $@"
+    <p style='margin:0 0 16px'>Olá <strong>{E(compradorNome)}</strong>,</p>
+    <p style='margin:0 0 20px'>Confirmamos a venda do seu veículo. Obrigado pela preferência!</p>
+    {Destaque($@"<strong style='display:block;margin-bottom:4px'>{E(veiculoDescricao)}</strong>Valor: <strong>{valorVenda:C}</strong>", Verde, "#dcfce7")}
+    <p style='margin:0 0 20px'>Em breve entraremos em contato para os próximos passos.</p>";
+
+            return MontarEmail("Venda confirmada", Verde, conteudo);
         }
 
         private static string GetVendaEstornadaTemplate(string compradorNome, string veiculoDescricao)
         {
-            return $@"
-<!DOCTYPE html>
-<html>
-<head>
-    <style>
-        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-        .header {{ background: #c62828; color: white; padding: 20px; text-align: center; }}
-        .content {{ padding: 20px; background: #f9f9f9; }}
-        .highlight {{ background: #ffebee; padding: 15px; border-radius: 5px; margin: 15px 0; }}
-        .footer {{ padding: 15px; text-align: center; font-size: 12px; color: #666; }}
-    </style>
-</head>
-<body>
-    <div class='container'>
-        <div class='header'>
-            <h1>ConnectVeiculos</h1>
-        </div>
-        <div class='content'>
-            <h2>Venda Estornada</h2>
-            <p>Prezado(a) <strong>{compradorNome}</strong>,</p>
-            <p>Informamos que a venda do veiculo abaixo foi estornada:</p>
-            <div class='highlight'>
-                <strong>Veiculo:</strong> {veiculoDescricao}
-            </div>
-            <p>Para mais informacoes, entre em contato conosco.</p>
-        </div>
-        <div class='footer'>
-            <p>Este e-mail foi enviado automaticamente pelo sistema ConnectVeiculos.</p>
-            <p>Por favor, nao responda a este e-mail.</p>
-        </div>
-    </div>
-</body>
-</html>";
+            var conteudo = $@"
+    <p style='margin:0 0 16px'>Olá <strong>{E(compradorNome)}</strong>,</p>
+    <p style='margin:0 0 20px'>A venda do veículo abaixo foi estornada.</p>
+    {Destaque($"<strong>{E(veiculoDescricao)}</strong>", Ambar, "#fef3c7")}
+    <p style='margin:0 0 20px'>Se tiver qualquer dúvida sobre o estorno, entre em contato conosco.</p>";
+
+            return MontarEmail("Venda estornada", Ambar, conteudo);
         }
 
         private static string GetNovoUsuarioTemplate(string usuarioNome, string senhaTemporaria)
         {
-            return $@"
-<!DOCTYPE html>
-<html>
-<head>
-    <style>
-        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-        .header {{ background: #1a237e; color: white; padding: 20px; text-align: center; }}
-        .content {{ padding: 20px; background: #f9f9f9; }}
-        .credentials {{ background: #e3f2fd; padding: 15px; border-radius: 5px; margin: 15px 0; font-family: monospace; }}
-        .warning {{ background: #fff3e0; padding: 10px; border-radius: 5px; margin: 15px 0; color: #e65100; }}
-        .footer {{ padding: 15px; text-align: center; font-size: 12px; color: #666; }}
-    </style>
-</head>
-<body>
-    <div class='container'>
-        <div class='header'>
-            <h1>ConnectVeiculos</h1>
-        </div>
-        <div class='content'>
-            <h2>Bem-vindo ao ConnectVeiculos!</h2>
-            <p>Ola <strong>{usuarioNome}</strong>,</p>
-            <p>Sua conta foi criada com sucesso no sistema ConnectVeiculos.</p>
-            <p>Utilize a senha temporaria abaixo para acessar o sistema:</p>
-            <div class='credentials'>
-                <strong>Senha temporaria:</strong> {senhaTemporaria}
-            </div>
-            <div class='warning'>
-                <strong>Importante:</strong> Por seguranca, recomendamos que altere sua senha no primeiro acesso.
-            </div>
-        </div>
-        <div class='footer'>
-            <p>Este e-mail foi enviado automaticamente pelo sistema ConnectVeiculos.</p>
-            <p>Por favor, nao responda a este e-mail.</p>
-        </div>
-    </div>
-</body>
-</html>";
+            var conteudo = $@"
+    <p style='margin:0 0 16px'>Olá <strong>{E(usuarioNome)}</strong>,</p>
+    <p style='margin:0 0 20px'>Sua conta foi criada no ConnectVeículos. Use a senha temporária
+    abaixo para entrar pela primeira vez.</p>
+    <div style='background:#eef2ff;padding:14px;border-radius:6px;margin:0 0 20px;font-family:monospace;font-size:15px'>{E(senhaTemporaria)}</div>
+    {Destaque("<strong style='display:block;margin-bottom:4px'>Troque a senha no primeiro acesso</strong>Enquanto ela estiver valendo, qualquer pessoa com este e-mail consegue entrar na sua conta.", Ambar, "#fef3c7")}";
+
+            return MontarEmail("Bem-vindo ao ConnectVeículos", AzulMarca, conteudo);
         }
+
         private static string GetRecuperacaoSenhaTemplate(string usuarioNome, string token, string urlBase)
         {
             // O e-mail mandava o token cru e pedia pro usuario "utilizar o codigo",
@@ -409,45 +357,24 @@ namespace ConnectVeiculos.Infrastructure.Email
                 ? ""
                 : $"{urlBase}/redefinir-senha?token={Uri.EscapeDataString(token)}";
 
-            var nome = System.Net.WebUtility.HtmlEncode(usuarioNome ?? "");
-
             // Sem link montado (loja sem URL de catalogo), o codigo volta a ser a
             // saida — melhor que um e-mail sem acao nenhuma.
-            var blocoAcao = string.IsNullOrEmpty(linkRedefinir)
+            var acao = string.IsNullOrEmpty(linkRedefinir)
                 ? $@"<p style='margin:0 0 8px'>Use o código abaixo na tela de redefinição de senha:</p>
-            <div style='background:#eef2ff;padding:14px;border-radius:6px;margin:0 0 20px;font-family:monospace;word-break:break-all;font-size:13px'>{token}</div>"
-                : $@"<p style='margin:0 0 20px'>
-              <a href='{linkRedefinir}' style='display:inline-block;background:#1a237e;color:#fff;padding:14px 30px;border-radius:8px;text-decoration:none;font-weight:600'>Criar nova senha</a>
-            </p>
-            <p style='margin:0 0 20px;font-size:13px;color:#6b7280'>
-              Se o botão não funcionar, copie e cole este endereço no navegador:<br>
-              <span style='word-break:break-all'>{linkRedefinir}</span>
-            </p>";
+    <div style='background:#eef2ff;padding:14px;border-radius:6px;margin:0 0 20px;font-family:monospace;word-break:break-all;font-size:13px'>{token}</div>"
+                : Botao(linkRedefinir, "Criar nova senha") + $@"<p style='margin:0 0 20px;font-size:13px;color:#6b7280'>
+      Se o botão não funcionar, copie e cole este endereço no navegador:<br>
+      <span style='word-break:break-all'>{linkRedefinir}</span>
+    </p>";
 
-            return $@"<!DOCTYPE html><html><body style='margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;line-height:1.6;color:#333'>
-<div style='max-width:600px;margin:0 auto;padding:20px'>
-  <div style='background:#1a237e;color:#fff;padding:20px;text-align:center;border-radius:8px 8px 0 0'>
-    <h1 style='margin:0;font-size:20px'>Redefinição de senha</h1>
-  </div>
-  <div style='padding:24px;background:#fff;border:1px solid #e5e7eb;border-top:0;border-radius:0 0 8px 8px'>
-    <p style='margin:0 0 16px'>Olá <strong>{nome}</strong>,</p>
+            var conteudo = $@"
+    <p style='margin:0 0 16px'>Olá <strong>{E(usuarioNome)}</strong>,</p>
     <p style='margin:0 0 20px'>Recebemos um pedido para redefinir a senha da sua conta.
     Clique no botão abaixo para escolher uma nova.</p>
+    {acao}
+    {Destaque("<strong style='display:block;margin-bottom:4px'>O link vale por 2 horas</strong>Se você não pediu a redefinição, ignore este e-mail — sua senha continua a mesma.", Ambar, "#fef3c7")}";
 
-    {blocoAcao}
-
-    <div style='background:#fef3c7;border-left:4px solid #b45309;padding:14px 16px;border-radius:6px;margin:0 0 20px'>
-      <strong style='display:block;margin-bottom:4px'>O link vale por 2 horas</strong>
-      Se você não pediu a redefinição, ignore este e-mail — sua senha continua a mesma.
-    </div>
-
-    <p style='margin:0;padding-top:16px;border-top:1px solid #e5e7eb;color:#6b7280;font-size:13px'>
-      Mensagem automática. Por favor, não responda a este e-mail.
-    </p>
-  </div>
-  <p style='text-align:center;color:#9ca3af;font-size:12px;margin:16px 0 0'>ConnectVeículos</p>
-</div>
-</body></html>";
+            return MontarEmail("Redefinição de senha", AzulMarca, conteudo);
         }
     }
 }
