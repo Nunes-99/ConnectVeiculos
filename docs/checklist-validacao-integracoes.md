@@ -30,8 +30,10 @@ resto abaixo é conviver com o problema.
       veículos publicados sozinhos após autorizar, sem clicar em "sincronizar"
       (todos em AGUARDANDO_PAGAMENTO, que é o ML cobrando a taxa da categoria)
 - [x] Anúncio criado na publicação automática (MLB5234328545)
-- [ ] Atualizar preço de um veículo publicado e ver o valor mudar no anúncio
-- [ ] Vender o veículo e ver o anúncio ser encerrado
+- [!] Atualizar preço / encerrar anúncio no ML — **impossível enquanto o anúncio
+      estiver em **. O ML recusa com "price is not modifiable",
+      "status is not modifiable". Só volta a ser possível pagando a taxa.
+      Verificado em 2026-09-14 nas duas operações
 - [ ] Aviso de expiração com o visual novo (o que chegou usava o texto antigo)
 - [!] Renovação automática do token — impossível sem `offline_access`
 
@@ -61,8 +63,8 @@ aplicativo comum), número dedicado a ela, e templates aprovados pela Meta.
 - [x] Carimbo `✅ VENDIDO` na legenda do post do Facebook
 - [x] Publicação manual pelo ícone da rede na lista de Veículos
 - [x] Ícone colorido só quando já publicado
-- [ ] **Estorno de venda tirando o carimbo** do post
-- [ ] **Mudança de preço reescrevendo a legenda**
+- [x] **Estorno de venda tirando o carimbo** — validado em 2026-09-14 (veículo 8)
+- [x] **Mudança de preço reescrevendo a legenda** — validado em 2026-09-14
 - [ ] **Excluir veículo carimbando `⛔ INDISPONÍVEL`**
 - [ ] Comportamento quando o token da Page falhar (não expira, mas nunca vimos
       falhar de verdade)
