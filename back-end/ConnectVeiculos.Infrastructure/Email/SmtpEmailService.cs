@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Text;
 using System.Net.Mail;
@@ -245,15 +246,15 @@ namespace ConnectVeiculos.Infrastructure.Email
     <p style='margin:0 0 16px'>Olá{(string.IsNullOrEmpty(nome) ? "" : " <strong>" + E(nome) + "</strong>")},</p>
     <p style='margin:0 0 20px'>O veículo que você favoritou ficou mais barato.</p>
     {Destaque($@"<strong style='display:block;margin-bottom:6px'>{E(veiculoDesc)}</strong>
-      <span style='text-decoration:line-through;color:#6b7280'>{precoAntigo:C}</span>
-      &nbsp;<span style='font-size:20px;color:{Verde};font-weight:bold'>{precoNovo:C}</span><br>
-      <span style='font-size:13px;color:#6b7280'>Economia de {queda:C} ({pct}%)</span>", Verde, "#dcfce7")}
+      <span style='text-decoration:line-through;color:#6b7280'>{Moeda(precoAntigo)}</span>
+      &nbsp;<span style='font-size:20px;color:{Verde};font-weight:bold'>{Moeda(precoNovo)}</span><br>
+      <span style='font-size:13px;color:#6b7280'>Economia de {Moeda(queda)} ({pct}%)</span>", Verde, "#dcfce7")}
     {Botao(linkCatalogo, "Ver veículo")}";
 
             var body = MontarEmail("O preço baixou", Verde, conteudo,
                 "Você está recebendo este e-mail porque favoritou este veículo.");
 
-            return await SendEmailAsync(to, $"O preço baixou: {veiculoDesc} por {precoNovo:C}", body);
+            return await SendEmailAsync(to, $"O preço baixou: {veiculoDesc} por {Moeda(precoNovo)}", body);
         }
 
         public async Task<bool> SendVeiculoSimilarAsync(string to, string nome, string veiculoDesc, decimal preco, string linkCatalogo)
@@ -262,7 +263,7 @@ namespace ConnectVeiculos.Infrastructure.Email
     <p style='margin:0 0 16px'>Olá{(string.IsNullOrEmpty(nome) ? "" : " <strong>" + E(nome) + "</strong>")},</p>
     <p style='margin:0 0 20px'>Acabou de chegar um veículo parecido com os que você favoritou.</p>
     {Destaque($@"<strong style='display:block;margin-bottom:6px'>{E(veiculoDesc)}</strong>
-      <span style='font-size:20px;color:{AzulMarca};font-weight:bold'>{preco:C}</span>", AzulMarca, "#eef2ff")}
+      <span style='font-size:20px;color:{AzulMarca};font-weight:bold'>{Moeda(preco)}</span>", AzulMarca, "#eef2ff")}
     {Botao(linkCatalogo, "Ver no catálogo")}";
 
             var body = MontarEmail("Novo veículo no estoque", AzulMarca, conteudo,
@@ -314,12 +315,20 @@ namespace ConnectVeiculos.Infrastructure.Email
 
         private static string E(string? texto) => System.Net.WebUtility.HtmlEncode(texto ?? "");
 
+        /// <summary>
+        /// Valor em reais. O container roda sem cultura definida, entao ":C"
+        /// formatava com a cultura invariante e o cliente recebia "¤119,000.00"
+        /// no lugar de "R$ 119.000,00" — em todo e-mail que mostra dinheiro.
+        /// </summary>
+        private static string Moeda(decimal valor) =>
+            valor.ToString("C", CultureInfo.GetCultureInfo("pt-BR"));
+
         private static string GetVendaConfirmadaTemplate(string compradorNome, string veiculoDescricao, decimal valorVenda)
         {
             var conteudo = $@"
     <p style='margin:0 0 16px'>Olá <strong>{E(compradorNome)}</strong>,</p>
     <p style='margin:0 0 20px'>Confirmamos a venda do seu veículo. Obrigado pela preferência!</p>
-    {Destaque($@"<strong style='display:block;margin-bottom:4px'>{E(veiculoDescricao)}</strong>Valor: <strong>{valorVenda:C}</strong>", Verde, "#dcfce7")}
+    {Destaque($@"<strong style='display:block;margin-bottom:4px'>{E(veiculoDescricao)}</strong>Valor: <strong>{Moeda(valorVenda)}</strong>", Verde, "#dcfce7")}
     <p style='margin:0 0 20px'>Em breve entraremos em contato para os próximos passos.</p>";
 
             return MontarEmail("Venda confirmada", Verde, conteudo);

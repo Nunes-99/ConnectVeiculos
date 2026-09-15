@@ -46,6 +46,10 @@ namespace ConnectVeiculos.Application.UseCases.Vendas
         // R$ 12.950.001.295,00 num carro de R$ 129.500,00.
         private const int FatorMaximoSobrePreco = 10;
 
+        // A aplicacao roda sem cultura definida; ":C" sairia como "¤129,500.00".
+        private static string EmReais(decimal valor) =>
+            valor.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"));
+
         private static void GarantirValorPlausivel(decimal valorVenda, decimal precoVeiculo)
         {
             if (valorVenda <= 0)
@@ -58,7 +62,7 @@ namespace ConnectVeiculos.Application.UseCases.Vendas
             if (valorVenda > teto)
             {
                 throw new DomainException(
-                    $"O valor da venda ({valorVenda:C}) está muito acima do preço do veículo ({precoVeiculo:C}). " +
+                    $"O valor da venda ({EmReais(valorVenda)}) está muito acima do preço do veículo ({EmReais(precoVeiculo)}). " +
                     "Confira o valor digitado.");
             }
         }
