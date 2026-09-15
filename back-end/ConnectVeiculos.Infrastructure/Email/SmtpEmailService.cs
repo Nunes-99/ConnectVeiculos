@@ -248,7 +248,7 @@ namespace ConnectVeiculos.Infrastructure.Email
     {Destaque($@"<strong style='display:block;margin-bottom:6px'>{E(veiculoDesc)}</strong>
       <span style='text-decoration:line-through;color:#6b7280'>{Moeda(precoAntigo)}</span>
       &nbsp;<span style='font-size:20px;color:{Verde};font-weight:bold'>{Moeda(precoNovo)}</span><br>
-      <span style='font-size:13px;color:#6b7280'>Economia de {Moeda(queda)} ({pct}%)</span>", Verde, "#dcfce7")}
+      <span style='font-size:13px;color:#6b7280'>Economia de {Moeda(queda)} ({Percentual(pct)}%)</span>", Verde, "#dcfce7")}
     {Botao(linkCatalogo, "Ver veículo")}";
 
             var body = MontarEmail("O preço baixou", Verde, conteudo,
@@ -322,6 +322,11 @@ namespace ConnectVeiculos.Infrastructure.Email
         /// </summary>
         private static string Moeda(decimal valor) =>
             valor.ToString("C", CultureInfo.GetCultureInfo("pt-BR"));
+
+        // Pela mesma razao do Moeda(): sem LANG no container a cultura e a
+        // invariante, e a porcentagem saia com ponto decimal ("5.9%").
+        private static string Percentual(decimal valor) =>
+            valor.ToString("0.#", CultureInfo.GetCultureInfo("pt-BR"));
 
         private static string GetVendaConfirmadaTemplate(string compradorNome, string veiculoDescricao, decimal valorVenda)
         {

@@ -44,6 +44,13 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
         /// Configuravel (MetaSettings__Scopes) para ajustar sem reconstruir a imagem.
         /// </summary>
         ///
+        /// business_management e o que faz o /me/accounts enxergar Pages que
+        /// pertencem a um Business. Sem ele a chamada volta 200 com "data" vazio,
+        /// mesmo existindo Page e mesmo com pages_show_list concedido — e a
+        /// conexao terminava num "Nenhuma Page encontrada" sem saida pela tela.
+        /// Confirmado em producao: com o escopo, a mesma conta passou a listar a
+        /// Page e a selecao automatica resolveu sozinha.
+        ///
         /// instagram_manage_contents NAO entra aqui. E o escopo que a documentacao
         /// exige pra apagar um post, mas a Meta recusa a autorizacao inteira com
         /// "Invalid Scopes: instagram_manage_contents" — ele nao esta habilitado
@@ -51,6 +58,6 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
         /// so a exclusao: impede conectar.
         public string Scopes { get; set; } =
             "pages_show_list,pages_read_engagement,pages_manage_posts," +
-            "instagram_basic,instagram_content_publish";
+            "instagram_basic,instagram_content_publish,business_management";
     }
 }
