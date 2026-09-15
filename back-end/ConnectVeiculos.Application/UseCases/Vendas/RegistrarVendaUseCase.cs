@@ -38,6 +38,31 @@ namespace ConnectVeiculos.Application.UseCases.Vendas
             _backgroundRunner = backgroundRunner;
         }
 
+        // Quanto o valor da venda pode passar do preco do veiculo antes de ser
+        // erro de digitacao em vez de negociacao. Dez vezes e folgado de
+        // proposito: cobre venda com acessorios, juros de financiamento embutido
+        // e reajuste, e ainda assim pega o caso real que motivou isto — um campo
+        // ja preenchido com o preco que recebeu digitacao por cima e virou
+        // R$ 12.950.001.295,00 num carro de R$ 129.500,00.
+        private const int FatorMaximoSobrePreco = 10;
+
+        private static void GarantirValorPlausivel(decimal valorVenda, decimal precoVeiculo)
+        {
+            if (valorVenda <= 0)
+                throw new DomainException("Informe o valor da venda.");
+
+            // Veiculo sem preco cadastrado nao da base de comparacao.
+            if (precoVeiculo <= 0) return;
+
+            var teto = precoVeiculo * FatorMaximoSobrePreco;
+            if (valorVenda > teto)
+            {
+                throw new DomainException(
+                    $"O valor da venda ({valorVenda:C}) está muito acima do preço do veículo ({precoVeiculo:C}). " +
+                    "Confira o valor digitado.");
+            }
+        }
+
         public async Task<int> Execute(VendaInputModel inputModel)
         {
             var veiculo = await _veiculoRepository.GetByIdAsync(inputModel.R_VeiId);
@@ -47,6 +72,8 @@ namespace ConnectVeiculos.Application.UseCases.Vendas
 
             if (veiculo.VeiSts == "V")
                 throw new DomainException("Este veículo já foi vendido.");
+
+            GarantirValorPlausivel(inputModel.VenValor, veiculo.VeiPreco);
 
             // Marcar veículo como vendido ANTES de criar a venda (evita venda duplicada)
             veiculo.AlterarStatus("V");

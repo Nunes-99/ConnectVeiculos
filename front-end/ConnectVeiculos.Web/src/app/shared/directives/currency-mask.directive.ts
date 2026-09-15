@@ -46,9 +46,21 @@ export class CurrencyMaskDirective implements ControlValueAccessor, OnInit {
     this.onTouched();
   }
 
+  // Campo de dinheiro costuma chegar preenchido — o valor da venda nasce com o
+  // preco do veiculo, por exemplo. Como o mask reparseia TODOS os digitos do
+  // campo, digitar por cima anexava ao que ja estava: um R$ 129.500,00 com
+  // "12950000" digitado virou R$ 12.950.001.295,00, e a venda foi gravada assim.
+  // Selecionar tudo ao focar faz a digitacao substituir, que e o que se espera.
+  @HostListener('focus')
+  onFocus(): void {
+    this.el.nativeElement.select();
+  }
+
   @HostListener('input')
   onInput(): void {
-    const digits = this.el.nativeElement.value.replace(/\D/g, '');
+    // Teto de digitos: R$ 9.999.999.999,99. Nenhum valor real do sistema chega
+    // perto, e sem limite o campo aceita um numero de tamanho arbitrario.
+    const digits = this.el.nativeElement.value.replace(/\D/g, '').slice(0, 12);
     this.cents = parseInt(digits, 10) || 0;
     this.updateDisplay();
     this.onChange(this.cents / 100);

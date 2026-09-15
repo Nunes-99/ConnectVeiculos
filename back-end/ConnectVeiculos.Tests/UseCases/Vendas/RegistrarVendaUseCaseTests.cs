@@ -49,6 +49,84 @@ namespace ConnectVeiculos.Tests.UseCases.Vendas
         /// So o caminho de editar o veiculo fazia isso, e quem vende usa a tela de
         /// Vendas.
         /// </summary>
+        /// <summary>
+        /// O campo "Valor da Venda" nasce preenchido com o preço do veículo, e o
+        /// mask reparseia todos os dígitos do campo — digitar por cima anexava ao
+        /// que já estava. Aconteceu de verdade: um R$ 129.500,00 com "12950000"
+        /// digitado virou R$ 12.950.001.295,00, e a venda foi gravada assim, sem
+        /// nenhum aviso.
+        ///
+        /// A tela passou a selecionar o conteúdo ao focar, mas a regra vive aqui:
+        /// a API é chamada de outros lugares e um número absurdo não pode entrar.
+        /// </summary>
+        [Fact]
+        public async Task Execute_ComValorAbsurdamenteAcimaDoPreco_DeveRecusar()
+        {
+            var veiculo = new Veiculo(1, 1, 1, "Jeep", "Compass", 2022, "TST1F07", "9BWZZZ377VT004251",
+                "Cinza", 38000, 129500m, DateTime.Now, "D", "D", 110000m);
+            _veiculoRepositoryMock.Setup(x => x.GetByIdAsync(1)).ReturnsAsync(veiculo);
+
+            Func<Task> acao = async () => await _useCase.Execute(NovaVenda(12_950_001_295m));
+
+            await acao.Should().ThrowAsync<DomainException>()
+                .WithMessage("*muito acima do preço do veículo*");
+            _vendaRepositoryMock.Verify(x => x.CreateAsync(It.IsAny<Venda>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Execute_ComValorZerado_DeveRecusar()
+        {
+            _veiculoRepositoryMock.Setup(x => x.GetByIdAsync(1)).ReturnsAsync(VeiculoDeTeste());
+
+            Func<Task> acao = async () => await _useCase.Execute(NovaVenda(0m));
+
+            await acao.Should().ThrowAsync<DomainException>().WithMessage("*valor da venda*");
+        }
+
+        [Theory]
+        [InlineData(129500)]   // preco cheio
+        [InlineData(115000)]   // desconto
+        [InlineData(60000)]    // desconto grande, ainda plausivel
+        [InlineData(400000)]   // acima do preco mas dentro do teto (financiamento, acessorios)
+        public async Task Execute_ComValorPlausivel_DeveRegistrar(decimal valor)
+        {
+            // O teto e folgado de proposito: negociar acima do preco acontece e nao
+            // pode ser bloqueado — o alvo e o erro de digitacao, nao a negociacao.
+            _veiculoRepositoryMock.Setup(x => x.GetByIdAsync(1)).ReturnsAsync(VeiculoDeTeste());
+            _vendaRepositoryMock.Setup(x => x.CreateAsync(It.IsAny<Venda>())).ReturnsAsync(1);
+
+            await _useCase.Execute(NovaVenda(valor));
+
+            _vendaRepositoryMock.Verify(x => x.CreateAsync(It.IsAny<Venda>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task Execute_ComVeiculoSemPrecoCadastrado_NaoDeveBloquear()
+        {
+            // Sem preco nao ha base de comparacao; barrar aqui impediria vender.
+            var semPreco = new Veiculo(1, 1, 1, "Jeep", "Compass", 2022, "TST1F07", "9BWZZZ377VT004251",
+                "Cinza", 38000, 0m, DateTime.Now, "D", "D", 0m);
+            _veiculoRepositoryMock.Setup(x => x.GetByIdAsync(1)).ReturnsAsync(semPreco);
+            _vendaRepositoryMock.Setup(x => x.CreateAsync(It.IsAny<Venda>())).ReturnsAsync(1);
+
+            await _useCase.Execute(NovaVenda(90000m));
+
+            _vendaRepositoryMock.Verify(x => x.CreateAsync(It.IsAny<Venda>()), Times.Once);
+        }
+
+        private static Veiculo VeiculoDeTeste() => new(
+            1, 1, 1, "Jeep", "Compass", 2022, "TST1F07", "9BWZZZ377VT004251",
+            "Cinza", 38000, 129500m, DateTime.Now, "D", "D", 110000m);
+
+        private static VendaInputModel NovaVenda(decimal valor) => new()
+        {
+            R_VeiId = 1,
+            R_UsuId = 1,
+            VenValor = valor,
+            VenDtVenda = DateTime.Now,
+            VenCompradorNome = "Comprador de Teste"
+        };
+
         [Fact]
         public async Task Execute_AoRegistrarVenda_DeveTirarOVeiculoDasPlataformas()
         {
