@@ -1063,21 +1063,24 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Troca o favicon pelo icone da loja. O <link> do index.html e' unico para
-   * todo o sistema, entao aqui ele e' reescrito em runtime — so no catalogo
-   * publico, que e' a unica tela com identidade propria por loja.
+   * Troca o favicon pelo icone da loja — so no catalogo publico, que e' a unica
+   * tela com identidade propria por loja.
+   *
+   * Remove TODOS os <link rel="icon"> antes de por o da loja. O index.html
+   * declara varios (o .ico e os PNGs de 192 e 512, para o navegador e para o
+   * Google escolherem o melhor); trocar so o primeiro deixava os outros de pe e
+   * o navegador continuava livre para preferir um deles — o icone do sistema
+   * aparecia no lugar do da loja.
    */
   private aplicarFavicon(): void {
     if (!isPlatformBrowser(this.platformId) || !this.loja?.lojFavicon) return;
 
-    const url = this.imagemService.getImageUrl(this.loja.lojFavicon);
-    let link = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
-    if (!link) {
-      link = document.createElement('link');
-      link.rel = 'icon';
-      document.head.appendChild(link);
-    }
-    link.href = url;
+    document.querySelectorAll("link[rel~='icon']").forEach(l => l.remove());
+
+    const link = document.createElement('link');
+    link.rel = 'icon';
+    link.href = this.imagemService.getImageUrl(this.loja.lojFavicon);
+    document.head.appendChild(link);
   }
 
   /** Leva ate a listagem, usada pelos botoes "Estoque" do topo. */
