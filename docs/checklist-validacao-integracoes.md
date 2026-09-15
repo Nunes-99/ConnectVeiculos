@@ -34,7 +34,7 @@ resto abaixo é conviver com o problema.
       estiver em **. O ML recusa com "price is not modifiable",
       "status is not modifiable". Só volta a ser possível pagando a taxa.
       Verificado em 2026-09-14 nas duas operações
-- [ ] Aviso de expiração com o visual novo (o que chegou usava o texto antigo)
+- [x] Aviso de expiração com o visual novo — recebido em 2026-09-15
 - [!] Renovação automática do token — impossível sem `offline_access`
 
 ## 2. WhatsApp Business
@@ -80,13 +80,17 @@ aplicativo comum), número dedicado a ela, e templates aprovados pela Meta.
 Remetente atual: `mecanto.app@gmail.com` via `smtp.gmail.com:587`. É provisório —
 um cliente da Diamante recebendo e-mail desse endereço estranha.
 
+> Achado em 2026-09-15: todo valor em dinheiro saía como `¤119,000.00`. A
+> aplicação nunca define cultura e o container não tem `LANG`, então `:C`
+> formatava com a cultura invariante. Corrigido com pt-BR explícito.
+
 - [x] Teste de configuração da tela de Integrações
 - [x] Aviso de expiração do Mercado Livre
 - [x] **Recuperação de senha** — validado em 2026-09-14, ponta a ponta (pedido,
       e-mail com link, tela de nova senha, login com a senha nova)
-- [ ] Venda confirmada
-- [ ] Venda estornada
-- [ ] Queda de preço para quem favoritou um veículo
+- [x] Venda confirmada — 2026-09-15
+- [x] Venda estornada — 2026-09-15
+- [x] Queda de preço para quem favoritou um veículo — 2026-09-15
 - [ ] Novo veículo similar para quem favoritou
 - [ ] Novo usuário (senha temporária)
 - [x] Acentuação e visual padronizados em todos os templates
