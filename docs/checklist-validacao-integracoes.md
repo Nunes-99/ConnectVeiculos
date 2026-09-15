@@ -67,10 +67,26 @@ aplicativo comum), número dedicado a ela, e templates aprovados pela Meta.
 - [x] **Mudança de preço reescrevendo a legenda** — validado em 2026-09-14
 - [x] **Excluir veículo carimbando `⛔ INDISPONÍVEL`** — validado em 2026-09-15
       (veículo 8; log registrou "atualizada (status I)")
+- [x] **Conexão automática da Page** — validado em 2026-09-15. Desconectar e
+      reconectar deixou a Page ativa sem nenhum passo manual; o log registrou
+      "Page ConnectVeiculos selecionada automaticamente (única da conta)" e os
+      dois "Testar conexão" responderam OK com o Page Token novo
+- [x] **Causa do "Nenhuma Page encontrada"** — era a falta de
+      `business_management`. Sem esse escopo o `/me/accounts` devolve 200 com
+      `data` vazio quando a Page pertence a um Business, mesmo com
+      `pages_show_list` concedido
 - [ ] Comportamento quando o token da Page falhar (não expira, mas nunca vimos
       falhar de verdade)
 - [!] Marcar vendido no Instagram — a Graph API não permite editar legenda de
-      mídia publicada; só permite excluir
+      mídia publicada
+- [!] **Apagar o post do Instagram — impossível, e o interruptor foi retirado**.
+      Exige `instagram_manage_contents`, que a Meta não concede a este tipo de
+      aplicativo: pedi-lo no OAuth derruba a autorização inteira com "Invalid
+      Scopes". Confirmado em 2026-09-15 na tela de Integrações comerciais do
+      Facebook, que lista as seis permissões concedidas (`business_management`,
+      `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`,
+      `instagram_basic`, `instagram_content_publish`) — nenhuma de gerenciar
+      conteúdo do Instagram. O backend continua pronto caso o App Review libere
 
 ## 4. E-mail (SMTP)
 
@@ -83,7 +99,9 @@ um cliente da Diamante recebendo e-mail desse endereço estranha.
 
 > Achado em 2026-09-15: todo valor em dinheiro saía como `¤119,000.00`. A
 > aplicação nunca define cultura e o container não tem `LANG`, então `:C`
-> formatava com a cultura invariante. Corrigido com pt-BR explícito.
+> formatava com a cultura invariante. Corrigido com pt-BR explícito. A mesma
+> causa deixava a porcentagem de queda de preço como `5.9%`; corrigida depois,
+> em 2026-09-15.
 
 - [x] Teste de configuração da tela de Integrações
 - [x] Aviso de expiração do Mercado Livre
@@ -110,8 +128,13 @@ um cliente da Diamante recebendo e-mail desse endereço estranha.
 - [x] Veículo vendido com `noindex` e aviso na tela
 - [ ] **Alguma página realmente indexada** — "descoberta" não é "indexada";
       conferir em Inspeção de URL e solicitar indexação
-- [ ] Filtrar o sitemap para lojas públicas (hoje expõe `default`,
-      `empresa-teste` e `teste`)
+- [ ] **Filtrar o sitemap para lojas públicas.** Em 2026-09-15 expunha quatro
+      tenants: `default` (6 URLs), `empresa-teste` (5), `teste` (1) e
+      `viorica7078` (1). O último é um cadastro novo feito com e-mail
+      temporário, ou seja **qualquer autocadastro entra no sitemap sozinho** e
+      é oferecido ao Google como loja real. Falta decidir o critério de "loja
+      pública" (sugerido: ativa + plano pago + ao menos um veículo, com o
+      `default` de fora por ser a loja-modelo)
 - [!] Google Merchant — refresh token revogado (`invalid_grant`)
 - [!] Google Vehicle Ads — não existe no Brasil
 - [ ] Google Ads — sem integração no sistema; é link externo, nada a testar

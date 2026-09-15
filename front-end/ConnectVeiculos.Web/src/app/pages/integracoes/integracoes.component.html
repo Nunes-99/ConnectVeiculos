@@ -284,19 +284,6 @@
 
   <!-- Modal desconectar WhatsApp -->
   @if (true) {
-  <!-- Apagar o post do Instagram nao tem volta: leva curtidas, comentarios e
-       alcance. Usa o modal do sistema em vez do confirm() do navegador, que
-       aparecia como "connectveiculos.dev.br diz" e nao deixava destacar nada. -->
-  <app-confirm-modal
-    [show]="showIgExcluirModal"
-    titulo="Apagar o post do Instagram ao sair de circulação?"
-    mensagem="Quando o veículo for vendido, reservado ou excluído, o post dele será APAGADO do Instagram — junto com as curtidas, os comentários e o alcance que ele tiver acumulado. Não há como recuperar: se a venda for estornada depois, o post não volta. A alternativa é deixar desligado e conviver com o post anunciando um carro que já saiu, já que o Instagram não permite editar a legenda de uma publicação."
-    textoBotaoConfirmar="Sim, apagar ao sair"
-    textoBotaoCancelar="Manter os posts"
-    tipo="danger"
-    (confirmar)="confirmarIgExcluirAoSair()"
-    (cancelar)="cancelarIgExcluirAoSair()" />
-
   <app-confirm-modal
     [show]="showWaDesconectarModal"
     titulo="Desconectar WhatsApp Business?"
@@ -1037,25 +1024,26 @@
               </div>
             }
 
-            <!-- Quando o carro sai de circulacao, o Facebook recebe o carimbo de
-                 VENDIDO na legenda. No Instagram isso nao existe: a Graph API nao
-                 deixa editar legenda de midia publicada. Ou o post fica anunciando
-                 um carro que ja saiu, ou e apagado — e apagar leva junto o
-                 engajamento, sem volta. A escolha fica com a loja. -->
+            <!-- O interruptor de apagar o post saiu do ar. A exclusao exige a
+                 permissao instagram_manage_contents, que a Meta nao concede a
+                 este tipo de aplicativo: pedi-la no OAuth derruba a autorizacao
+                 inteira com "Invalid Scopes", e sem ela o DELETE volta
+                 "Insufficient permissions". Confirmado em 2026-09-15 na tela de
+                 Integracoes comerciais do Facebook, que lista as seis permissoes
+                 concedidas — nenhuma delas de gerenciar conteudo do Instagram.
+
+                 O backend (ExcluirPostAsync / META_IG_EXCLUIR_AO_SAIR) fica de
+                 pe: se a permissao for liberada via App Review, basta devolver o
+                 interruptor. Oferecer um botao que nao faz nada e pior do que
+                 nao ter botao. -->
             <div class="ig-excluir">
-              <label class="toggle-switch">
-                <input type="checkbox" [checked]="igConfig.excluirAoSairHabilitado"
-                       (change)="toggleIgExcluirAoSair(!igConfig.excluirAoSairHabilitado)" />
-                <span class="toggle-slider"></span>
-                <span class="toggle-label">Apagar o post quando o veículo sair</span>
-              </label>
               <small>
-                O Instagram não permite editar a legenda de um post já publicado, então o
-                carimbo de <strong>VENDIDO</strong> que aparece no Facebook não é possível aqui.
-                Com esta opção ligada, o post é <strong>apagado</strong> quando o veículo é
-                vendido, reservado ou excluído — junto com as curtidas, os comentários e o
-                alcance dele, sem possibilidade de recuperar. Desligada, o post permanece no
-                perfil anunciando um carro que já saiu.
+                <strong>Sobre veículos vendidos:</strong> o Instagram não permite editar a
+                legenda de um post já publicado, então o carimbo de <strong>VENDIDO</strong>
+                que aparece no Facebook não existe aqui — o post permanece no perfil como
+                foi publicado. Apagar automaticamente também não é possível: a Meta não
+                concede a este aplicativo a permissão de gerenciar conteúdo do Instagram.
+                Para tirar um post do ar, exclua-o pelo próprio aplicativo do Instagram.
               </small>
             </div>
           </div>

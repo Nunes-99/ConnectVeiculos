@@ -372,32 +372,11 @@ _{{6}}_`;
     });
   }
 
-  // Apagar o post do Instagram e irreversivel: leva junto curtidas,
-  // comentarios e alcance. Por isso a confirmacao antes de ligar — desligar
-  // volta ao comportamento seguro e nao precisa perguntar nada.
-  //
-  // O aviso usa o modal do proprio sistema. Antes era um confirm() nativo, que
-  // aparecia com a cara do navegador ("connectveiculos.dev.br diz"), sem a
-  // identidade da tela e sem destacar o que se perde.
-  showIgExcluirModal = false;
-
-  toggleIgExcluirAoSair(habilitado: boolean): void {
-    if (habilitado) {
-      this.showIgExcluirModal = true;
-      return;
-    }
-    this.aplicarIgExcluirAoSair(false);
-  }
-
-  confirmarIgExcluirAoSair(): void {
-    this.showIgExcluirModal = false;
-    this.aplicarIgExcluirAoSair(true);
-  }
-
-  cancelarIgExcluirAoSair(): void {
-    this.showIgExcluirModal = false;
-  }
-
+  // O interruptor de apagar o post saiu da tela: a permissao
+  // instagram_manage_contents nao e concedida a este aplicativo, entao o DELETE
+  // sempre volta "Insufficient permissions". A chamada fica aqui porque o
+  // backend continua aceitando o ajuste — se a Meta liberar via App Review,
+  // basta devolver o interruptor no template.
   private aplicarIgExcluirAoSair(habilitado: boolean): void {
     this.integracaoService.setInstagramExcluirAoSair(habilitado).subscribe({
       next: () => {
