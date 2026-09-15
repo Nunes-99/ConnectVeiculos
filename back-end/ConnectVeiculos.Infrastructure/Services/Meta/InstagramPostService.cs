@@ -19,6 +19,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
     public class InstagramPostService : IInstagramPostService
     {
         public const string KEY_AUTO_POST = "META_IG_AUTO_POST";
+        public const string KEY_EXCLUIR_AO_SAIR = "META_IG_EXCLUIR_AO_SAIR";
         public const string PLATAFORMA = "Instagram";
 
         // Instagram Carrossel: minimo 2, maximo 10 itens. Single Photo se for 1.
@@ -88,7 +89,8 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
                 InstagramConectado = !string.IsNullOrEmpty(token) && !string.IsNullOrEmpty(igId),
                 BusinessAccountId = string.IsNullOrEmpty(igId) ? null : igId,
                 Username = string.IsNullOrEmpty(username) ? null : username,
-                AutoPostHabilitado = await AutoPostHabilitadoAsync()
+                AutoPostHabilitado = await AutoPostHabilitadoAsync(),
+                ExcluirAoSairHabilitado = await ExcluirAoSairHabilitadoAsync()
             };
         }
 
@@ -96,6 +98,56 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
         {
             await _configRepository.SetValorAsync(KEY_AUTO_POST, habilitado ? "true" : "false");
             _logger.LogInformation("Instagram auto-post {Status} pelo operador.", habilitado ? "HABILITADO" : "DESABILITADO");
+        }
+
+        public async Task SetExcluirAoSairHabilitadoAsync(bool habilitado)
+        {
+            await _configRepository.SetValorAsync(KEY_EXCLUIR_AO_SAIR, habilitado ? "true" : "false");
+            _logger.LogInformation(
+                "Instagram: exclusao do post ao sair de circulacao {Status} pelo operador.",
+                habilitado ? "HABILITADA" : "DESABILITADA");
+        }
+
+        public async Task<bool> ExcluirAoSairHabilitadoAsync()
+        {
+            var v = await _configRepository.GetValorAsync(KEY_EXCLUIR_AO_SAIR);
+            return string.Equals(v, "true", StringComparison.OrdinalIgnoreCase);
+        }
+
+        public async Task<bool> ExcluirPostAsync(string mediaId)
+        {
+            if (string.IsNullOrWhiteSpace(mediaId)) return false;
+
+            var (token, igId) = await ResolveAsync();
+            if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(igId))
+            {
+                _logger.LogDebug("Instagram nao configurado; post {MediaId} fica como esta.", mediaId);
+                return false;
+            }
+
+            try
+            {
+                var url = $"https://graph.facebook.com/{_settings.ApiVersion}/{mediaId}"
+                        + $"?access_token={Uri.EscapeDataString(token)}";
+
+                var resp = await _httpClient.DeleteAsync(url);
+                if (!resp.IsSuccessStatusCode)
+                {
+                    // Nao e' excecao: o post pode ter sido apagado no aplicativo, ou
+                    // ser de um tipo que a Meta nao deixa remover pela API.
+                    _logger.LogWarning("Instagram nao apagou o post {MediaId}: {Body}",
+                        mediaId, await resp.Content.ReadAsStringAsync());
+                    return false;
+                }
+
+                _logger.LogInformation("Post do Instagram {MediaId} apagado.", mediaId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao apagar o post {MediaId} do Instagram", mediaId);
+                return false;
+            }
         }
 
         public async Task<TestIntegracaoResult> TestarAsync()

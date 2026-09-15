@@ -700,3 +700,20 @@
     small { color: #92400e; opacity: .85; }
   }
 }
+
+/* Interruptor de apagar o post do Instagram. Separado do resto do bloco por uma
+   linha porque a acao e destrutiva e irreversivel — nao pode ser confundida com
+   os outros ajustes do card. */
+.ig-excluir {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-color);
+
+  small {
+    display: block;
+    margin-top: 8px;
+    font-size: .78rem;
+    line-height: 1.45;
+    color: var(--text-secondary);
+  }
+}

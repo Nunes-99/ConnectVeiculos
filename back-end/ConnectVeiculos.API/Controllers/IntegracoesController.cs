@@ -962,6 +962,21 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
             return Ok(new { habilitado = input.Habilitado });
         }
 
+        /// <summary>
+        /// Liga ou desliga a exclusao do post do Instagram quando o veiculo sai de
+        /// circulacao. Desligado por padrao — apagar e irreversivel e leva junto o
+        /// engajamento do post.
+        /// </summary>
+        [HttpPost("instagram/excluir-ao-sair")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> SetInstagramExcluirAoSair(
+            [FromServices] IInstagramPostService ig,
+            [FromBody] AutoPostInput input)
+        {
+            await ig.SetExcluirAoSairHabilitadoAsync(input.Habilitado);
+            return Ok(new { habilitado = input.Habilitado });
+        }
+
         [HttpPost("instagram/test")]
         [Authorize(Roles = "Administrador,Gerente")]
         public async Task<IActionResult> TestarInstagram([FromServices] IInstagramPostService ig)

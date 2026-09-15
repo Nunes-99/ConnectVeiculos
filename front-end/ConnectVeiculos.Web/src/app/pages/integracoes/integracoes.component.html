@@ -992,6 +992,28 @@
                 {{ igTesteResultado!.mensagem }}
               </div>
             }
+
+            <!-- Quando o carro sai de circulacao, o Facebook recebe o carimbo de
+                 VENDIDO na legenda. No Instagram isso nao existe: a Graph API nao
+                 deixa editar legenda de midia publicada. Ou o post fica anunciando
+                 um carro que ja saiu, ou e apagado — e apagar leva junto o
+                 engajamento, sem volta. A escolha fica com a loja. -->
+            <div class="ig-excluir">
+              <label class="toggle-switch">
+                <input type="checkbox" [checked]="igConfig.excluirAoSairHabilitado"
+                       (change)="toggleIgExcluirAoSair(!igConfig.excluirAoSairHabilitado)" />
+                <span class="toggle-slider"></span>
+                <span class="toggle-label">Apagar o post quando o veículo sair</span>
+              </label>
+              <small>
+                O Instagram não permite editar a legenda de um post já publicado, então o
+                carimbo de <strong>VENDIDO</strong> que aparece no Facebook não é possível aqui.
+                Com esta opção ligada, o post é <strong>apagado</strong> quando o veículo é
+                vendido, reservado ou excluído — junto com as curtidas, os comentários e o
+                alcance dele, sem possibilidade de recuperar. Desligada, o post permanece no
+                perfil anunciando um carro que já saiu.
+              </small>
+            </div>
           </div>
         } @else {
           <div class="info-block">

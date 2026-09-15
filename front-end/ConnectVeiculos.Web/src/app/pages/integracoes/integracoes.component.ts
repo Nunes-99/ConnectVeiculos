@@ -356,6 +356,28 @@ _{{6}}_`;
     });
   }
 
+  // Apagar o post do Instagram e irreversivel: leva junto curtidas,
+  // comentarios e alcance. Por isso a confirmacao antes de ligar — desligar
+  // volta ao comportamento seguro e nao precisa perguntar nada.
+  toggleIgExcluirAoSair(habilitado: boolean): void {
+    if (habilitado && !confirm(
+      'Ao sair de circulação, o post do veículo será APAGADO do Instagram.\n\n' +
+      'Isso remove também as curtidas, os comentários e o alcance do post, e não tem volta. ' +
+      'Se a venda for estornada depois, o post não retorna.\n\nDeseja ativar?')) {
+      return;
+    }
+
+    this.integracaoService.setInstagramExcluirAoSair(habilitado).subscribe({
+      next: () => {
+        this.igConfig.excluirAoSairHabilitado = habilitado;
+        this.toast.success(habilitado
+          ? 'Ao sair de circulação, o post será apagado do Instagram.'
+          : 'O post do Instagram passa a ser mantido no perfil.');
+      },
+      error: () => this.toast.error('Não consegui alterar a configuração.')
+    });
+  }
+
   toggleIgAutoPost(habilitado: boolean): void {
     this.integracaoService.setInstagramAutoPost(habilitado).subscribe({
       next: () => {

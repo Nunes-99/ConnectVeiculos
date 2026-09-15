@@ -68,6 +68,7 @@ export interface FacebookConfigInfo {
   apiVersion?: string;
   tokenDefinido: boolean;
   autoPostHabilitado: boolean;
+  excluirAoSairHabilitado?: boolean;
 }
 
 export interface FacebookConfigInput {
@@ -136,6 +137,8 @@ export interface InstagramPostConfigInfo {
   businessAccountId?: string | null;
   username?: string | null;
   autoPostHabilitado: boolean;
+  /** Apagar o post quando o veículo sai de circulação. Ver toggleIgExcluirAoSair. */
+  excluirAoSairHabilitado?: boolean;
 }
 
 // Master switch + status do App Meta. Front usa pra (1) exibir/ocultar o card
@@ -349,6 +352,11 @@ export class IntegracaoService {
 
   setInstagramAutoPost(habilitado: boolean): Observable<{ habilitado: boolean }> {
     return this.http.post<{ habilitado: boolean }>(`${this.baseUrl}/integracoes/instagram/auto-post`, { habilitado });
+  }
+
+  /** Apagar o post do Instagram quando o veículo sai de circulação. */
+  setInstagramExcluirAoSair(habilitado: boolean): Observable<{ habilitado: boolean }> {
+    return this.http.post<{ habilitado: boolean }>(`${this.baseUrl}/integracoes/instagram/excluir-ao-sair`, { habilitado });
   }
 
   testarInstagram(): Observable<TestIntegracaoResult> {

@@ -155,21 +155,37 @@ namespace ConnectVeiculos.Infrastructure.Services.Publicacoes
             }
             catch (Exception ex) { _logger.LogError(ex, "Erro ao marcar post do Facebook do veiculo {VeiculoId}", veiculoId); }
 
-            // Instagram fica de fora: a Graph API nao permite editar legenda de
-            // midia publicada (so ligar/desligar comentarios). O post continua no
-            // perfil anunciando um carro que ja saiu.
+            // Instagram: a Graph API nao permite editar legenda de midia publicada
+            // (so ligar/desligar comentarios), entao nao da pra carimbar como nas
+            // outras plataformas. Ou o post fica no perfil anunciando um carro que
+            // ja saiu, ou e apagado — e apagar leva junto curtidas, comentarios e
+            // alcance, sem volta.
+            //
+            // Quem decide e a loja, pelo interruptor em Integracoes. Desligado por
+            // padrao: o comportamento destrutivo nao pode ser o default.
             try
             {
                 var ig = await _publicacaoRepository.GetAtivaByVeiculoEPlataformaAsync(veiculoId, "Instagram");
-                if (ig != null)
+                if (ig == null) return;
+
+                if (!await _instagramPostService.ExcluirAoSairHabilitadoAsync())
                 {
                     _logger.LogInformation(
-                        "Post do Instagram {PostId} do veiculo {VeiculoId} nao pode ser alterado: "
-                        + "a Graph API nao permite editar legenda de midia publicada.",
+                        "Post do Instagram {PostId} do veiculo {VeiculoId} mantido: a Graph API nao permite "
+                        + "editar legenda de midia publicada, e a exclusao automatica esta desligada.",
                         ig.PubExternoId, veiculoId);
+                    return;
+                }
+
+                if (await _instagramPostService.ExcluirPostAsync(ig.PubExternoId))
+                {
+                    // So marca como removido quando a Meta confirmou. Se o post
+                    // continua la, a publicacao tem que continuar refletindo isso.
+                    ig.Remover();
+                    await _publicacaoRepository.UpdateAsync(ig);
                 }
             }
-            catch (Exception ex) { _logger.LogDebug(ex, "Falha ao consultar publicacao do Instagram do veiculo {VeiculoId}", veiculoId); }
+            catch (Exception ex) { _logger.LogError(ex, "Erro ao tratar o post do Instagram do veiculo {VeiculoId}", veiculoId); }
         }
 
         public async Task ReativarVeiculoAsync(int veiculoId)

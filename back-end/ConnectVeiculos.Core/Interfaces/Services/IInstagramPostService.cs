@@ -9,6 +9,25 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         Task<bool> IsConfiguredAsync();
         Task<InstagramPostConfigInfo> GetConfigAsync();
         Task SetAutoPostHabilitadoAsync(bool habilitado);
+
+        /// <summary>
+        /// Liga ou desliga a exclusao do post quando o veiculo sai de circulacao.
+        ///
+        /// Desligado por padrao, e de proposito: a Graph API nao deixa editar
+        /// legenda de midia publicada, entao a unica forma de tirar do ar um
+        /// anuncio de carro vendido e apagar o post — junto com as curtidas, os
+        /// comentarios e o alcance dele, sem volta. Quem liga precisa saber disso.
+        /// </summary>
+        Task SetExcluirAoSairHabilitadoAsync(bool habilitado);
+
+        /// <summary>
+        /// Apaga um post do Instagram. Devolve false quando nao ha conexao, o
+        /// post ja nao existe ou a Meta recusa — nunca lanca.
+        /// </summary>
+        Task<bool> ExcluirPostAsync(string mediaId);
+
+        /// <summary>Se a exclusao automatica esta ligada neste tenant.</summary>
+        Task<bool> ExcluirAoSairHabilitadoAsync();
         Task<TestIntegracaoResult> TestarAsync();
 
         /// <summary>
@@ -32,6 +51,7 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         public string? BusinessAccountId { get; set; }
         public string? Username { get; set; }
         public bool AutoPostHabilitado { get; set; }
+        public bool ExcluirAoSairHabilitado { get; set; }
     }
 
     /// <summary>

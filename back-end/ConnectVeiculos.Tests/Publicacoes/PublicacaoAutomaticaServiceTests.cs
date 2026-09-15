@@ -167,6 +167,71 @@ namespace ConnectVeiculos.Tests.Publicacoes
             _instagram.Verify(x => x.PublicarVeiculoAsync(VeiculoId), Times.Once);
         }
 
+        /// <summary>
+        /// O Instagram nao aceita edicao de legenda de midia publicada, entao nao
+        /// da pra carimbar VENDIDO como no Facebook. Sobra apagar o post — que
+        /// leva junto curtidas, comentarios e alcance, sem volta. Por isso o
+        /// comportamento e opcional e nasce desligado.
+        /// </summary>
+        [Fact]
+        public async Task ComExclusaoDesligada_DeveManterOPostDoInstagram()
+        {
+            PublicacaoAtivaNoInstagram();
+            _instagram.Setup(x => x.ExcluirAoSairHabilitadoAsync()).ReturnsAsync(false);
+
+            await Criar().MarcarVeiculoIndisponivelAsync(VeiculoId, "V");
+
+            _instagram.Verify(x => x.ExcluirPostAsync(It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task ComExclusaoLigada_DeveApagarOPostEMarcarComoRemovida()
+        {
+            var publicacao = PublicacaoAtivaNoInstagram();
+            _instagram.Setup(x => x.ExcluirAoSairHabilitadoAsync()).ReturnsAsync(true);
+            _instagram.Setup(x => x.ExcluirPostAsync("ig-123")).ReturnsAsync(true);
+
+            await Criar().MarcarVeiculoIndisponivelAsync(VeiculoId, "V");
+
+            _instagram.Verify(x => x.ExcluirPostAsync("ig-123"), Times.Once);
+            _publicacoes.Verify(x => x.UpdateAsync(publicacao), Times.Once);
+            publicacao.PubStatus.Should().Be(VeiculoPublicacao.StatusRemovido);
+        }
+
+        [Fact]
+        public async Task QuandoAMetaRecusaApagar_NaoDeveMarcarComoRemovida()
+        {
+            // Se o post continua no perfil, o registro tem que continuar dizendo
+            // isso — senao a tela mostra o icone apagado pra um post que esta la.
+            var publicacao = PublicacaoAtivaNoInstagram();
+            _instagram.Setup(x => x.ExcluirAoSairHabilitadoAsync()).ReturnsAsync(true);
+            _instagram.Setup(x => x.ExcluirPostAsync("ig-123")).ReturnsAsync(false);
+
+            await Criar().MarcarVeiculoIndisponivelAsync(VeiculoId, "V");
+
+            _publicacoes.Verify(x => x.UpdateAsync(It.IsAny<VeiculoPublicacao>()), Times.Never);
+            publicacao.PubStatus.Should().Be(VeiculoPublicacao.StatusAtivo);
+        }
+
+        [Fact]
+        public async Task SemPostNoInstagram_NaoDeveConsultarOInterruptor()
+        {
+            _publicacoes.Setup(x => x.GetAtivaByVeiculoEPlataformaAsync(VeiculoId, "Instagram"))
+                        .ReturnsAsync((VeiculoPublicacao)null);
+
+            await Criar().MarcarVeiculoIndisponivelAsync(VeiculoId, "V");
+
+            _instagram.Verify(x => x.ExcluirAoSairHabilitadoAsync(), Times.Never);
+        }
+
+        private VeiculoPublicacao PublicacaoAtivaNoInstagram()
+        {
+            var publicacao = new VeiculoPublicacao(VeiculoId, "Instagram", "ig-123", "https://ig/p");
+            _publicacoes.Setup(x => x.GetAtivaByVeiculoEPlataformaAsync(VeiculoId, "Instagram"))
+                        .ReturnsAsync(publicacao);
+            return publicacao;
+        }
+
         private PublicacaoAutomaticaService Criar() => new(
             _veiculos.Object, _imagens.Object, _publicacoes.Object, _ml.Object,
             _fbCatalogo.Object, _fbPage.Object, _instagram.Object, _google.Object,
