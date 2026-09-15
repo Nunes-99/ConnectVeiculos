@@ -172,6 +172,15 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
 
                         try { await _googleService.PublicarVeiculoAsync(inputModel.VeiId); }
                         catch (Exception ex) { _logger.LogError(ex, "Erro ao publicar no Google"); }
+
+                        // Tirar o carimbo da legenda do post da Page. As chamadas
+                        // acima sao o catalogo do Facebook e o Google Merchant,
+                        // que sao outra coisa: o post organico continuava dizendo
+                        // VENDIDO ou RESERVADO com o carro de volta a venda.
+                        // O estorno de venda ja fazia isso; voltar o status pela
+                        // tela de edicao chega no mesmo lugar por outro caminho.
+                        await _publicacaoAutomaticaService
+                            .AtualizarPostDoVeiculoAsync(inputModel.VeiId, inputModel.VeiSts);
                     }
                     else if (statusAnterior == "D" && inputModel.VeiSts != "D")
                     {

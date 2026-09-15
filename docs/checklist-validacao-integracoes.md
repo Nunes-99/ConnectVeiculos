@@ -79,6 +79,13 @@ aplicativo comum), número dedicado a ela, e templates aprovados pela Meta.
       falhar de verdade)
 - [!] Marcar vendido no Instagram — a Graph API não permite editar legenda de
       mídia publicada
+- [x] **Carimbo `🔒 RESERVADO`** — validado em 2026-09-15 (veículo 1)
+- [x] **Tirar o carimbo ao voltar para Disponível** — validado em 2026-09-15,
+      *depois de corrigir*. O ramo "voltou a ficar disponível" publicava no
+      catálogo do Facebook e no Google Merchant, mas não reescrevia a legenda do
+      post orgânico: o post ficava dizendo RESERVADO com o carro de volta à
+      venda. Só o estorno de venda tratava disso. Corrigido em
+      `AtualizarVeiculoUseCase`, com teste de regressão
 - [!] **Apagar o post do Instagram — impossível, e o interruptor foi retirado**.
       Exige `instagram_manage_contents`, que a Meta não concede a este tipo de
       aplicativo: pedi-lo no OAuth derruba a autorização inteira com "Invalid
@@ -86,7 +93,13 @@ aplicativo comum), número dedicado a ela, e templates aprovados pela Meta.
       Facebook, que lista as seis permissões concedidas (`business_management`,
       `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`,
       `instagram_basic`, `instagram_content_publish`) — nenhuma de gerenciar
-      conteúdo do Instagram. O backend continua pronto caso o App Review libere
+      conteúdo do Instagram. O backend continua pronto caso o App Review libere.
+      **Confirmado também pela API** em 2026-09-15, marcando o veículo 1 como
+      reservado com a opção ligada:
+      `DELETE /v18.0/18162197113470689 -> 400` com
+      `(#10) Insufficient permissions to access this data`. O registro da
+      publicação continuou ATIVO, como deve: o ícone na lista não pode dizer que
+      o post sumiu enquanto ele está no ar
 
 ## 4. E-mail (SMTP)
 

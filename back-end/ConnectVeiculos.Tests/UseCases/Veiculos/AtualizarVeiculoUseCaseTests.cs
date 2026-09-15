@@ -132,6 +132,31 @@ namespace ConnectVeiculos.Tests.UseCases.Veiculos
             _veiculoRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Veiculo>()), Times.Once);
         }
 
+        /// <summary>
+        /// Voltar o carro para a venda tem que tirar o carimbo da legenda. As
+        /// chamadas de Facebook e Google nesse ramo sao o catalogo e o Merchant,
+        /// que sao outra coisa: o post organico continuava dizendo VENDIDO ou
+        /// RESERVADO com o carro de volta a venda. Visto em producao em
+        /// 2026-09-15 — o estorno de venda ja tratava disso, mas voltar o status
+        /// pela tela de edicao nao.
+        /// </summary>
+        [Theory]
+        [InlineData("V")]
+        [InlineData("R")]
+        public async Task Execute_QuandoVeiculoVoltaAFicarDisponivel_DeveTirarOCarimboDoPost(string statusAnterior)
+        {
+            _veiculoRepositoryMock.Setup(x => x.GetByIdAsync(1)).ReturnsAsync(VeiculoComStatus(statusAnterior));
+
+            await _useCase.Execute(InputComStatus("D"));
+
+            _publicacaoAutomaticaServiceMock.Verify(
+                x => x.AtualizarPostDoVeiculoAsync(1, "D"), Times.Once);
+        }
+
+        private static Veiculo VeiculoComStatus(string status) => new(
+            1, 1, 1, "Toyota", "Corolla", 2024, "ABC1D23", "9BWZZZ377VT004251",
+            "Branco", 10000, 145000m, DateTime.Now, status, "D", 130000m);
+
         private static Veiculo VeiculoDisponivel() => new(
             1, 1, 1, "Toyota", "Corolla", 2024, "ABC1D23", "9BWZZZ377VT004251",
             "Branco", 10000, 145000m, DateTime.Now, "D", "D", 130000m);
