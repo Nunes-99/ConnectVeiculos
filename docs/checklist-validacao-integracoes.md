@@ -65,7 +65,8 @@ aplicativo comum), número dedicado a ela, e templates aprovados pela Meta.
 - [x] Ícone colorido só quando já publicado
 - [x] **Estorno de venda tirando o carimbo** — validado em 2026-09-14 (veículo 8)
 - [x] **Mudança de preço reescrevendo a legenda** — validado em 2026-09-14
-- [ ] **Excluir veículo carimbando `⛔ INDISPONÍVEL`**
+- [x] **Excluir veículo carimbando `⛔ INDISPONÍVEL`** — validado em 2026-09-15
+      (veículo 8; log registrou "atualizada (status I)")
 - [ ] Comportamento quando o token da Page falhar (não expira, mas nunca vimos
       falhar de verdade)
 - [!] Marcar vendido no Instagram — a Graph API não permite editar legenda de
@@ -91,8 +92,14 @@ um cliente da Diamante recebendo e-mail desse endereço estranha.
 - [x] Venda confirmada — 2026-09-15
 - [x] Venda estornada — 2026-09-15
 - [x] Queda de preço para quem favoritou um veículo — 2026-09-15
-- [ ] Novo veículo similar para quem favoritou
-- [ ] Novo usuário (senha temporária)
+- [x] Novo veículo similar para quem favoritou — validado em 2026-09-15 (Jeep
+      Renegade a R$ 120.000 disparou para quem favoritou o Compass a R$ 112.000;
+      regra é mesma marca, mesma categoria e preço dentro de ±20%)
+- [!] Novo usuário (senha temporária) — **o e-mail nunca é enviado**.
+      `SendNovoUsuarioAsync` está na interface e implementado, com template, mas
+      nenhum lugar do sistema o chama. E a tela pede a senha ao administrador,
+      enquanto o template pressupõe senha gerada pelo sistema. São dois desenhos
+      diferentes; falta decidir qual vale antes de testar
 - [x] Acentuação e visual padronizados em todos os templates
 
 ## 5. Google
