@@ -43,8 +43,13 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
         ///
         /// Configuravel (MetaSettings__Scopes) para ajustar sem reconstruir a imagem.
         /// </summary>
+        ///
+        /// instagram_manage_contents e' o que permite APAGAR um post publicado.
+        /// Sem ele o DELETE volta "(#10) Insufficient permissions", que foi o que
+        /// aconteceu na primeira tentativa. Publicar e apagar sao permissoes
+        /// separadas na Meta.
         public string Scopes { get; set; } =
             "pages_show_list,pages_read_engagement,pages_manage_posts," +
-            "instagram_basic,instagram_content_publish";
+            "instagram_basic,instagram_content_publish,instagram_manage_contents";
     }
 }

@@ -284,6 +284,19 @@
 
   <!-- Modal desconectar WhatsApp -->
   @if (true) {
+  <!-- Apagar o post do Instagram nao tem volta: leva curtidas, comentarios e
+       alcance. Usa o modal do sistema em vez do confirm() do navegador, que
+       aparecia como "connectveiculos.dev.br diz" e nao deixava destacar nada. -->
+  <app-confirm-modal
+    [show]="showIgExcluirModal"
+    titulo="Apagar o post do Instagram ao sair de circulação?"
+    mensagem="Quando o veículo for vendido, reservado ou excluído, o post dele será APAGADO do Instagram — junto com as curtidas, os comentários e o alcance que ele tiver acumulado. Não há como recuperar: se a venda for estornada depois, o post não volta. A alternativa é deixar desligado e conviver com o post anunciando um carro que já saiu, já que o Instagram não permite editar a legenda de uma publicação."
+    textoBotaoConfirmar="Sim, apagar ao sair"
+    textoBotaoCancelar="Manter os posts"
+    tipo="danger"
+    (confirmar)="confirmarIgExcluirAoSair()"
+    (cancelar)="cancelarIgExcluirAoSair()" />
+
   <app-confirm-modal
     [show]="showWaDesconectarModal"
     titulo="Desconectar WhatsApp Business?"

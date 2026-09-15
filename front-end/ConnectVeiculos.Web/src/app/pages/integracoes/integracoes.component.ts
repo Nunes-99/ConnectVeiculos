@@ -359,14 +359,30 @@ _{{6}}_`;
   // Apagar o post do Instagram e irreversivel: leva junto curtidas,
   // comentarios e alcance. Por isso a confirmacao antes de ligar — desligar
   // volta ao comportamento seguro e nao precisa perguntar nada.
+  //
+  // O aviso usa o modal do proprio sistema. Antes era um confirm() nativo, que
+  // aparecia com a cara do navegador ("connectveiculos.dev.br diz"), sem a
+  // identidade da tela e sem destacar o que se perde.
+  showIgExcluirModal = false;
+
   toggleIgExcluirAoSair(habilitado: boolean): void {
-    if (habilitado && !confirm(
-      'Ao sair de circulação, o post do veículo será APAGADO do Instagram.\n\n' +
-      'Isso remove também as curtidas, os comentários e o alcance do post, e não tem volta. ' +
-      'Se a venda for estornada depois, o post não retorna.\n\nDeseja ativar?')) {
+    if (habilitado) {
+      this.showIgExcluirModal = true;
       return;
     }
+    this.aplicarIgExcluirAoSair(false);
+  }
 
+  confirmarIgExcluirAoSair(): void {
+    this.showIgExcluirModal = false;
+    this.aplicarIgExcluirAoSair(true);
+  }
+
+  cancelarIgExcluirAoSair(): void {
+    this.showIgExcluirModal = false;
+  }
+
+  private aplicarIgExcluirAoSair(habilitado: boolean): void {
     this.integracaoService.setInstagramExcluirAoSair(habilitado).subscribe({
       next: () => {
         this.igConfig.excluirAoSairHabilitado = habilitado;
