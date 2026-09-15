@@ -912,6 +912,37 @@
               {{ metaCarregando ? 'Carregando...' : 'Carregar minhas Pages' }}
             </button>
           </div>
+
+          <!-- Quando a Page pertence a um Business, o Facebook devolve a lista
+               vazia mesmo existindo Page e mesmo com a permissao concedida.
+               Informar o ID e o unico caminho que resta — antes so dava para
+               fazer isso chamando a API pelo console do navegador. -->
+          @if (metaPagesCarregadas) {
+            <div class="aviso-inline">
+              <span class="material-icons">info</span>
+              <span>Sua Page pertence a um Business, por isso o Facebook não a lista aqui.
+                    Informe o ID dela uma única vez — nas próximas reconexões ela volta sozinha.</span>
+            </div>
+            <div class="form-group">
+              <label for="metaPageIdManual">ID da Page do Facebook</label>
+              <input id="metaPageIdManual" type="text" inputmode="numeric"
+                     placeholder="Ex.: 1175042902348633"
+                     [(ngModel)]="metaPageIdManual" [ngModelOptions]="{standalone: true}" />
+              <small>Está em <a href="https://business.facebook.com/settings/pages" target="_blank"
+                     rel="noopener">business.facebook.com</a> → Contas → Páginas, abaixo do nome da Page.</small>
+            </div>
+            <div class="card-actions">
+              <button class="btn-primary" (click)="usarMetaPageManual()"
+                      [disabled]="metaCarregando || !metaPageIdManual.trim()">
+                <span class="material-icons">check</span>
+                Usar esta Page
+              </button>
+              <button class="btn-danger-outline" (click)="desconectarMeta()">
+                <span class="material-icons">link_off</span>
+                Desconectar
+              </button>
+            </div>
+          }
         } @else {
           <div class="form-group">
             <label>Selecione a Page:</label>

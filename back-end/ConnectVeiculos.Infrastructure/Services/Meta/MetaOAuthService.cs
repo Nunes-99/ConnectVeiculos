@@ -21,6 +21,12 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
         public const string KEY_IG_BUSINESS_ID = "META_IG_BUSINESS_ID";
         public const string KEY_IG_USERNAME = "META_IG_USERNAME";
 
+        // Ultima Page usada por esta loja. Ao contrario de KEY_PAGE_ID, sobrevive
+        // ao desconectar de proposito: e' lembranca de qual Page e' desta loja,
+        // nao credencial. Serve para reconectar sozinho quando /me/accounts volta
+        // vazio, que e' o caso de Page pertencente a um Business.
+        public const string KEY_PAGE_ID_ULTIMA = "META_PAGE_ID_ULTIMA";
+
 
         private readonly HttpClient _httpClient;
         private readonly MetaSettings _settings;
@@ -135,28 +141,101 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             }
             catch (Exception ex) { _logger.LogDebug(ex, "Meta /me opcional falhou (ignorado)"); }
 
-            // Step 4: lista pages so pra contar (lista completa vai pra UI via ListarPagesAsync).
-            int pagesCount = 0;
-            try
-            {
-                var pages = await ListarPagesUsandoTokenAsync(longToken);
-                pagesCount = pages.Count;
-            }
-            catch (Exception ex) { _logger.LogWarning(ex, "Meta listar pages no callback falhou (continuando)"); }
-
-            // Step 5: persiste.
+            // Step 4: persiste. Vem antes da selecao da Page porque
+            // SelecionarPageAsync le o user token daqui.
             await _configRepository.SetValorAsync(KEY_USER_TOKEN_CIFRADO, _tokenProtector.Protect(longToken));
             await _configRepository.SetValorAsync(
                 KEY_USER_TOKEN_EXPIRA,
                 DateTime.UtcNow.AddSeconds(expiresIn).ToString("O"));
 
+            // Step 5: deixa a conexao pronta pra uso sem pedir nada ao lojista.
+            var (pagesCount, pageAuto) = await ResolverPageAposConectarAsync(longToken);
+
             return new MetaOAuthCallbackResult
             {
                 Sucesso = true,
-                Mensagem = "Conectado com sucesso.",
+                Mensagem = pageAuto == null
+                    ? "Conectado com sucesso."
+                    : $"Conectado com sucesso. Publicando na Page \"{pageAuto}\".",
                 UserNome = userNome,
-                PagesEncontradas = pagesCount
+                PagesEncontradas = pagesCount,
+                PageSelecionadaAutomaticamente = pageAuto
             };
+        }
+
+        /// <summary>
+        /// Escolhe a Page sozinho quando nao ha ambiguidade, para o lojista nao
+        /// precisar de nenhum passo extra depois de autorizar. Devolve quantas
+        /// Pages a Meta listou e o nome da Page selecionada (null se ficou a
+        /// cargo do usuario).
+        ///
+        /// Dois casos se resolvem sem perguntar:
+        ///  - uma unica Page na conta: nao ha o que escolher;
+        ///  - lista vazia mas esta loja ja usou uma Page antes: e' reconexao, e a
+        ///    lista vazia e' a limitacao conhecida do /me/accounts com Page de
+        ///    Business no Facebook Login for Business — nao ausencia de Page.
+        ///
+        /// Com duas ou mais Pages a escolha continua sendo do usuario: chutar
+        /// publicaria o estoque na Page errada.
+        /// </summary>
+        private async Task<(int PagesCount, string? PageNome)> ResolverPageAposConectarAsync(string userToken)
+        {
+            List<MetaPageOption> pages;
+            try
+            {
+                pages = await ListarPagesUsandoTokenAsync(userToken);
+            }
+            catch (Exception ex)
+            {
+                // Nao pode derrubar a conexao: o token ja esta salvo e a tela
+                // ainda permite escolher a Page na mao.
+                _logger.LogWarning(ex, "Meta listar pages no callback falhou (continuando)");
+                return (0, null);
+            }
+
+            try
+            {
+                if (pages.Count == 1)
+                {
+                    var unica = await SelecionarPageAsync(pages[0].PageId);
+                    if (unica.Sucesso)
+                    {
+                        _logger.LogInformation(
+                            "Meta: Page {Nome} selecionada automaticamente (unica da conta).", unica.PageNome);
+                        return (1, unica.PageNome);
+                    }
+                    _logger.LogWarning("Meta: selecao automatica da Page unica falhou: {Msg}", unica.Mensagem);
+                    return (1, null);
+                }
+
+                if (pages.Count > 1)
+                    return (pages.Count, null);
+
+                var ultima = await _configRepository.GetValorAsync(KEY_PAGE_ID_ULTIMA);
+                if (string.IsNullOrWhiteSpace(ultima))
+                    return (0, null);
+
+                var reconexao = await SelecionarPageAsync(ultima);
+                if (!reconexao.Sucesso)
+                {
+                    // A Page pode ter saido do Business ou perdido o acesso.
+                    // A tela cai no caminho manual, informando o ID.
+                    _logger.LogWarning(
+                        "Meta: nao consegui reusar a Page {PageId} da conexao anterior: {Msg}",
+                        ultima, reconexao.Mensagem);
+                    return (0, null);
+                }
+
+                _logger.LogInformation(
+                    "Meta: Page {Nome} reconectada automaticamente — /me/accounts veio vazio (Page de Business).",
+                    reconexao.PageNome);
+                return (0, reconexao.PageNome);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Meta: selecao automatica de Page falhou (conexao segue valida).");
+                return (pages.Count, null);
+            }
         }
 
         public async Task<IReadOnlyList<MetaPageOption>> ListarPagesAsync()
@@ -241,6 +320,9 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             }
 
             await _configRepository.SetValorAsync(KEY_PAGE_ID, pageId);
+            // Lembranca para a proxima reconexao. Fica fora do DesconectarAsync
+            // de proposito — ver KEY_PAGE_ID_ULTIMA.
+            await _configRepository.SetValorAsync(KEY_PAGE_ID_ULTIMA, pageId);
             await _configRepository.SetValorAsync(KEY_PAGE_NOME, pageNome);
             await _configRepository.SetValorAsync(KEY_PAGE_TOKEN_CIFRADO, _tokenProtector.Protect(pageToken));
             await _configRepository.SetValorAsync(KEY_IG_BUSINESS_ID, igId ?? "");
@@ -286,6 +368,13 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
 
         public async Task DesconectarAsync()
         {
+            // Guarda qual era a Page antes de limpar tudo, para a proxima conexao
+            // se resolver sozinha. Vale tambem para quem ja estava conectado antes
+            // desta rotina existir: a lembranca nasce aqui, sem migracao.
+            var pageAtual = await _configRepository.GetValorAsync(KEY_PAGE_ID);
+            if (!string.IsNullOrWhiteSpace(pageAtual))
+                await _configRepository.SetValorAsync(KEY_PAGE_ID_ULTIMA, pageAtual);
+
             await _configRepository.SetValorAsync(KEY_USER_TOKEN_CIFRADO, "");
             await _configRepository.SetValorAsync(KEY_USER_TOKEN_EXPIRA, "");
             await _configRepository.SetValorAsync(KEY_PAGE_ID, "");

@@ -44,12 +44,13 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
         /// Configuravel (MetaSettings__Scopes) para ajustar sem reconstruir a imagem.
         /// </summary>
         ///
-        /// instagram_manage_contents e' o que permite APAGAR um post publicado.
-        /// Sem ele o DELETE volta "(#10) Insufficient permissions", que foi o que
-        /// aconteceu na primeira tentativa. Publicar e apagar sao permissoes
-        /// separadas na Meta.
+        /// instagram_manage_contents NAO entra aqui. E o escopo que a documentacao
+        /// exige pra apagar um post, mas a Meta recusa a autorizacao inteira com
+        /// "Invalid Scopes: instagram_manage_contents" — ele nao esta habilitado
+        /// para o tipo deste aplicativo. Pedir escopo que o app nao tem nao falha
+        /// so a exclusao: impede conectar.
         public string Scopes { get; set; } =
             "pages_show_list,pages_read_engagement,pages_manage_posts," +
-            "instagram_basic,instagram_content_publish,instagram_manage_contents";
+            "instagram_basic,instagram_content_publish";
     }
 }

@@ -120,12 +120,21 @@ namespace ConnectVeiculos.API.Controllers
             }
         }
 
-        private static string BuildCallbackHtml(bool sucesso, string? mensagemErro)
+        // Serve os dois callbacks de OAuth (Mercado Livre e Meta), por isso o nome
+        // da integracao e o detalhe de sucesso vem por parametro — antes a pagina
+        // dizia "Mercado Livre conectado!" tambem ao voltar do Facebook.
+        private static string BuildCallbackHtml(
+            bool sucesso,
+            string? mensagemErro,
+            string integracao = "Mercado Livre",
+            string? detalheSucesso = null)
         {
-            var titulo = sucesso ? "Mercado Livre conectado!" : "Falha na conexao";
+            var titulo = sucesso ? $"{integracao} conectado!" : "Falha na conexao";
             var cor = sucesso ? "#16a34a" : "#dc2626";
             var corpo = sucesso
-                ? "<p>A integracao foi configurada com sucesso. Voce pode fechar esta janela.</p>"
+                ? "<p>" + System.Net.WebUtility.HtmlEncode(
+                      detalheSucesso ?? "A integracao foi configurada com sucesso.")
+                  + " Voce pode fechar esta janela.</p>"
                 : $"<p>Nao foi possivel concluir a conexao.</p><pre style='background:#f3f4f6;padding:8px;border-radius:6px;overflow:auto;font-size:12px'>{System.Net.WebUtility.HtmlEncode(mensagemErro ?? "")}</pre>";
             return $@"<!doctype html><html lang='pt-br'><head><meta charset='utf-8'><title>{titulo}</title>
 <style>body{{font-family:system-ui,sans-serif;max-width:520px;margin:80px auto;padding:24px;text-align:center}}
@@ -847,7 +856,12 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
             {
                 var redirectUri = $"{Request.Scheme}://{Request.Host}/api/integracoes/meta/callback";
                 var result = await meta.ExchangeCodeAsync(code, state, redirectUri);
-                return Content(BuildCallbackHtml(result.Sucesso, result.Sucesso ? null : result.Mensagem), "text/html");
+                var detalhe = string.IsNullOrEmpty(result.PageSelecionadaAutomaticamente)
+                    ? null
+                    : $"Publicando na Page \"{result.PageSelecionadaAutomaticamente}\".";
+                return Content(
+                    BuildCallbackHtml(result.Sucesso, result.Sucesso ? null : result.Mensagem, "Facebook", detalhe),
+                    "text/html");
             }
             catch (OAuthStateException ex)
             {

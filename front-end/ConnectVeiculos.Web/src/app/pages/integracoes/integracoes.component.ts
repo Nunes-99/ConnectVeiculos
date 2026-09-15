@@ -292,20 +292,34 @@ _{{6}}_`;
     });
   }
 
+  // Lista vazia nao significa "sem Page": o /me/accounts do Facebook nao
+  // devolve Pages de Business. Estes dois campos sustentam o caminho manual
+  // por ID, que e a saida quando isso acontece.
+  metaPagesCarregadas = false;
+  metaPageIdManual = '';
+
   carregarMetaPages(): void {
     this.metaCarregando = true;
     this.integracaoService.listarMetaPages().subscribe({
       next: (pages) => {
         this.metaPages = pages;
+        this.metaPagesCarregadas = true;
         this.metaCarregando = false;
         if (pages.length === 0)
-          this.toast.info('Nenhuma Page encontrada nessa conta. Crie uma Facebook Page primeiro.');
+          this.toast.info('O Facebook não listou nenhuma Page — informe o ID dela abaixo.');
       },
       error: () => {
         this.metaCarregando = false;
         this.toast.error('Erro ao listar Pages do Facebook.');
       }
     });
+  }
+
+  usarMetaPageManual(): void {
+    const id = this.metaPageIdManual.trim();
+    if (!id) return;
+    this.metaPageIdSelecionada = id;
+    this.selecionarMetaPage();
   }
 
   selecionarMetaPage(): void {
@@ -337,6 +351,8 @@ _{{6}}_`;
         this.metaConnection = { userTokenDefinido: false, pageSelecionada: false, instagramConectado: false };
         this.metaPages = [];
         this.metaPageIdSelecionada = '';
+        this.metaPagesCarregadas = false;
+        this.metaPageIdManual = '';
         this.fbPageConfig = { pageConectada: false, autoPostHabilitado: false };
         this.igConfig = { instagramConectado: false, autoPostHabilitado: false };
       },

@@ -39,6 +39,13 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         public string? Mensagem { get; set; }
         public string? UserNome { get; set; }
         public int PagesEncontradas { get; set; }
+
+        /// <summary>
+        /// Nome da Page que o proprio callback ja deixou selecionada, ou null
+        /// quando a escolha ficou para o usuario (varias Pages, ou nenhuma
+        /// referencia anterior).
+        /// </summary>
+        public string? PageSelecionadaAutomaticamente { get; set; }
     }
 
     public class MetaPageOption

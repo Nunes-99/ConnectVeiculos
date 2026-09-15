@@ -63,7 +63,7 @@ services:
       # Escopos do OAuth: precisam casar com os casos de uso habilitados no app
       # da Meta. Pedir um que o app nao concede derruba a tela inteira com
       # "Invalid Scopes". Configuravel pra ajustar sem reconstruir a imagem.
-      - MetaSettings__Scopes=${META_SCOPES:-pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish,instagram_manage_contents}
+      - MetaSettings__Scopes=${META_SCOPES:-pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish}
       # IndexNow — protocolo aberto Bing/Yandex/DuckDuckGo crawl on-demand.
       # Key precisa bater com o arquivo /{key}.txt servido pelo frontend.
       - IndexNowSettings__Enabled=${INDEXNOW_ENABLED:-true}
