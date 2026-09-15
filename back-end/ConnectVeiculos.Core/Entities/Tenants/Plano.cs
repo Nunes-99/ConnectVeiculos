@@ -6,6 +6,14 @@ namespace ConnectVeiculos.Core.Entities.Tenants
     // capacidade (quantos veiculos, lojas, usuarios e leads/mes o tenant pode usar).
     public class Plano
     {
+        /// <summary>
+        /// Nome do plano atribuido no autocadastro. Serve para distinguir a loja
+        /// que so experimentou o sistema daquela que virou cliente — o preco nao
+        /// serve, porque o Enterprise e cadastrado com preco zero (valor sob
+        /// consulta) e mesmo assim e uma loja real.
+        /// </summary>
+        public const string NomeGratuito = "Free";
+
         public int PlaId { get; private set; }
         public string PlaNome { get; private set; } = string.Empty;
         public decimal PlaPreco { get; private set; }

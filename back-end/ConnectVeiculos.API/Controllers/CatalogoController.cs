@@ -20,6 +20,9 @@ namespace ConnectVeiculos.API.Controllers
     [Produces("application/json")]
     public class CatalogoController : ControllerBase
     {
+        // Loja-modelo do sistema, nao e de nenhum cliente: fica fora do sitemap.
+        private const string TenantModelo = "default";
+
         private readonly ICacheService _cacheService;
         private readonly ITenantContext _tenantContext;
 
@@ -130,14 +133,33 @@ namespace ConnectVeiculos.API.Controllers
         /// <summary>
         /// Lista os tenants publicos do SaaS — usado pelo sitemap.xml do SSR
         /// para gerar URLs de catalogo multi-tenant.
+        ///
+        /// "Publico" aqui e mais estreito que "ativo". Antes bastava estar ativo,
+        /// e o resultado era que todo autocadastro entrava no sitemap sozinho e
+        /// era oferecido ao Google como loja real do ConnectVeiculos — em
+        /// 2026-09-15 havia quatro tenants la, entre eles um cadastro feito com
+        /// e-mail temporario. Alem de nao ajudar ninguem, dilui a autoridade do
+        /// dominio entre catalogos vazios ou de teste.
+        ///
+        /// Entram apenas lojas ativas, fora do plano gratuito e diferentes de
+        /// "default", que e a loja-modelo do sistema. Quem tem catalogo vazio e
+        /// descartado depois, no proprio sitemap, que ja consulta o catalogo de
+        /// cada loja.
         /// </summary>
         [HttpGet("public-tenants")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ResponseCache(Duration = 300, Location = ResponseCacheLocation.Any)]
         public async Task<IActionResult> ListarTenantsPublicos([FromServices] ConnectVeiculos.Infrastructure.Database.EntityFramework.MasterDbContext master, CancellationToken ct)
         {
+            var planosPublicos = master.Planos
+                .Where(p => p.PlaNome != ConnectVeiculos.Core.Entities.Tenants.Plano.NomeGratuito)
+                .Select(p => p.PlaId);
+
             var tenants = await master.Tenants
-                .Where(t => t.TenStatus == ConnectVeiculos.Core.Entities.Tenants.TenantStatus.Active)
+                .Where(t => t.TenStatus == ConnectVeiculos.Core.Entities.Tenants.TenantStatus.Active
+                            && t.TenSlug != TenantModelo
+                            && t.TenPlaId != null
+                            && planosPublicos.Contains(t.TenPlaId.Value))
                 .Select(t => new { slug = t.TenSlug, nome = t.TenNome })
                 .ToListAsync(ct);
             return Ok(tenants);

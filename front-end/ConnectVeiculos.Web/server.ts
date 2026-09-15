@@ -111,9 +111,15 @@ export function app(): express.Express {
           if (!catResp.ok) continue;
           const data = await catResp.json();
 
+          // Catalogo vazio nao entra: uma pagina "nenhum veiculo encontrado"
+          // nao serve a quem chega pela busca, e ainda consome rastreamento
+          // que deveria ir para as lojas com estoque.
+          const veiculos = data.veiculos || [];
+          if (veiculos.length === 0) continue;
+
           xml += `  <url><loc>${siteBase}/catalogo/${tenant.slug}</loc><changefreq>daily</changefreq><priority>0.8</priority></url>\n`;
 
-          for (const v of data.veiculos || []) {
+          for (const v of veiculos) {
             xml += `  <url><loc>${siteBase}/catalogo/${tenant.slug}/veiculo/${v.veiId}</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>\n`;
           }
         } catch {
