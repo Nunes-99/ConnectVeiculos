@@ -141,13 +141,16 @@ um cliente da Diamante recebendo e-mail desse endereço estranha.
 - [x] Veículo vendido com `noindex` e aviso na tela
 - [ ] **Alguma página realmente indexada** — "descoberta" não é "indexada";
       conferir em Inspeção de URL e solicitar indexação
-- [ ] **Filtrar o sitemap para lojas públicas.** Em 2026-09-15 expunha quatro
-      tenants: `default` (6 URLs), `empresa-teste` (5), `teste` (1) e
-      `viorica7078` (1). O último é um cadastro novo feito com e-mail
-      temporário, ou seja **qualquer autocadastro entra no sitemap sozinho** e
-      é oferecido ao Google como loja real. Falta decidir o critério de "loja
-      pública" (sugerido: ativa + plano pago + ao menos um veículo, com o
-      `default` de fora por ser a loja-modelo)
+- [x] **Filtrar o sitemap para lojas públicas** — feito e validado em
+      2026-09-15. Expunha quatro tenants: `default` (6 URLs), `empresa-teste`
+      (5), `teste` (1) e `viorica7078` (1) — este último um autocadastro com
+      e-mail temporário, ou seja qualquer visitante entrava no sitemap sozinho e
+      era oferecido ao Google como loja real. Agora entram só lojas ativas, fora
+      do plano gratuito, diferentes de `default` (loja-modelo) e com ao menos um
+      veículo no catálogo. O plano gratuito é reconhecido pelo nome, não pelo
+      preço: o Enterprise custa zero por ser valor sob consulta, e filtrar por
+      preço tirava uma loja real do ar. Resultado: 14 URLs → 7, só
+      `empresa-teste`
 - [!] Google Merchant — refresh token revogado (`invalid_grant`)
 - [!] Google Vehicle Ads — não existe no Brasil
 - [ ] Google Ads — sem integração no sistema; é link externo, nada a testar
