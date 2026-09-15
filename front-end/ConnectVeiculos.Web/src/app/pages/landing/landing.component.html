@@ -266,6 +266,14 @@
         <a href="#planos">Planos</a>
         <a href="#faq">FAQ</a>
       </div>
+      @if (lojasPublicas().length) {
+        <div class="footer-col">
+          <h4>Lojas</h4>
+          @for (loja of lojasPublicas(); track loja.slug) {
+            <a [routerLink]="['/catalogo', loja.slug]">{{ loja.nome }}</a>
+          }
+        </div>
+      }
       <div class="footer-col">
         <h4>Contato</h4>
         <a href="mailto:desenvolvimento@acsn.com.br">desenvolvimento&#64;acsn.com.br</a>

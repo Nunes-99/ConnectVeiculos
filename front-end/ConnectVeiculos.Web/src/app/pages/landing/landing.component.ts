@@ -1,7 +1,7 @@
 import { Component, OnInit, afterNextRender, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
-import { AuthService } from '../../core/services';
+import { AuthService, CatalogoService } from '../../core/services';
 import { SeoService } from '../../core/services/seo.service';
 
 @Component({
@@ -13,8 +13,23 @@ import { SeoService } from '../../core/services/seo.service';
 })
 export class LandingComponent implements OnInit {
   private authService = inject(AuthService);
+  private catalogoService = inject(CatalogoService);
   private seoService = inject(SeoService);
   private router = inject(Router);
+
+  /**
+   * Lojas publicas, linkadas no rodape.
+   *
+   * Nao e vitrine: e o unico caminho de rastreio ate os catalogos. Ate
+   * 2026-09-15 nenhuma pagina do site apontava para /catalogo — o Search
+   * Console mostrava as URLs como "Detetada, atualmente nao indexada", com
+   * "Pagina de referencia: nada detetado" e nenhum rastreio. O sitemap diz ao
+   * Google que a URL existe; o link e o que diz que ela importa.
+   *
+   * A chamada acontece no ngOnInit para o SSR incluir os links no HTML: um
+   * link que so aparece depois do JavaScript nao cumpre esse papel.
+   */
+  lojasPublicas = signal<{ slug: string; nome: string }[]>([]);
 
   // Durante SSR e a primeira renderizacao do client (hidratacao),
   // o template sempre renderiza como anonimo. So depois que o Angular
@@ -189,6 +204,13 @@ export class LandingComponent implements OnInit {
 
   ngOnInit(): void {
     this.seoService.setLandingPage();
+
+    this.catalogoService.listarLojasPublicas().subscribe({
+      next: lojas => this.lojasPublicas.set(lojas),
+      // Sem lojas a secao nao aparece. A landing nao pode quebrar porque a
+      // listagem falhou.
+      error: () => this.lojasPublicas.set([])
+    });
   }
 
   toggleFaq(index: number): void {

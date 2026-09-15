@@ -11,6 +11,15 @@ export class CatalogoService {
   private http = inject(HttpClient);
   private baseUrl = `${environment.apiUrl}/catalogo`;
 
+  /**
+   * Lojas que o sitemap considera publicas. E a mesma fonte, de proposito: o
+   * que o Google recebe no sitemap e o que a landing linka tem de ser a mesma
+   * lista, senao uma das duas mente.
+   */
+  listarLojasPublicas(): Observable<{ slug: string; nome: string }[]> {
+    return this.http.get<{ slug: string; nome: string }[]>(`${this.baseUrl}/public-tenants`);
+  }
+
   getCatalogo(
     marca?: string,
     anoMin?: number,
