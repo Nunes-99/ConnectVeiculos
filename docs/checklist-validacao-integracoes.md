@@ -173,8 +173,13 @@ um cliente da Diamante recebendo e-mail desse endereço estranha.
       Mercado Livre, post no Facebook com foto e carrossel no Instagram
 - [x] Trava "Salvando…" — vista funcionando no cadastro de veículo (formulário
       acinzentado e botão com spinner durante o upload das fotos)
-- [ ] **Importar planilha e publicar** — implementado em 2026-09-16, falta
-      exercitar em produção. A importação continua não publicando sozinha: ao
+- [x] **Importar planilha e publicar** — validado em produção em 2026-09-16,
+      nos quatro caminhos: placa fora do padrão recusada com a mensagem dos
+      formatos aceitos; importação sem sucesso não faz a pergunta; importação
+      com sucesso pergunta com a contagem certa; e reimportar a mesma planilha
+      resulta em 0 importados, 0 erros e nenhuma pergunta. Publicando os dois
+      importados (ambos sem foto), o log registrou "nao publicado por nao ter
+      foto" para cada um e "0 veiculo(s) publicado(s)". A importação continua não publicando sozinha: ao
       terminar, a tela pergunta se o operador quer publicar os importados. Se
       sim, vão para Mercado Livre, catálogo do Facebook, post da Página e
       Google — **sem Instagram**, que aceita 25 posts/24h e seria estourado por
