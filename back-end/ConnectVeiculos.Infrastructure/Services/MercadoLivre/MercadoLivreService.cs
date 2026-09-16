@@ -132,10 +132,16 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
              // explica o resultado sem dizer nada sobre escopos.
              var scope = Uri.EscapeDataString("offline_access read write");
 
-             return $"{AuthUrl}?response_type=code&client_id={_settings.AppId}" +
-                    $"&redirect_uri={Uri.EscapeDataString(_settings.RedirectUri)}" +
-                    $"&scope={scope}" +
-                    $"&state={Uri.EscapeDataString(state)}";
+             var url = $"{AuthUrl}?response_type=code&client_id={_settings.AppId}" +
+                       $"&redirect_uri={Uri.EscapeDataString(_settings.RedirectUri)}" +
+                       $"&scope={scope}" +
+                       $"&state={Uri.EscapeDataString(state)}";
+
+             // A URL nao carrega segredo — client_id e publico e o state e opaco.
+             // Registrada porque o suporte do ML pede o request de /authorization
+             // para diagnosticar, e reconstruir de memoria e' como se erra.
+             _logger.LogInformation("ML URL de autorizacao: {Url}", url);
+             return url;
         }
 
         public async Task HandleCallbackAsync(string code, string? state)
@@ -195,6 +201,32 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
             catch (Exception ex)
             {
                 _logger.LogDebug(ex, "Nao consegui descrever a resposta do /oauth/token (ignorado).");
+            }
+
+            // Grants do aplicativo: e a fonte que o proprio ML indica para saber
+            // quais escopos ficaram concedidos, independente do que veio na
+            // resposta do token. Puramente diagnostico — falhar aqui nao pode
+            // atrapalhar a conexao, que ja esta feita a esta altura.
+            try
+            {
+                if (result.TryGetProperty("access_token", out var tokenParaGrants))
+                {
+                    var req = new HttpRequestMessage(HttpMethod.Get,
+                        $"/applications/{_settings.AppId}/grants");
+                    req.Headers.Authorization =
+                        new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenParaGrants.GetString());
+
+                    var grantsResp = await _httpClient.SendAsync(req);
+                    var grantsBody = await grantsResp.Content.ReadAsStringAsync();
+                    _logger.LogInformation("ML grants (HTTP {Status}): {Body}",
+                        (int)grantsResp.StatusCode, grantsBody);
+                    await LogAsync(NivelIntegracaoLog.Info, "oauth.callback.grants",
+                        $"HTTP {(int)grantsResp.StatusCode}: {grantsBody}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Nao consegui consultar os grants do app no ML (ignorado).");
             }
 
             // access_token e sempre obrigatorio — sem ele nada funciona.
