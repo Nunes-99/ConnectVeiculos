@@ -313,7 +313,11 @@ namespace ConnectVeiculos.API.Controllers
                     RefreshToken = newRefresh.RefToken,
                     RefreshExpiration = newRefresh.RefExpiraEm,
                     TenantSlug = tenant.TenSlug,
-                    TenantNome = tenant.TenNome
+                    TenantNome = tenant.TenNome,
+                    // Renovar o token nao pode apagar a exigencia de trocar a
+                    // senha: sem isto, bastaria esperar a renovacao para o
+                    // aviso sumir.
+                    TrocarSenhaObrigatoria = usuario.UsuTrocarSenha
                 });
             }
 
@@ -500,7 +504,8 @@ namespace ConnectVeiculos.API.Controllers
                     RefreshToken = refresh.RefToken,
                     RefreshExpiration = refresh.RefExpiraEm,
                     TenantSlug = tenant.TenSlug,
-                    TenantNome = tenant.TenNome
+                    TenantNome = tenant.TenNome,
+                    TrocarSenhaObrigatoria = usuario.UsuTrocarSenha
                 });
             }
 

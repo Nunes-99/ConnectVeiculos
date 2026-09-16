@@ -29,11 +29,15 @@ export class AuthService extends ApiService {
 
   currentUser = signal<Usuario | null>(null);
 
+  private readonly TROCAR_SENHA_KEY = 'connectveiculos_trocar_senha';
+
   /**
    * Ligado quando a senha em uso foi gerada pelo sistema e enviada por e-mail.
-   * Fica em memoria de proposito: some ao recarregar, e o proximo login
-   * pergunta ao servidor de novo — a resposta dele e que manda, nao o
-   * localStorage, que o usuario pode editar.
+   *
+   * Gravado junto da sessao porque recarregar a pagina nao pode servir de
+   * atalho para pular a troca: o estado so vive em memoria enquanto a aba
+   * existe, e um F5 zerava a exigencia. Quem manda continua sendo a resposta do
+   * servidor — todo login e toda renovacao de token a reescrevem.
    */
   precisaTrocarSenha = signal(false);
   isAuthenticated = signal<boolean>(false);
@@ -53,6 +57,9 @@ export class AuthService extends ApiService {
       const user = JSON.parse(storedUser) as Usuario;
       this.currentUser.set(user);
       this.isAuthenticated.set(true);
+      // Restaura tambem a exigencia de troca: recarregar a pagina nao pode
+      // servir de atalho para pular a tela.
+      this.precisaTrocarSenha.set(localStorage.getItem(this.TROCAR_SENHA_KEY) === '1');
     }
   }
 
@@ -75,7 +82,7 @@ export class AuthService extends ApiService {
 
         this.currentUser.set(user);
         this.isAuthenticated.set(true);
-        this.precisaTrocarSenha.set(response.trocarSenhaObrigatoria === true);
+        this.definirTrocaObrigatoria(response.trocarSenhaObrigatoria === true);
         if (isPlatformBrowser(this.platformId)) {
           localStorage.setItem(this.USER_STORAGE_KEY, JSON.stringify(user));
           localStorage.setItem(this.TOKEN_STORAGE_KEY, response.token);
@@ -151,10 +158,14 @@ export class AuthService extends ApiService {
 
     this.currentUser.set(null);
     this.isAuthenticated.set(false);
+    this.precisaTrocarSenha.set(false);
     if (isPlatformBrowser(this.platformId)) {
       localStorage.removeItem(this.USER_STORAGE_KEY);
       localStorage.removeItem(this.TOKEN_STORAGE_KEY);
       localStorage.removeItem(this.REFRESH_TOKEN_KEY);
+      // Some junto com a sessao: a marca pertence a ela, e ficar para tras
+      // abriria o modal para o proximo usuario que entrasse neste navegador.
+      localStorage.removeItem(this.TROCAR_SENHA_KEY);
       // Preserva TENANT_SLUG_KEY de proposito: o navegador fica "pinado" no
       // tenant do usuario para que /login funcione mesmo apos logout.
     }
@@ -219,7 +230,17 @@ export class AuthService extends ApiService {
 
   /** Chamado quando a troca conclui: a exigencia deixa de valer. */
   concluirTrocaObrigatoria(): void {
-    this.precisaTrocarSenha.set(false);
+    this.definirTrocaObrigatoria(false);
+  }
+
+  private definirTrocaObrigatoria(valor: boolean): void {
+    this.precisaTrocarSenha.set(valor);
+    if (!isPlatformBrowser(this.platformId)) return;
+    if (valor) {
+      localStorage.setItem(this.TROCAR_SENHA_KEY, '1');
+    } else {
+      localStorage.removeItem(this.TROCAR_SENHA_KEY);
+    }
   }
 
   trocarSenha(senhaAtual: string, novaSenha: string, confirmarSenha: string): Observable<{ mensagem: string }> {
