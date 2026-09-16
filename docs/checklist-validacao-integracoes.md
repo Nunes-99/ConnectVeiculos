@@ -173,9 +173,14 @@ um cliente da Diamante recebendo e-mail desse endereço estranha.
       Mercado Livre, post no Facebook com foto e carrossel no Instagram
 - [x] Trava "Salvando…" — vista funcionando no cadastro de veículo (formulário
       acinzentado e botão com spinner durante o upload das fotos)
-- [ ] Importar planilha — hoje não publica em lugar nenhum; decisão pendente se
-      deve publicar em ML e catálogos (Instagram não, pelo limite de 25
-      posts/24h)
+- [ ] **Importar planilha e publicar** — implementado em 2026-09-16, falta
+      exercitar em produção. A importação continua não publicando sozinha: ao
+      terminar, a tela pergunta se o operador quer publicar os importados. Se
+      sim, vão para Mercado Livre, catálogo do Facebook, post da Página e
+      Google — **sem Instagram**, que aceita 25 posts/24h e seria estourado por
+      uma planilha de estoque. Veículo sem foto é pulado. Repetido não entra:
+      a importação já descarta duplicado por placa+cor+modelo, e as rotinas de
+      publicação recusam veículo que já tem anúncio ativo
 
 ## 7. Infraestrutura
 

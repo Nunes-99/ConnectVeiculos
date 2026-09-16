@@ -239,6 +239,48 @@ namespace ConnectVeiculos.Infrastructure.Services.Publicacoes
         /// Espera as fotos aparecerem e o upload estabilizar. Devolve quantas
         /// fotos havia, ou 0 se nenhuma chegou dentro da janela.
         /// </summary>
+        public async Task<int> PublicarVeiculosImportadosAsync(IEnumerable<int> veiculoIds)
+        {
+            var publicados = 0;
+
+            foreach (var veiculoId in veiculoIds.Distinct())
+            {
+                try
+                {
+                    var veiculo = await _veiculoRepository.GetByIdAsync(veiculoId);
+                    if (veiculo == null || veiculo.VeiSts != "D")
+                    {
+                        _logger.LogInformation(
+                            "Importacao: veiculo {VeiculoId} nao publicado (inexistente ou fora de disponivel).", veiculoId);
+                        continue;
+                    }
+
+                    var fotos = (await _imagemRepository.GetByVeiculoIdAsync(veiculoId)).Count(i => i.ImgSts);
+                    if (fotos == 0)
+                    {
+                        _logger.LogInformation(
+                            "Importacao: veiculo {VeiculoId} nao publicado por nao ter foto.", veiculoId);
+                        continue;
+                    }
+
+                    await PublicarMercadoLivreAsync(veiculoId);
+                    await PublicarFacebookCatalogoAsync(veiculoId);
+                    await PublicarFacebookPageAsync(veiculoId);
+                    await PublicarGoogleAsync(veiculoId);
+                    publicados++;
+                }
+                catch (Exception ex)
+                {
+                    // Um veiculo com problema nao pode interromper o lote.
+                    _logger.LogError(ex, "Importacao: falha ao publicar o veiculo {VeiculoId}.", veiculoId);
+                }
+            }
+
+            _logger.LogInformation(
+                "Importacao: {Publicados} veiculo(s) publicado(s) nas plataformas externas.", publicados);
+            return publicados;
+        }
+
         private async Task<int> EsperarFotosAsync(int veiculoId)
         {
             var anterior = -1;

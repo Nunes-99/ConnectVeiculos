@@ -560,6 +560,20 @@
   </div>
 }
 
+<!-- A importacao nao publica nada sozinha: pergunta depois de mostrar o
+     resultado, para o operador decidir sabendo o que entrou. Veiculo repetido
+     nem chega aqui — ele nao e criado, entao nao ha o que republicar. -->
+<app-confirm-modal
+  [show]="showPublicarImportados"
+  titulo="Publicar os veículos importados?"
+  [mensagem]="'Foram importados ' + totalImportadosParaPublicar + ' veículo(s). Deseja publicá-los agora no Mercado Livre, no catálogo do Facebook, no post da Página e no Google? Veículos sem foto são ignorados, e o Instagram fica de fora para não estourar o limite de 25 posts por dia.'"
+  textoBotaoConfirmar="Sim, publicar"
+  textoBotaoCancelar="Não publicar"
+  tipo="warning"
+  (confirmar)="confirmarPublicarImportados()"
+  (cancelar)="cancelarPublicarImportados()">
+</app-confirm-modal>
+
 <app-confirm-modal
   [show]="showConfirmModal"
   titulo="Excluir Veículo"

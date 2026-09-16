@@ -386,6 +386,15 @@ export class VeiculosComponent implements OnInit {
     else this.toast.error(result.mensagem);
   }
 
+  /**
+   * Ids criados na importacao em andamento. Duplicados nao entram aqui: eles
+   * sequer chegam a ser criados, entao nao ha o que republicar — e o backend
+   * ainda recusa publicar de novo um veiculo que ja tem anuncio ativo.
+   */
+  private importadosIds: number[] = [];
+  showPublicarImportados = false;
+  publicandoImportados = false;
+
   private loadData(): void {
     this.loading = true;
     this.veiculoService.getAll().subscribe({
@@ -1028,6 +1037,7 @@ export class VeiculosComponent implements OnInit {
 
     this.importando = true;
     this.importResult = null;
+    this.importadosIds = [];
 
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -1178,8 +1188,12 @@ export class VeiculosComponent implements OnInit {
       veiculosExistentes.add(chave);
 
       this.veiculoService.create(veiculo).subscribe({
-        next: () => {
+        next: (criado: any) => {
           resultado.sucesso++;
+          // O POST devolve { id }. Sem o id nao da pra oferecer a publicacao,
+          // entao quem nao vier identificado fica de fora da pergunta.
+          const novoId = Number(criado?.id ?? criado?.veiId);
+          if (novoId > 0) this.importadosIds.push(novoId);
           this.finalizarImportacao(resultado, --pendentes);
         },
         error: (err) => {
@@ -1220,6 +1234,42 @@ export class VeiculosComponent implements OnInit {
   fecharResultadoImportacao(): void {
     this.showImportResult = false;
     this.importResult = null;
+
+    // A pergunta vem depois do resultado, nao junto: primeiro o operador ve o
+    // que entrou e o que falhou, e so entao decide sobre a publicacao.
+    if (this.importadosIds.length > 0) {
+      this.showPublicarImportados = true;
+    }
+  }
+
+  get totalImportadosParaPublicar(): number {
+    return this.importadosIds.length;
+  }
+
+  confirmarPublicarImportados(): void {
+    if (this.publicandoImportados) return;
+    this.publicandoImportados = true;
+
+    this.veiculoService.publicarImportados(this.importadosIds).subscribe({
+      next: (res) => {
+        this.toast.success(res?.mensagem ?? 'Publicação iniciada.');
+        this.publicandoImportados = false;
+        this.showPublicarImportados = false;
+        this.importadosIds = [];
+      },
+      error: () => {
+        this.toast.error('Não foi possível iniciar a publicação. Os veículos foram importados normalmente.');
+        this.publicandoImportados = false;
+        this.showPublicarImportados = false;
+        this.importadosIds = [];
+      }
+    });
+  }
+
+  cancelarPublicarImportados(): void {
+    if (this.publicandoImportados) return;
+    this.showPublicarImportados = false;
+    this.importadosIds = [];
   }
 
   toggleSocialStatus(veiculoId: number, rede: string, currentValue: boolean): void {

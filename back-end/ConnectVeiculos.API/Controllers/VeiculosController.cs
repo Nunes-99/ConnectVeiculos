@@ -202,6 +202,41 @@ namespace ConnectVeiculos.API.Controllers
             return Ok(resultado);
         }
 
+        /// <summary>
+        /// Publica nas plataformas externas veiculos que acabaram de ser
+        /// importados. Endpoint separado de proposito: a importacao nao publica
+        /// nada sozinha — a tela pergunta ao operador depois, e so chama aqui se
+        /// ele disser que sim.
+        ///
+        /// Responde na hora e publica em segundo plano: o lote fala com Mercado
+        /// Livre, Facebook e Google, e segurar a tela ate o fim renderia timeout.
+        /// </summary>
+        [HttpPost("importar/publicar")]
+        [ProducesResponseType(StatusCodes.Status202Accepted)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public IActionResult PublicarImportados(
+            [FromServices] ConnectVeiculos.Core.Interfaces.Tenancy.ITenantBackgroundRunner backgroundRunner,
+            [FromBody] List<int> veiculoIds)
+        {
+            if (veiculoIds == null || veiculoIds.Count == 0)
+                return BadRequest("Informe ao menos um veiculo.");
+
+            var ids = veiculoIds.Where(id => id > 0).Distinct().ToList();
+            if (ids.Count == 0)
+                return BadRequest("Nenhum id de veiculo valido.");
+
+            backgroundRunner.Enqueue<ConnectVeiculos.Core.Interfaces.Services.IPublicacaoAutomaticaService>(
+                s => s.PublicarVeiculosImportadosAsync(ids),
+                $"publicar {ids.Count} veiculo(s) importado(s)");
+
+            return Accepted(new
+            {
+                mensagem = $"Publicacao de {ids.Count} veiculo(s) iniciada. "
+                         + "Veiculos sem foto sao ignorados.",
+                total = ids.Count
+            });
+        }
+
         #endregion
 
         #region PUT
