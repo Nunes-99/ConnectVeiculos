@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, EventEmitter, HostListener, inject, Input, OnDestroy, Output, PLATFORM_ID, ViewChild, signal, effect } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, EventEmitter, HostListener, inject, Input, OnDestroy, Output, PLATFORM_ID, ViewChild, signal, computed } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
@@ -90,8 +90,6 @@ export class SidebarComponent implements AfterViewInit, OnDestroy {
   linkCopiado = false;
   catalogoExpanded = false;
 
-  mostrarTrocarSenha = signal(false);
-
   /**
    * Troca exigida pelo servidor: a senha em uso foi gerada pelo sistema e
    * enviada por e-mail, entao um terceiro a conhece. Enquanto durar, o modal
@@ -99,6 +97,18 @@ export class SidebarComponent implements AfterViewInit, OnDestroy {
    * voluntaria, so muda o texto e a saida.
    */
   trocaObrigatoria = this.authService.precisaTrocarSenha;
+
+  /** Aberto pelo botao do rodape. */
+  private trocaManual = signal(false);
+
+  /**
+   * Derivado, e nao um signal que alguem liga: a primeira versao abria o modal
+   * de dentro de um effect(), e escrever signal dentro de effect e proibido
+   * (NG0600). A excecao era engolida em producao e o modal simplesmente nunca
+   * aparecia, com o banco dizendo que a troca era exigida. Como computed, a
+   * exigencia do servidor abre a tela sem ninguem precisar escrever nada.
+   */
+  mostrarTrocarSenha = computed(() => this.trocaManual() || this.trocaObrigatoria());
   salvandoSenha = signal(false);
   mostrarConfirmaTrocaEmpresa = signal(false);
   mostrarSenhaAtual = false;
@@ -195,14 +205,6 @@ export class SidebarComponent implements AfterViewInit, OnDestroy {
       next: (lojas) => this.lojas = lojas
     });
     this.carregarDocsVencendo();
-
-    // Abre a troca de senha sozinho assim que o login sinaliza a exigencia,
-    // venha de onde vier a navegacao.
-    effect(() => {
-      if (this.trocaObrigatoria() && !this.mostrarTrocarSenha()) {
-        this.abrirTrocarSenha();
-      }
-    });
   }
 
   private platformId = inject(PLATFORM_ID);
@@ -246,12 +248,12 @@ export class SidebarComponent implements AfterViewInit, OnDestroy {
     this.mostrarSenhaAtual = false;
     this.mostrarNovaSenha = false;
     this.mostrarConfirmarSenha = false;
-    this.mostrarTrocarSenha.set(true);
+    this.trocaManual.set(true);
   }
 
   fecharTrocarSenha(): void {
     if (this.salvandoSenha() || this.trocaObrigatoria()) return;
-    this.mostrarTrocarSenha.set(false);
+    this.trocaManual.set(false);
     this.formSenha.reset({ senhaAtual: '', novaSenha: '', confirmarSenha: '' });
   }
 
@@ -267,7 +269,7 @@ export class SidebarComponent implements AfterViewInit, OnDestroy {
         this.toast.success(res?.mensagem ?? 'Senha alterada. Será exigida no próximo login.');
         this.authService.concluirTrocaObrigatoria();
         this.salvandoSenha.set(false);
-        this.mostrarTrocarSenha.set(false);
+        this.trocaManual.set(false);
         this.formSenha.reset({ senhaAtual: '', novaSenha: '', confirmarSenha: '' });
       },
       error: (err) => {
