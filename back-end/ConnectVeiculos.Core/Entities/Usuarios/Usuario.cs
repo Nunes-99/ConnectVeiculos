@@ -13,6 +13,14 @@ namespace ConnectVeiculos.Core.Entities.Usuarios
         public string UsuFuncao { get; private set; }
         public bool UsuSts { get; private set; }
 
+        /// <summary>
+        /// Marca que a senha atual foi gerada pelo sistema e mandada por e-mail,
+        /// entao um terceiro a conhece: ela vale para o primeiro acesso e nada
+        /// mais. Enquanto estiver ligado, o sistema exige a troca antes de
+        /// liberar qualquer tela.
+        /// </summary>
+        public bool UsuTrocarSenha { get; private set; }
+
         public Usuario() { }
 
         public Usuario(int usuId, string usuNome, string usuCPF, string usuRG,
@@ -65,6 +73,17 @@ namespace ConnectVeiculos.Core.Entities.Usuarios
                 throw new UsuarioException("A nova senha é obrigatória.");
 
             UsuSenha = novaSenha;
+            // Senha escolhida pelo proprio usuario: a exigencia deixa de existir.
+            UsuTrocarSenha = false;
+        }
+
+        /// <summary>
+        /// Usado no cadastro, quando a senha e gerada pelo sistema e enviada por
+        /// e-mail.
+        /// </summary>
+        public void ExigirTrocaDeSenha()
+        {
+            UsuTrocarSenha = true;
         }
     }
 }

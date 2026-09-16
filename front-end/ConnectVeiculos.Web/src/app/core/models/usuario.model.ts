@@ -14,6 +14,8 @@ export interface Usuario {
 }
 
 export interface LoginResponse {
+  /** Senha gerada pelo sistema: o app exige a troca antes de liberar as telas. */
+  trocarSenhaObrigatoria?: boolean;
   usuId: number;
   usuNome: string;
   usuEmail: string;

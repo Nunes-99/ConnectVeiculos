@@ -84,6 +84,7 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
                 entity.Property(e => e.UsuEmail).HasMaxLength(255).IsRequired();
                 entity.Property(e => e.UsuSenha).HasMaxLength(255).IsRequired();
                 entity.Property(e => e.UsuFuncao).HasMaxLength(100);
+                entity.Property(e => e.UsuTrocarSenha);
             });
 
             // Loja

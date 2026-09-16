@@ -222,11 +222,6 @@ export class UsuariosComponent implements OnInit {
       return;
     }
 
-    // Validacao adicional de senha para novo usuario
-    if (!this.editMode && (!this.formData.usuSenha || this.formData.usuSenha.length < 6)) {
-      return;
-    }
-
     // Validacao de lojas
     if (this.lojasSelecionadas.size === 0) {
       return;
@@ -289,17 +284,12 @@ export class UsuariosComponent implements OnInit {
     return this.formSubmitted && (!value || value === 0);
   }
 
-  isSenhaInvalid(): boolean {
-    if (this.editMode) return false;
-    return this.formSubmitted && (!this.formData.usuSenha || this.formData.usuSenha.length < 6);
-  }
-
   isFormValid(): boolean {
     const basicValid = this.usuarioForm?.valid ?? false;
     const lojaValid = this.formData.r_LojId > 0;
     const acessoValid = this.formData.r_AcsId > 0;
-    const senhaValid = this.editMode || (this.formData.usuSenha?.length >= 6);
     const cpfValid = !this.formData.usuCPF || DocumentoValidator.isValidCPF(this.formData.usuCPF);
-    return basicValid && lojaValid && acessoValid && senhaValid && cpfValid;
+    // Senha saiu da conta: quem gera e o servidor.
+    return basicValid && lojaValid && acessoValid && cpfValid;
   }
 }

@@ -106,16 +106,27 @@
   <div class="modal-overlay">
     <div class="modal" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h2>Trocar senha</h2>
-        <button class="btn-close" (click)="fecharTrocarSenha()" [disabled]="salvandoSenha()">
-          <span class="material-icons">close</span>
-        </button>
+        <h2>{{ trocaObrigatoria() ? 'Escolha sua senha' : 'Trocar senha' }}</h2>
+        <!-- Sem botao de fechar quando a troca e exigida: a senha atual chegou
+             por e-mail e nao serve para uso continuado. -->
+        @if (!trocaObrigatoria()) {
+          <button class="btn-close" (click)="fecharTrocarSenha()" [disabled]="salvandoSenha()">
+            <span class="material-icons">close</span>
+          </button>
+        }
       </div>
       <form [formGroup]="formSenha" (ngSubmit)="salvarTrocarSenha()">
         <div class="modal-body">
-          <p style="margin: 0 0 16px; font-size: 14px; opacity: 0.75;">
-            Informe a senha atual e escolha uma nova. A nova senha será exigida no próximo login.
-          </p>
+          @if (trocaObrigatoria()) {
+            <p style="margin: 0 0 16px; font-size: 14px; opacity: 0.75;">
+              A senha que você recebeu por e-mail vale só para este primeiro acesso.
+              Informe-a abaixo e escolha a senha que passará a usar.
+            </p>
+          } @else {
+            <p style="margin: 0 0 16px; font-size: 14px; opacity: 0.75;">
+              Informe a senha atual e escolha uma nova. A nova senha será exigida no próximo login.
+            </p>
+          }
 
           <div class="form-group">
             <label class="required">Senha atual</label>

@@ -126,11 +126,14 @@ um cliente da Diamante recebendo e-mail desse endereço estranha.
 - [x] Novo veículo similar para quem favoritou — validado em 2026-09-15 (Jeep
       Renegade a R$ 120.000 disparou para quem favoritou o Compass a R$ 112.000;
       regra é mesma marca, mesma categoria e preço dentro de ±20%)
-- [!] Novo usuário (senha temporária) — **o e-mail nunca é enviado**.
-      `SendNovoUsuarioAsync` está na interface e implementado, com template, mas
-      nenhum lugar do sistema o chama. E a tela pede a senha ao administrador,
-      enquanto o template pressupõe senha gerada pelo sistema. São dois desenhos
-      diferentes; falta decidir qual vale antes de testar
+- [ ] **Novo usuário (senha temporária)** — implementado em 2026-09-16, falta
+      exercitar em produção. Os dois desenhos que se contradiziam foram
+      resolvidos a favor da senha gerada pelo sistema: o formulário não pede
+      mais senha, `CadastrarUsuarioUseCase` gera uma temporária de 12
+      caracteres, grava `UsuTrocarSenha` e enfileira o e-mail depois do commit.
+      No primeiro login o modal de troca abre sozinho e não fecha até a pessoa
+      escolher a própria senha. Qualquer troca de senha (tela ou recuperação)
+      zera a exigência no mesmo UPDATE
 - [x] Acentuação e visual padronizados em todos os templates
 
 ## 5. Google

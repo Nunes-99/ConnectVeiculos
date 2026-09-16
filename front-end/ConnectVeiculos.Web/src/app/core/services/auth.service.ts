@@ -28,6 +28,14 @@ export class AuthService extends ApiService {
   private platformId = inject(PLATFORM_ID);
 
   currentUser = signal<Usuario | null>(null);
+
+  /**
+   * Ligado quando a senha em uso foi gerada pelo sistema e enviada por e-mail.
+   * Fica em memoria de proposito: some ao recarregar, e o proximo login
+   * pergunta ao servidor de novo — a resposta dele e que manda, nao o
+   * localStorage, que o usuario pode editar.
+   */
+  precisaTrocarSenha = signal(false);
   isAuthenticated = signal<boolean>(false);
 
   constructor(http: HttpClient, private router: Router) {
@@ -67,6 +75,7 @@ export class AuthService extends ApiService {
 
         this.currentUser.set(user);
         this.isAuthenticated.set(true);
+        this.precisaTrocarSenha.set(response.trocarSenhaObrigatoria === true);
         if (isPlatformBrowser(this.platformId)) {
           localStorage.setItem(this.USER_STORAGE_KEY, JSON.stringify(user));
           localStorage.setItem(this.TOKEN_STORAGE_KEY, response.token);
@@ -206,6 +215,11 @@ export class AuthService extends ApiService {
       novaSenha,
       confirmarSenha
     });
+  }
+
+  /** Chamado quando a troca conclui: a exigencia deixa de valer. */
+  concluirTrocaObrigatoria(): void {
+    this.precisaTrocarSenha.set(false);
   }
 
   trocarSenha(senhaAtual: string, novaSenha: string, confirmarSenha: string): Observable<{ mensagem: string }> {

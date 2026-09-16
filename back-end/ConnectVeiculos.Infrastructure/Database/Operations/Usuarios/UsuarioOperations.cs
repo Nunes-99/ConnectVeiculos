@@ -77,7 +77,11 @@ namespace ConnectVeiculos.Infrastructure.Database.Operations.Usuarios
 
         public async Task AtualizarSenhaAsync(int usuarioId, string senhaHash)
         {
-            var sql = @"UPDATE Usuario SET UsuSenha = @Senha WHERE UsuId = @Id";
+            // Zera UsuTrocarSenha no mesmo UPDATE: qualquer caminho que troque a
+            // senha (tela de troca ou recuperacao por e-mail) significa que o
+            // usuario escolheu a propria senha. Em comandos separados, uma falha
+            // entre os dois deixaria o usuario preso na tela de troca.
+            var sql = @"UPDATE Usuario SET UsuSenha = @Senha, UsuTrocarSenha = 0 WHERE UsuId = @Id";
             await _dbSession.Connection.ExecuteAsync(sql, new { Id = usuarioId, Senha = senhaHash }, _dbSession.Transaction);
         }
     }

@@ -156,19 +156,18 @@
                 <span class="field-error">{{ emailMensagem }}</span>
               }
             </div>
+            <!-- Sem campo de senha de proposito: quem cadastra nao precisa e
+                 nao deve conhecer a senha de outra pessoa. O sistema gera uma
+                 temporaria, manda por e-mail e exige a troca no primeiro
+                 acesso. -->
             <div class="form-group">
-              <label [class.required]="!editMode">Senha</label>
-              <input type="password"
-                     [(ngModel)]="formData.usuSenha"
-                     name="usuSenha"
-                     maxlength="100"
-                     autocomplete="new-password"
-                     [class.invalid]="isSenhaInvalid()"
-                     [readonly]="editMode"
-                     [class.disabled]="editMode"
-                     [placeholder]="editMode ? '••••••••' : 'Senha'" />
-              @if (isSenhaInvalid()) {
-                <span class="field-error">Senha deve ter no mínimo 6 caracteres</span>
+              @if (!editMode) {
+                <label>Senha</label>
+                <p class="campo-informativo">
+                  <span class="material-icons">mail</span>
+                  O sistema gera uma senha temporária e envia para o e-mail acima.
+                  Ela vale só para o primeiro acesso: a pessoa escolhe a própria senha ao entrar.
+                </p>
               }
             </div>
           </div>

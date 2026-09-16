@@ -425,6 +425,11 @@ namespace ConnectVeiculos.Infrastructure.IoC
                 connection.Open();
 
                 // Adicionar coluna VeiObservacao na tabela Veiculo
+                // Senha gerada pelo sistema no cadastro: obriga a troca no
+                // primeiro acesso. Bancos antigos nascem com 0 — quem ja
+                // existe escolheu a propria senha e nao deve ser incomodado.
+                AddColumnIfNotExists(connection, "Usuario", "UsuTrocarSenha", "INTEGER NOT NULL DEFAULT 0");
+
                 AddColumnIfNotExists(connection, "Veiculo", "VeiObservacao", "TEXT");
 
                 // Adicionar coluna LojWhatsApp na tabela Loja

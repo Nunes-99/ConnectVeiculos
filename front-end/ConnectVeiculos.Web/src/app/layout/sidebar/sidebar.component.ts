@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, EventEmitter, HostListener, inject, Input, OnDestroy, Output, PLATFORM_ID, ViewChild, signal } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, EventEmitter, HostListener, inject, Input, OnDestroy, Output, PLATFORM_ID, ViewChild, signal, effect } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
@@ -91,6 +91,14 @@ export class SidebarComponent implements AfterViewInit, OnDestroy {
   catalogoExpanded = false;
 
   mostrarTrocarSenha = signal(false);
+
+  /**
+   * Troca exigida pelo servidor: a senha em uso foi gerada pelo sistema e
+   * enviada por e-mail, entao um terceiro a conhece. Enquanto durar, o modal
+   * nao fecha e nao ha botao de sair dele — reaproveita a mesma tela da troca
+   * voluntaria, so muda o texto e a saida.
+   */
+  trocaObrigatoria = this.authService.precisaTrocarSenha;
   salvandoSenha = signal(false);
   mostrarConfirmaTrocaEmpresa = signal(false);
   mostrarSenhaAtual = false;
@@ -187,6 +195,14 @@ export class SidebarComponent implements AfterViewInit, OnDestroy {
       next: (lojas) => this.lojas = lojas
     });
     this.carregarDocsVencendo();
+
+    // Abre a troca de senha sozinho assim que o login sinaliza a exigencia,
+    // venha de onde vier a navegacao.
+    effect(() => {
+      if (this.trocaObrigatoria() && !this.mostrarTrocarSenha()) {
+        this.abrirTrocarSenha();
+      }
+    });
   }
 
   private platformId = inject(PLATFORM_ID);
@@ -234,7 +250,7 @@ export class SidebarComponent implements AfterViewInit, OnDestroy {
   }
 
   fecharTrocarSenha(): void {
-    if (this.salvandoSenha()) return;
+    if (this.salvandoSenha() || this.trocaObrigatoria()) return;
     this.mostrarTrocarSenha.set(false);
     this.formSenha.reset({ senhaAtual: '', novaSenha: '', confirmarSenha: '' });
   }
@@ -249,6 +265,7 @@ export class SidebarComponent implements AfterViewInit, OnDestroy {
     this.authService.trocarSenha(senhaAtual, novaSenha, confirmarSenha).subscribe({
       next: (res) => {
         this.toast.success(res?.mensagem ?? 'Senha alterada. Será exigida no próximo login.');
+        this.authService.concluirTrocaObrigatoria();
         this.salvandoSenha.set(false);
         this.mostrarTrocarSenha.set(false);
         this.formSenha.reset({ senhaAtual: '', novaSenha: '', confirmarSenha: '' });

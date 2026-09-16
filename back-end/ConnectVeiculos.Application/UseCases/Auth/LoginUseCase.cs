@@ -50,7 +50,8 @@ namespace ConnectVeiculos.Application.UseCases.Auth
                 UsuEmail = usuario.UsuEmail,
                 UsuFuncao = usuario.UsuFuncao ?? "",
                 Token = token.Token,
-                Expiration = token.Expiration
+                Expiration = token.Expiration,
+                TrocarSenhaObrigatoria = usuario.UsuTrocarSenha
             };
         }
 

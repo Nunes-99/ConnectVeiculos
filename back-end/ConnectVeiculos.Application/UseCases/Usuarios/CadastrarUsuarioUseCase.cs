@@ -9,6 +9,9 @@ using ConnectVeiculos.Core.Interfaces.Database.Repositories.Permissoes;
 using ConnectVeiculos.Core.Exceptions;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Usuarios;
 using ConnectVeiculos.Core.Interfaces.Services;
+using ConnectVeiculos.Core.Interfaces.Email;
+using ConnectVeiculos.Core.Interfaces.Tenancy;
+using System.Security.Cryptography;
 
 namespace ConnectVeiculos.Application.UseCases.Usuarios
 {
@@ -19,19 +22,39 @@ namespace ConnectVeiculos.Application.UseCases.Usuarios
         private readonly IPermissaoRepository _permissaoRepository;
         private readonly IUnitOfWork _unitOfWork;
          private readonly ILimiteService _limiteService;
+        private readonly ITenantBackgroundRunner _backgroundRunner;
 
         public CadastrarUsuarioUseCase(
             IUsuarioRepository usuarioRepository,
             ILojaUsuarioRepository lojaUsuarioRepository,
             IPermissaoRepository permissaoRepository,
              IUnitOfWork unitOfWork,
-             ILimiteService limiteService)
+             ILimiteService limiteService,
+            ITenantBackgroundRunner backgroundRunner)
         {
             _usuarioRepository = usuarioRepository;
             _lojaUsuarioRepository = lojaUsuarioRepository;
             _permissaoRepository = permissaoRepository;
             _unitOfWork = unitOfWork;
              _limiteService = limiteService;
+            _backgroundRunner = backgroundRunner;
+        }
+
+        /// <summary>
+        /// Senha temporaria do primeiro acesso.
+        ///
+        /// Sem "I", "l", "1", "O" e "0": ela e lida de um e-mail e digitada a
+        /// mao, e esses caracteres se confundem em boa parte das fontes.
+        /// RandomNumberGenerator, e nao Random, porque isto e credencial.
+        /// </summary>
+        private const string AlfabetoSenha = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+
+        private static string GerarSenhaTemporaria()
+        {
+            var chars = new char[12];
+            for (var i = 0; i < chars.Length; i++)
+                chars[i] = AlfabetoSenha[RandomNumberGenerator.GetInt32(AlfabetoSenha.Length)];
+            return new string(chars);
         }
 
         public async Task<int> Execute(UsuarioInputModel inputModel)
@@ -42,8 +65,12 @@ namespace ConnectVeiculos.Application.UseCases.Usuarios
             if (existente != null)
                 throw new DomainException("Já existe um usuário cadastrado com este e-mail.");
 
-            // Hash da senha com BCrypt
-            var senhaHash = BCrypt.Net.BCrypt.HashPassword(inputModel.UsuSenha);
+            // A senha e gerada aqui, nao pedida ao administrador: assim ninguem
+            // alem do proprio usuario conhece a senha com que ele vai entrar.
+            // Ela vale so para o primeiro acesso — o UsuTrocarSenha abaixo
+            // obriga a troca antes de liberar qualquer tela.
+            var senhaTemporaria = GerarSenhaTemporaria();
+            var senhaHash = BCrypt.Net.BCrypt.HashPassword(senhaTemporaria);
 
             var usuario = new Usuario(
                 inputModel.UsuId,
@@ -55,6 +82,7 @@ namespace ConnectVeiculos.Application.UseCases.Usuarios
                 inputModel.UsuFuncao,
                 inputModel.UsuSts
             );
+            usuario.ExigirTrocaDeSenha();
 
             _unitOfWork.BeginTransaction();
 
@@ -86,6 +114,17 @@ namespace ConnectVeiculos.Application.UseCases.Usuarios
                 }
 
                 _unitOfWork.Commit();
+
+                // Depois do commit e fora da requisicao: o SMTP e lento e pode
+                // estar fora do ar, e isso nao pode impedir o cadastro nem
+                // segurar a tela do administrador. Se o e-mail falhar, o
+                // administrador ainda pode reenviar pela tela de usuarios.
+                var email = usuario.UsuEmail;
+                var nome = usuario.UsuNome;
+                _backgroundRunner.Enqueue<IEmailService>(
+                    s => s.SendNovoUsuarioAsync(email, nome, senhaTemporaria),
+                    $"enviar senha de primeiro acesso para {email}");
+
                 return id;
             }
             catch

@@ -120,3 +120,26 @@
     .material-icons { font-size: 1rem; }
   }
 }
+
+// Ocupa o lugar do antigo campo de senha: explica que a senha e gerada e
+// enviada por e-mail, em vez de deixar um espaco vazio sem motivo aparente.
+.campo-informativo {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 0;
+  padding: 10px 12px;
+  background: rgba(25, 118, 210, 0.07);
+  border: 1px solid rgba(25, 118, 210, 0.25);
+  border-radius: 6px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: inherit;
+  opacity: 0.9;
+
+  .material-icons {
+    font-size: 18px;
+    flex-shrink: 0;
+    color: #1976d2;
+  }
+}
