@@ -14,11 +14,28 @@ quebrado ou impossível
 
 ## 1. Mercado Livre
 
-A conta cai a cada 6 horas: o aplicativo `7837357995078436` não recebe
-`refresh_token` e o DevCenter não expõe `offline_access`. Testado com e sem
-`scope` na URL de autorização e com corpo em JSON e form-urlencoded — o
-comportamento não muda. **A correção depende de chamado no suporte deles**; o
-resto abaixo é conviver com o problema.
+A conta cai a cada 6 horas: a aplicação `7837357995078436` não recebe
+`refresh_token`. **Chamado aberto em 16/09/2026 — protocolo 482724079**,
+escalado para a equipe de Integrações do Mercado Livre.
+
+O que ficou provado em 16/09, depois de três hipóteses minhas descartadas
+(parâmetro `scope` ausente, separador `+` em vez de `%20`, grant antigo
+reaproveitado):
+
+- A URL de autorização envia `scope=offline_access%20read%20write`, codificada.
+- O `/oauth/token` responde com `access_token`, `token_type`, `expires_in`
+  (21600), `scope` e `user_id` — **sem `refresh_token` e sem erro
+  `invalid_scope`**. O escopo é descartado em silêncio.
+- O `scope` concedido traz `read`, `write` e cinco escopos `urn:...`, nunca
+  `offline_access`.
+- `GET /applications/7837357995078436/grants` confirma o mesmo, e o grant mais
+  antigo, de 25/05/2026, **já nascia sem `offline_access`** — nunca funcionou.
+- Revogar o grant (`DELETE /users/{id}/applications/{app}`, HTTP 200
+  "Autorización eliminada") e autorizar do zero não muda nada.
+
+Achado de produto no caminho: o "Desconectar" era só local e nunca revogava a
+autorização no ML. Corrigido — agora revoga de verdade, e isso invalidava
+qualquer teste de escopo feito antes.
 
 - [x] Conectar pelo OAuth
 - [x] Publicar anúncio de um veículo
