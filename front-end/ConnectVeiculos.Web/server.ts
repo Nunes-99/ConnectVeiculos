@@ -143,6 +143,13 @@ export function app(): express.Express {
     index: false,
   }));
 
+  // A landing tambem vai por SSR. Ela estava no ramo estatico e o HTML servido
+  // era um <app-root> vazio de 16 KB: aparecia no Google so porque o Googlebot
+  // executa JavaScript, e os links do rodape para os catalogos — a unica coisa
+  // que aponta para eles no site inteiro — nao existiam para quem nao executa.
+  // E a pagina mais importante do dominio; vale o custo de renderizar.
+  server.get('/', ssrHandler(commonEngine, indexHtml, browserDistFolder));
+
   // Rotas do catalogo: SSR (renderiza no servidor com dados).
   // Path-based multi-tenancy: /catalogo/:tenantSlug e variantes.
   server.get('/catalogo', ssrHandler(commonEngine, indexHtml, browserDistFolder));
