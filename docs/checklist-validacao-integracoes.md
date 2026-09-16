@@ -126,8 +126,14 @@ um cliente da Diamante recebendo e-mail desse endereço estranha.
 - [x] Novo veículo similar para quem favoritou — validado em 2026-09-15 (Jeep
       Renegade a R$ 120.000 disparou para quem favoritou o Compass a R$ 112.000;
       regra é mesma marca, mesma categoria e preço dentro de ±20%)
-- [ ] **Novo usuário (senha temporária)** — implementado em 2026-09-16, falta
-      exercitar em produção. Os dois desenhos que se contradiziam foram
+- [x] **Novo usuário (senha temporária)** — validado ponta a ponta em
+      2026-09-16: cadastro sem campo de senha, e-mail recebido com a temporária
+      `PVjGJPXHdq7T` (12 caracteres, sem I/l/1/O/0), modal obrigatório abrindo
+      sozinho no primeiro login, troca concluída e `UsuTrocarSenha` de volta a 0.
+      Dois bugs meus apareceram só neste teste: eu havia preenchido o campo no
+      `LoginUseCase`, que a API não usa (quem autentica é o `AuthController`), e
+      abria o modal de dentro de um `effect()`, o que o Angular proíbe (NG0600)
+      — a exceção era engolida e a tela nunca aparecia. Os dois desenhos que se contradiziam foram
       resolvidos a favor da senha gerada pelo sistema: o formulário não pede
       mais senha, `CadastrarUsuarioUseCase` gera uma temporária de 12
       caracteres, grava `UsuTrocarSenha` e enfileira o e-mail depois do commit.

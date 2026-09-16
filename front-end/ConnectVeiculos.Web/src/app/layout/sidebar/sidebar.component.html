@@ -177,7 +177,11 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn-secondary" (click)="fecharTrocarSenha()" [disabled]="salvandoSenha()">Cancelar</button>
+          <!-- Some junto com o "X" quando a troca e exigida: um botao que nao
+               fecha nada so faz a pessoa clicar e achar que travou. -->
+          @if (!trocaObrigatoria()) {
+            <button type="button" class="btn-secondary" (click)="fecharTrocarSenha()" [disabled]="salvandoSenha()">Cancelar</button>
+          }
           <button type="submit" class="btn-primary" [disabled]="formSenha.invalid || salvandoSenha()">
             {{ salvandoSenha() ? 'Salvando...' : 'Salvar' }}
           </button>
