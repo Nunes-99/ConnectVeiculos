@@ -190,19 +190,23 @@ um cliente da Diamante recebendo e-mail desse endereço estranha.
       Mercado Livre, post no Facebook com foto e carrossel no Instagram
 - [x] Trava "Salvando…" — vista funcionando no cadastro de veículo (formulário
       acinzentado e botão com spinner durante o upload das fotos)
-- [x] **Importar planilha e publicar** — validado em produção em 2026-09-16,
-      nos quatro caminhos: placa fora do padrão recusada com a mensagem dos
-      formatos aceitos; importação sem sucesso não faz a pergunta; importação
-      com sucesso pergunta com a contagem certa; e reimportar a mesma planilha
-      resulta em 0 importados, 0 erros e nenhuma pergunta. Publicando os dois
-      importados (ambos sem foto), o log registrou "nao publicado por nao ter
-      foto" para cada um e "0 veiculo(s) publicado(s)". A importação continua não publicando sozinha: ao
-      terminar, a tela pergunta se o operador quer publicar os importados. Se
-      sim, vão para Mercado Livre, catálogo do Facebook, post da Página e
-      Google — **sem Instagram**, que aceita 25 posts/24h e seria estourado por
-      uma planilha de estoque. Veículo sem foto é pulado. Repetido não entra:
-      a importação já descarta duplicado por placa+cor+modelo, e as rotinas de
-      publicação recusam veículo que já tem anúncio ativo
+- [x] **Importar planilha e publicar** — resolvido em 2026-09-16 descobrindo
+      que a premissa estava errada. O checklist dizia "hoje não publica em
+      lugar nenhum"; na verdade a importação cria os veículos pelo mesmo
+      endpoint do cadastro manual, que **já enfileira a publicação
+      automática** — a mesma rotina que espera as fotos chegarem.
+
+      Chegou a ser implementada uma pergunta no fim da importação ("publicar os
+      importados?") com rotina própria de lote. Revertida: era redundante, e um
+      veículo recém-importado nunca tem foto no momento da pergunta, porque
+      planilha não carrega imagem — a resposta seria sempre "0 publicados".
+      O log de produção mostrou as duas rotinas rodando em sequência para os
+      mesmos veículos, cada uma registrando a mesma ausência de foto.
+
+      Como funciona hoje: o veículo importado entra na publicação automática
+      como qualquer outro. Sem foto na janela de espera, não publica e registra
+      o motivo. Quem subir as fotos depois publica pelos ícones de Instagram e
+      Facebook na lista de Veículos.
 
 ## 7. Infraestrutura
 

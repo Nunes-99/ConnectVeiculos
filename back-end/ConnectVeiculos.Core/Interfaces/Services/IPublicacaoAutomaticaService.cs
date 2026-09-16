@@ -26,24 +26,6 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         /// circulacao — editar o veiculo e registrar a venda — e por muito tempo
         /// so o primeiro avisava as plataformas.
         /// </summary>
-        /// <summary>
-        /// Publica veiculos vindos de uma importacao por planilha, depois de o
-        /// operador confirmar. Diferente de <see cref="PublicarNovoVeiculoAsync"/>
-        /// em dois pontos, porque o lote muda o que faz sentido:
-        ///
-        /// - nao espera fotos. No cadastro avulso a espera existe porque o
-        ///   operador esta subindo imagens naquele instante; na planilha, ou a
-        ///   foto ja esta la, ou nao vai chegar — e esperar dois minutos por
-        ///   veiculo atrasaria todos os outros do lote.
-        /// - nao publica no Instagram. A conta aceita 25 posts por 24h, e uma
-        ///   planilha de estoque estoura isso sozinha, derrubando as publicacoes
-        ///   seguintes do dia.
-        ///
-        /// Veiculo sem foto e pulado: anuncio sem imagem nao serve a ninguem.
-        /// Devolve quantos foram efetivamente publicados.
-        /// </summary>
-        Task<int> PublicarVeiculosImportadosAsync(IEnumerable<int> veiculoIds);
-
         Task MarcarVeiculoIndisponivelAsync(int veiculoId, string novoStatus);
 
         /// <summary>

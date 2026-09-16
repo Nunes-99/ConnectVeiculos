@@ -39,15 +39,6 @@ export class VeiculoService extends ApiService {
     return this.post<Veiculo>(this.endpoint, veiculo);
   }
 
-  /**
-   * Publica nas plataformas os veiculos recem-importados, depois de o operador
-   * confirmar. A importacao em si nao publica nada — ver a pergunta no fim de
-   * processarImportacao.
-   */
-  publicarImportados(veiculoIds: number[]): Observable<{ mensagem: string; total: number }> {
-    return this.post<{ mensagem: string; total: number }>(`${this.endpoint}/importar/publicar`, veiculoIds);
-  }
-
   update(id: number, veiculo: VeiculoInput): Observable<Veiculo> {
     return this.put<Veiculo>(`${this.endpoint}/${id}`, veiculo);
   }
