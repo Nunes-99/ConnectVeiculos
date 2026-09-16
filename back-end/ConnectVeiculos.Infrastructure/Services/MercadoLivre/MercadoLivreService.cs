@@ -118,14 +118,23 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
              // State protege contra CSRF (atacante nao consegue forjar callback porque
              // nao tem a chave do DataProtection) e contra cross-tenant (state carrega
              // o slug e o callback valida que confere com o tenant resolvido).
-             // Sem parametro `scope`. Mandavamos "offline_access read write" e o ML
-             // devolvia access_token sem refresh_token, obrigando a reconectar a cada
-             // 6h. O Integrador da ACSN, que recebe refresh_token normalmente do mesmo
-             // ML, monta a URL so com response_type, client_id, redirect_uri e state —
-             // as permissoes vem da configuracao da aplicacao no DevCenter, nao da URL.
-             // Pedir escopo explicito aqui aparentemente restringe a concessao.
+             // O scope volta, agora codificado com %20.
+             //
+             // O suporte do ML confirmou em 2026-09-16 que os valores aceitos sao
+             // offline_access, read e write, e que refresh_token so vem quando
+             // offline_access esta no scope concedido.
+             //
+             // A tentativa anterior mandava "scope=offline_access+read+write" e a
+             // conclusao foi que pedir escopo restringia a concessao. O separador
+             // nunca foi verificado: "+" so vira espaco quando o servidor decodifica
+             // no estilo formulario, e em query string de OAuth o separador e %20. Se
+             // o ML leu a string literal, recebeu um unico escopo invalido — o que
+             // explica o resultado sem dizer nada sobre escopos.
+             var scope = Uri.EscapeDataString("offline_access read write");
+
              return $"{AuthUrl}?response_type=code&client_id={_settings.AppId}" +
                     $"&redirect_uri={Uri.EscapeDataString(_settings.RedirectUri)}" +
+                    $"&scope={scope}" +
                     $"&state={Uri.EscapeDataString(state)}";
         }
 
@@ -166,6 +175,27 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
             }
 
             var result = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+            // Registra o FORMATO da resposta, nunca o conteudo dos tokens: os nomes
+            // dos campos e o scope concedido. E o que o suporte do ML pede para
+            // diagnosticar, e o que responde de vez se offline_access foi concedido
+            // — sem depender de deducao, como ate agora.
+            try
+            {
+                var campos = string.Join(", ", result.EnumerateObject().Select(x => x.Name));
+                var scopeConcedido = result.TryGetProperty("scope", out var scopeEl)
+                    ? scopeEl.GetString() ?? "(vazio)"
+                    : "(ausente)";
+                _logger.LogInformation(
+                    "ML /oauth/token respondeu com os campos [{Campos}] e scope [{Scope}].",
+                    campos, scopeConcedido);
+                await LogAsync(NivelIntegracaoLog.Info, "oauth.callback.resposta",
+                    $"Campos: {campos} | scope: {scopeConcedido}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Nao consegui descrever a resposta do /oauth/token (ignorado).");
+            }
 
             // access_token e sempre obrigatorio — sem ele nada funciona.
             if (!result.TryGetProperty("access_token", out var accessTokenEl))
