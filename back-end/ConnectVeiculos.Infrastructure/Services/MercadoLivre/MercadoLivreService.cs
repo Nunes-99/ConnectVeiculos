@@ -429,6 +429,42 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
 
         public async Task DesconectarAsync()
         {
+             // Revoga a autorizacao no Mercado Livre antes de limpar o que e' nosso.
+             //
+             // Ate 2026-09-16 o desconectar era apenas local, e isso escondia um
+             // problema: o grant continuava ativo la, entao reconectar nao passava
+             // por uma concessao nova — o ML devolvia token com as permissoes do
+             // grant antigo. Ficamos semanas achando que "pedir offline_access nao
+             // funciona", quando o escopo pedido nunca chegou a ser reavaliado: os
+             // grants mostravam date_created e date_updated identicos, de setembro,
+             // depois de varias reautorizacoes.
+             //
+             // Falhar aqui nao impede o desconectar local: o usuario pediu para
+             // desconectar e tem de sair desconectado, mesmo que o ML esteja fora
+             // do ar. Nesse caso a revogacao fica pendente e ele pode refazer.
+             try
+             {
+                 await EnsureTokenAsync();
+                 if (!string.IsNullOrEmpty(_settings.AccessToken) && !string.IsNullOrEmpty(_settings.UserId))
+                 {
+                     var req = new HttpRequestMessage(HttpMethod.Delete,
+                         $"/users/{_settings.UserId}/applications/{_settings.AppId}");
+                     req.Headers.Authorization =
+                         new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _settings.AccessToken);
+
+                     var resp = await _httpClient.SendAsync(req);
+                     var corpo = await resp.Content.ReadAsStringAsync();
+                     _logger.LogInformation("ML revogacao do grant (HTTP {Status}): {Corpo}",
+                         (int)resp.StatusCode, corpo);
+                     await LogAsync(NivelIntegracaoLog.Info, "oauth.desconectar.revogacao",
+                         $"HTTP {(int)resp.StatusCode}: {corpo}");
+                 }
+             }
+             catch (Exception ex)
+             {
+                 _logger.LogWarning(ex, "Nao consegui revogar o grant no ML; seguindo com o desconectar local.");
+             }
+
              // Limpa chaves legadas (compat) + entidade nova (fonte da verdade).
             await _configRepository.SetValorAsync("ML_ACCESS_TOKEN", "");
             await _configRepository.SetValorAsync("ML_REFRESH_TOKEN", "");
