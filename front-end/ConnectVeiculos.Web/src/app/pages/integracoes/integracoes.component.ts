@@ -298,6 +298,41 @@ _{{6}}_`;
   metaPagesCarregadas = false;
   metaPageIdManual = '';
 
+  /**
+   * Envio de teste do WhatsApp. As outras integracoes todas tem "Testar
+   * conexao"; esta nao tinha, e a unica forma de exercitar o envio era ter um
+   * lead com o numero certo — o que nao serve para conferir a configuracao.
+   *
+   * Lembrete que vale para quem for testar: com numero de teste da Meta, o
+   * destino precisa estar na lista de destinatarios cadastrados la, senao ela
+   * recusa.
+   */
+  waTesteTelefone = '';
+  waTestando = false;
+
+  testarEnvioWhatsApp(): void {
+    const telefone = this.waTesteTelefone.replace(/\D/g, '');
+    if (!telefone || this.waTestando) return;
+
+    this.waTestando = true;
+    const destino = telefone.startsWith('55') ? telefone : '55' + telefone;
+
+    this.integracaoService.enviarWhatsApp({
+      telefone: destino,
+      mensagem: 'Mensagem de teste do ConnectVeículos. Se você recebeu isto, a integração com o WhatsApp está funcionando.'
+    }).subscribe({
+      next: (r) => {
+        this.toast.success(r?.mensagem ?? 'Mensagem enviada.');
+        this.waTestando = false;
+      },
+      error: (err) => {
+        const msg = err?.error?.message ?? err?.error?.mensagem;
+        this.toast.error(typeof msg === 'string' ? msg : 'Não foi possível enviar. Verifique o token e se o número está na lista de destinatários de teste.');
+        this.waTestando = false;
+      }
+    });
+  }
+
   carregarMetaPages(): void {
     this.metaCarregando = true;
     this.integracaoService.listarMetaPages().subscribe({

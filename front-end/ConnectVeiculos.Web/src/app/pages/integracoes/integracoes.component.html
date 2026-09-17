@@ -167,6 +167,28 @@
           <span class="material-icons">help_outline</span> Ver templates
         </button>
       </div>
+
+      <!-- As outras integracoes tem "Testar conexao"; esta nao tinha, e a unica
+           forma de exercitar o envio era ter um lead com o numero certo. -->
+      @if (waConfig.configurado) {
+        <div class="form-group">
+          <label for="waTesteTelefone">Enviar mensagem de teste para</label>
+          <div class="feed-url-row">
+            <input id="waTesteTelefone" type="tel" [(ngModel)]="waTesteTelefone"
+                   [ngModelOptions]="{standalone: true}" placeholder="(11) 90000-0000"
+                   [disabled]="waTestando" />
+            <button class="btn-outline" (click)="testarEnvioWhatsApp()"
+                    [disabled]="waTestando || !waTesteTelefone.trim()">
+              <span class="material-icons">send</span>
+              {{ waTestando ? 'Enviando...' : 'Enviar teste' }}
+            </button>
+          </div>
+          <small>
+            Com número de teste da Meta, o destino precisa estar na lista de destinatários
+            cadastrados lá — caso contrário a Meta recusa o envio.
+          </small>
+        </div>
+      }
     </div>
     <div class="card-footer">
       <span class="material-icons">info</span>

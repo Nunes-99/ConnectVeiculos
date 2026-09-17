@@ -18,6 +18,12 @@ export class TelefonePipe implements PipeTransform {
   transform(valor: string | null | undefined): string {
     if (!valor) return '';
 
+    // Numero internacional fica como veio. Sem isto, um +1 631 555-1181 dos
+    // Estados Unidos virava "(16) 31555-1181": tem 11 digitos, e a formatacao
+    // brasileira encaixava, inventando um DDD que nao existe.
+    const internacional = valor.trim().startsWith('+') && !valor.trim().startsWith('+55');
+    if (internacional) return valor;
+
     let digitos = valor.replace(/\D/g, '');
 
     // DDI do Brasil: 5511999998888 -> 11999998888
