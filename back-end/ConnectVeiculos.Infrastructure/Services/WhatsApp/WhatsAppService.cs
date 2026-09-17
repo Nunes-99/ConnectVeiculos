@@ -117,25 +117,44 @@ namespace ConnectVeiculos.Infrastructure.Services.WhatsApp
                 return false;
             }
 
-            var payload = new
-            {
-                messaging_product = "whatsapp",
-                to = NormalizarTelefone(telefoneE164),
-                type = "template",
-                template = new
+            var lista = parametros?.ToArray() ?? Array.Empty<string>();
+
+            // Template sem parametro nao pode levar "components". Mandavamos
+            // sempre um componente "body" com a lista vazia, e a Meta aceita a
+            // chamada — devolve 200 — mas nao entrega a mensagem. O hello_world,
+            // que e o template padrao de toda conta nova, cai exatamente nesse
+            // caso: nenhum parametro.
+            object payload = lista.Length == 0
+                ? new
                 {
-                    name = templateName,
-                    language = new { code = lang },
-                    components = new[]
+                    messaging_product = "whatsapp",
+                    to = NormalizarTelefone(telefoneE164),
+                    type = "template",
+                    template = new
                     {
-                        new
-                        {
-                            type = "body",
-                            parameters = parametros.Select(p => new { type = "text", text = p }).ToArray()
-                        }
+                        name = templateName,
+                        language = new { code = lang }
                     }
                 }
-            };
+                : new
+                {
+                    messaging_product = "whatsapp",
+                    to = NormalizarTelefone(telefoneE164),
+                    type = "template",
+                    template = new
+                    {
+                        name = templateName,
+                        language = new { code = lang },
+                        components = new[]
+                        {
+                            new
+                            {
+                                type = "body",
+                                parameters = lista.Select(p => new { type = "text", text = p }).ToArray()
+                            }
+                        }
+                    }
+                };
 
             return await PostAsync(payload, token, phoneId);
         }
@@ -157,7 +176,11 @@ namespace ConnectVeiculos.Infrastructure.Services.WhatsApp
                     return false;
                 }
 
-                _logger.LogInformation("WhatsApp enviado com sucesso");
+                // O corpo vem com o id da mensagem e o message_status. Sem ele,
+                // "enviado com sucesso" significa apenas que a Meta aceitou a
+                // chamada — que nao e o mesmo que ter entregue, e foi o que nos
+                // deixou no escuro em dois testes seguidos.
+                _logger.LogInformation("WhatsApp aceito pela Meta: {Body}", body);
                 return true;
             }
             catch (Exception ex)
