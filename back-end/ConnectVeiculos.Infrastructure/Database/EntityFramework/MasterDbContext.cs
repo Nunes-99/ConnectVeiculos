@@ -11,6 +11,7 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
     {
         public DbSet<Tenant> Tenants => Set<Tenant>();
         public DbSet<UserEmailMap> UserEmailMaps => Set<UserEmailMap>();
+        public DbSet<WhatsAppNumeroMap> WhatsAppNumeroMaps => Set<WhatsAppNumeroMap>();
          public DbSet<Plano> Planos => Set<Plano>();
 
         public MasterDbContext(DbContextOptions<MasterDbContext> options) : base(options) { }

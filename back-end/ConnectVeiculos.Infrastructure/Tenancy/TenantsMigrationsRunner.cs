@@ -115,6 +115,21 @@ namespace ConnectVeiculos.Infrastructure.Tenancy
             idxCmd.CommandText = "CREATE INDEX IF NOT EXISTS IX_UserEmailMap_TenantId ON UserEmailMap(TenantId)";
             idxCmd.ExecuteNonQuery();
 
+            // Numero do WhatsApp -> tenant. O webhook da Meta nao diz de quem e a
+            // mensagem pela URL; identifica pelo phone_number_id do payload. Sem
+            // este mapa, cada loja precisaria do proprio aplicativo da Meta.
+            using (var waCmd = conn.CreateCommand())
+            {
+                waCmd.CommandText = @"CREATE TABLE IF NOT EXISTS WhatsAppNumeroMap (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    PhoneNumberId TEXT NOT NULL UNIQUE,
+                    TenantId INTEGER NOT NULL,
+                    TenantSlug TEXT NOT NULL,
+                    AtualizadoEm TEXT NOT NULL
+                )";
+                waCmd.ExecuteNonQuery();
+            }
+
             EnsureColumn(conn, "Tenants", "TenGoogleVerifCode", "TEXT NULL");
             EnsureColumn(conn, "Tenants", "TenFacebookVerifCode", "TEXT NULL");
 

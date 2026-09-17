@@ -400,19 +400,89 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
         [Authorize(Roles = "Administrador,Gerente")]
         public async Task<IActionResult> SaveWhatsAppConfig(
             [FromServices] IWhatsAppService whatsApp,
+            [FromServices] ConnectVeiculos.Infrastructure.Database.EntityFramework.MasterDbContext master,
+            [FromServices] ConnectVeiculos.Core.Interfaces.Tenancy.ITenantContext tenantContext,
+            [FromServices] ILogger<IntegracoesController> logger,
             [FromBody] SalvarWhatsAppConfigRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.AccessToken) || string.IsNullOrWhiteSpace(request.PhoneId) || string.IsNullOrWhiteSpace(request.VerifyToken))
                 return BadRequest(new { error = "AccessToken, PhoneId e VerifyToken sao obrigatorios." });
 
             await whatsApp.SalvarConfigAsync(request.AccessToken, request.PhoneId, request.VerifyToken);
+
+            // Registra o numero no mapa global. E o que permite o webhook saber de
+            // quem e a mensagem sem depender de "?tenant=" na URL — e, portanto,
+            // sem obrigar cada loja a ter o proprio aplicativo da Meta.
+            if (tenantContext.IsResolved)
+            {
+                try
+                {
+                    var existente = await master.WhatsAppNumeroMaps
+                        .FirstOrDefaultAsync(m => m.PhoneNumberId == request.PhoneId);
+
+                    if (existente == null)
+                    {
+                        master.WhatsAppNumeroMaps.Add(new ConnectVeiculos.Core.Entities.Tenants.WhatsAppNumeroMap(
+                            request.PhoneId, tenantContext.TenantId, tenantContext.TenantSlug));
+                    }
+                    else
+                    {
+                        // O mesmo numero pode trocar de loja. Reaponta em vez de
+                        // criar uma segunda linha, que tornaria o roteamento ambiguo.
+                        existente.Reapontar(tenantContext.TenantId, tenantContext.TenantSlug);
+                    }
+
+                    await master.SaveChangesAsync();
+                    logger.LogInformation("WhatsApp: numero {PhoneId} associado ao tenant {Slug}.",
+                        request.PhoneId, tenantContext.TenantSlug);
+                }
+                catch (Exception ex)
+                {
+                    // Nao impede salvar a configuracao: o envio ja funciona, e o
+                    // recebimento ainda pode cair no caminho antigo, por "?tenant=".
+                    logger.LogWarning(ex, "WhatsApp: falha ao registrar o numero {PhoneId} no mapa de tenants.",
+                        request.PhoneId);
+                }
+            }
+
             return Ok(new { mensagem = "Configuracao salva." });
         }
 
         [HttpPost("whatsapp/desconectar")]
         [Authorize(Roles = "Administrador,Gerente")]
-        public async Task<IActionResult> DesconectarWhatsApp([FromServices] IWhatsAppService whatsApp)
+        public async Task<IActionResult> DesconectarWhatsApp(
+            [FromServices] IWhatsAppService whatsApp,
+            [FromServices] ConnectVeiculos.Infrastructure.Database.EntityFramework.MasterDbContext master,
+            [FromServices] ConnectVeiculos.Core.Interfaces.Tenancy.ITenantContext tenantContext,
+            [FromServices] ILogger<IntegracoesController> logger)
         {
+            // Tira o numero do mapa antes de limpar a configuracao: depois de
+            // limpar nao daria mais para saber qual era. Deixar para tras faria
+            // mensagens de um numero ja desconectado continuarem caindo nesta loja.
+            try
+            {
+                var config = await whatsApp.GetConfigAsync();
+                if (!string.IsNullOrWhiteSpace(config?.PhoneId))
+                {
+                    var mapa = await master.WhatsAppNumeroMaps
+                        .FirstOrDefaultAsync(m => m.PhoneNumberId == config.PhoneId
+                                               && m.TenantId == tenantContext.TenantId);
+                    if (mapa != null)
+                    {
+                        master.WhatsAppNumeroMaps.Remove(mapa);
+                        await master.SaveChangesAsync();
+                        logger.LogInformation("WhatsApp: numero {PhoneId} desassociado do tenant {Slug}.",
+                            config.PhoneId, tenantContext.TenantSlug);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Nao pode impedir o desconectar: quem pediu para desconectar tem
+                // de sair desconectado.
+                logger.LogWarning(ex, "WhatsApp: falha ao remover o numero do mapa de tenants.");
+            }
+
             await whatsApp.DesconectarAsync();
             return Ok(new { mensagem = "WhatsApp desconectado." });
         }
@@ -422,23 +492,52 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
         [AllowAnonymous]
         public async Task<IActionResult> WhatsAppVerify(
             [FromServices] IWhatsAppService whatsApp,
+            [FromServices] IConfiguration configuration,
             [FromQuery(Name = "hub.mode")] string? mode,
             [FromQuery(Name = "hub.verify_token")] string? token,
             [FromQuery(Name = "hub.challenge")] string? challenge)
         {
+            // Com um aplicativo unico atendendo todas as lojas, a verificacao do
+            // webhook acontece uma vez so, no aplicativo — nao existe loja
+            // definida nessa chamada. Por isso o token global (WHATSAPP_VERIFY_TOKEN)
+            // vem primeiro; o token da loja continua valendo para quem ainda usa
+            // aplicativo proprio, com "?tenant=" na URL.
+            var tokenGlobal = configuration["WhatsAppSettings:VerifyToken"];
+            if (!string.IsNullOrWhiteSpace(tokenGlobal) && mode == "subscribe" && token == tokenGlobal)
+                return Content(challenge ?? "", "text/plain");
+
             var verifyToken = await whatsApp.GetVerifyTokenAsync() ?? "connectveiculos-verify";
             if (mode == "subscribe" && token == verifyToken)
                 return Content(challenge ?? "", "text/plain");
+
             return Forbid();
         }
 
         // Webhook recebimento de mensagens / eventos
+        /// <summary>
+        /// Recebe mensagens do WhatsApp.
+        ///
+        /// A loja e identificada pelo `phone_number_id` que vem no payload, e nao
+        /// pela URL. A URL cadastrada na Meta e uma so, igual para todas as
+        /// lojas — que e o que permite um aplicativo unico atender todo mundo.
+        ///
+        /// Antes o endereco carregava "?tenant=slug". Funcionava, mas obrigava
+        /// cada loja a ter o proprio aplicativo da Meta: criar app de
+        /// desenvolvedor, gerar token e configurar webhook. Nenhum lojista faz
+        /// isso; na pratica sobraria para quem vende o sistema, uma vez por
+        /// cliente.
+        ///
+        /// O "?tenant=" continua sendo aceito como alternativa, para nao quebrar
+        /// integracoes ja cadastradas enquanto elas nao migram.
+        /// </summary>
         [HttpPost("whatsapp/webhook")]
         [AllowAnonymous]
         public async Task<IActionResult> WhatsAppReceive(
             [FromServices] ILogger<IntegracoesController> logger,
-            [FromServices] ConnectVeiculos.Infrastructure.Database.EntityFramework.ConnectVeiculosDbContext db,
-            [FromServices] ConnectVeiculos.Core.Interfaces.Services.INotificacaoService notificacao,
+            [FromServices] IServiceScopeFactory scopeFactory,
+            [FromServices] ConnectVeiculos.Infrastructure.Database.EntityFramework.MasterDbContext master,
+            [FromServices] ConnectVeiculos.Core.Interfaces.Tenancy.ITenantStore tenantStore,
+            [FromServices] ConnectVeiculos.Core.Interfaces.Tenancy.ITenantContext tenantContext,
             [FromBody] System.Text.Json.JsonElement payload)
         {
             logger.LogInformation("WhatsApp webhook recebido");
@@ -446,7 +545,8 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
             try
             {
                 // Estrutura do payload Meta:
-                // { "entry":[{"changes":[{"value":{"messages":[{"from","text":{"body"}}],"contacts":[{"profile":{"name"}}]}}]}] }
+                // { "entry":[{"changes":[{"value":{"metadata":{"phone_number_id"},
+                //   "messages":[{"from","text":{"body"}}],"contacts":[{"profile":{"name"}}]}}]}] }
                 if (!payload.TryGetProperty("entry", out var entry) || entry.GetArrayLength() == 0) return Ok();
 
                 foreach (var ent in entry.EnumerateArray())
@@ -457,6 +557,33 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
                         if (!change.TryGetProperty("value", out var value)) continue;
                         if (!value.TryGetProperty("messages", out var messages) || messages.ValueKind != System.Text.Json.JsonValueKind.Array) continue;
 
+                        var phoneNumberId = value.TryGetProperty("metadata", out var meta)
+                                         && meta.TryGetProperty("phone_number_id", out var pid)
+                            ? pid.GetString()
+                            : null;
+
+                        var tenant = await ResolverTenantDoWhatsAppAsync(master, tenantStore, tenantContext, phoneNumberId, logger);
+                        if (tenant == null)
+                        {
+                            logger.LogWarning(
+                                "WhatsApp: mensagem descartada — numero {PhoneNumberId} nao pertence a nenhuma loja. "
+                                + "A loja precisa salvar a configuracao do WhatsApp para registrar o numero.",
+                                phoneNumberId ?? "(ausente)");
+                            continue;
+                        }
+
+                        // Escopo proprio por loja: o DbContext e resolvido depois do
+                        // tenant, senao viria apontando para o banco errado.
+                        using var scope = scopeFactory.CreateScope();
+                        scope.ServiceProvider
+                             .GetRequiredService<ConnectVeiculos.Core.Interfaces.Tenancy.ITenantContext>()
+                             .Resolve(tenant.TenId, tenant.TenSlug, tenant.TenDatabaseFile);
+
+                        var db = scope.ServiceProvider
+                            .GetRequiredService<ConnectVeiculos.Infrastructure.Database.EntityFramework.ConnectVeiculosDbContext>();
+                        var notificacao = scope.ServiceProvider
+                            .GetRequiredService<ConnectVeiculos.Core.Interfaces.Services.INotificacaoService>();
+
                         // Mapear contatos por wa_id
                         var nomes = new Dictionary<string, string>();
                         if (value.TryGetProperty("contacts", out var contacts) && contacts.ValueKind == System.Text.Json.JsonValueKind.Array)
@@ -464,7 +591,7 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
                             foreach (var c in contacts.EnumerateArray())
                             {
                                 var waId = c.TryGetProperty("wa_id", out var w) ? w.GetString() : null;
-                                var nome = c.TryGetProperty("profile", out var p) && p.TryGetProperty("name", out var n) ? n.GetString() : null;
+                                var nome = c.TryGetProperty("profile", out var pr) && pr.TryGetProperty("name", out var n) ? n.GetString() : null;
                                 if (!string.IsNullOrEmpty(waId) && !string.IsNullOrEmpty(nome)) nomes[waId] = nome;
                             }
                         }
@@ -488,7 +615,8 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
                                 .FirstOrDefaultAsync();
                             if (ja != null)
                             {
-                                logger.LogInformation("Lead WhatsApp ja existe ({Tel}), ignorando duplicata", telefoneFmt);
+                                logger.LogInformation("Lead WhatsApp ja existe ({Tel}) no tenant {Slug}, ignorando duplicata",
+                                    telefoneFmt, tenant.TenSlug);
                                 continue;
                             }
 
@@ -499,7 +627,8 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
                             db.Leads.Add(lead);
                             await db.SaveChangesAsync();
 
-                            logger.LogInformation("Lead WhatsApp criado #{Id} de {Tel}", lead.LeaId, telefoneFmt);
+                            logger.LogInformation("Lead WhatsApp criado #{Id} de {Tel} no tenant {Slug}",
+                                lead.LeaId, telefoneFmt, tenant.TenSlug);
 
                             try
                             {
@@ -523,6 +652,38 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
 
             // Sempre 200 — Meta retentaria se receber !=200
             return Ok();
+        }
+
+        /// <summary>
+        /// Descobre de qual loja e o numero que recebeu a mensagem. Primeiro pelo
+        /// registro do `phone_number_id`; se nao houver, cai no tenant que o
+        /// middleware resolveu pela URL — o caminho antigo, com "?tenant=slug".
+        /// </summary>
+        private async Task<ConnectVeiculos.Core.Entities.Tenants.Tenant?> ResolverTenantDoWhatsAppAsync(
+            ConnectVeiculos.Infrastructure.Database.EntityFramework.MasterDbContext master,
+            ConnectVeiculos.Core.Interfaces.Tenancy.ITenantStore tenantStore,
+            ConnectVeiculos.Core.Interfaces.Tenancy.ITenantContext tenantContext,
+            string? phoneNumberId,
+            ILogger logger)
+        {
+            if (!string.IsNullOrWhiteSpace(phoneNumberId))
+            {
+                var mapa = await master.WhatsAppNumeroMaps.AsNoTracking()
+                    .FirstOrDefaultAsync(m => m.PhoneNumberId == phoneNumberId);
+
+                if (mapa != null)
+                    return await tenantStore.GetByIdAsync(mapa.TenantId);
+            }
+
+            if (tenantContext.IsResolved && !string.IsNullOrWhiteSpace(tenantContext.TenantSlug))
+            {
+                logger.LogInformation(
+                    "WhatsApp: numero {PhoneNumberId} nao registrado; usando o tenant da URL ({Slug}).",
+                    phoneNumberId ?? "(ausente)", tenantContext.TenantSlug);
+                return await tenantStore.GetBySlugAsync(tenantContext.TenantSlug);
+            }
+
+            return null;
         }
 
         [HttpPost("whatsapp/enviar")]

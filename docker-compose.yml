@@ -60,6 +60,12 @@ services:
       # vinculada a Page e o app Meta com instagram_content_publish liberado.
       # Ligue com META_INSTAGRAM_ENABLED=true no .env quando os dois existirem.
       - MetaSettings__InstagramEnabled=${META_INSTAGRAM_ENABLED:-false}
+      # Token de verificacao do webhook do WhatsApp, no nivel do aplicativo.
+      # Com um aplicativo unico atendendo todas as lojas, a verificacao acontece
+      # uma vez so e nao existe loja definida nessa chamada — por isso o token
+      # nao pode vir da configuracao de um tenant.
+      - WhatsAppSettings__VerifyToken=${WHATSAPP_VERIFY_TOKEN:-}
+
       # Escopos do OAuth: precisam casar com os casos de uso habilitados no app
       # da Meta. Pedir um que o app nao concede derruba a tela inteira com
       # "Invalid Scopes". Configuravel pra ajustar sem reconstruir a imagem.
