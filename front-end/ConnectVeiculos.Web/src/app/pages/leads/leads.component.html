@@ -221,3 +221,39 @@
     </div>
   }
 </div>
+
+<!-- Só aparece quando a API do WhatsApp esta configurada. Sem ela, o botao do
+     lead continua abrindo o wa.me, como sempre fez. -->
+@if (leadRespondendo) {
+  <div class="modal-overlay" (click)="fecharResposta()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Responder pelo WhatsApp</h2>
+        <button class="btn-close" (click)="fecharResposta()" [disabled]="enviandoResposta">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="destinatario">
+          Para <strong>{{ leadRespondendo.leaNomeCliente || 'cliente' }}</strong>
+          — {{ leadRespondendo.leaTelefone | telefone }}
+        </p>
+        <label class="required">Mensagem</label>
+        <textarea rows="5" maxlength="1000" [(ngModel)]="mensagemResposta"
+                  [disabled]="enviandoResposta"
+                  placeholder="Escreva a resposta que será enviada pelo WhatsApp..."></textarea>
+        <small>
+          O WhatsApp só aceita mensagem livre dentro de 24h desde a última mensagem do
+          cliente. Passado esse prazo, é preciso usar um template aprovado.
+        </small>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="fecharResposta()" [disabled]="enviandoResposta">Cancelar</button>
+        <button class="btn-primary" (click)="enviarResposta()"
+                [disabled]="enviandoResposta || !mensagemResposta.trim()">
+          {{ enviandoResposta ? 'Enviando...' : 'Enviar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
