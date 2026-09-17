@@ -96,11 +96,34 @@ aplicativo comum), número dedicado a ela, e templates aprovados pela Meta.
 - O telefone `+1 631 555-1181` aparecia como `(16) 31555-1181`: o pipe aplicava
   máscara brasileira em qualquer número de 11 dígitos
 
-**Limite conhecido do desenho atual:** o webhook resolve o tenant por
-`?tenant=slug` na URL, o que obriga **cada loja a ter o próprio app da Meta** —
-inviável como produto. O caminho é o Embedded Signup, com um app só, roteando
-pelo `phone_number_id` do payload. Exige ser Provedor de Tecnologia e
-verificação da empresa
+**Roteamento por número — feito e validado em 2026-09-17.** O webhook
+identifica a loja pelo `phone_number_id` do payload, não mais pela URL. Isso
+permite um app único da Meta atender todas as lojas com o mesmo endereço.
+
+Validado chamando o webhook **sem** `?tenant=`: o lead caiu em `empresa-teste`
+(`Lead WhatsApp criado #2 ... no tenant empresa-teste`) e o `default` continuou
+com zero leads — ou seja, não houve queda no tenant errado. O mapa
+número → loja vive no master, no padrão do `UserEmailMap`. O `?tenant=`
+continua aceito como alternativa.
+
+**Falta a segunda metade: o Embedded Signup**, que troca os três campos de
+configuração por um botão. Depende de a Meta aprovar a conta como Provedor de
+Tecnologia, o que exige verificação da empresa. Não foi escrito de propósito —
+seria código indo para produção sem nunca ter rodado.
+
+**Pendências para ter clientes reais** (nenhuma é de código):
+
+1. **Verificação da empresa** na Meta — é o primeiro dominó: aparece como
+   pré-requisito do WhatsApp em produção e de Provedor de Tecnologia
+2. **App Review do Facebook/Instagram** — enquanto o app estiver em modo
+   desenvolvimento, só admin, desenvolvedor ou testador do app consegue
+   autorizar. Uma revenda de fora **não conectaria hoje**, e isso nunca foi
+   testado porque todos os testes foram com a conta do próprio desenvolvedor
+3. **Provedor de Tecnologia + Embedded Signup** para o WhatsApp
+
+Atenção ao banner "Modo Teste" da tela de Integrações: ele é calculado como
+`AppId preenchido && AppSecret vazio`, o que mede se falta configurar o secret,
+**não** o modo do app na Meta. Pode estar informando algo que não corresponde
 
 **Nota sobre webhooks:** app não publicado **só recebe webhook de teste
 disparado do painel**. Os status reais de entrega aparecem no painel da Meta e
