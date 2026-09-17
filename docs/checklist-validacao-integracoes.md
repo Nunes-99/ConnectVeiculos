@@ -63,15 +63,49 @@ de template e lembrete de test drive.
 Pré-requisitos que não são de código: conta **WhatsApp Business API** (não é o
 aplicativo comum), número dedicado a ela, e templates aprovados pela Meta.
 
-- [ ] Configurar Access Token, Phone ID e Verify Token
-- [ ] Webhook de verificação — cadastrar a URL no painel da Meta e ver o
-      `hub.challenge` ser aceito
-- [ ] **Mensagem recebida vira Lead** no admin
-- [ ] Anti-duplicata — duas mensagens seguidas do mesmo número geram um Lead só
+- [x] **Configurar Access Token, Phone ID e Verify Token** — 2026-09-16, com o
+      número de teste gratuito da Meta (app `1801407787871634`, Phone ID
+      `1306797175857602`)
+- [x] **Webhook de verificação** — a Meta chamou `GET .../whatsapp/webhook`
+      com `hub.challenge` e recebeu 200
+- [x] **Mensagem recebida vira Lead** — `Lead WhatsApp criado #1 de
+      +16315551181`, com nome, telefone, origem WHATSAPP e o texto na observação
+- [x] **Anti-duplicata** — segundo envio do mesmo payload registrou
+      `Lead WhatsApp ja existe (+16315551181), ignorando duplicata`
 - [ ] Notificação em tempo real do Lead no painel, sem recarregar
-- [ ] Enviar mensagem pelo sistema
-- [ ] Enviar template aprovado
+- [x] **Enviar mensagem pelo sistema** — não havia tela: `enviarWhatsApp` existia
+      no serviço e nenhuma página o chamava; o botão do lead só abria o `wa.me`.
+      Criada a resposta pelo lead e o envio de teste no card de Integrações
+- [!] **Enviar template aprovado — bloqueado fora do nosso código.** O envio sai
+      correto: a Meta responde 200 com `wa_id` válido e `message_status:
+      accepted`. A mensagem não é entregue, e o teste que isola isso é
+      definitivo — **o envio disparado pelo painel da própria Meta, sem passar
+      pelo sistema, também não chega**. Falta verificar o número destinatário
+      na lista de teste
 - [ ] Lembrete de test drive (job do Hangfire)
+
+**Achados de código nesta rodada**, todos corrigidos:
+
+- Template sem parâmetro não pode levar `components`. Mandávamos sempre um
+  `body` com lista vazia; a Meta aceita e não entrega. O `hello_world` cai
+  exatamente nesse caso
+- O envio logava só "enviado com sucesso" e descartava o corpo da resposta —
+  que traz o id e o `message_status`. Dois testes se perderam por isso
+- `EnviarTemplateAsync` não tinha endpoint nem tela, mesmo padrão do
+  `enviarWhatsApp` e do e-mail de novo usuário
+- O telefone `+1 631 555-1181` aparecia como `(16) 31555-1181`: o pipe aplicava
+  máscara brasileira em qualquer número de 11 dígitos
+
+**Limite conhecido do desenho atual:** o webhook resolve o tenant por
+`?tenant=slug` na URL, o que obriga **cada loja a ter o próprio app da Meta** —
+inviável como produto. O caminho é o Embedded Signup, com um app só, roteando
+pelo `phone_number_id` do payload. Exige ser Provedor de Tecnologia e
+verificação da empresa
+
+**Nota sobre webhooks:** app não publicado **só recebe webhook de teste
+disparado do painel**. Os status reais de entrega aparecem no painel da Meta e
+nunca chegam ao servidor — confirmado em 2026-09-17, três eventos `messages`
+listados lá e zero POSTs no nginx
 
 ## 3. Meta — Facebook e Instagram
 
