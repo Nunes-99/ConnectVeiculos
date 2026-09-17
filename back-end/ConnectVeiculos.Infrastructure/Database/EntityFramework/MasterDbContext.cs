@@ -56,6 +56,18 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
             u.HasIndex(x => x.Email).IsUnique();
             u.Property(x => x.TenantSlug).IsRequired().HasMaxLength(64);
             u.HasIndex(x => x.TenantId);
+
+            // ToTable explicito, como no UserEmailMap acima. Sem isto o EF usa o
+            // nome do DbSet e procura "WhatsAppNumeroMaps", no plural, enquanto a
+            // tabela criada no schema e' singular.
+            var w = modelBuilder.Entity<WhatsAppNumeroMap>();
+            w.ToTable("WhatsAppNumeroMap");
+            w.HasKey(x => x.Id);
+            w.Property(x => x.Id).ValueGeneratedOnAdd();
+            w.Property(x => x.PhoneNumberId).IsRequired().HasMaxLength(64);
+            w.HasIndex(x => x.PhoneNumberId).IsUnique();
+            w.Property(x => x.TenantSlug).IsRequired().HasMaxLength(64);
+            w.HasIndex(x => x.TenantId);
         }
     }
 }
