@@ -1,7 +1,8 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LeadService, Lead, IntegracaoService, ToastService } from '../../core/services';
+import { LeadService, Lead, IntegracaoService, ToastService, SignalRService } from '../../core/services';
 import { TelefonePipe } from '../../shared/pipes';
 
 @Component({
@@ -15,6 +16,8 @@ export class LeadsComponent implements OnInit {
   private leadService = inject(LeadService);
   private integracaoService = inject(IntegracaoService);
   private toast = inject(ToastService);
+  private signalR = inject(SignalRService);
+  private destroyRef = inject(DestroyRef);
 
   leads: Lead[] = [];
   loading = false;
@@ -35,6 +38,23 @@ export class LeadsComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadData();
+
+    // Lead que chega pelo WhatsApp aparece sozinho, sem recarregar. O backend
+    // ja emitia LEAD_WHATSAPP pelo SignalR desde sempre; faltava alguem escutar
+    // — a tela nunca se inscreveu, e o aviso nunca chegava a lugar nenhum.
+    //
+    // Recarrega a lista em vez de inserir o lead vindo do evento: os cartoes de
+    // contagem no topo e os filtros de status e origem que estao aplicados
+    // continuam corretos, sem precisar reproduzir essa logica aqui.
+    this.signalR.notificacoes$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(notificacao => {
+        if (notificacao?.tipo !== 'LEAD_WHATSAPP') return;
+
+        const nome = notificacao.dados?.nome;
+        this.toast.info(nome ? `Novo lead no WhatsApp: ${nome}` : 'Novo lead no WhatsApp.');
+        this.loadData();
+      });
 
     this.integracaoService.getWhatsAppStatus().subscribe({
       next: (s) => this.whatsAppApiAtiva = s?.configurado === true,
