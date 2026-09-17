@@ -72,7 +72,10 @@ aplicativo comum), número dedicado a ela, e templates aprovados pela Meta.
       +16315551181`, com nome, telefone, origem WHATSAPP e o texto na observação
 - [x] **Anti-duplicata** — segundo envio do mesmo payload registrou
       `Lead WhatsApp ja existe (+16315551181), ignorando duplicata`
-- [ ] Notificação em tempo real do Lead no painel, sem recarregar
+- [x] Notificação em tempo real do Lead no painel, sem recarregar — **validado em 17/09/2026**.
+      Webhook disparado com o número real (11) 95317-9948 → lead apareceu sozinho no topo
+      da lista e os cartões passaram de 3 para 4, com a tela parada. A tela nunca escutava
+      o `LEAD_WHATSAPP` que o backend já emitia; corrigido no commit 72a4c0c.
 - [x] **Enviar mensagem pelo sistema** — não havia tela: `enviarWhatsApp` existia
       no serviço e nenhuma página o chamava; o botão do lead só abria o `wa.me`.
       Criada a resposta pelo lead e o envio de teste no card de Integrações
