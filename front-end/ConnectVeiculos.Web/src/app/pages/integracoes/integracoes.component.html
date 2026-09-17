@@ -173,7 +173,7 @@
       @if (waConfig.configurado) {
         <div class="form-group">
           <label for="waTesteTelefone">Enviar mensagem de teste para</label>
-          <div class="feed-url-row">
+          <div class="wa-teste-row">
             <input id="waTesteTelefone" type="tel" [(ngModel)]="waTesteTelefone"
                    [ngModelOptions]="{standalone: true}" placeholder="(11) 90000-0000"
                    [disabled]="waTestando" />
@@ -184,8 +184,10 @@
             </button>
           </div>
           <small>
-            Com número de teste da Meta, o destino precisa estar na lista de destinatários
-            cadastrados lá — caso contrário a Meta recusa o envio.
+            Envia o template <strong>hello_world</strong>, e não texto livre: o WhatsApp só
+            entrega texto livre dentro de 24h desde a última mensagem do cliente, e um teste
+            é sempre uma conversa iniciada pela empresa. Com número de teste da Meta, o
+            destino também precisa estar na lista de destinatários cadastrados lá.
           </small>
         </div>
       }

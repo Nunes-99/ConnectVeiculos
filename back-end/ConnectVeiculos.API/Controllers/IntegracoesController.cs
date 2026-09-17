@@ -539,6 +539,34 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
                       : StatusCode(502, new { error = "Falha ao enviar mensagem (verifique configuração e logs)." });
         }
 
+        /// <summary>
+        /// Envia um template aprovado. Existe separado do envio de texto porque
+        /// as duas coisas nao sao intercambiaveis no WhatsApp: texto livre so
+        /// vale dentro das 24h abertas por uma mensagem do cliente; fora disso,
+        /// e fora de qualquer conversa iniciada pela empresa, so template passa.
+        ///
+        /// Era o caso do EnviarTemplateAsync ate aqui: implementado no servico,
+        /// sem endpoint e sem tela.
+        /// </summary>
+        [HttpPost("whatsapp/enviar-template")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> WhatsAppEnviarTemplate(
+            [FromServices] IWhatsAppService whatsApp,
+            [FromBody] EnviarWhatsAppTemplateRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Telefone) || string.IsNullOrWhiteSpace(request.Template))
+                return BadRequest("Telefone e template sao obrigatorios.");
+
+            var ok = await whatsApp.EnviarTemplateAsync(
+                request.Telefone,
+                request.Template,
+                string.IsNullOrWhiteSpace(request.Idioma) ? "pt_BR" : request.Idioma,
+                request.Parametros ?? new List<string>());
+
+            return ok ? Ok(new { mensagem = "Template enviado." })
+                      : StatusCode(502, new { error = "Falha ao enviar o template (verifique se ele existe e esta aprovado)." });
+        }
+
         // ==========================================
         // E-MAIL / SMTP
         // ==========================================
@@ -1087,6 +1115,15 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
     {
         public string Telefone { get; set; } = "";
         public string Mensagem { get; set; } = "";
+    }
+
+    public class EnviarWhatsAppTemplateRequest
+    {
+        public string Telefone { get; set; } = string.Empty;
+        public string Template { get; set; } = string.Empty;
+        /// <summary>Codigo de idioma do template, como pt_BR ou en_US.</summary>
+        public string? Idioma { get; set; }
+        public List<string>? Parametros { get; set; }
     }
 
     public class SalvarWhatsAppConfigRequest

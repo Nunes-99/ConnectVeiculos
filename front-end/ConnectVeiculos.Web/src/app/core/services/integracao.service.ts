@@ -192,6 +192,10 @@ export class IntegracaoService {
     return this.http.post<{ mensagem: string }>(`${this.baseUrl}/integracoes/whatsapp/desconectar`, {});
   }
 
+  enviarWhatsAppTemplate(data: { telefone: string; template: string; idioma?: string; parametros?: string[] }): Observable<{ mensagem: string }> {
+    return this.http.post<{ mensagem: string }>(`${this.baseUrl}/integracoes/whatsapp/enviar-template`, data);
+  }
+
   enviarWhatsApp(data: { telefone: string; mensagem: string }): Observable<{ mensagem: string }> {
     return this.http.post<{ mensagem: string }>(`${this.baseUrl}/integracoes/whatsapp/enviar`, data);
   }

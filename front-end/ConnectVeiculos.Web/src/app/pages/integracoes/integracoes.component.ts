@@ -317,9 +317,18 @@ _{{6}}_`;
     this.waTestando = true;
     const destino = telefone.startsWith('55') ? telefone : '55' + telefone;
 
-    this.integracaoService.enviarWhatsApp({
+    // Template, e nao texto livre. Texto livre so chega dentro das 24h abertas
+    // por uma mensagem do cliente — e o teste, por definicao, e uma conversa
+    // iniciada pela empresa. Mandando texto, a Meta aceita a chamada, responde
+    // sucesso e nao entrega nada: foi o que aconteceu no primeiro teste.
+    //
+    // hello_world e o template que a Meta cria junto com toda conta nova, em
+    // en_US, sem parametros. Serve exatamente para confirmar que token, numero
+    // e destinatario estao certos.
+    this.integracaoService.enviarWhatsAppTemplate({
       telefone: destino,
-      mensagem: 'Mensagem de teste do ConnectVeículos. Se você recebeu isto, a integração com o WhatsApp está funcionando.'
+      template: 'hello_world',
+      idioma: 'en_US'
     }).subscribe({
       next: (r) => {
         this.toast.success(r?.mensagem ?? 'Mensagem enviada.');

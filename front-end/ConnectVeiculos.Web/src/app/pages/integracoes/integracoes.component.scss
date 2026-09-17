@@ -730,3 +730,29 @@
     color: var(--text-secondary);
   }
 }
+
+// Campo + botao do envio de teste do WhatsApp. Nao reaproveita o .feed-url-row
+// porque aquele foi feito para um botao de copiar (so icone): aqui o botao tem
+// texto e, na largura do card, passava por cima do campo. Com wrap, os dois
+// empilham quando nao cabem lado a lado.
+.wa-teste-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  input {
+    flex: 1 1 160px;
+    min-width: 0;
+    padding: 8px 12px;
+    border: 1px solid var(--border, #ddd);
+    border-radius: 6px;
+    font-size: 0.82rem;
+    background: var(--bg-secondary, #f5f5f5);
+    color: var(--text-primary, #333);
+  }
+
+  button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+}
