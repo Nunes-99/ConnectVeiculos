@@ -69,6 +69,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Notificacao
             var veiculoDesc = veiculo == null
                 ? "Veiculo"
                 : $"{veiculo.VeiMarca} {veiculo.VeiModelo} {veiculo.VeiAno}".Trim();
+            if (string.IsNullOrWhiteSpace(veiculoDesc)) veiculoDesc = "Veiculo";
 
             string lojaNome = "Concessionaria";
             string lojaEndereco = "";
@@ -77,18 +78,23 @@ namespace ConnectVeiculos.Infrastructure.Services.Notificacao
                 var loja = await _db.Lojas.AsNoTracking().FirstOrDefaultAsync(l => l.LojId == td.R_LojId.Value);
                 if (loja != null)
                 {
-                    lojaNome = loja.LojNome ?? lojaNome;
+                    if (!string.IsNullOrWhiteSpace(loja.LojNome)) lojaNome = loja.LojNome;
                     var partes = new[] { loja.LojLogradouro, loja.LojNumero, loja.LojBairro, loja.LojCidade, loja.LojEstado }
                         .Where(p => !string.IsNullOrWhiteSpace(p));
                     lojaEndereco = string.Join(", ", partes);
                 }
             }
 
+            // Nenhum parametro pode sair vazio: a Meta recusa o template inteiro
+            // quando uma variavel vem em branco, e a recusa nao diz qual foi —
+            // o erro chega como se o template estivesse errado. O horario e o
+            // unico campo opcional no cadastro do test drive, entao e o unico
+            // que precisa de um texto no lugar.
             var parametros = new List<string>
             {
                 td.TdrNomeCliente ?? "Cliente",
                 td.TdrDataAgendamento.ToString("dd/MM/yyyy"),
-                td.TdrHorario ?? "",
+                string.IsNullOrWhiteSpace(td.TdrHorario) ? "a combinar" : td.TdrHorario.Trim(),
                 veiculoDesc
             };
 
