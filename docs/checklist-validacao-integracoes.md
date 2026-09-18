@@ -122,8 +122,20 @@ aplicativo comum), número dedicado a ela, e templates aprovados pela Meta.
       estoura exceção, e o log já sugere conferir se o template está aprovado.
       Nada a mudar ali.
 
-      Para testar: o job procura test drives de **amanhã**. O cadastrado é de
-      18/09, então o job de hoje achou zero. Precisa remarcar para o dia seguinte
+      **Preparado em 18/09:** test drive #2 agendado para 19/09 as 14:30,
+      status Confirmado, telefone (11) 95317-9948. O job das 09:00 de 19/09 vai
+      encontra-lo. O #1 (18/09, sem horario) ficou como esta — serve de registro
+      do bug que motivou a correcao.
+
+      A confirmacao disparou a notificacao e o log mostrou o estado real:
+
+      ```
+      [13:05:06 ERR] WhatsApp falhou (Unauthorized): "Authentication Error", code 190
+      [13:05:06 WRN] TestDrive notificacao falhou: template=testdrive_confirmado
+      ```
+
+      13:05 UTC = 10:05 em Brasilia, e o token expirava as 10:00 — a prova em
+      producao de que o token de 24h nao serve nem para um dia de trabalho
 
 **Achados de código nesta rodada**, todos corrigidos:
 
@@ -310,6 +322,15 @@ um cliente da Diamante recebendo e-mail desse endereço estranha.
       como qualquer outro. Sem foto na janela de espera, não publica e registra
       o motivo. Quem subir as fotos depois publica pelos ícones de Instagram e
       Facebook na lista de Veículos.
+
+## 6.1 Lacunas de produto encontradas
+
+- [ ] **Nao existe remarcar test drive.** A API tem `POST` (agendar, publico),
+      `GET` (listar) e `PUT /{id}/status` — e so. Se o cliente ligar pedindo
+      para mudar a data ou o horario, a loja precisa cancelar e criar outro,
+      perdendo o registro do agendamento original. O horario tambem nao pode ser
+      preenchido depois: o test drive #1 esta sem horario e nao ha como corrigir
+      pela tela. Encontrado em 18/09/2026 ao procurar o botao de editar
 
 ## 7. Infraestrutura
 
