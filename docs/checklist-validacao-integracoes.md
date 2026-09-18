@@ -79,13 +79,51 @@ aplicativo comum), número dedicado a ela, e templates aprovados pela Meta.
 - [x] **Enviar mensagem pelo sistema** — não havia tela: `enviarWhatsApp` existia
       no serviço e nenhuma página o chamava; o botão do lead só abria o `wa.me`.
       Criada a resposta pelo lead e o envio de teste no card de Integrações
+- [!] **O token do WhatsApp expira em 24h** — descoberto em 18/09/2026.
+      Consultando o número na Graph API, a resposta foi:
+
+      ```
+      Error validating access token: Session has expired on
+      Thursday, 17-Sep-26 12:00:00 PDT
+      ```
+
+      O token gerado no painel "API Setup" da Meta é **temporário, de 24 horas**.
+      Serve para testar e nada mais: depois de um dia o envio para de funcionar
+      sozinho, sem ninguém mexer em nada. É uma explicação a se considerar para
+      qualquer teste de envio que "parou de funcionar do nada" de um dia para o
+      outro.
+
+      Não afeta o recebimento: o webhook continua criando leads normalmente,
+      porque quem chama somos nós é que somos chamados.
+
+      A saída definitiva é um **token de Usuário do Sistema** (System User) no
+      Business Manager, com as permissões `whatsapp_business_messaging` e
+      `whatsapp_business_management`, marcado como permanente. Enquanto o
+      Embedded Signup não existir, é esse token que tem de estar na configuração
+
 - [!] **Enviar template aprovado — bloqueado fora do nosso código.** O envio sai
       correto: a Meta responde 200 com `wa_id` válido e `message_status:
       accepted`. A mensagem não é entregue, e o teste que isola isso é
       definitivo — **o envio disparado pelo painel da própria Meta, sem passar
       pelo sistema, também não chega**. Falta verificar o número destinatário
       na lista de teste
-- [ ] Lembrete de test drive (job do Hangfire)
+- [ ] Lembrete de test drive (job do Hangfire) — **dois bloqueios, um já
+      resolvido**:
+      1. *(resolvido em 18/09)* O horário é opcional no cadastro e ia vazio para
+         a variável `{{3}}` do template. A Meta recusa o template inteiro quando
+         uma variável vem em branco, e a recusa não diz qual foi — o erro chega
+         parecendo template inexistente. O test drive cadastrado para o teste
+         estava salvo justamente sem horário. Corrigido com 4 testes de regressão
+      2. Os templates `testdrive_confirmado` e `testdrive_lembrete` ainda não
+         existem na WABA — precisam ser criados e aprovados (6 parâmetros: nome,
+         data, horário, veículo, endereço, nome da loja)
+
+      O job em si já degrada direito: conta enviados/falhas/sem-config, não
+      estoura exceção, e o log já sugere conferir se o template está aprovado.
+      Nada a mudar ali.
+
+      Para testar: o job procura test drives de **amanhã**. O cadastrado é de
+      18/09, então o job de hoje achou zero. Precisa remarcar para o dia seguinte
 
 **Achados de código nesta rodada**, todos corrigidos:
 
@@ -225,8 +263,13 @@ um cliente da Diamante recebendo e-mail desse endereço estranha.
 - [x] `sitemap.xml` aceito — 17 URLs descobertas
 - [x] Título e JSON-LD próprios na página de veículo disponível
 - [x] Veículo vendido com `noindex` e aviso na tela
-- [ ] **Alguma página realmente indexada** — "descoberta" não é "indexada";
-      conferir em Inspeção de URL e solicitar indexação
+- [x] **Páginas realmente indexadas** — confirmado em 18/09/2026 por
+      `site:connectveiculos.dev.br` no Google. Aparecem a landing, o catálogo da
+      loja (`/catalogo/empresa-teste`), a página de exclusão de dados e **uma
+      página de veículo** (`/empresa-teste/veiculo/...`). A página do veículo sai
+      com preço no resultado — "R$ 145.000,00" — ou seja o JSON-LD está sendo
+      lido, não só o texto. Nenhum veículo vendido apareceu, o que bate com o
+      `noindex`
 - [x] **Filtrar o sitemap para lojas públicas** — feito e validado em
       2026-09-15. Expunha quatro tenants: `default` (6 URLs), `empresa-teste`
       (5), `teste` (1) e `viorica7078` (1) — este último um autocadastro com
