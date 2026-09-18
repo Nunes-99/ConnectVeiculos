@@ -354,7 +354,22 @@ um cliente da Diamante recebendo e-mail desse endereço estranha.
 
 ## 6.1 Lacunas de produto encontradas
 
-- [ ] **Nao existe remarcar test drive.** A API tem `POST` (agendar, publico),
+- [x] **Remarcar test drive** — implementado e validado em producao em
+      18/09/2026. O registro #1, que estava em 18/09 sem horario (o mesmo que
+      revelou o bug do parametro vazio), foi remarcado pela tela para 22/09 as
+      10:30, mantendo o status Confirmado. O #2, preparado para o job, ficou
+      intacto. O aviso ao cliente foi tentado e caiu com code 190, como
+      esperado enquanto o token do WhatsApp nao for permanente.
+
+      **Descoberta de bastidor:** as telas que "nao carregavam" durante os
+      testes (Veiculos, Test Drives, Leads) nao tinham problema nenhum. O
+      console entregou a explicacao: `The page is being frozen` — o Chrome
+      suspende abas em segundo plano. Com a aba em foco, tudo responde na hora.
+      O servidor sempre entregou em ~0,12s, o que ja era pista disso.
+
+      Era assim antes:
+
+- [~] **Nao existia remarcar test drive.** A API tem `POST` (agendar, publico),
       `GET` (listar) e `PUT /{id}/status` — e so. Se o cliente ligar pedindo
       para mudar a data ou o horario, a loja precisa cancelar e criar outro,
       perdendo o registro do agendamento original. O horario tambem nao pode ser
