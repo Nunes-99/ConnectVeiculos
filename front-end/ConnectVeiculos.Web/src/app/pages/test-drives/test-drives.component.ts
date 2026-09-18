@@ -20,6 +20,20 @@ export class TestDrivesComponent implements OnInit {
   showInfo = false;
   filtroStatus = '';
 
+  /**
+   * Remarcacao. Antes disso a unica saida era cancelar e criar outro, o que
+   * dispara um cancelamento para um cliente que so pediu para mudar de horario.
+   */
+  tdRemarcando: TestDrive | null = null;
+  novaData = '';
+  novoHorario = '';
+  remarcando = false;
+
+  /** O input de data nao aceita dia anterior a hoje. */
+  get hoje(): string {
+    return new Date().toISOString().slice(0, 10);
+  }
+
   ngOnInit(): void {
     this.loadData();
   }
@@ -58,6 +72,51 @@ export class TestDrivesComponent implements OnInit {
         }
       },
       error: () => this.toast?.error('Erro ao atualizar status.')
+    });
+  }
+
+  abrirRemarcar(td: TestDrive): void {
+    this.tdRemarcando = td;
+    this.novaData = (td.tdrDataAgendamento || '').slice(0, 10);
+    this.novoHorario = td.tdrHorario || '';
+  }
+
+  fecharRemarcar(): void {
+    if (this.remarcando) return;
+    this.tdRemarcando = null;
+    this.novaData = '';
+    this.novoHorario = '';
+  }
+
+  confirmarRemarcar(): void {
+    const td = this.tdRemarcando;
+    if (!td || !this.novaData || this.remarcando) return;
+
+    this.remarcando = true;
+    this.testDriveService.reagendar(td.tdrId, this.novaData, this.novoHorario).subscribe({
+      next: (resp: any) => {
+        this.remarcando = false;
+        this.fecharRemarcar();
+        this.loadData();
+
+        const n = resp?.notificacao;
+        if (!n || !n.aplicavel) {
+          this.toast?.success('Test drive remarcado.');
+        } else if (n.enviada) {
+          this.toast?.success('Test drive remarcado — cliente avisado via WhatsApp.');
+        } else if (n.motivo === 'nao-configurado') {
+          this.toast?.warning('Test drive remarcado. WhatsApp não integrado — avise o cliente da nova data.');
+        } else if (n.motivo === 'sem-telefone') {
+          this.toast?.warning('Test drive remarcado. Cliente sem WhatsApp cadastrado — avise da nova data.');
+        } else {
+          this.toast?.warning('Test drive remarcado, mas o aviso no WhatsApp falhou — avise o cliente da nova data.');
+        }
+      },
+      error: (err) => {
+        this.remarcando = false;
+        const msg = typeof err?.error === 'string' ? err.error : 'Não foi possível remarcar.';
+        this.toast?.error(msg);
+      }
     });
   }
 

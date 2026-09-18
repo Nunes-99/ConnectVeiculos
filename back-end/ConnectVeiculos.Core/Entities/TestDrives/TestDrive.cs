@@ -35,5 +35,21 @@ namespace ConnectVeiculos.Core.Entities.TestDrives
         }
 
         public void AlterarStatus(string novoStatus) { TdrStatus = novoStatus; }
+
+        /// <summary>
+        /// Muda a data e o horario de um agendamento que continua valendo.
+        ///
+        /// Ate 18/09/2026 nao existia: quem precisasse mudar o horario tinha de
+        /// cancelar e criar outro, o que perde o registro original e faz o
+        /// cliente receber um cancelamento por uma remarcacao combinada com ele.
+        ///
+        /// O horario e opcional aqui pelo mesmo motivo que e opcional no
+        /// agendamento — nem toda loja trabalha com hora marcada.
+        /// </summary>
+        public void Reagendar(DateTime novaData, string? novoHorario)
+        {
+            TdrDataAgendamento = novaData;
+            TdrHorario = string.IsNullOrWhiteSpace(novoHorario) ? "" : novoHorario.Trim();
+        }
     }
 }

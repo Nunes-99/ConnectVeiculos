@@ -60,6 +60,49 @@ namespace ConnectVeiculos.API.Controllers
             return Ok(result);
         }
 
+        /// <summary>
+        /// Remarca data e horario de um agendamento que continua valendo.
+        ///
+        /// Um test drive ja realizado ou cancelado nao se remarca: o que
+        /// aconteceu, aconteceu. Para esses, o caminho e agendar um novo.
+        ///
+        /// Quando o agendamento ja estava confirmado, o cliente e avisado da
+        /// nova data — foi ele quem combinou a mudanca, e a confirmacao antiga
+        /// que ele tem na mao passou a estar errada.
+        /// </summary>
+        [HttpPut("{id}/reagendar")]
+        [Authorize]
+        public async Task<IActionResult> Reagendar(
+            int id,
+            [FromBody] ReagendarTestDriveRequest request,
+            [FromServices] ITestDriveNotificacaoService notificacao)
+        {
+            var testDrive = await _context.TestDrives.FindAsync(id);
+            if (testDrive == null) return NotFound();
+
+            if (testDrive.TdrStatus == "R")
+                return BadRequest("Test drive ja realizado nao pode ser remarcado. Agende um novo.");
+            if (testDrive.TdrStatus == "X")
+                return BadRequest("Test drive cancelado nao pode ser remarcado. Agende um novo.");
+            if (request.DataAgendamento.Date < DateTime.Today)
+                return BadRequest("Data de agendamento nao pode ser no passado.");
+
+            testDrive.Reagendar(request.DataAgendamento, request.Horario);
+            await _context.SaveChangesAsync();
+
+            TestDriveNotificacaoResult? notif = null;
+            if (testDrive.TdrStatus == "C")
+                notif = await notificacao.NotificarConfirmacaoAsync(testDrive);
+
+            return Ok(new
+            {
+                remarcado = true,
+                notificacao = notif == null
+                    ? new { aplicavel = false, enviada = false, motivo = "nao-aplicavel", erro = (string?)null }
+                    : new { aplicavel = true, enviada = notif.Enviada, motivo = notif.Motivo, erro = notif.MensagemErro }
+            });
+        }
+
         // PUT - atualizar status. Dispara notificacao WhatsApp se aplicavel.
         [HttpPut("{id}/status")]
         [Authorize]
@@ -107,5 +150,12 @@ namespace ConnectVeiculos.API.Controllers
     public class AtualizarStatusRequest
     {
         public string Status { get; set; }
+    }
+
+    public class ReagendarTestDriveRequest
+    {
+        public DateTime DataAgendamento { get; set; }
+        /// <summary>Opcional: nem toda loja trabalha com hora marcada.</summary>
+        public string? Horario { get; set; }
     }
 }
