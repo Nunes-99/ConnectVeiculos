@@ -12,14 +12,15 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
     /// <summary>
     /// Avisa por e-mail quando a conexao com o Mercado Livre esta perto de cair.
     ///
-    /// O app do ML nao recebe refresh_token, entao o token dura 6h e alguem
-    /// precisa reconectar na mao. Sem aviso, a loja descobre pela ausencia: fica
-    /// dias sem anunciar nada e so estranha depois. O e-mail chega antes, com o
-    /// link da tela de Integracoes.
+    /// Nasceu porque a aplicacao do ML nao recebia refresh_token: o token durava
+    /// 6h e alguem precisava reconectar na mao. Sem aviso, a loja descobria pela
+    /// ausencia — ficava dias sem anunciar nada e so estranhava depois.
     ///
-    /// Quando o ML liberar offline_access na aplicacao, o refresh passa a
-    /// funcionar, o token deixa de expirar sozinho e este worker para de ter o
-    /// que avisar — sem precisar ser removido.
+    /// Desde 18/09/2026 o offline_access esta habilitado na aplicacao (caixa
+    /// "Refresh Token" nos fluxos OAuth do DevCenter) e o refresh funciona, entao
+    /// o token deixou de expirar sozinho e este worker normalmente nao tem o que
+    /// avisar. Continua valendo: se o refresh_token for revogado ou rejeitado, a
+    /// integracao volta a expirar e o aviso e o que evita a loja descobrir tarde.
     /// </summary>
     public sealed class MercadoLivreExpiracaoWorker : BackgroundService
     {

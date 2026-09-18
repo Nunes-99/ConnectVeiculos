@@ -269,6 +269,35 @@ um cliente da Diamante recebendo e-mail desse endereço estranha.
       zera a exigência no mesmo UPDATE
 - [x] Acentuação e visual padronizados em todos os templates
 
+## 4.1 Mercado Livre — offline_access resolvido em 18/09/2026
+
+- [x] **A conexao para de cair a cada 6 horas.** O suporte respondeu ao chamado
+      WCS-50843 confirmando o diagnostico: a aplicacao estava com o fluxo e o
+      redirect URI corretos, **faltava o offline_access habilitado na propria
+      aplicacao**.
+
+      No DevCenter isso nao aparece com esse nome: e a caixa **"Refresh Token"**
+      em *Fluxos OAuth*, que estava desmarcada ao lado de Authorization Code e
+      Client Credentials. Os seletores de *Permissoes* nao tem opcao "off-line"
+      nenhuma — procurar por ali era beco sem saida.
+
+      Ordem que funcionou: marcar Refresh Token e salvar → Desconectar (revoga o
+      grant antigo, que o suporte exigia) → Conectar. Resultado no log:
+
+      ```
+      ML /oauth/token respondeu com os campos
+      [access_token, token_type, expires_in, scope, user_id, refresh_token]
+      e scope [offline_access read ... write]
+      Mercado Livre conectado. UserId: 188075347
+      ```
+
+      No banco: IntRefreshTokenCifrado PRESENTE, IntFalhasConsecutivasSync 0.
+
+      Tres hipoteses foram descartadas antes desta (ausencia do parametro scope,
+      separador + vs %20, grant velho). A quarta tentativa achou um bug real de
+      caminho — o DesconectarAsync nunca revogava o grant — que virou justamente
+      o passo que o suporte pediu.
+
 ## 5. Google
 
 - [x] Domínio verificado no Search Console
