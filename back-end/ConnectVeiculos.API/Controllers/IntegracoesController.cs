@@ -555,6 +555,23 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
                     foreach (var change in changes.EnumerateArray())
                     {
                         if (!change.TryGetProperty("value", out var value)) continue;
+
+                        // A Meta manda dois tipos de evento pelo mesmo webhook:
+                        // "messages", quando o cliente escreve, e "statuses", que conta o
+                        // que aconteceu com o que NOS enviamos. So o primeiro era lido — o
+                        // segundo morria no continue abaixo.
+                        //
+                        // Isso deixava um buraco caro: a Meta responde "accepted" a todo
+                        // envio aceito, o que nao significa entregue. Quando ela descarta a
+                        // mensagem depois (destinatario fora da lista de teste, numero sem
+                        // WhatsApp, template reprovado), quem diz isso e o status — e nos
+                        // estavamos jogando fora justamente a parte que explica a falha.
+                        if (value.TryGetProperty("statuses", out var statuses)
+                            && statuses.ValueKind == System.Text.Json.JsonValueKind.Array)
+                        {
+                            RegistrarStatusDeEnvio(statuses, logger);
+                        }
+
                         if (!value.TryGetProperty("messages", out var messages) || messages.ValueKind != System.Text.Json.JsonValueKind.Array) continue;
 
                         var phoneNumberId = value.TryGetProperty("metadata", out var meta)
@@ -652,6 +669,50 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
 
             // Sempre 200 — Meta retentaria se receber !=200
             return Ok();
+        }
+
+        /// <summary>
+        /// Registra no log o que a Meta fez com cada mensagem que enviamos.
+        ///
+        /// Os estados vao de "sent" a "delivered" e "read"; "failed" vem com o
+        /// motivo, que e a unica forma de saber por que uma mensagem aceita nao
+        /// chegou. Sem isto, "accepted" era tudo o que se sabia.
+        /// </summary>
+        private static void RegistrarStatusDeEnvio(System.Text.Json.JsonElement statuses, ILogger logger)
+        {
+            foreach (var s in statuses.EnumerateArray())
+            {
+                var status = s.TryGetProperty("status", out var st) ? st.GetString() : "(sem status)";
+                var destino = s.TryGetProperty("recipient_id", out var r) ? r.GetString() : "(sem destinatario)";
+                var id = s.TryGetProperty("id", out var i) ? i.GetString() : "";
+
+                var temErro = s.TryGetProperty("errors", out var errors)
+                           && errors.ValueKind == System.Text.Json.JsonValueKind.Array
+                           && errors.GetArrayLength() > 0;
+
+                if (!temErro)
+                {
+                    logger.LogInformation("WhatsApp {Status} para {Destino} [id={Id}]", status, destino, id);
+                    continue;
+                }
+
+                foreach (var e in errors.EnumerateArray())
+                {
+                    var codigo = e.TryGetProperty("code", out var c) ? c.ToString() : "?";
+                    var titulo = e.TryGetProperty("title", out var t) ? t.GetString() : "";
+
+                    // O texto util as vezes esta em error_data.details e as vezes
+                    // em message — a Meta usa os dois conforme o tipo de falha.
+                    var detalhe = e.TryGetProperty("error_data", out var ed)
+                               && ed.TryGetProperty("details", out var d)
+                        ? d.GetString()
+                        : (e.TryGetProperty("message", out var m) ? m.GetString() : "");
+
+                    logger.LogWarning(
+                        "WhatsApp {Status} para {Destino}: ({Codigo}) {Titulo} — {Detalhe} [id={Id}]",
+                        status, destino, codigo, titulo, detalhe, id);
+                }
+            }
         }
 
         /// <summary>
