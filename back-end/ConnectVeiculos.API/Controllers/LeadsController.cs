@@ -10,6 +10,8 @@ namespace ConnectVeiculos.API.Controllers
     [Route("api/[controller]")]
     public class LeadsController : ControllerBase
     {
+        private const string OrigemCliqueWhatsApp = "WHATSAPP_CATALOGO";
+
         private readonly ConnectVeiculosDbContext _context;
 
         public LeadsController(ConnectVeiculosDbContext context)
@@ -21,6 +23,27 @@ namespace ConnectVeiculos.API.Controllers
         [HttpPost]
         public async Task<IActionResult> Registrar([FromBody] RegistrarLeadRequest request)
         {
+            // Clique no WhatsApp do catalogo: o visitante nao preenche nada — a conversa
+            // acontece no WhatsApp da loja. O registro serve para a loja saber qual veiculo
+            // gerou interesse. Antes caia na validacao abaixo e respondia 400, entao nenhum
+            // clique de "Tenho interesse" jamais virou lead.
+            if (string.Equals(request.Origem, OrigemCliqueWhatsApp, StringComparison.OrdinalIgnoreCase)
+                && string.IsNullOrWhiteSpace(request.NomeCliente)
+                && string.IsNullOrWhiteSpace(request.Telefone)
+                && string.IsNullOrWhiteSpace(request.Email))
+            {
+                request.NomeCliente = "Visitante do catálogo";
+                request.Observacao ??= "Clicou em falar pelo WhatsApp no catálogo. O contato chega direto no WhatsApp da loja.";
+
+                var clique = new Lead(0, request.VeiculoId, request.LojaId, request.NomeCliente,
+                    null, null, OrigemCliqueWhatsApp, "NOVO", request.Observacao,
+                    null, null, null, null);
+
+                _context.Leads.Add(clique);
+                await _context.SaveChangesAsync();
+                return Ok(new { id = clique.LeaId, mensagem = "Interesse registrado." });
+            }
+
             if (string.IsNullOrWhiteSpace(request.NomeCliente))
                 return BadRequest("Nome do cliente é obrigatório.");
             if (string.IsNullOrWhiteSpace(request.Telefone) && string.IsNullOrWhiteSpace(request.Email))

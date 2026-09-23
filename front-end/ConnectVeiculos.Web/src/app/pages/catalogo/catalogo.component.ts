@@ -170,8 +170,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   tdEnviado = false;
   tdMinData = '';
   datasDisponiveis: { valor: string; label: string }[] = [];
-  todosHorarios = ['08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
-  horariosDisponiveis: string[] = [...this.todosHorarios];
+  horariosDisponiveis: string[] = [];
 
   // Share
   showShare = false;
@@ -562,10 +561,24 @@ export class CatalogoComponent implements OnInit, OnDestroy {
    */
   telefoneWhatsApp(veiculo?: CatalogoVeiculo | null): string {
     const v = veiculo || this.veiculoSelecionado;
-    return v?.lojaWhatsApp?.replace(/\D/g, '')
+    const digitos = v?.lojaWhatsApp?.replace(/\D/g, '')
         || this.loja?.lojWhatsApp?.replace(/\D/g, '')
         || this.loja?.lojTel1?.replace(/\D/g, '')
         || '';
+    return this.comDdi(digitos);
+  }
+
+  /**
+   * Numero no formato do wa.me (55 + DDD + numero). A loja cadastra dos dois
+   * jeitos — o WhatsApp da Diamante esta salvo como 5511949803898 e o telefone
+   * como 11949803898. Antes o 55 era colado sempre, e o "Tenho interesse" abria
+   * o WhatsApp para 555511949803898: um numero que nao existe, com o cliente
+   * achando que tinha mandado a mensagem.
+   */
+  private comDdi(digitos: string): string {
+    if (!digitos) return '';
+    if (digitos.length <= 11) return `55${digitos}`;
+    return digitos;
   }
 
   /** So mostra o botao de WhatsApp quando ha numero pra onde mandar. */
@@ -582,7 +595,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     const mensagem = encodeURIComponent(
       `Olá! Tenho interesse no veículo ${v.veiMarca} ${v.veiModelo} ${v.veiAno} - ${this.formatarPreco(v.veiPreco)}`
     );
-    window.open(`https://wa.me/55${telefone}?text=${mensagem}`, '_blank');
+    window.open(`https://wa.me/${telefone}?text=${mensagem}`, '_blank');
     this.leadService.registrar({
       veiculoId: v?.veiId || null,
       lojaId: this.lojaId,
@@ -592,11 +605,11 @@ export class CatalogoComponent implements OnInit, OnDestroy {
 
   abrirWhatsAppGeral(): void {
     if (!isPlatformBrowser(this.platformId)) return;
-    const telefone = this.loja?.lojWhatsApp?.replace(/\D/g, '') || this.loja?.lojTel1?.replace(/\D/g, '') || '';
+    const telefone = this.comDdi(this.loja?.lojWhatsApp?.replace(/\D/g, '') || this.loja?.lojTel1?.replace(/\D/g, '') || '');
     if (!telefone && this.veiculos.length > 0) {
-      const tel = this.veiculos[0].lojaWhatsApp?.replace(/\D/g, '') || '';
+      const tel = this.comDdi(this.veiculos[0].lojaWhatsApp?.replace(/\D/g, '') || '');
       if (!tel) return;
-      window.open(`https://wa.me/55${tel}?text=${encodeURIComponent('Olá! Gostaria de saber mais sobre os veículos disponíveis.')}`, '_blank');
+      window.open(`https://wa.me/${tel}?text=${encodeURIComponent('Olá! Gostaria de saber mais sobre os veículos disponíveis.')}`, '_blank');
       this.leadService.registrar({
         veiculoId: null,
         lojaId: this.lojaId,
@@ -605,7 +618,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
       return;
     }
     if (!telefone) return;
-    window.open(`https://wa.me/55${telefone}?text=${encodeURIComponent('Olá! Gostaria de saber mais sobre os veículos disponíveis.')}`, '_blank');
+    window.open(`https://wa.me/${telefone}?text=${encodeURIComponent('Olá! Gostaria de saber mais sobre os veículos disponíveis.')}`, '_blank');
     this.leadService.registrar({
       veiculoId: null,
       lojaId: this.lojaId,
@@ -840,12 +853,13 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   // ==========================================
   abrirTestDrive(veiculo: CatalogoVeiculo): void {
     this.testDriveVeiculo = veiculo;
-    const hoje = new Date();
-    this.tdMinData = hoje.toISOString().split('T')[0];
-    this.tdNome = ''; this.tdTelefone = ''; this.tdWhatsApp = ''; this.tdEmail = ''; this.tdData = this.tdMinData; this.tdHorario = ''; this.tdObs = '';
-    this.tdEnviado = false;
+    this.tdMinData = this.dataLocal(new Date());
     this.datasDisponiveis = this.gerarProximasDatas(30);
-    this.horariosDisponiveis = [...this.todosHorarios];
+    this.tdNome = ''; this.tdTelefone = ''; this.tdWhatsApp = ''; this.tdEmail = ''; this.tdHorario = ''; this.tdObs = '';
+    // Hoje pode nao estar na lista (domingo): comeca pela primeira data que a loja atende.
+    this.tdData = this.datasDisponiveis[0]?.valor || '';
+    this.tdEnviado = false;
+    this.horariosDisponiveis = [];
     this.onTdDataChange();
     this.showTestDrive = true;
   }
@@ -857,7 +871,9 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     for (let i = 0; i < dias; i++) {
       const d = new Date(hoje);
       d.setDate(d.getDate() + i);
-      const valor = d.toISOString().split('T')[0];
+      // A loja nao abre aos domingos (regra em ExpedienteTestDrive, no backend).
+      if (d.getDay() === 0) continue;
+      const valor = this.dataLocal(d);
       const dia = String(d.getDate()).padStart(2, '0');
       const mes = String(d.getMonth() + 1).padStart(2, '0');
       const label = i === 0 ? `Hoje (${dia}/${mes})` : i === 1 ? `Amanhã (${dia}/${mes})` : `${diasSemana[d.getDay()]} ${dia}/${mes}`;
@@ -866,36 +882,32 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     return datas;
   }
 
+  /**
+   * yyyy-MM-dd no fuso do navegador. O toISOString() convertia para UTC: depois
+   * das 21h o "Hoje (23/09)" era gravado como 24/09.
+   */
+  private dataLocal(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
   onTdDataChange(): void {
-    if (!this.tdData) {
-      this.horariosDisponiveis = [...this.todosHorarios];
-      return;
-    }
+    this.horariosDisponiveis = [];
+    if (!this.tdData) return;
 
-    this.testDriveService.listar(this.lojaId || undefined).subscribe({
-      next: (tds) => {
-        const ocupados = tds
-          .filter(td => td.tdrStatus !== 'X' && td.tdrDataAgendamento?.split('T')[0] === this.tdData)
-          .map(td => td.tdrHorario);
-        let disponiveis = this.todosHorarios.filter(h => !ocupados.includes(h));
-
-        // Filtra horários já passados quando a data selecionada é hoje
-        const hoje = new Date();
-        const hojeStr = hoje.toISOString().split('T')[0];
-        if (this.tdData === hojeStr) {
-          const horaAtual = hoje.getHours();
-          const minutoAtual = hoje.getMinutes();
-          disponiveis = disponiveis.filter(h => {
-            const [hora, minuto] = h.split(':').map(Number);
-            return hora > horaAtual || (hora === horaAtual && minuto > minutoAtual);
-          });
-        }
-
-        this.horariosDisponiveis = disponiveis;
+    // O servidor decide: expediente da loja (sabado ate meio-dia, domingo
+    // fechado), horarios ja tomados e, se for hoje, os que ja passaram. Antes
+    // isto usava o GET autenticado de test drives — para o visitante comum dava
+    // 401 e nenhum desses filtros rodava.
+    const dataPedida = this.tdData;
+    this.testDriveService.horariosLivres(dataPedida, this.lojaId).subscribe({
+      next: (livres) => {
+        if (this.tdData !== dataPedida) return; // trocou de data antes da resposta
+        this.horariosDisponiveis = livres;
         if (!this.horariosDisponiveis.includes(this.tdHorario)) {
           this.tdHorario = '';
         }
-      }
+      },
+      error: () => { this.horariosDisponiveis = []; }
     });
   }
 
@@ -929,7 +941,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   }
 
   enviarTestDrive(): void {
-    if (!this.testDriveVeiculo || !this.tdNome || !this.tdTelefone || !this.tdData) return;
+    if (!this.testDriveVeiculo || !this.tdNome || !this.tdTelefone || !this.tdData || !this.tdHorario) return;
     this.testDriveService.agendar({
       veiculoId: this.testDriveVeiculo.veiId,
       lojaId: this.lojaId,
@@ -942,7 +954,12 @@ export class CatalogoComponent implements OnInit, OnDestroy {
       observacao: this.tdObs
     }).subscribe({
       next: () => { this.tdEnviado = true; },
-      error: () => { this.toast.error('Erro ao agendar. Tente novamente.'); }
+      error: (err) => {
+        // O servidor explica o motivo ("Esse horário não está mais disponível"...).
+        const motivo = typeof err?.error === 'string' ? err.error : null;
+        this.toast.error(motivo || 'Erro ao agendar. Tente novamente.');
+        if (motivo) this.onTdDataChange();
+      }
     });
   }
 
@@ -1053,7 +1070,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   get linkVenderCarro(): string | null {
     if (this.loja?.lojLinkVenderCarro) return this.loja.lojLinkVenderCarro;
     const zap = this.telefoneWhatsApp();
-    return zap ? `https://wa.me/${zap}?text=${encodeURIComponent('Ola! Quero vender meu carro.')}` : null;
+    return zap ? `https://wa.me/${zap}?text=${encodeURIComponent('Olá! Quero vender meu carro.')}` : null;
   }
 
   /** Endereco da loja no Google Maps, para o mapa do rodape. */

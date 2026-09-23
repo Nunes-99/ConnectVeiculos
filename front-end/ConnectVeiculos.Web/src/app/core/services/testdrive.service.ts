@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
@@ -26,6 +26,13 @@ export class TestDriveService {
 
   agendar(data: any): Observable<any> {
     return this.http.post(this.baseUrl, data);
+  }
+
+  /** Horarios livres de uma data (publico): expediente, ocupados e ja passados saem no servidor. */
+  horariosLivres(data: string, lojaId?: number | null): Observable<string[]> {
+    let params = new HttpParams().set('data', data);
+    if (lojaId) params = params.set('lojaId', lojaId.toString());
+    return this.http.get<string[]>(`${this.baseUrl}/horarios`, { params });
   }
 
   listar(lojaId?: number, status?: string): Observable<TestDrive[]> {

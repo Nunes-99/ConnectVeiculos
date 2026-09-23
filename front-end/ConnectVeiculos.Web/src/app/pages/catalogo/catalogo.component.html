@@ -472,7 +472,7 @@
               <div class="spec-item">
                 <span class="material-icons">pin</span>
                 <div>
-                  <small>Placa</small>
+                  <small>Final da placa</small>
                   <strong>{{ veiculoSelecionado.veiPlaca }}</strong>
                 </div>
               </div>
@@ -701,10 +701,10 @@
             </select>
           </div>
           @if (tdData && horariosDisponiveis.length === 0) {
-            <p class="td-aviso">Todos os horários estão ocupados nesta data. Escolha outra data.</p>
+            <p class="td-aviso">Não há horários livres nesta data. Escolha outra data.</p>
           }
           <textarea [(ngModel)]="tdObs" placeholder="Observações (opcional)" rows="2"></textarea>
-          <button class="btn-agendar" (click)="enviarTestDrive()" [disabled]="!tdNome || !tdTelefone || !tdData">
+          <button class="btn-agendar" (click)="enviarTestDrive()" [disabled]="!tdNome || !tdTelefone || !tdData || !tdHorario">
             <span class="material-icons">check</span> Confirmar Agendamento
           </button>
         </div>

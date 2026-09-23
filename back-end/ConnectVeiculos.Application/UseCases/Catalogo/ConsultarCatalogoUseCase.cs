@@ -85,7 +85,10 @@ namespace ConnectVeiculos.Application.UseCases.Catalogo
                         VeiCor = v.VeiCor,
                         VeiKm = v.VeiKm,
                         VeiPreco = v.VeiPreco,
-                        VeiPlaca = v.VeiPlaca,
+                        // Catalogo e' publico: so o final da placa sai daqui. A placa
+                        // inteira permite consultar dono, multas e historico do carro,
+                        // e a loja nao quer isso exposto antes da negociacao.
+                        VeiPlaca = FinalDaPlaca(v.VeiPlaca),
                         VeiObservacao = v.VeiObservacao,
                         VeiOpcionais = v.VeiOpcionais,
                         CategoriaNome = v.Categoria?.CatNome ?? "",
@@ -171,6 +174,13 @@ namespace ConnectVeiculos.Application.UseCases.Catalogo
             };
 
             return resultado;
+        }
+
+        /// <summary>Ultimos 3 caracteres da placa ("TST0A01" -> "A01"). Vazio se nao houver placa.</summary>
+        public static string FinalDaPlaca(string placa)
+        {
+            var limpa = new string((placa ?? string.Empty).Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
+            return limpa.Length <= 3 ? limpa : limpa[^3..];
         }
     }
 }

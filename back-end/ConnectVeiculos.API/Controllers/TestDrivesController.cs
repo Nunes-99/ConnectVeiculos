@@ -24,10 +24,15 @@ namespace ConnectVeiculos.API.Controllers
         {
             if (string.IsNullOrWhiteSpace(request.NomeCliente) || string.IsNullOrWhiteSpace(request.Telefone))
                 return BadRequest("Nome e telefone sao obrigatorios.");
-            if (request.DataAgendamento < DateTime.Today)
-                return BadRequest("Data de agendamento não pode ser no passado.");
             if (!string.IsNullOrWhiteSpace(request.Email) && !request.Email.Contains('@'))
                 return BadRequest("E-mail invalido.");
+
+            var recusa = ExpedienteTestDrive.MotivoRecusa(
+                request.DataAgendamento, request.Horario,
+                await HorariosOcupadosAsync(request.DataAgendamento, request.LojaId),
+                ExpedienteTestDrive.AgoraEmBrasilia());
+            if (recusa != null)
+                return BadRequest(recusa);
 
             var testDrive = new TestDrive(0, request.VeiculoId, request.LojaId, request.NomeCliente,
                 request.Telefone, request.WhatsApp, request.Email, request.DataAgendamento, request.Horario, request.Observacao, "P");
@@ -36,6 +41,27 @@ namespace ConnectVeiculos.API.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { id = testDrive.TdrId, mensagem = "Test drive agendado com sucesso!" });
+        }
+
+        // GET publico - horarios livres de uma data, para o formulario do catalogo.
+        // Antes o catalogo chamava o GET autenticado abaixo: para o visitante comum
+        // ele respondia 401 e os filtros de horario ocupado e ja passado nunca rodavam.
+        // Aqui so saem os horarios, nada de nome ou telefone de quem agendou.
+        [HttpGet("horarios")]
+        public async Task<IActionResult> HorariosLivres([FromQuery] DateTime data, [FromQuery] int? lojaId = null)
+        {
+            var livres = ExpedienteTestDrive.HorariosLivres(
+                data, await HorariosOcupadosAsync(data, lojaId), ExpedienteTestDrive.AgoraEmBrasilia());
+            return Ok(livres);
+        }
+
+        private async Task<List<string?>> HorariosOcupadosAsync(DateTime data, int? lojaId)
+        {
+            var dia = data.Date;
+            var query = _context.TestDrives
+                .Where(t => t.TdrStatus != "X" && t.TdrDataAgendamento >= dia && t.TdrDataAgendamento < dia.AddDays(1));
+            if (lojaId.HasValue) query = query.Where(t => t.R_LojId == lojaId.Value);
+            return await query.Select(t => (string?)t.TdrHorario).ToListAsync();
         }
 
         // GET - listar test drives (autenticado)
