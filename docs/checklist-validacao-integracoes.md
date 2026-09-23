@@ -408,7 +408,7 @@ um cliente da Diamante recebendo e-mail desse endereço estranha.
 - [x] `/api/feed/facebook` (TSV) e `/api/feed/google` (XML) respondendo 200 —
       verificado em 23/09/2026
 - [x] Links do feed abrindo a página certa do veículo (`/catalogo/{slug}/veiculo/{id}`)
-- [ ] **Feed servindo a loja errada — corrigido, falta deploy.** Achado em
+- [x] **Feed servindo a loja errada — corrigido e validado em 23/09 (b806aac):** `empresa-teste` agora traz os carros da Diamante e `default` os da loja-modelo. Achado em
       23/09: `?tenant=empresa-teste` devolvia os carros da loja-modelo
       `default`. O `[ResponseCache(Duration = 60)]` sem `VaryByQueryKeys` faz o
       `UseResponseCaching` usar só o path como chave — o primeiro feed pedido
