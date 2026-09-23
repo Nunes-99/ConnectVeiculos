@@ -66,7 +66,9 @@ qualquer teste de escopo feito antes.
       passou a acontecer 75 min antes (`RefreshSkew`), o worker renova antes de
       decidir, e só avisa se a renovação falhar. Antes o worker também calava
       justamente nesse caso — checava `IsConnectedAsync` primeiro, e ela devolve
-      false quando o refresh falha. **Falta deploy e ver 24h de log sem aviso**
+      false quando o refresh falha. **Validado em 23/09 após o deploy:** o token
+      foi renovado às 12:38 (Brasília), antes da janela de aviso, e nenhum e-mail
+      saiu
 
 ## 2. WhatsApp Business
 
@@ -93,7 +95,18 @@ aplicativo comum), número dedicado a ela, e templates aprovados pela Meta.
 - [x] **Enviar mensagem pelo sistema** — não havia tela: `enviarWhatsApp` existia
       no serviço e nenhuma página o chamava; o botão do lead só abria o `wa.me`.
       Criada a resposta pelo lead e o envio de teste no card de Integrações
-- [!] **O token do WhatsApp expira em 24h** — descoberto em 18/09/2026.
+- [x] **Token permanente do WhatsApp** — configurado em 23/09/2026. Usuário do
+      sistema `connectveiculos-api` no portfólio "ConnectVeiculos Teste",
+      `whatsapp_business_management` + `whatsapp_business_messaging`. O
+      depurador de token da Meta confirma: tipo System User, expira "Nunca",
+      escopos valendo para todas as contas do WhatsApp do portfólio
+- [x] **Templates `testdrive_confirmado` / `_lembrete` / `_cancelado`** —
+      enviados para análise em 23/09/2026 (Utilidade, pt_BR, variáveis por
+      número). A Meta recusa variável no fim do corpo — o `_{{6}}_` do
+      `WHATSAPP_TEMPLATES.md` não passa; a última linha virou
+      `Te esperamos na {{6}}. Até breve!`. **Falta aprovação**
+- [x] ~~O token do WhatsApp expira em 24h~~ — descoberto em 18/09/2026, resolvido
+      pelo token permanente acima.
       Consultando o número na Graph API, a resposta foi:
 
       ```
