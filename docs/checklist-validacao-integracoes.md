@@ -464,16 +464,19 @@ Testado em `/catalogo/empresa-teste` pelo navegador, sem enviar formulário.
       Credito", origem FINANCIAMENTO, renda R$ 8.000 (23/09)
 - [x] **Test drive** enviado pelo catálogo → test drive #3, 28/09 10:00,
       pendente (23/09)
-- [ ] **"Tenho interesse neste veículo" — dois bugs, corrigidos em 41fd23d,
-      falta validar após deploy.** (1) Abria o WhatsApp para
+- [x] **"Tenho interesse neste veículo" — validado em 23/09 após o deploy:**
+      abre `phone=5511949803898` e o `POST /api/leads` responde 200. (1) Abria o WhatsApp para
       `555511949803898`: o WhatsApp da loja está salvo com 55 e o botão colava
       outro — o cliente interessado mandava mensagem para um número que não
       existe. (2) O registro do clique respondia 400 (exigia nome e contato),
       então nenhum clique jamais virou lead. Agora vira lead "Visitante do
       catálogo" com o veículo
-- [ ] **Horário de test drive — corrigido em 41fd23d, falta validar após
-      deploy.** Regra definida pelo Vitor: sábado até o meio-dia, domingo
-      fechado. Mora em `ExpedienteTestDrive` (backend), vale no POST público e
+- [x] **Horário de test drive — validado em 23/09 após o deploy.** Regra
+      definida pelo Vitor: 09:00 a 17:00 em dia de semana, sábado até o
+      meio-dia (09–11h), domingo fechado. Na tela: domingo some da lista de
+      datas, sábado mostra 09/10/11h, segunda 28/09 não oferece as 10:00
+      (ocupada pelo test drive #3). Pela API, agendar domingo ou sábado à tarde
+      é recusado com o motivo. Mora em `ExpedienteTestDrive` (backend), vale no POST público e
       na rota pública `GET /api/testdrives/horarios`. Achados no caminho: a tela
       filtrava ocupados/já passados com o GET **autenticado** — para visitante
       comum dava 401 e nenhum filtro rodava (no meu teste funcionou só porque o
@@ -485,7 +488,8 @@ Testado em `/catalogo/empresa-teste` pelo navegador, sem enviar formulário.
       (fecha às 13h) e **08:00** (abre 8h30). O `LojHorario` é texto livre,
       então não dá para calcular a partir dele — precisa de expediente
       estruturado por dia da semana
-- [ ] **Placa no catálogo público — corrigido em 41fd23d, falta validar.**
+- [x] **Placa no catálogo público — validado em 23/09:** API, HTML do SSR e
+      modal mostram só "Final da placa: A01".
       Decisão: mostrar só os 3 últimos caracteres ("Final da placa: A01"). O
       corte é no backend, então a placa inteira nem sai na API pública
 - [ ] Modal do veículo e formulários ficam brancos num catálogo de tema
@@ -494,6 +498,12 @@ Testado em `/catalogo/empresa-teste` pelo navegador, sem enviar formulário.
 - [ ] Formulário de crédito: os dois campos de valor não têm rótulo (aparecem
       só "R$ 0,00" e "R$ 23.000,00")
 - [ ] Esc não fecha os modais, só o X
+- [ ] Depois de um deploy, quem já visitou o site vê a versão antiga até
+      recarregar — é o service worker do PWA. Visto em 23/09 (placa inteira
+      numa aba aberta antes do deploy, corrigida no segundo reload)
+- [ ] O service worker guarda `/api/lojas/**` por **1 dia** com estratégia
+      `performance` (`ngsw-config.json`): uma alteração na tela de Lojas pode
+      demorar a aparecer para quem já tinha a lista em cache. Não testado
 - [x] Link do Facebook no topo usa exatamente o que está cadastrado na loja
       (`lojFacebook = connectprimeveiculos`) — é o comportamento esperado
 - [x] Texto "Ola! Quero vender meu carro." sem acento — corrigido em 41fd23d
