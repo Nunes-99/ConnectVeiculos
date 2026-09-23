@@ -1755,6 +1755,29 @@
   .comp-value.highlight { color: var(--cat-destaque, #1a237e); }
 
   .fav-header h2 { color: var(--cat-texto, #fafafa); }
+
+  .detalhes-thumbs-container {
+    background: var(--cat-fundo, #171717);
+    .thumbs-nav { color: var(--cat-texto-suave, #b0b0b0); &:hover:not(:disabled) { background: var(--cat-realce, rgba(255, 255, 255, 0.12)); } }
+  }
+
+  .filtro-acoes {
+    .btn-filtrar { background: var(--cat-destaque, #1a237e); color: var(--cat-destaque-texto, #fff); &:hover { background: var(--cat-destaque, #1a237e); filter: brightness(1.08); } }
+    .btn-limpar {
+      background: transparent;
+      border: 1px solid var(--cat-borda, #2f2f2f);
+      color: var(--cat-texto, #fafafa);
+      &:hover { background: var(--cat-realce, rgba(255, 255, 255, 0.12)); }
+    }
+  }
+
+  .det-action-btn {
+    background: var(--cat-fundo, #171717);
+    border-color: var(--cat-borda, #2f2f2f);
+    color: var(--cat-texto, #fafafa);
+    .material-icons { color: var(--cat-destaque, #1a237e); }
+    &:hover { background: var(--cat-realce, rgba(255, 255, 255, 0.12)); border-color: var(--cat-destaque, #1a237e); }
+  }
 }
 
 // Campo com rotulo visivel (renda e entrada no pedido de credito)
@@ -1766,4 +1789,12 @@
   gap: 0.3rem;
 
   span { font-size: 0.8rem; font-weight: 500; color: var(--cat-texto-suave, #666); }
+}
+
+// Modais de formulario rolam por dentro: o de credito tem oito campos e, numa
+// tela baixa (notebook com zoom, celular deitado), o titulo e o X sumiam acima
+// da borda sem ter como alcancar.
+.finance-modal, .testdrive-modal, .share-modal, .favorito-modal {
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
 }
