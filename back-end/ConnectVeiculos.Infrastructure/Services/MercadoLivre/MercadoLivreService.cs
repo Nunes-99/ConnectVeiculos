@@ -42,7 +42,13 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
 
          // Skew aplicado ao expires_in: dispara refresh proativo X segundos antes
          // de expirar pra cobrir latencia de rede + clock drift + tempo da chamada.
-         private static readonly TimeSpan RefreshSkew = TimeSpan.FromSeconds(60);
+         //
+         // Precisa ser MAIOR que a antecedencia do MercadoLivreExpiracaoWorker (60 min).
+         // Com 60s, o worker via o token a 59 min do fim, mandava "expira em breve" e
+         // so depois o refresh acontecia — 4 e-mails falsos por dia para a loja. Com
+         // 75 min, a varredura do worker (a cada 15 min, via IsConnectedAsync) renova
+         // antes de entrar na janela de aviso, e o aviso so sai se o refresh falhar.
+         private static readonly TimeSpan RefreshSkew = TimeSpan.FromMinutes(75);
 
          // Lock por tenant para serializar refreshes concorrentes. ML invalida o
          // refresh_token a CADA refresh (rolling tokens) — duas threads pedindo

@@ -12,8 +12,13 @@ namespace ConnectVeiculos.API.Controllers
         // Cache curto (60s) pra balancear: feeds sao puxados ~1x/hora por
         // Facebook/Google, e mudancas no admin (preco, novo veiculo, vendido)
         // devem refletir rapidamente. 30 min era atritoso pra debug + cadastro.
+        //
+        // VaryByQueryKeys/VaryByHeader sao obrigatorios: o feed e' por loja, e sem
+        // eles o ResponseCaching usa so o path como chave — o primeiro feed pedido
+        // era servido por 60s para TODAS as lojas (?tenant=empresa-teste devolvia
+        // os carros da loja-modelo "default").
         [HttpGet("facebook")]
-        [ResponseCache(Duration = 60)]
+        [ResponseCache(Duration = 60, VaryByQueryKeys = new[] { "tenant" }, VaryByHeader = "X-Tenant-Slug")]
         public async Task<IActionResult> FacebookFeed([FromServices] IFeedService feedService)
         {
             var feed = await feedService.GerarFeedFacebookAsync();
@@ -21,7 +26,7 @@ namespace ConnectVeiculos.API.Controllers
         }
 
         [HttpGet("google")]
-        [ResponseCache(Duration = 60)]
+        [ResponseCache(Duration = 60, VaryByQueryKeys = new[] { "tenant" }, VaryByHeader = "X-Tenant-Slug")]
         public async Task<IActionResult> GoogleFeed([FromServices] IFeedService feedService)
         {
             var feed = await feedService.GerarFeedGoogleAsync();

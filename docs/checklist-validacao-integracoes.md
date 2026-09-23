@@ -14,6 +14,9 @@ quebrado ou impossível
 
 ## 1. Mercado Livre
 
+> **Resolvido em 18/09/2026** — ver a seção 4.1. O texto abaixo é o histórico
+> da investigação, de quando a conta caía a cada 6 horas.
+
 A conta cai a cada 6 horas: a aplicação `7837357995078436` não recebe
 `refresh_token`. **Chamado aberto em 16/09/2026 — protocolo 482724079**,
 escalado para a equipe de Integrações do Mercado Livre.
@@ -52,7 +55,18 @@ qualquer teste de escopo feito antes.
       "status is not modifiable". Só volta a ser possível pagando a taxa.
       Verificado em 2026-09-14 nas duas operações
 - [x] Aviso de expiração com o visual novo — recebido em 2026-09-15
-- [!] Renovação automática do token — impossível sem `offline_access`
+- [x] **Renovação automática do token** — validada em 23/09/2026 pelo log de
+      produção: de 18/09 a 23/09 o token foi renovado sozinho a cada 6h
+      (`Token do Mercado Livre renovado com sucesso (expira em 21600s)`), sem
+      nenhuma reconexão manual
+- [x] **E-mail de expiração falso a cada 6h** — achado em 23/09 no mesmo log.
+      O refresh só acontecia 60s antes de vencer, mas o aviso sai 60 min antes:
+      a loja recebia "Conexão com o Mercado Livre expira em breve" 4 vezes por
+      dia, e uma hora depois o token se renovava sozinho. Corrigido: o refresh
+      passou a acontecer 75 min antes (`RefreshSkew`), o worker renova antes de
+      decidir, e só avisa se a renovação falhar. Antes o worker também calava
+      justamente nesse caso — checava `IsConnectedAsync` primeiro, e ela devolve
+      false quando o refresh falha. **Falta deploy e ver 24h de log sem aviso**
 
 ## 2. WhatsApp Business
 
@@ -107,8 +121,21 @@ aplicativo comum), número dedicado a ela, e templates aprovados pela Meta.
       definitivo — **o envio disparado pelo painel da própria Meta, sem passar
       pelo sistema, também não chega**. Falta verificar o número destinatário
       na lista de teste
-- [ ] Lembrete de test drive (job do Hangfire) — **dois bloqueios, um já
-      resolvido**:
+- [~] Lembrete de test drive (job do Hangfire) — **o job está validado; o
+      que falta é o template na Meta.** Log de produção em 21/09, 09:00:
+
+      ```
+      Lembrete TestDrive tenant empresa-teste: 1 agendados pra amanha —
+      0 enviados, 1 falharam, 0 sem WA configurado
+      WhatsApp falhou (NotFound): (#132001) template name (testdrive_lembrete)
+      does not exist in pt_BR
+      ```
+
+      O job achou o test drive #1 (remarcado para 22/09), montou o envio e a
+      Meta recusou por template inexistente — não por token. Depois de criar e
+      aprovar os templates, basta agendar um test drive para o dia seguinte.
+
+      Histórico dos bloqueios:
       1. *(resolvido em 18/09)* O horário é opcional no cadastro e ia vazio para
          a variável `{{3}}` do template. A Meta recusa o template inteiro quando
          uma variável vem em branco, e a recusa não diz qual foi — o erro chega
@@ -376,6 +403,23 @@ um cliente da Diamante recebendo e-mail desse endereço estranha.
       preenchido depois: o test drive #1 esta sem horario e nao ha como corrigir
       pela tela. Encontrado em 18/09/2026 ao procurar o botao de editar
 
+## 6.2 Feed do catálogo (Facebook / Google)
+
+- [x] `/api/feed/facebook` (TSV) e `/api/feed/google` (XML) respondendo 200 —
+      verificado em 23/09/2026
+- [x] Links do feed abrindo a página certa do veículo (`/catalogo/{slug}/veiculo/{id}`)
+- [ ] **Feed servindo a loja errada — corrigido, falta deploy.** Achado em
+      23/09: `?tenant=empresa-teste` devolvia os carros da loja-modelo
+      `default`. O `[ResponseCache(Duration = 60)]` sem `VaryByQueryKeys` faz o
+      `UseResponseCaching` usar só o path como chave — o primeiro feed pedido
+      era servido por 60s para todas as lojas (a prova: `Age: 46` numa URL com
+      parâmetro aleatório). Mesmo bug que já tinha acontecido em
+      `/api/imagens/file`. Provavelmente é o "não encontra o carro do
+      catálogo": um catálogo da Meta apontado para o feed da loja recebia os
+      carros de outra. **Depois do deploy:** comparar
+      `/api/feed/google?tenant=empresa-teste` com `?tenant=default` — os títulos
+      têm de ser diferentes
+
 ## 7. Infraestrutura
 
 - [x] 504 durante deploy — resolvido com teto de memória no build
@@ -395,8 +439,9 @@ um cliente da Diamante recebendo e-mail desse endereço estranha.
 
 ## Pendências que não são de código
 
-- Chamado no suporte do Mercado Livre pedindo `offline_access` na aplicação
-  `7837357995078436`
+- ~~Chamado no suporte do Mercado Livre pedindo `offline_access`~~ — resolvido em 18/09
+- Criar e aprovar na Meta os templates `testdrive_confirmado` e `testdrive_lembrete`
+- Token permanente do WhatsApp (System User) no lugar do de 24h
 - Rotacionar o app secret da Meta
 - Estoque real da Diamante no lugar dos carros de teste (placas `TST...`)
 - Logotipo real da loja

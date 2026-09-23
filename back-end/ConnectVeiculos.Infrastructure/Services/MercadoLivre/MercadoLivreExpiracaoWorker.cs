@@ -101,7 +101,15 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
         private async Task VerificarTenantAsync(IServiceProvider sp, string slug)
         {
             var ml = sp.GetRequiredService<IMercadoLivreService>();
-            if (!await ml.IsConnectedAsync()) return;
+
+            // Le a expiracao do banco antes de qualquer chamada: se o refresh falhar,
+            // IsConnectedAsync devolve false, e checar a conexao primeiro fazia o
+            // worker calar exatamente no caso em que o aviso importa.
+            if (await ml.ObterExpiracaoTokenAsync() == null) return;
+
+            // Renova o token se estiver perto do fim (ver RefreshSkew). O resultado
+            // nao importa aqui: o que decide o aviso e a expiracao gravada depois.
+            await ml.IsConnectedAsync();
 
             var expiraEm = await ml.ObterExpiracaoTokenAsync();
             if (expiraEm == null) return;
@@ -216,8 +224,8 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
     </p>")}
 
     <p style='margin:0;padding-top:16px;border-top:1px solid #e5e7eb;color:#6b7280;font-size:13px'>
-      O Mercado Livre não fornece renovação automática para este aplicativo, por isso a
-      reconexão precisa ser feita manualmente de tempos em tempos.
+      A conexão normalmente se renova sozinha. Este aviso significa que a renovação
+      automática não funcionou e a reconexão precisa ser feita no painel.
     </p>
   </div>
   <p style='text-align:center;color:#9ca3af;font-size:12px;margin:16px 0 0'>
