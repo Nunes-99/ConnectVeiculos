@@ -470,7 +470,13 @@ um cliente da Diamante recebendo e-mail desse endereço estranha.
 
 - ~~Chamado no suporte do Mercado Livre pedindo `offline_access`~~ — resolvido em 18/09
 - Criar e aprovar na Meta os templates `testdrive_confirmado` e `testdrive_lembrete`
-- Token permanente do WhatsApp (System User) no lugar do de 24h
+- ~~Token permanente do WhatsApp (System User)~~ — feito em 23/09
+- **Número brasileiro para o WhatsApp — PENDENTE, decisão do cliente.** O número
+  de teste da Meta não envia para o Brasil (erro 130497). Opções: chip novo só
+  para o sistema, número atual da loja (deixa de usar o app nele) ou apresentar
+  sem envio automático. Precisa de nome de exibição aprovado e cartão na conta
+  `2600526637086768`. Até lá, confirmação/lembrete/cancelamento de test drive
+  ficam sem validar
 - Rotacionar o app secret da Meta
 - Estoque real da Diamante no lugar dos carros de teste (placas `TST...`)
 - Logotipo real da loja
