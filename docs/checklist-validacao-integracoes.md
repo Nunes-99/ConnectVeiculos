@@ -497,7 +497,7 @@ Testado em `/catalogo/empresa-teste` pelo navegador, sem enviar formulário.
 - [x] Link do Facebook no topo usa exatamente o que está cadastrado na loja
       (`lojFacebook = connectprimeveiculos`) — é o comportamento esperado
 - [x] Texto "Ola! Quero vender meu carro." sem acento — corrigido em 41fd23d
-- [ ] Horário de semana ainda oferece 08:00 e a loja abre 8h30
+- [x] Primeiro horário às 09:00 (loja abre 8h30) — decisão do Vitor, 23/09
 
 ## 7. Infraestrutura
 

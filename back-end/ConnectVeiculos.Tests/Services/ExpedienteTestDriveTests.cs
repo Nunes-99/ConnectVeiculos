@@ -22,14 +22,14 @@ namespace ConnectVeiculos.Tests.Services
         public void Sabado_VaiAteOMeioDia()
         {
             ExpedienteTestDrive.HorariosLivres(new DateTime(2026, 9, 26), Nenhum, Agora)
-                .Should().Equal("08:00", "09:00", "10:00", "11:00");
+                .Should().Equal("09:00", "10:00", "11:00");
         }
 
         [Fact]
         public void DiaDeSemana_TemOExpedienteInteiro()
         {
             ExpedienteTestDrive.HorariosLivres(new DateTime(2026, 9, 28), Nenhum, Agora)
-                .Should().Equal("08:00", "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00", "17:00");
+                .Should().Equal("09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00", "17:00");
         }
 
         [Fact]
@@ -53,6 +53,7 @@ namespace ConnectVeiculos.Tests.Services
         [InlineData(2026, 9, 22, "10:00", "passado")]
         [InlineData(2026, 9, 23, "09:00", "disponível")]
         [InlineData(2026, 9, 28, "", "horário")]
+        [InlineData(2026, 9, 28, "08:00", "expediente")]
         public void Agendamento_ForaDaRegra_EhRecusado(int ano, int mes, int dia, string horario, string trechoDoMotivo)
         {
             ExpedienteTestDrive.MotivoRecusa(new DateTime(ano, mes, dia), horario, Nenhum, Agora)
