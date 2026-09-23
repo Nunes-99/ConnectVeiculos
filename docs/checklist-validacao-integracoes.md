@@ -460,25 +460,44 @@ Testado em `/catalogo/empresa-teste` pelo navegador, sem enviar formulário.
       1,49% em 48x = R$ 2.696,73; total R$ 152.443,26 com a entrada)
 - [x] Formulário de análise de crédito e de test drive abrem
 - [x] Test drive de hoje só oferece horário futuro
-- [ ] Enviar os formulários (crédito, test drive, "tenho interesse") e ver o
-      lead chegar no painel — **precisa de autorização para enviar**
-- [!] **Horário de test drive ignora o expediente da loja.** A lista é fixa
+- [x] **Análise de crédito** enviada pelo catálogo → lead #5 "Teste Claude
+      Credito", origem FINANCIAMENTO, renda R$ 8.000 (23/09)
+- [x] **Test drive** enviado pelo catálogo → test drive #3, 28/09 10:00,
+      pendente (23/09)
+- [ ] **"Tenho interesse neste veículo" — dois bugs, corrigidos em 41fd23d,
+      falta validar após deploy.** (1) Abria o WhatsApp para
+      `555511949803898`: o WhatsApp da loja está salvo com 55 e o botão colava
+      outro — o cliente interessado mandava mensagem para um número que não
+      existe. (2) O registro do clique respondia 400 (exigia nome e contato),
+      então nenhum clique jamais virou lead. Agora vira lead "Visitante do
+      catálogo" com o veículo
+- [ ] **Horário de test drive — corrigido em 41fd23d, falta validar após
+      deploy.** Regra definida pelo Vitor: sábado até o meio-dia, domingo
+      fechado. Mora em `ExpedienteTestDrive` (backend), vale no POST público e
+      na rota pública `GET /api/testdrives/horarios`. Achados no caminho: a tela
+      filtrava ocupados/já passados com o GET **autenticado** — para visitante
+      comum dava 401 e nenhum filtro rodava (no meu teste funcionou só porque o
+      navegador estava logado no painel); e as datas saíam em UTC, então depois
+      das 21h "Hoje" gravava o dia seguinte.
+      Histórico: **Horário de test drive ignora o expediente da loja.** A lista é fixa
       no código (`catalogo.component.ts:173`, 08:00–17:00 todo dia). O
       cliente consegue agendar **domingo** (loja fechada), **sábado 17:00**
       (fecha às 13h) e **08:00** (abre 8h30). O `LojHorario` é texto livre,
       então não dá para calcular a partir dele — precisa de expediente
       estruturado por dia da semana
-- [ ] **Placa aparece no catálogo público** (TST0A01 no modal). Muitas lojas
-      escondem ou mostram parcial — decisão do cliente
+- [ ] **Placa no catálogo público — corrigido em 41fd23d, falta validar.**
+      Decisão: mostrar só os 3 últimos caracteres ("Final da placa: A01"). O
+      corte é no backend, então a placa inteira nem sai na API pública
 - [ ] Modal do veículo e formulários ficam brancos num catálogo de tema
       escuro — a camada de tema não chega aos modais
 - [ ] Botão "Solicitar Análise de Crédito" sem estilo (botão cru do navegador)
 - [ ] Formulário de crédito: os dois campos de valor não têm rótulo (aparecem
       só "R$ 0,00" e "R$ 23.000,00")
 - [ ] Esc não fecha os modais, só o X
-- [ ] Link do Facebook no topo aponta para `facebook.com/connectprimeveiculos`
-      — confirmar se é a página da Diamante
-- [ ] Texto "Ola! Quero vender meu carro." sem acento
+- [x] Link do Facebook no topo usa exatamente o que está cadastrado na loja
+      (`lojFacebook = connectprimeveiculos`) — é o comportamento esperado
+- [x] Texto "Ola! Quero vender meu carro." sem acento — corrigido em 41fd23d
+- [ ] Horário de semana ainda oferece 08:00 e a loja abre 8h30
 
 ## 7. Infraestrutura
 
