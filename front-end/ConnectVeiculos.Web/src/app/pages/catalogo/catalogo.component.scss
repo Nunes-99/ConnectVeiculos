@@ -1798,3 +1798,35 @@
   max-height: calc(100vh - 2rem);
   overflow-y: auto;
 }
+
+// Detalhe do veiculo em grade com areas: galeria e opcionais/observacoes a
+// esquerda, ficha e botoes a direita (ocupando as duas linhas). No celular a
+// ordem vira galeria -> ficha/botoes -> opcionais, para o preco e o
+// "Tenho interesse" aparecerem antes da lista de itens.
+.detalhes-content {
+  grid-template-areas:
+    "galeria info"
+    "extra   info";
+  grid-template-rows: auto 1fr;
+}
+.detalhes-galeria { grid-area: galeria; }
+.detalhes-info { grid-area: info; }
+.detalhes-info.detalhes-extra {
+  grid-area: extra;
+  align-self: start;
+  padding: 0.25rem 0 0.5rem;
+  overflow: visible;
+
+  .det-observacao { margin-bottom: 0; }
+}
+
+@media (max-width: 768px) {
+  .detalhes-content {
+    grid-template-areas:
+      "galeria"
+      "info"
+      "extra";
+    grid-template-rows: auto;
+  }
+  .detalhes-info.detalhes-extra { padding: 0 1.25rem 1.25rem; }
+}
