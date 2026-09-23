@@ -1304,26 +1304,6 @@
   border-bottom: 1px solid var(--cat-borda, #2f2f2f);
 }
 
-.cat-navbar-menu {
-  display: flex;
-  gap: 1.5rem;
-  padding: 0 1.5rem 0.75rem;
-  flex-wrap: wrap;
-}
-
-.cat-menu-link {
-  color: var(--cat-texto, #fafafa);
-  font-size: 0.85rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  text-decoration: none;
-  cursor: pointer;
-  padding-bottom: 2px;
-  border-bottom: 2px solid transparent;
-
-  &:hover { border-bottom-color: var(--cat-destaque, #1a237e); }
-}
-
 .cat-nav-zap {
   display: inline-flex;
   align-items: center;
@@ -1344,6 +1324,9 @@
     display: block;
     width: 100%;
     max-height: 420px;
+    // Com as chamadas dentro do banner, uma foto larga no celular ficaria baixa
+    // demais para caber titulo + subtitulo + botoes.
+    min-height: 300px;
     object-fit: cover;
   }
 }
@@ -1380,33 +1363,44 @@
 
 .cat-banner-acoes {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 0.75rem;
-  padding: 1rem 1.5rem 0;
-  max-width: 1400px;
-  margin: 0 auto;
+  margin-top: 1.25rem;
 }
 
 .cat-cta {
-  flex: 1 1 0;
-  min-width: 0;
-  padding: 0.85rem 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 170px;
+  padding: 0.75rem 1.75rem;
   border: 2px solid var(--cat-destaque, #1a237e);
-  border-radius: 8px;
+  border-radius: 999px;
   font-size: 0.95rem;
   font-weight: 700;
-  text-align: center;
   text-decoration: none;
   cursor: pointer;
+  transition: transform 0.15s, background 0.2s;
+
+  &:hover { transform: translateY(-1px); }
 
   &.cat-cta-cheio {
     background: var(--cat-destaque, #1a237e);
     color: var(--cat-destaque-texto, #fff);
   }
 
+  // Sobre a foto do banner o texto vazado fica branco: a cor de destaque da
+  // loja nem sempre contrasta com a imagem que ela escolheu.
   &.cat-cta-vazado {
-    background: transparent;
-    color: var(--cat-destaque, #1a237e);
+    background: rgba(0, 0, 0, 0.25);
+    color: #fff;
   }
+}
+
+@media (max-width: 480px) {
+  .cat-cta { min-width: 0; flex: 1 1 0; padding: 0.7rem 1rem; }
+  .cat-banner-acoes { width: 100%; }
 }
 
 .cat-busca-titulo {
@@ -1653,4 +1647,123 @@
 
     .material-icons { font-size: 18px; }
   }
+}
+
+// ==========================================
+// CAMADA DE TEMA — MODAIS
+// ==========================================
+// Os modais foram escritos brancos, com azul-marinho fixo. Ficavam brancos
+// num catalogo escuro (e so funcionam aqui porque o HTML passou a abrir os
+// modais dentro do .catalogo-container, onde as variaveis existem).
+.catalogo-container {
+  .detalhes-modal, .comparador-modal, .finance-modal,
+  .testdrive-modal, .share-modal, .favorito-modal {
+    background: var(--cat-superficie, #202020);
+    color: var(--cat-texto, #fafafa);
+  }
+
+  .finance-modal h2, .testdrive-modal h2, .share-modal h2,
+  .comparador-header h2 { color: var(--cat-destaque, #1a237e); }
+
+  .finance-veiculo, .td-veiculo, .share-modal p, .fav-desc,
+  .finance-disclaimer, .fav-privacy { color: var(--cat-texto-suave, #b0b0b0); }
+
+  // Campos de todos os formularios dos modais
+  .finance-field, .td-form, .share-link, .fav-field {
+    input, select, textarea {
+      background: var(--cat-fundo, #171717);
+      border-color: var(--cat-borda, #2f2f2f);
+      color: var(--cat-texto, #fafafa);
+      &::placeholder { color: var(--cat-texto-suave, #b0b0b0); opacity: 0.8; }
+      &:focus { border-color: var(--cat-destaque, #1a237e); }
+    }
+  }
+  .finance-field label, .fav-field label { color: var(--cat-texto-suave, #b0b0b0); }
+
+  // Detalhe do veiculo
+  .detalhes-galeria, .detalhes-img-principal { background: var(--cat-fundo, #171717); }
+  .detalhes-img-principal .img-nav {
+    background: var(--cat-realce, rgba(255, 255, 255, 0.12));
+    color: var(--cat-texto, #fafafa);
+    &:hover { background: var(--cat-realce-forte, rgba(255, 255, 255, 0.22)); }
+  }
+  .detalhes-thumbs img.active, .detalhes-thumbs img:hover { border-color: var(--cat-destaque, #1a237e); }
+
+  .detalhes-info {
+    .det-categoria { background: var(--cat-destaque, #1a237e); color: var(--cat-destaque-texto, #fff); }
+    h2 { color: var(--cat-texto, #fafafa); }
+    .det-preco { color: var(--cat-destaque, #1a237e); }
+
+    .det-specs .spec-item {
+      background: var(--cat-fundo, #171717);
+      .material-icons { color: var(--cat-destaque, #1a237e); }
+      small { color: var(--cat-texto-suave, #b0b0b0); }
+      strong { color: var(--cat-texto, #fafafa); }
+    }
+
+    .det-opcionais {
+      h4 { color: var(--cat-destaque, #1a237e); }
+      .opcional-tag { background: var(--cat-realce, rgba(255, 255, 255, 0.12)); color: var(--cat-texto, #fafafa); }
+    }
+
+    .det-observacao {
+      background: var(--cat-fundo, #171717);
+      border-color: var(--cat-borda, #2f2f2f);
+      border-left-color: var(--cat-destaque, #1a237e);
+      h4 { color: var(--cat-destaque, #1a237e); }
+      p { color: var(--cat-texto-suave, #b0b0b0); }
+    }
+
+    .det-loja {
+      background: var(--cat-fundo, #171717);
+      .material-icons { color: var(--cat-destaque, #1a237e); }
+      strong { color: var(--cat-texto, #fafafa); }
+      span { color: var(--cat-texto-suave, #b0b0b0); }
+    }
+  }
+
+  // Simulador
+  .finance-item {
+    background: var(--cat-fundo, #171717);
+    small { color: var(--cat-texto-suave, #b0b0b0); }
+    strong { color: var(--cat-texto, #fafafa); }
+    &.destaque {
+      background: var(--cat-destaque, #1a237e);
+      small, strong { color: var(--cat-destaque-texto, #fff); }
+    }
+  }
+
+  .solicitacao-info { background: var(--cat-fundo, #171717); color: var(--cat-texto-suave, #b0b0b0); }
+
+  // Botoes de acao dos modais seguem a cor da loja
+  .btn-agendar, .btn-enviar-solicitacao, .share-link button {
+    background: var(--cat-destaque, #1a237e);
+    color: var(--cat-destaque-texto, #fff);
+    &:hover { background: var(--cat-destaque, #1a237e); filter: brightness(1.08); }
+    &:disabled { background: var(--cat-destaque, #1a237e); opacity: 0.45; filter: none; }
+  }
+
+  .td-sucesso {
+    h2, h3 { color: var(--cat-texto, #fafafa); }
+    p { color: var(--cat-texto-suave, #b0b0b0); }
+  }
+
+  // Comparador
+  .comparador-grid { background: var(--cat-borda, #2f2f2f); & > div { background: var(--cat-superficie, #202020); } }
+  .comp-label { background: var(--cat-fundo, #171717) !important; color: var(--cat-texto-suave, #b0b0b0); }
+  .comp-header strong, .comp-value { color: var(--cat-texto, #fafafa); }
+  .comp-value.highlight { color: var(--cat-destaque, #1a237e); }
+
+  .fav-header h2 { color: var(--cat-texto, #fafafa); }
+}
+
+// Campo com rotulo visivel (renda e entrada no pedido de credito)
+.td-campo {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+
+  span { font-size: 0.8rem; font-weight: 500; color: var(--cat-texto-suave, #666); }
 }

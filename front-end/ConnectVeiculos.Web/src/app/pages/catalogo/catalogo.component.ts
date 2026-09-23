@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, OnDestroy, PLATFORM_ID } from '@angular/core';
+import { Component, HostListener, inject, OnInit, OnDestroy, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser, Location } from '@angular/common';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -432,6 +432,23 @@ export class CatalogoComponent implements OnInit, OnDestroy {
         this.empurrouHistorico = true;
       }
     }
+  }
+
+  /**
+   * Esc fecha o modal de cima. A ordem importa: credito abre por cima do
+   * simulador, que abre por cima do detalhe do veiculo — fechar tudo de uma vez
+   * jogaria o visitante de volta na listagem.
+   */
+  @HostListener('document:keydown.escape')
+  fecharModalDoTopo(): void {
+    if (this.showGaleria) this.fecharGaleria();
+    else if (this.showSolicitacaoCredito) this.fecharSolicitacaoCredito();
+    else if (this.showFinanciamento) this.fecharFinanciamento();
+    else if (this.showTestDrive) this.fecharTestDrive();
+    else if (this.showShare) this.fecharShare();
+    else if (this.showFavoritoCadastro) this.fecharFavoritoCadastro();
+    else if (this.showComparador) this.fecharComparador();
+    else if (this.showDetalhes) this.fecharDetalhes();
   }
 
   fecharDetalhes(): void {

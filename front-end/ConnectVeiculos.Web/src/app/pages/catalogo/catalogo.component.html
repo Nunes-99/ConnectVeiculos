@@ -47,34 +47,25 @@
         }
       </div>
     </div>
-
-    <!-- Menu do catalogo -->
-    <div class="cat-navbar-menu">
-      <a class="cat-menu-link" (click)="irParaEstoque()">ESTOQUE</a>
-      @if (linkVenderCarro) {
-        <a class="cat-menu-link" [href]="linkVenderCarro" target="_blank" rel="noopener">VENDA SEU CARRO</a>
-      }
-    </div>
   </nav>
 
   <!-- Banner de destaque configurado pela loja -->
   @if (loja?.lojBannerImg) {
     <section class="cat-banner">
       <img [src]="imagemService.getImageUrl(loja!.lojBannerImg!)" [alt]="loja!.lojBannerTitulo || loja!.lojNome" />
-      @if (loja?.lojBannerTitulo || loja?.lojBannerSubtitulo) {
-        <div class="cat-banner-texto">
-          @if (loja?.lojBannerTitulo) { <h2>{{ loja!.lojBannerTitulo }}</h2> }
-          @if (loja?.lojBannerSubtitulo) { <p>{{ loja!.lojBannerSubtitulo }}</p> }
+      <div class="cat-banner-texto">
+        @if (loja?.lojBannerTitulo) { <h2>{{ loja!.lojBannerTitulo }}</h2> }
+        @if (loja?.lojBannerSubtitulo) { <p>{{ loja!.lojBannerSubtitulo }}</p> }
+        <!-- Chamadas dentro do banner: soltas entre o banner e a busca ficavam
+             espremidas e repetiam o menu do topo, que foi retirado. -->
+        <div class="cat-banner-acoes">
+          <button type="button" class="cat-cta cat-cta-cheio" (click)="irParaEstoque()">Ver estoque</button>
+          @if (linkVenderCarro) {
+            <a class="cat-cta cat-cta-vazado" [href]="linkVenderCarro" target="_blank" rel="noopener">Vender meu carro</a>
+          }
         </div>
-      }
+      </div>
     </section>
-
-    <div class="cat-banner-acoes">
-      <button type="button" class="cat-cta cat-cta-cheio" (click)="irParaEstoque()">Estoque</button>
-      @if (linkVenderCarro) {
-        <a class="cat-cta cat-cta-vazado" [href]="linkVenderCarro" target="_blank" rel="noopener">Vender</a>
-      }
-    </div>
   }
 
   <!-- Search bar -->
@@ -314,7 +305,6 @@
       }
     </main>
   </div>
-</div>
 
 <!-- Footer -->
 @if (loja) {
@@ -621,7 +611,7 @@
         <div class="finance-item"><small>Total a pagar</small><strong>{{ formatarPreco(finEntrada + (finValorParcela * finParcelas)) }}</strong></div>
       </div>
       <p class="finance-disclaimer">* Simulação meramente ilustrativa. Consulte as condições reais com a loja.</p>
-      <button class="btn-solicitar-crédito" (click)="abrirSolicitacaoCredito()">
+      <button class="btn-solicitar-credito" (click)="abrirSolicitacaoCredito()">
         <span class="material-icons">request_quote</span>
         Solicitar Análise de Crédito
       </button>
@@ -643,9 +633,17 @@
           <input type="tel" [(ngModel)]="solTelefone" placeholder="WhatsApp *" class="required-input" (input)="formatarSolTelefone()" maxlength="15" />
           <input type="email" [(ngModel)]="solEmail" placeholder="E-mail" />
           <input type="text" [(ngModel)]="solCpf" placeholder="CPF *" class="required-input" (input)="formatarSolCpf()" maxlength="14" />
+          <!-- Com rotulo visivel: a mascara de moeda preenche "R$ 0,00" e o
+               placeholder sumia, deixando dois campos de valor sem nome. -->
           <div class="td-row">
-            <input type="text" [(ngModel)]="solRenda" placeholder="Renda mensal *" appCurrencyMask class="required-input" />
-            <input type="text" [(ngModel)]="solEntrada" placeholder="Entrada" appCurrencyMask />
+            <label class="td-campo">
+              <span>Renda mensal *</span>
+              <input type="text" [(ngModel)]="solRenda" appCurrencyMask class="required-input" />
+            </label>
+            <label class="td-campo">
+              <span>Entrada</span>
+              <input type="text" [(ngModel)]="solEntrada" appCurrencyMask />
+            </label>
           </div>
           <select [(ngModel)]="solParcelas">
             <option [ngValue]="null">Quantas parcelas?</option>
@@ -667,7 +665,7 @@
           <span class="material-icons">check_circle</span>
           <h2>Solicitação enviada!</h2>
           <p>Em breve nosso vendedor entrará em contato pelo telefone/WhatsApp informado.</p>
-          <button class="btn-fechar-sucesso" (click)="fecharSolicitacaoCredito()">Fechar</button>
+          <button class="btn-agendar" (click)="fecharSolicitacaoCredito()">Fechar</button>
         </div>
       }
     </div>
@@ -803,3 +801,9 @@
     </div>
   </div>
 }
+
+<!-- Fim do .catalogo-container. Rodape e modais ficam DENTRO dele de proposito:
+     e' la que moram as custom properties do tema da loja. Fora, os modais
+     saiam brancos num catalogo escuro e a margem do rodape mostrava o fundo
+     branco da pagina. -->
+</div>
