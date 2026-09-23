@@ -128,6 +128,22 @@ aplicativo comum), número dedicado a ela, e templates aprovados pela Meta.
       `whatsapp_business_management`, marcado como permanente. Enquanto o
       Embedded Signup não existir, é esse token que tem de estar na configuração
 
+- [!] **Causa do "accepted" que nunca chega — encontrada em 23/09/2026.** Com
+      o token permanente e o número já na lista de destinatários, o
+      `hello_world` saiu com `accepted` e não chegou. O evento de status, visto
+      em "Verifique webhooks de teste" no painel do app, trouxe o motivo:
+
+      ```
+      "status": "failed", "code": 130497,
+      "title": "Business account is restricted from messaging users in this country."
+      ```
+
+      O **número de teste da Meta (+1 555 149-2530) não pode enviar para o
+      Brasil**. Não é token, template, lista de destinatários nem código. O
+      caminho é registrar um **número brasileiro real** na conta
+      `2600526637086768` (Etapa 2 · Configuração da produção), com forma de
+      pagamento. Receber mensagens (lead) continua funcionando com o número de
+      teste
 - [!] **Enviar template aprovado — bloqueado fora do nosso código.** O envio sai
       correto: a Meta responde 200 com `wa_id` válido e `message_status:
       accepted`. A mensagem não é entregue, e o teste que isola isso é
