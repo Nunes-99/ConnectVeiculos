@@ -449,6 +449,37 @@ um cliente da Diamante recebendo e-mail desse endereço estranha.
       `/api/feed/google?tenant=empresa-teste` com `?tenant=default` — os títulos
       têm de ser diferentes
 
+## 6.3 Catálogo público (visão do cliente da loja) — rodada de 23/09/2026
+
+Testado em `/catalogo/empresa-teste` pelo navegador, sem enviar formulário.
+
+- [x] Listagem com tema da loja, 6 veículos, contagem de fotos
+- [x] Busca por texto ("civic" → 1 resultado)
+- [x] Modal do veículo abre pela URL `/catalogo/empresa-teste/veiculo/2`
+- [x] Simulador de financiamento — conta conferida à mão (R$ 92.000 a
+      1,49% em 48x = R$ 2.696,73; total R$ 152.443,26 com a entrada)
+- [x] Formulário de análise de crédito e de test drive abrem
+- [x] Test drive de hoje só oferece horário futuro
+- [ ] Enviar os formulários (crédito, test drive, "tenho interesse") e ver o
+      lead chegar no painel — **precisa de autorização para enviar**
+- [!] **Horário de test drive ignora o expediente da loja.** A lista é fixa
+      no código (`catalogo.component.ts:173`, 08:00–17:00 todo dia). O
+      cliente consegue agendar **domingo** (loja fechada), **sábado 17:00**
+      (fecha às 13h) e **08:00** (abre 8h30). O `LojHorario` é texto livre,
+      então não dá para calcular a partir dele — precisa de expediente
+      estruturado por dia da semana
+- [ ] **Placa aparece no catálogo público** (TST0A01 no modal). Muitas lojas
+      escondem ou mostram parcial — decisão do cliente
+- [ ] Modal do veículo e formulários ficam brancos num catálogo de tema
+      escuro — a camada de tema não chega aos modais
+- [ ] Botão "Solicitar Análise de Crédito" sem estilo (botão cru do navegador)
+- [ ] Formulário de crédito: os dois campos de valor não têm rótulo (aparecem
+      só "R$ 0,00" e "R$ 23.000,00")
+- [ ] Esc não fecha os modais, só o X
+- [ ] Link do Facebook no topo aponta para `facebook.com/connectprimeveiculos`
+      — confirmar se é a página da Diamante
+- [ ] Texto "Ola! Quero vender meu carro." sem acento
+
 ## 7. Infraestrutura
 
 - [x] 504 durante deploy — resolvido com teto de memória no build
