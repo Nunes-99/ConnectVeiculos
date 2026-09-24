@@ -532,9 +532,8 @@ Testado em `/catalogo/empresa-teste` pelo navegador, sem enviar formulário.
       `veiculoNome`; conferido: "Visitante do catálogo" → Honda Civic EXL 2023,
       crédito com renda R$ 8.000, entrada R$ 23.000, 48x e CPF; origem
       `WHATSAPP` com rótulo
-- [ ] Tabela de Leads com o telefone dentro da coluna Cliente (0034809, no ar)
-      — a primeira versão espremia o veículo e empurrava Ações para fora da
-      tela. **Falta ver com login** (a sessão tinha expirado)
+- [x] Tabela de Leads com o telefone dentro da coluna Cliente — validada com
+      login em 24/09: cabe na tela, sem rolagem lateral
 - [ ] A sessão do painel caiu para o login depois de o JWT vencer, com refresh
       token de 7 dias válido em tese. Pode ser só a aba parada; verificar
 - [x] **Por que o Google achou o Corolla e não o Civic** — o HTML do servidor
@@ -546,8 +545,20 @@ Testado em `/catalogo/empresa-teste` pelo navegador, sem enviar formulário.
       e observações próprios; semelhança caiu de 99% para 93% (o resto é a
       listagem atrás do modal)
 - [ ] **Pedir reindexação no Search Console** dos veículos 2, 3, 4, 5 e 11
-- [ ] Opcional: página de veículo sem a listagem no SSR, para derrubar a
-      semelhança de vez
+- [x] **Página de veículo sai do servidor só com o carro** (56238ce) —
+      nenhum card da listagem no HTML de /veiculo/N; semelhança Corolla x
+      Civic 99% → 93% → 86% (o resto é o modelo fixo: cabeçalho, rodapé,
+      rótulos). No navegador a listagem aparece atrás do modal (6 cards),
+      fechar volta ao catálogo, sem erro de hidratação no console
+- [x] **Sitemap com `<lastmod>`** (ed2c301, fa6b52d) — `VeiDtAtualizacao`
+      carimbada por interceptor em toda alteração que muda a página (marcar
+      "postado" nas redes não conta). Veículos sem data de entrada (vinham
+      0001-01-01) ficam sem lastmod em vez de mandar data absurda
+- [x] **IndexNow** — já disparava em cadastro/alteração/exclusão, mas o
+      sucesso era log Debug (invisível). Agora Information. Envio manual com a
+      chave de produção em 24/09: HTTP 200 (7 URLs da Diamante)
+- [ ] Reenvio automático do sitemap ao Google (API do Search Console) —
+      precisa de conta de serviço no Google Cloud como proprietária do site
 
 ## 7. Infraestrutura
 
