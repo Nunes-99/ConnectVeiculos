@@ -492,12 +492,24 @@ Testado em `/catalogo/empresa-teste` pelo navegador, sem enviar formulário.
       modal mostram só "Final da placa: A01".
       Decisão: mostrar só os 3 últimos caracteres ("Final da placa: A01"). O
       corte é no backend, então a placa inteira nem sai na API pública
-- [ ] Modal do veículo e formulários ficam brancos num catálogo de tema
-      escuro — a camada de tema não chega aos modais
-- [ ] Botão "Solicitar Análise de Crédito" sem estilo (botão cru do navegador)
-- [ ] Formulário de crédito: os dois campos de valor não têm rótulo (aparecem
-      só "R$ 0,00" e "R$ 23.000,00")
-- [ ] Esc não fecha os modais, só o X
+- [x] **Modais no tema da loja** — validado em 24/09. Causa: rodapé e modais
+      ficavam fora do `.catalogo-container`, onde moram as variáveis do tema.
+      Foi também a causa da **faixa branca acima do rodapé** (a margem mostrava
+      o fundo da página)
+- [x] Botão "Solicitar Análise de Crédito" — a classe no HTML era
+      `btn-solicitar-crédito`, com acento; o CSS nunca aplicava
+- [x] Renda e entrada com rótulo visível no pedido de crédito
+- [x] Esc fecha o modal de cima (crédito → simulador → detalhe)
+- [x] Menu ESTOQUE / VENDA SEU CARRO do topo retirado; "Ver estoque" e
+      "Vender meu carro" dentro do banner (pedido do Vitor, 23/09)
+- [x] Detalhe do veículo: opcionais e observações sob a foto, ficha e botões à
+      direita sem rolar; no celular foto → preço/botões → opcionais (24/09)
+- [x] Título "Qual veículo você está buscando?" alinhado com a caixa de busca
+- [x] Modais de formulário rolam por dentro (o topo do de crédito sumia em
+      tela baixa)
+- [ ] Mapa do rodapé — não verificável pelo navegador automatizado (google.com
+      é bloqueado nele). Código e URL não mudaram; o Google responde 200 e
+      permite o embed. Conferir num navegador comum
 - [ ] Depois de um deploy, quem já visitou o site vê a versão antiga até
       recarregar — é o service worker do PWA. Visto em 23/09 (placa inteira
       numa aba aberta antes do deploy, corrigida no segundo reload)
