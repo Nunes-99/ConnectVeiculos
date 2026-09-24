@@ -416,3 +416,12 @@
   font-size: 0.78rem;
   color: #5f6368;
 }
+
+// Telefone foi para dentro da coluna Cliente: com a coluna Veiculo a tabela
+// passou da largura e empurrava Acoes para fora da tela.
+.lead-telefone { font-size: 0.85rem; white-space: nowrap; }
+.col-veiculo { min-width: 170px; }
+
+@media (max-width: 768px) {
+  .col-veiculo { min-width: 0; }
+}
