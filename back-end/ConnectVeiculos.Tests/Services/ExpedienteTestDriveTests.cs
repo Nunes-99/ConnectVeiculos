@@ -74,6 +74,14 @@ namespace ConnectVeiculos.Tests.Services
                 .Should().Contain("disponível");
         }
 
+        [Fact]
+        public void Sitemap_SemDataValida_NaoMandaLastmod()
+        {
+            ConsultarCatalogoUseCase.DataDaPagina(null, DateTime.MinValue).Should().BeNull();
+            ConsultarCatalogoUseCase.DataDaPagina(null, new DateTime(2026, 9, 16)).Should().Be(new DateTime(2026, 9, 16));
+            ConsultarCatalogoUseCase.DataDaPagina(new DateTime(2026, 9, 24), new DateTime(2026, 9, 16)).Should().Be(new DateTime(2026, 9, 24));
+        }
+
         [Theory]
         [InlineData("TST0A01", "A01")]
         [InlineData("abc-1234", "234")]

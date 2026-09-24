@@ -90,7 +90,7 @@ namespace ConnectVeiculos.Application.UseCases.Catalogo
                         // e a loja nao quer isso exposto antes da negociacao.
                         VeiPlaca = FinalDaPlaca(v.VeiPlaca),
                         VeiObservacao = v.VeiObservacao,
-                        VeiDtAtualizacao = v.VeiDtAtualizacao ?? v.VeiDtEntrada,
+                        VeiDtAtualizacao = DataDaPagina(v.VeiDtAtualizacao, v.VeiDtEntrada),
                         VeiOpcionais = v.VeiOpcionais,
                         CategoriaNome = v.Categoria?.CatNome ?? "",
                         LojaNome = loja?.LojNome ?? "",
@@ -175,6 +175,17 @@ namespace ConnectVeiculos.Application.UseCases.Catalogo
             };
 
             return resultado;
+        }
+
+        /// <summary>
+        /// Data para o lastmod do sitemap. Veiculos cadastrados sem data de entrada
+        /// tem 0001-01-01 no banco; mandar isso ao Google e' pior que nao mandar
+        /// nada — ele passa a desconfiar do lastmod do site inteiro.
+        /// </summary>
+        public static DateTime? DataDaPagina(DateTime? atualizacao, DateTime entrada)
+        {
+            var data = atualizacao ?? entrada;
+            return data.Year >= 2000 ? data : null;
         }
 
         /// <summary>Ultimos 3 caracteres da placa ("TST0A01" -> "A01"). Vazio se nao houver placa.</summary>

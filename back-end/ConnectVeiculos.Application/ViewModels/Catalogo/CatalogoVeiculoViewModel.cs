@@ -10,8 +10,11 @@ namespace ConnectVeiculos.Application.ViewModels.Catalogo
         public int VeiKm { get; set; }
         public decimal VeiPreco { get; set; }
         public string VeiPlaca { get; set; }
-        /// <summary>Ultima alteracao da pagina publica (ou a entrada). Usada no lastmod do sitemap.</summary>
-        public DateTime VeiDtAtualizacao { get; set; }
+        /// <summary>
+        /// Ultima alteracao da pagina publica (ou a entrada). Usada no lastmod do
+        /// sitemap. Nula quando nao ha data confiavel — o sitemap omite o lastmod.
+        /// </summary>
+        public DateTime? VeiDtAtualizacao { get; set; }
         public string VeiObservacao { get; set; }
         public string VeiOpcionais { get; set; }
         public string LojaNome { get; set; }
