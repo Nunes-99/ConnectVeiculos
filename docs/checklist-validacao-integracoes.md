@@ -507,7 +507,12 @@ Testado em `/catalogo/empresa-teste` pelo navegador, sem enviar formulário.
 - [x] Título "Qual veículo você está buscando?" alinhado com a caixa de busca
 - [x] Modais de formulário rolam por dentro (o topo do de crédito sumia em
       tela baixa)
-- [x] **Mapa do rodapé sumiu em 24/09 sem mudança nossa — corrigido (f174aaa).**
+- [!] **Mapa do rodapé — CONTINUA EM BRANCO no navegador do Vitor (24/09, noite).**
+      Isolado: uma página do próprio site no mesmo iframe renderiza normal, e os
+      cabeçalhos do site não bloqueiam iframe de terceiros — o problema é o
+      Google no navegador dele, com as duas URLs sem chave. Próximo passo:
+      OpenStreetMap (sem chave, verificável daqui) ou Maps Embed API com chave.
+      Histórico: **Mapa do rodapé sumiu em 24/09 sem mudança nossa — tentativa (f174aaa).**
       `/maps?q=…&output=embed` passou a responder 301 com
       `X-Frame-Options: SAMEORIGIN` e o Chrome bloqueava o iframe. Agora aponta
       direto para `/maps/embed?origin=mfe&pb=…` (200, sem o cabeçalho). O
