@@ -521,6 +521,34 @@ Testado em `/catalogo/empresa-teste` pelo navegador, sem enviar formulário.
 - [x] Texto "Ola! Quero vender meu carro." sem acento — corrigido em 41fd23d
 - [x] Primeiro horário às 09:00 (loja abre 8h30) — decisão do Vitor, 23/09
 
+## 6.4 Celular, Leads e indexação — 24/09/2026
+
+- [x] **Catálogo no celular (390px)** — sem rolagem lateral; detalhe na ordem
+      foto → preço/botões → opcionais; crédito rola por dentro. Corrigidos e
+      validados: botões do banner numa linha (44px), faixa de horário com
+      rótulo e horário em linhas próprias, primeira miniatura inteira, ícone
+      de Filtros na cor da loja, placeholder da busca que não cabia
+- [x] **Leads mostram o veículo e o pedido de crédito** — a API devolve
+      `veiculoNome`; conferido: "Visitante do catálogo" → Honda Civic EXL 2023,
+      crédito com renda R$ 8.000, entrada R$ 23.000, 48x e CPF; origem
+      `WHATSAPP` com rótulo
+- [ ] Tabela de Leads com o telefone dentro da coluna Cliente (0034809, no ar)
+      — a primeira versão espremia o veículo e empurrava Ações para fora da
+      tela. **Falta ver com login** (a sessão tinha expirado)
+- [ ] A sessão do painel caiu para o login depois de o JWT vencer, com refresh
+      token de 7 dias válido em tese. Pode ser só a aba parada; verificar
+- [x] **Por que o Google achou o Corolla e não o Civic** — o HTML do servidor
+      era a listagem da loja, 99% igual nas seis páginas de veículo (o
+      detalhe só abria no navegador). O Google indexou uma e tratou as outras
+      como duplicata; a busca pelo Civic caía no Corolla porque a listagem
+      dele cita o Civic. Corrigido em dbbdf80: o detalhe abre também no SSR.
+      Medido depois do deploy: cada página traz nome, preço, ficha, opcionais
+      e observações próprios; semelhança caiu de 99% para 93% (o resto é a
+      listagem atrás do modal)
+- [ ] **Pedir reindexação no Search Console** dos veículos 2, 3, 4, 5 e 11
+- [ ] Opcional: página de veículo sem a listagem no SSR, para derrubar a
+      semelhança de vez
+
 ## 7. Infraestrutura
 
 - [x] 504 durante deploy — resolvido com teto de memória no build
