@@ -100,212 +100,215 @@
     }
   </div>
 
-  <!-- Grade de marcas: atalho de busca, montada a partir do estoque -->
-  @if (loja?.lojMostrarMarcas !== false && marcasDisponiveis.length > 1) {
-    <div class="cat-marcas">
-      @for (marca of marcasDisponiveis; track marca) {
-        <button type="button" class="cat-marca" (click)="filtrarPorMarca(marca)">{{ marca }}</button>
-      }
-    </div>
-  }
+  <!-- Fora do HTML do servidor na pagina de um veiculo (ver listagemAdiada). -->
+  @if (!listagemAdiada) {
+    <!-- Grade de marcas: atalho de busca, montada a partir do estoque -->
+    @if (loja?.lojMostrarMarcas !== false && marcasDisponiveis.length > 1) {
+      <div class="cat-marcas">
+        @for (marca of marcasDisponiveis; track marca) {
+          <button type="button" class="cat-marca" (click)="filtrarPorMarca(marca)">{{ marca }}</button>
+        }
+      </div>
+    }
 
-  <!-- Toolbar -->
-  <div class="catalogo-toolbar cat-resultados">
-    <div class="toolbar-left">
-      @if (favoritos.size > 0) {
-        <button class="toolbar-btn" (click)="showFavoritosOnly = !showFavoritosOnly" [class.active]="showFavoritosOnly">
-          <span class="material-icons">{{ showFavoritosOnly ? 'favorite' : 'favorite_border' }}</span>
-          Favoritos ({{ favoritos.size }})
+    <!-- Toolbar -->
+    <div class="catalogo-toolbar cat-resultados">
+      <div class="toolbar-left">
+        @if (favoritos.size > 0) {
+          <button class="toolbar-btn" (click)="showFavoritosOnly = !showFavoritosOnly" [class.active]="showFavoritosOnly">
+            <span class="material-icons">{{ showFavoritosOnly ? 'favorite' : 'favorite_border' }}</span>
+            Favoritos ({{ favoritos.size }})
+          </button>
+        }
+        @if (comparando.length >= 2) {
+          <button class="toolbar-btn accent" (click)="abrirComparador()">
+            <span class="material-icons">compare_arrows</span>
+            Comparar ({{ comparando.length }})
+          </button>
+        }
+      </div>
+      <div class="toolbar-right">
+        <select class="cat-sort-select" [(ngModel)]="ordenacao" (change)="filtrarPorTexto()" aria-label="Ordenar veículos">
+          <option value="">Mais recentes</option>
+          <option value="preco_asc">Menor preço</option>
+          <option value="preco_desc">Maior preço</option>
+          <option value="ano_desc">Mais novos</option>
+          <option value="ano_asc">Mais antigos</option>
+          <option value="km_asc">Menor km</option>
+        </select>
+        <button class="toolbar-btn view-toggle" [class.active]="viewMode === 'grid'" (click)="viewMode = 'grid'"
+                aria-label="Ver em grade" [attr.aria-pressed]="viewMode === 'grid'">
+          <span class="material-icons">grid_view</span>
         </button>
-      }
-      @if (comparando.length >= 2) {
-        <button class="toolbar-btn accent" (click)="abrirComparador()">
-          <span class="material-icons">compare_arrows</span>
-          Comparar ({{ comparando.length }})
+        <button class="toolbar-btn view-toggle" [class.active]="viewMode === 'list'" (click)="viewMode = 'list'"
+                aria-label="Ver em lista" [attr.aria-pressed]="viewMode === 'list'">
+          <span class="material-icons">view_list</span>
         </button>
-      }
+      </div>
     </div>
-    <div class="toolbar-right">
-      <select class="cat-sort-select" [(ngModel)]="ordenacao" (change)="filtrarPorTexto()" aria-label="Ordenar veículos">
-        <option value="">Mais recentes</option>
-        <option value="preco_asc">Menor preço</option>
-        <option value="preco_desc">Maior preço</option>
-        <option value="ano_desc">Mais novos</option>
-        <option value="ano_asc">Mais antigos</option>
-        <option value="km_asc">Menor km</option>
-      </select>
-      <button class="toolbar-btn view-toggle" [class.active]="viewMode === 'grid'" (click)="viewMode = 'grid'"
-              aria-label="Ver em grade" [attr.aria-pressed]="viewMode === 'grid'">
-        <span class="material-icons">grid_view</span>
-      </button>
-      <button class="toolbar-btn view-toggle" [class.active]="viewMode === 'list'" (click)="viewMode = 'list'"
-              aria-label="Ver em lista" [attr.aria-pressed]="viewMode === 'list'">
-        <span class="material-icons">view_list</span>
-      </button>
-    </div>
-  </div>
 
-  <div class="catalogo-content">
-    <button class="filtros-toggle" (click)="showFiltros = !showFiltros">
-      <span class="material-icons">tune</span>
-      {{ showFiltros ? 'Ocultar Filtros' : 'Filtros' }}
-      <span class="material-icons">{{ showFiltros ? 'expand_less' : 'expand_more' }}</span>
-    </button>
-    <aside class="filtros-sidebar" [class.open]="showFiltros">
-      <h3>Filtros</h3>
-      @if (lojas.length > 1 && !lojaSlug) {
+    <div class="catalogo-content">
+      <button class="filtros-toggle" (click)="showFiltros = !showFiltros">
+        <span class="material-icons">tune</span>
+        {{ showFiltros ? 'Ocultar Filtros' : 'Filtros' }}
+        <span class="material-icons">{{ showFiltros ? 'expand_less' : 'expand_more' }}</span>
+      </button>
+      <aside class="filtros-sidebar" [class.open]="showFiltros">
+        <h3>Filtros</h3>
+        @if (lojas.length > 1 && !lojaSlug) {
+          <div class="filtro-grupo">
+            <label>Loja</label>
+            <select [ngModel]="filtroLojaId || ''" (ngModelChange)="onLojaFiltroChange($event)" aria-label="Filtrar por loja">
+              <option value="">Todas as lojas</option>
+              @for (l of lojas; track l.lojId) {
+                <option [value]="l.lojId">{{ l.lojNome }}</option>
+              }
+            </select>
+          </div>
+        }
         <div class="filtro-grupo">
-          <label>Loja</label>
-          <select [ngModel]="filtroLojaId || ''" (ngModelChange)="onLojaFiltroChange($event)" aria-label="Filtrar por loja">
-            <option value="">Todas as lojas</option>
-            @for (l of lojas; track l.lojId) {
-              <option [value]="l.lojId">{{ l.lojNome }}</option>
+          <label>Marca</label>
+          <select [(ngModel)]="marcaSelecionada" (change)="loadCatalogo()" aria-label="Filtrar por marca">
+            <option value="">Todas as marcas</option>
+            @for (marca of filtros.marcas; track marca) {
+              <option [value]="marca">{{ marca }}</option>
             }
           </select>
         </div>
-      }
-      <div class="filtro-grupo">
-        <label>Marca</label>
-        <select [(ngModel)]="marcaSelecionada" (change)="loadCatalogo()" aria-label="Filtrar por marca">
-          <option value="">Todas as marcas</option>
-          @for (marca of filtros.marcas; track marca) {
-            <option [value]="marca">{{ marca }}</option>
-          }
-        </select>
-      </div>
-      <div class="filtro-grupo">
-        <label>Ano</label>
-        <div class="filtro-range">
-          <input type="tel" [(ngModel)]="anoMinSelecionado" [placeholder]="'Min: ' + filtros.anoMin" />
-          <span>até</span>
-          <input type="tel" [(ngModel)]="anoMaxSelecionado" [placeholder]="'Max: ' + filtros.anoMax" />
-        </div>
-      </div>
-      <div class="filtro-grupo">
-        <label>Categoria</label>
-        <select [(ngModel)]="categoriaSelecionada" (change)="filtrarPorTexto()" aria-label="Filtrar por categoria">
-          <option value="">Todas as categorias</option>
-          @for (cat of categorias; track cat) {
-            <option [value]="cat">{{ cat }}</option>
-          }
-        </select>
-      </div>
-      <div class="filtro-grupo">
-        <label>Preço (R$)</label>
-        <div class="filtro-range">
-          <input [(ngModel)]="precoMinSelecionado" appCurrencyMask placeholder="Min" />
-          <span>até</span>
-          <input [(ngModel)]="precoMaxSelecionado" appCurrencyMask placeholder="Max" />
-        </div>
-      </div>
-      <div class="filtro-acoes">
-        <button class="btn-filtrar" (click)="loadCatalogo()">Filtrar</button>
-        <button class="btn-limpar" (click)="limparFiltros()">Limpar</button>
-      </div>
-    </aside>
-
-    <main class="veiculos-grid">
-      <!-- Link de um veiculo que ja saiu do catalogo. Acontece o tempo todo:
-           o endereco foi pro post do Facebook e pro WhatsApp do cliente
-           enquanto o carro estava a venda. Sem este aviso, a pessoa caia no
-           catalogo inteiro sem entender por que o carro do anuncio sumiu. -->
-      @if (veiculoIndisponivel) {
-        <div class="aviso-indisponivel" role="status">
-          <span class="material-icons">directions_car</span>
-          <div>
-            <strong>Este veículo não está mais disponível.</strong>
-            <p>Ele foi vendido ou saiu do estoque. Veja abaixo o que temos hoje.</p>
+        <div class="filtro-grupo">
+          <label>Ano</label>
+          <div class="filtro-range">
+            <input type="tel" [(ngModel)]="anoMinSelecionado" [placeholder]="'Min: ' + filtros.anoMin" />
+            <span>até</span>
+            <input type="tel" [(ngModel)]="anoMaxSelecionado" [placeholder]="'Max: ' + filtros.anoMax" />
           </div>
-          <button type="button" class="btn-fechar-aviso"
-                  (click)="veiculoIndisponivel = false" aria-label="Fechar aviso">
-            <span class="material-icons">close</span>
-          </button>
         </div>
-      }
+        <div class="filtro-grupo">
+          <label>Categoria</label>
+          <select [(ngModel)]="categoriaSelecionada" (change)="filtrarPorTexto()" aria-label="Filtrar por categoria">
+            <option value="">Todas as categorias</option>
+            @for (cat of categorias; track cat) {
+              <option [value]="cat">{{ cat }}</option>
+            }
+          </select>
+        </div>
+        <div class="filtro-grupo">
+          <label>Preço (R$)</label>
+          <div class="filtro-range">
+            <input [(ngModel)]="precoMinSelecionado" appCurrencyMask placeholder="Min" />
+            <span>até</span>
+            <input [(ngModel)]="precoMaxSelecionado" appCurrencyMask placeholder="Max" />
+          </div>
+        </div>
+        <div class="filtro-acoes">
+          <button class="btn-filtrar" (click)="loadCatalogo()">Filtrar</button>
+          <button class="btn-limpar" (click)="limparFiltros()">Limpar</button>
+        </div>
+      </aside>
 
-      @if (loading) {
-        <div class="loading">
-          <div class="loading-spinner"></div>
-          <p>Carregando veículos...</p>
-        </div>
-      } @else {
-        <div class="resultados-info">
-          <span>{{ veiculosFiltrados.length }} {{ veiculosFiltrados.length === 1 ? 'veículo disponível' : 'veículos disponíveis' }}</span>
-          @if (buscaTexto) {
-            <span class="busca-resultado"> para "{{ buscaTexto }}"</span>
-          }
-        </div>
+      <main class="veiculos-grid">
+        <!-- Link de um veiculo que ja saiu do catalogo. Acontece o tempo todo:
+             o endereco foi pro post do Facebook e pro WhatsApp do cliente
+             enquanto o carro estava a venda. Sem este aviso, a pessoa caia no
+             catalogo inteiro sem entender por que o carro do anuncio sumiu. -->
+        @if (veiculoIndisponivel) {
+          <div class="aviso-indisponivel" role="status">
+            <span class="material-icons">directions_car</span>
+            <div>
+              <strong>Este veículo não está mais disponível.</strong>
+              <p>Ele foi vendido ou saiu do estoque. Veja abaixo o que temos hoje.</p>
+            </div>
+            <button type="button" class="btn-fechar-aviso"
+                    (click)="veiculoIndisponivel = false" aria-label="Fechar aviso">
+              <span class="material-icons">close</span>
+            </button>
+          </div>
+        }
 
-        <div class="cards-container" [class.list-view]="viewMode === 'list'">
-          @for (veiculo of veiculosExibidos; track veiculo.veiId) {
-            <div class="veiculo-card" (click)="abrirDetalhes(veiculo)">
-              <div class="card-imagem">
-                <img [src]="getImagemPrincipal(veiculo)" [alt]="veiculo.veiMarca + ' ' + veiculo.veiModelo"
-                     (error)="onImageError($event)" />
-                @if (veiculo.imagens && veiculo.imagens.length > 1) {
-                  <span class="imagens-count">
-                    <span class="material-icons">photo_library</span>
-                    {{ veiculo.imagens.length }}
-                  </span>
-                }
-                @if (veiculo.categoriaNome) {
-                  <span class="badge-categoria">{{ veiculo.categoriaNome }}</span>
-                }
-                <div class="card-actions" (click)="$event.stopPropagation()">
-                  <button class="card-action-btn" (click)="toggleFavorito(veiculo.veiId)" [class.active]="isFavorito(veiculo.veiId)" title="Favoritar">
-                    <span class="material-icons">{{ isFavorito(veiculo.veiId) ? 'favorite' : 'favorite_border' }}</span>
-                  </button>
-                  <button class="card-action-btn" (click)="toggleComparar(veiculo, $event)" [class.active]="isComparando(veiculo.veiId)" title="Comparar">
-                    <span class="material-icons">compare_arrows</span>
-                  </button>
-                  <button class="card-action-btn" (click)="abrirShare(veiculo); $event.stopPropagation()" title="Compartilhar">
-                    <span class="material-icons">share</span>
-                  </button>
+        @if (loading) {
+          <div class="loading">
+            <div class="loading-spinner"></div>
+            <p>Carregando veículos...</p>
+          </div>
+        } @else {
+          <div class="resultados-info">
+            <span>{{ veiculosFiltrados.length }} {{ veiculosFiltrados.length === 1 ? 'veículo disponível' : 'veículos disponíveis' }}</span>
+            @if (buscaTexto) {
+              <span class="busca-resultado"> para "{{ buscaTexto }}"</span>
+            }
+          </div>
+
+          <div class="cards-container" [class.list-view]="viewMode === 'list'">
+            @for (veiculo of veiculosExibidos; track veiculo.veiId) {
+              <div class="veiculo-card" (click)="abrirDetalhes(veiculo)">
+                <div class="card-imagem">
+                  <img [src]="getImagemPrincipal(veiculo)" [alt]="veiculo.veiMarca + ' ' + veiculo.veiModelo"
+                       (error)="onImageError($event)" />
+                  @if (veiculo.imagens && veiculo.imagens.length > 1) {
+                    <span class="imagens-count">
+                      <span class="material-icons">photo_library</span>
+                      {{ veiculo.imagens.length }}
+                    </span>
+                  }
+                  @if (veiculo.categoriaNome) {
+                    <span class="badge-categoria">{{ veiculo.categoriaNome }}</span>
+                  }
+                  <div class="card-actions" (click)="$event.stopPropagation()">
+                    <button class="card-action-btn" (click)="toggleFavorito(veiculo.veiId)" [class.active]="isFavorito(veiculo.veiId)" title="Favoritar">
+                      <span class="material-icons">{{ isFavorito(veiculo.veiId) ? 'favorite' : 'favorite_border' }}</span>
+                    </button>
+                    <button class="card-action-btn" (click)="toggleComparar(veiculo, $event)" [class.active]="isComparando(veiculo.veiId)" title="Comparar">
+                      <span class="material-icons">compare_arrows</span>
+                    </button>
+                    <button class="card-action-btn" (click)="abrirShare(veiculo); $event.stopPropagation()" title="Compartilhar">
+                      <span class="material-icons">share</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              <div class="card-info">
-                <h3>{{ veiculo.veiMarca }} {{ veiculo.veiModelo }}</h3>
-                <p class="preco">{{ formatarPreco(veiculo.veiPreco) }}</p>
+                <div class="card-info">
+                  <h3>{{ veiculo.veiMarca }} {{ veiculo.veiModelo }}</h3>
+                  <p class="preco">{{ formatarPreco(veiculo.veiPreco) }}</p>
 
-                <div class="detalhes">
-                  <div class="detalhe-item">
-                    <span class="material-icons">calendar_today</span>
-                    <span>{{ veiculo.veiAno }}</span>
-                  </div>
-                  <div class="detalhe-item">
-                    <span class="material-icons">speed</span>
-                    <span>{{ formatarKm(veiculo.veiKm) }}</span>
-                  </div>
-                  @if (veiculo.veiCor) {
+                  <div class="detalhes">
                     <div class="detalhe-item">
-                      <span class="material-icons">palette</span>
-                      <span>{{ veiculo.veiCor }}</span>
+                      <span class="material-icons">calendar_today</span>
+                      <span>{{ veiculo.veiAno }}</span>
+                    </div>
+                    <div class="detalhe-item">
+                      <span class="material-icons">speed</span>
+                      <span>{{ formatarKm(veiculo.veiKm) }}</span>
+                    </div>
+                    @if (veiculo.veiCor) {
+                      <div class="detalhe-item">
+                        <span class="material-icons">palette</span>
+                        <span>{{ veiculo.veiCor }}</span>
+                      </div>
+                    }
+                  </div>
+
+                  @if (!lojaId) {
+                    <div class="loja-info">
+                      <span class="material-icons">store</span>
+                      <span>{{ veiculo.lojaNome }}</span>
                     </div>
                   }
+
+                  <span class="ver-detalhes">Ver detalhes <span class="material-icons">arrow_forward</span></span>
                 </div>
-
-                @if (!lojaId) {
-                  <div class="loja-info">
-                    <span class="material-icons">store</span>
-                    <span>{{ veiculo.lojaNome }}</span>
-                  </div>
-                }
-
-                <span class="ver-detalhes">Ver detalhes <span class="material-icons">arrow_forward</span></span>
               </div>
-            </div>
-          } @empty {
-            <div class="sem-veiculos">
-              <span class="material-icons">search_off</span>
-              <p>Nenhum veículo disponível no momento</p>
-              <p class="sub-text">Novos veículos aparecerão automaticamente aqui</p>
-            </div>
-          }
-        </div>
-      }
-    </main>
-  </div>
+            } @empty {
+              <div class="sem-veiculos">
+                <span class="material-icons">search_off</span>
+                <p>Nenhum veículo disponível no momento</p>
+                <p class="sub-text">Novos veículos aparecerão automaticamente aqui</p>
+              </div>
+            }
+          </div>
+        }
+      </main>
+    </div>
+  }
 
 <!-- Footer -->
 @if (loja) {

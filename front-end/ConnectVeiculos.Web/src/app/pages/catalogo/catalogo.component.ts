@@ -1,4 +1,4 @@
-import { Component, HostListener, inject, OnInit, OnDestroy, PLATFORM_ID } from '@angular/core';
+import { Component, HostListener, inject, Injector, afterNextRender, OnInit, OnDestroy, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser, Location } from '@angular/common';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -68,6 +68,16 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   lojaId: number | null = null;
   lojaSlug: string | null = null;
   tenantSlug: string | null = null;
+
+  /**
+   * Pagina de veiculo (/veiculo/N): a listagem da loja fica de fora do HTML do
+   * servidor. Com ela, as paginas dos seis carros chegavam ao Google 93%
+   * iguais — era a mesma listagem atras de cada modal. O navegador comeca
+   * igual ao servidor (senao a hidratacao nao bate) e mostra a listagem logo
+   * depois do primeiro render; para o visitante nada muda.
+   */
+  listagemAdiada = false;
+  private injector = inject(Injector);
 
   // Subscriptions
   private routeSubscription: Subscription | null = null;
@@ -198,6 +208,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
       }
       if (params['veiculoId']) {
         this.autoOpenVeiculoId = Number(params['veiculoId']);
+        this.listagemAdiada = true;
       }
       this.loadCatalogo();
       if (isPlatformBrowser(this.platformId)) {
@@ -210,6 +221,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     const veiculoQuery = this.route.snapshot.queryParamMap.get('veiculo');
     if (veiculoQuery && /^\d+$/.test(veiculoQuery)) {
       this.autoOpenVeiculoId = Number(veiculoQuery);
+      this.listagemAdiada = true;
     }
 
     if (isPlatformBrowser(this.platformId)) {
@@ -335,15 +347,21 @@ export class CatalogoComponent implements OnInit, OnDestroy {
             // Antes caia aqui em silencio — ficava o titulo generico da
             // plataforma e a pagina mostrava o catalogo como se nada fosse.
             this.veiculoIndisponivel = true;
+            // Aqui a listagem e' o conteudo: a pagina diz "veja o que temos hoje".
+            this.listagemAdiada = false;
             this.seoService.setVehicleUnavailablePage(this.loja, this.router.url);
           }
           this.autoOpenVeiculoId = null;
+          this.liberarListagemNoNavegador();
         } else {
           this.seoService.setCatalogPage(this.loja, this.router.url);
           this.seoService.setCatalogJsonLd(this.veiculos);
         }
       },
-      error: () => this.loading = false
+      error: () => {
+        this.loading = false;
+        this.listagemAdiada = false;
+      }
     });
   }
 
@@ -417,6 +435,13 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     return this.tenantSlug
       ? `/catalogo/${this.tenantSlug}/veiculo/${veiculoId}`
       : `/catalogo?veiculo=${veiculoId}`;
+  }
+
+  private liberarListagemNoNavegador(): void {
+    if (!this.listagemAdiada || !isPlatformBrowser(this.platformId)) return;
+    // Depois do primeiro render (ja hidratado); o setTimeout devolve a mudanca
+    // para dentro da zona, que dispara a deteccao de mudancas.
+    afterNextRender(() => setTimeout(() => { this.listagemAdiada = false; }), { injector: this.injector });
   }
 
   abrirDetalhes(veiculo: CatalogoVeiculo): void {
