@@ -201,9 +201,24 @@
 }
 
 .card-actions {
-  display: flex;
+  // Grade de duas colunas: cada botao ocupa metade; o principal do cartao
+  // (Publicar no ML, Conectar, Configurar...) ocupa a linha inteira. Com flex
+  // e larguras pelo texto, os botoes ficavam desencontrados.
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
-  flex-wrap: wrap;
+
+  > button, > a {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+    min-width: 0;
+  }
+
+  > .btn-primary { grid-column: 1 / -1; }
+
+  // Mesmo tamanho de fonte dos vizinhos: o Desconectar vinha em 14px fixo.
+  > .btn-danger-outline { font-size: 0.85rem; font-weight: 500; padding: 8px 16px; }
 
   .btn-primary, .btn-success, .btn-outline {
     display: inline-flex;

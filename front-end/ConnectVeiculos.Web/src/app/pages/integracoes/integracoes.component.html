@@ -47,8 +47,8 @@
               <strong>A conexão expira em {{ mlMinutosRestantes }} min.</strong>
               <small>Reconecte para não interromper a publicação de anúncios.</small>
             } @else {
-              <strong>Conexão válida por mais {{ formatarPrazoMl(mlMinutosRestantes) }}.</strong>
-              <small>O Mercado Livre não fornece renovação automática para este aplicativo — é preciso reconectar quando expirar.</small>
+              <strong>Conexão ativa.</strong>
+              <small>O acesso ao Mercado Livre se renova sozinho — não é preciso reconectar.</small>
             }
           </div>
         </div>
@@ -183,12 +183,6 @@
               {{ waTestando ? 'Enviando...' : 'Enviar teste' }}
             </button>
           </div>
-          <small>
-            Envia o template <strong>hello_world</strong>, e não texto livre: o WhatsApp só
-            entrega texto livre dentro de 24h desde a última mensagem do cliente, e um teste
-            é sempre uma conversa iniciada pela empresa. Com número de teste da Meta, o
-            destino também precisa estar na lista de destinatários cadastrados lá.
-          </small>
         </div>
       }
     </div>
