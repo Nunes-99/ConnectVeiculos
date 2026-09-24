@@ -507,17 +507,14 @@ Testado em `/catalogo/empresa-teste` pelo navegador, sem enviar formulário.
 - [x] Título "Qual veículo você está buscando?" alinhado com a caixa de busca
 - [x] Modais de formulário rolam por dentro (o topo do de crédito sumia em
       tela baixa)
-- [!] **Mapa do rodapé — CONTINUA EM BRANCO no navegador do Vitor (24/09, noite).**
-      Isolado: uma página do próprio site no mesmo iframe renderiza normal, e os
-      cabeçalhos do site não bloqueiam iframe de terceiros — o problema é o
-      Google no navegador dele, com as duas URLs sem chave. Próximo passo:
-      OpenStreetMap (sem chave, verificável daqui) ou Maps Embed API com chave.
-      Histórico: **Mapa do rodapé sumiu em 24/09 sem mudança nossa — tentativa (f174aaa).**
-      `/maps?q=…&output=embed` passou a responder 301 com
-      `X-Frame-Options: SAMEORIGIN` e o Chrome bloqueava o iframe. Agora aponta
-      direto para `/maps/embed?origin=mfe&pb=…` (200, sem o cabeçalho). O
-      navegador automatizado não abre google.com: **conferência visual é do
-      Vitor**
+- [x] **Mapa do rodapé funciona em produção — verificado em 24/09 num Chrome
+      limpo (Playwright): mapa completo com o pino no endereço da loja.** As
+      duas URLs (`/maps?q=…&output=embed` e `/maps/embed?pb=…`) renderizam;
+      a troca de f174aaa partiu de diagnóstico errado e foi revertida
+      (ad0b993). O mapa em branco era do navegador do Vitor: a extensão do
+      Claude no Chrome bloqueia google.com nas abas que controla (e era por
+      isso que também saía em branco para mim), ou cache do PWA. Conferir em
+      janela anônima
 - [x] Tela de Integrações e `WHATSAPP_TEMPLATES.md` com os textos aprovados
       (c3922c6) — conferido no bundle publicado: texto novo presente,
       `_{{6}}_` ausente
