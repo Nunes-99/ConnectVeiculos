@@ -89,6 +89,13 @@ export function app(): express.Express {
 
   // Sitemap dinâmico — multi-tenant: itera todos os tenants ativos e
   // gera URLs no formato /catalogo/{tenantSlug} e /catalogo/{tenantSlug}/veiculo/{id}.
+  /** Data em yyyy-MM-dd (formato W3C aceito no sitemap), ou null se invalida. */
+  const dataSitemap = (valor: unknown): string | null => {
+    if (!valor) return null;
+    const d = new Date(String(valor));
+    return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+  };
+
   server.get('/sitemap.xml', async (req, res) => {
     try {
       const apiBase = process.env['API_BASE_URL'] || 'http://localhost:5219';
@@ -117,10 +124,17 @@ export function app(): express.Express {
           const veiculos = data.veiculos || [];
           if (veiculos.length === 0) continue;
 
-          xml += `  <url><loc>${siteBase}/catalogo/${tenant.slug}</loc><changefreq>daily</changefreq><priority>0.8</priority></url>\n`;
+          // lastmod e' o que o Google usa para decidir o que revisitar;
+          // changefreq e priority ele ignora. A listagem muda quando qualquer
+          // veiculo muda, entao vale a data mais recente entre eles.
+          const datas = veiculos.map((v: any) => dataSitemap(v.veiDtAtualizacao)).filter(Boolean).sort();
+          const lastmodLoja = datas.length ? `<lastmod>${datas[datas.length - 1]}</lastmod>` : '';
+          xml += `  <url><loc>${siteBase}/catalogo/${tenant.slug}</loc>${lastmodLoja}<changefreq>daily</changefreq><priority>0.8</priority></url>\n`;
 
           for (const v of veiculos) {
-            xml += `  <url><loc>${siteBase}/catalogo/${tenant.slug}/veiculo/${v.veiId}</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>\n`;
+            const dt = dataSitemap(v.veiDtAtualizacao);
+            const lastmod = dt ? `<lastmod>${dt}</lastmod>` : '';
+            xml += `  <url><loc>${siteBase}/catalogo/${tenant.slug}/veiculo/${v.veiId}</loc>${lastmod}<changefreq>weekly</changefreq><priority>0.9</priority></url>\n`;
           }
         } catch {
           // tenant individual falhou — continua os outros

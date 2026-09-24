@@ -140,6 +140,7 @@ namespace ConnectVeiculos.Infrastructure.IoC
 
             // Registrar interceptors
             services.AddSingleton<SoftDeleteInterceptor>();
+            services.AddSingleton<VeiculoAtualizadoInterceptor>();
             services.AddScoped<AuditInterceptor>();
 
             // DbContext para Entity Framework — tambem tenant-aware via factory.
@@ -161,7 +162,8 @@ namespace ConnectVeiculos.Infrastructure.IoC
                     options.UseSqlite(connStr);
                 }
 
-                options.AddInterceptors(softDeleteInterceptor, auditInterceptor);
+                options.AddInterceptors(softDeleteInterceptor, auditInterceptor,
+                    serviceProvider.GetRequiredService<VeiculoAtualizadoInterceptor>());
             });
 
             // Repositories
@@ -431,6 +433,10 @@ namespace ConnectVeiculos.Infrastructure.IoC
                 AddColumnIfNotExists(connection, "Usuario", "UsuTrocarSenha", "INTEGER NOT NULL DEFAULT 0");
 
                 AddColumnIfNotExists(connection, "Veiculo", "VeiObservacao", "TEXT");
+
+                // Data da ultima alteracao do veiculo (lastmod do sitemap). Veiculos
+                // antigos ficam nulos e o sitemap cai na data de entrada.
+                AddColumnIfNotExists(connection, "Veiculo", "VeiDtAtualizacao", "TEXT");
 
                 // Adicionar coluna LojWhatsApp na tabela Loja
                 AddColumnIfNotExists(connection, "Loja", "LojWhatsApp", "TEXT");

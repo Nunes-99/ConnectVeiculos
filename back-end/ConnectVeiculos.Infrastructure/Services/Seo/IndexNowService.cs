@@ -74,7 +74,9 @@ namespace ConnectVeiculos.Infrastructure.Services.Seo
                  }
                  else
                  {
-                     _logger.LogDebug(
+                     // Information e nao Debug: em Debug o sucesso nunca aparecia em
+                     // producao e nao havia como saber se o IndexNow funcionava.
+                     _logger.LogInformation(
                          "IndexNow notificado: tenant {TenantSlug} veiculo {VeiculoId} ({UrlCount} URLs)",
                          tenantSlug, veiculoId, urls.Count);
                  }

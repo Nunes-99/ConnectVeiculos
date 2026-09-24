@@ -25,6 +25,9 @@ namespace ConnectVeiculos.Core.Entities.Veiculos
         public int VeiKm { get; private set; }
         public decimal VeiPreco { get; private set; }
         public DateTime VeiDtEntrada { get; private set; }
+        // Ultima alteracao que muda a pagina publica. Preenchida pelo
+        // VeiculoAtualizadoInterceptor; vira o <lastmod> do sitemap.
+        public DateTime? VeiDtAtualizacao { get; private set; }
         public string VeiSts { get; private set; }
         public string VeiSitSts { get; private set; }
         public decimal VeiPrecoCompra { get; private set; }

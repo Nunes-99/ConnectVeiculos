@@ -90,6 +90,7 @@ namespace ConnectVeiculos.Application.UseCases.Catalogo
                         // e a loja nao quer isso exposto antes da negociacao.
                         VeiPlaca = FinalDaPlaca(v.VeiPlaca),
                         VeiObservacao = v.VeiObservacao,
+                        VeiDtAtualizacao = v.VeiDtAtualizacao ?? v.VeiDtEntrada,
                         VeiOpcionais = v.VeiOpcionais,
                         CategoriaNome = v.Categoria?.CatNome ?? "",
                         LojaNome = loja?.LojNome ?? "",
