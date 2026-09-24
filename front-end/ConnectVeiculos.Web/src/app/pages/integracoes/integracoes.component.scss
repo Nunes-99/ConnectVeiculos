@@ -215,12 +215,18 @@
     min-width: 0;
     // Meia coluna de um cartao e' estreita: com 16px de cada lado,
     // "Remover anuncios" e "Desconectar conta Meta" quebravam em duas linhas.
-    padding-left: 8px !important;
-    padding-right: 8px !important;
+    padding: 0 8px !important;
     white-space: nowrap;
+    // Mesma altura para todos: cada tipo de botao tinha padding e borda
+    // proprios, e a mesma linha ficava com 36px e 42px lado a lado.
+    box-sizing: border-box;
+    height: 38px;
+    line-height: 1;
   }
 
-  > .btn-primary { grid-column: 1 / -1; }
+  // Principal do cartao, ou botao sozinho no bloco, ocupa a linha inteira.
+  > .btn-primary,
+  > :only-child { grid-column: 1 / -1; }
 
   // Mesmo tamanho de fonte dos vizinhos: o Desconectar vinha em 14px fixo.
   > .btn-danger-outline { font-size: 0.85rem; font-weight: 500; padding: 8px 16px; }
