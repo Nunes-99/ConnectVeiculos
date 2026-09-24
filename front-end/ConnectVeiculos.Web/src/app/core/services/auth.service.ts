@@ -2,7 +2,7 @@ import { Injectable, inject, signal, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, tap } from 'rxjs';
+import { Observable, finalize, shareReplay, tap, throwError } from 'rxjs';
 import { ApiService } from './api.service';
 import { Usuario, LoginResponse } from '../models';
 
@@ -97,12 +97,27 @@ export class AuthService extends ApiService {
     );
   }
 
+  /**
+   * Renovacao em andamento, compartilhada por todas as requisicoes que
+   * receberem 401 ao mesmo tempo.
+   *
+   * O backend troca o refresh token a cada uso (o antigo fica invalido). Ao
+   * abrir uma tela com o JWT vencido, varias chamadas caem em 401 juntas e
+   * cada uma disparava a propria renovacao com o MESMO refresh token: a
+   * primeira passava, a segunda era recusada e o interceptor deslogava. Era a
+   * sessao "caindo sozinha" mesmo com o refresh de 7 dias valido.
+   */
+  private renovacaoEmAndamento: Observable<LoginResponse> | null = null;
+
   refreshSession(): Observable<LoginResponse> {
+    if (this.renovacaoEmAndamento) return this.renovacaoEmAndamento;
+
     const refreshToken = this.getRefreshToken();
     if (!refreshToken) {
-      throw new Error('Sem refresh token armazenado.');
+      return throwError(() => new Error('Sem refresh token armazenado.'));
     }
-    return this.post<LoginResponse>('auth/refresh', { refreshToken }).pipe(
+
+    this.renovacaoEmAndamento = this.post<LoginResponse>('auth/refresh', { refreshToken }).pipe(
       tap(response => {
         if (isPlatformBrowser(this.platformId)) {
           localStorage.setItem(this.TOKEN_STORAGE_KEY, response.token);
@@ -110,8 +125,11 @@ export class AuthService extends ApiService {
             localStorage.setItem(this.REFRESH_TOKEN_KEY, response.refreshToken);
           }
         }
-      })
+      }),
+      finalize(() => { this.renovacaoEmAndamento = null; }),
+      shareReplay(1)
     );
+    return this.renovacaoEmAndamento;
   }
 
   getRefreshToken(): string | null {
