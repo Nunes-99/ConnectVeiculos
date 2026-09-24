@@ -18,6 +18,7 @@ export interface Lead {
   leaRenda?: number;
   leaEntrada?: number;
   leaParcelas?: number;
+  veiculoNome?: string | null;
 }
 
 export interface LeadOrigem {

@@ -170,6 +170,7 @@
         <thead>
           <tr>
             <th>Cliente</th>
+            <th>Veículo</th>
             <th>Telefone</th>
             <th>Origem</th>
             <th>Status</th>
@@ -185,7 +186,18 @@
                 @if (lead.leaEmail) {
                   <br><span class="text-muted">{{ lead.leaEmail }}</span>
                 }
+                <!-- Pedido de credito: a loja precisa destes dados para rodar a
+                     analise, e eles nao apareciam em lugar nenhum da tela. -->
+                @if (lead.leaRenda || lead.leaCpf) {
+                  <div class="lead-financiamento">
+                    @if (lead.leaRenda) { <span>Renda {{ lead.leaRenda | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</span> }
+                    @if (lead.leaEntrada) { <span>Entrada {{ lead.leaEntrada | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</span> }
+                    @if (lead.leaParcelas) { <span>{{ lead.leaParcelas }}x</span> }
+                    @if (lead.leaCpf) { <span>CPF {{ lead.leaCpf }}</span> }
+                  </div>
+                }
               </td>
+              <td data-label="Veículo">{{ lead.veiculoNome || '-' }}</td>
               <td data-label="Telefone">{{ (lead.leaTelefone | telefone) || '-' }}</td>
               <td data-label="Origem"><span class="badge-origem">{{ getOrigemLabel(lead.leaOrigem) }}</span></td>
               <td data-label="Status">
@@ -213,7 +225,7 @@
             </tr>
           } @empty {
             <tr>
-              <td colspan="6" class="empty">Nenhum lead encontrado</td>
+              <td colspan="7" class="empty">Nenhum lead encontrado</td>
             </tr>
           }
         </tbody>

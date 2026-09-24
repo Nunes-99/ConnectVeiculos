@@ -407,3 +407,12 @@
     .btn-primary { background: #1a237e; color: #fff; }
   }
 }
+
+.lead-financiamento {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  margin-top: 0.3rem;
+  font-size: 0.78rem;
+  color: #5f6368;
+}

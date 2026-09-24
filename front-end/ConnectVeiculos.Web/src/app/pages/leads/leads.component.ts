@@ -124,6 +124,7 @@ export class LeadsComponent implements OnInit {
 
   getOrigemLabel(origem: string): string {
     const labels: Record<string, string> = {
+      'WHATSAPP': 'WhatsApp',
       'WHATSAPP_CATALOGO': 'WhatsApp Catálogo',
       'WHATSAPP_DETALHE': 'WhatsApp Detalhe',
       'TEST_DRIVE': 'Test Drive',

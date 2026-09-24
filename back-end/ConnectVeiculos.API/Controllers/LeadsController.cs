@@ -69,7 +69,20 @@ namespace ConnectVeiculos.API.Controllers
             var query = _context.Leads.AsQueryable();
             if (lojaId.HasValue) query = query.Where(l => l.R_LojId == lojaId.Value);
             if (!string.IsNullOrEmpty(status)) query = query.Where(l => l.LeaStatus == status);
-            var result = await query.OrderByDescending(l => l.LeaDtCriacao).ToListAsync();
+            // Com o nome do veiculo: o lead de clique no WhatsApp so tem isso de util
+            // (nao traz nome nem telefone), e a tela so recebia o id.
+            var result = await query.OrderByDescending(l => l.LeaDtCriacao)
+                .Select(l => new
+                {
+                    l.LeaId, l.R_VeiId, l.R_LojId,
+                    l.LeaNomeCliente, l.LeaTelefone, l.LeaEmail,
+                    l.LeaOrigem, l.LeaStatus, l.LeaObservacao, l.LeaDtCriacao,
+                    l.LeaCpf, l.LeaRenda, l.LeaEntrada, l.LeaParcelas,
+                    VeiculoNome = _context.Veiculos
+                        .Where(v => v.VeiId == l.R_VeiId)
+                        .Select(v => v.VeiMarca + " " + v.VeiModelo + " " + v.VeiAno)
+                        .FirstOrDefault()
+                }).ToListAsync();
             return Ok(result);
         }
 

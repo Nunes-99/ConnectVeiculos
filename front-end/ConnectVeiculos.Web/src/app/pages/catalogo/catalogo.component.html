@@ -3,7 +3,8 @@
   @if (loja?.lojHorario) {
     <div class="cat-horario">
       <span class="material-icons" aria-hidden="true">schedule</span>
-      <strong>Horário de atendimento:</strong> {{ loja!.lojHorario }}
+      <strong>Horário de atendimento:</strong>
+      <span class="cat-horario-texto">{{ loja!.lojHorario }}</span>
     </div>
   }
 
@@ -75,7 +76,7 @@
       <div class="cat-search-box">
         <span class="material-icons">search</span>
         <input type="text" [(ngModel)]="buscaTexto" (input)="filtrarPorTexto()"
-               placeholder="O que você está procurando? Ex: Toyota Corolla, SUV, Sedan..." />
+               placeholder="Busque por marca, modelo ou tipo" />
         @if (buscaTexto) {
           <button class="cat-search-clear" (click)="buscaTexto = ''; filtrarPorTexto()">
             <span class="material-icons">close</span>
