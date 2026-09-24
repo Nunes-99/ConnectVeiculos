@@ -213,6 +213,11 @@
     justify-content: center;
     text-align: center;
     min-width: 0;
+    // Meia coluna de um cartao e' estreita: com 16px de cada lado,
+    // "Remover anuncios" e "Desconectar conta Meta" quebravam em duas linhas.
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+    white-space: nowrap;
   }
 
   > .btn-primary { grid-column: 1 / -1; }
@@ -751,12 +756,14 @@
 // texto e, na largura do card, passava por cima do campo. Com wrap, os dois
 // empilham quando nao cabem lado a lado.
 .wa-teste-row {
-  display: flex;
-  flex-wrap: wrap;
+  // Grade: o campo encolhe e o botao fica do tamanho do texto. Com flex e
+  // base de 160px no campo, o botao era empurrado para fora do cartao e
+  // aparecia cortado ("Enviar test").
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
 
   input {
-    flex: 1 1 160px;
     min-width: 0;
     padding: 8px 12px;
     border: 1px solid var(--border, #ddd);
