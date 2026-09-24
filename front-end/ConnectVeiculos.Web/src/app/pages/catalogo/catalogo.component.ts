@@ -321,9 +321,13 @@ export class CatalogoComponent implements OnInit, OnDestroy {
             const path = this.router.url;
             this.seoService.setVehiclePage(v, path);
             this.seoService.setVehicleJsonLd(v, path);
-            if (isPlatformBrowser(this.platformId)) {
-              this.abrirDetalhes(v);
-            }
+            // Abre tambem no SSR (abrirDetalhes ja isola o que so existe no
+            // navegador). Antes so o navegador abria o detalhe: o HTML que o
+            // Google recebia era a listagem, 99% igual em todas as paginas de
+            // veiculo — ele indexou uma (o Corolla) e tratou as outras como
+            // duplicata. A busca pelo Civic caia no Corolla porque a listagem
+            // dele cita o Civic.
+            this.abrirDetalhes(v);
           } else {
             // O veiculo saiu do catalogo (vendido, reservado ou excluido) mas a
             // URL continua viva: ela foi pro post do Facebook, pro WhatsApp do
