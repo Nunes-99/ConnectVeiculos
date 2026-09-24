@@ -513,8 +513,8 @@ Testado em `/catalogo/empresa-teste` pelo navegador, sem enviar formulário.
       a troca de f174aaa partiu de diagnóstico errado e foi revertida
       (ad0b993). O mapa em branco era do navegador do Vitor: a extensão do
       Claude no Chrome bloqueia google.com nas abas que controla (e era por
-      isso que também saía em branco para mim), ou cache do PWA. Conferir em
-      janela anônima
+      isso que também saía em branco para mim). **Confirmado pelo Vitor em
+      24/09 num navegador fora do grupo da extensão: mapa completo**
 - [x] Tela de Integrações e `WHATSAPP_TEMPLATES.md` com os textos aprovados
       (c3922c6) — conferido no bundle publicado: texto novo presente,
       `_{{6}}_` ausente
@@ -574,6 +574,14 @@ Testado em `/catalogo/empresa-teste` pelo navegador, sem enviar formulário.
       chave de produção em 24/09: HTTP 200 (7 URLs da Diamante)
 - [ ] Reenvio automático do sitemap ao Google (API do Search Console) —
       precisa de conta de serviço no Google Cloud como proprietária do site
+
+## 6.5 Tela de Integrações — 24/09/2026
+
+- [x] Botões em grade de 2 colunas; o principal do cartão (Publicar no ML,
+      Conectar, Configurar) e botão sozinho no bloco ocupam a linha inteira.
+      Medido após o deploy: todos com 38px, todos cabem numa linha
+- [x] Texto sob "Enviar teste" do WhatsApp removido; botão não é mais cortado
+- [x] Aviso do ML não diz mais que é preciso reconectar (renova sozinho desde 18/09)
 
 ## 7. Infraestrutura
 
