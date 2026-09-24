@@ -507,9 +507,17 @@ Testado em `/catalogo/empresa-teste` pelo navegador, sem enviar formulário.
 - [x] Título "Qual veículo você está buscando?" alinhado com a caixa de busca
 - [x] Modais de formulário rolam por dentro (o topo do de crédito sumia em
       tela baixa)
-- [ ] Mapa do rodapé — não verificável pelo navegador automatizado (google.com
-      é bloqueado nele). Código e URL não mudaram; o Google responde 200 e
-      permite o embed. Conferir num navegador comum
+- [x] **Mapa do rodapé sumiu em 24/09 sem mudança nossa — corrigido (f174aaa).**
+      `/maps?q=…&output=embed` passou a responder 301 com
+      `X-Frame-Options: SAMEORIGIN` e o Chrome bloqueava o iframe. Agora aponta
+      direto para `/maps/embed?origin=mfe&pb=…` (200, sem o cabeçalho). O
+      navegador automatizado não abre google.com: **conferência visual é do
+      Vitor**
+- [x] Tela de Integrações e `WHATSAPP_TEMPLATES.md` com os textos aprovados
+      (c3922c6) — conferido no bundle publicado: texto novo presente,
+      `_{{6}}_` ausente
+- [ ] Tenants a remover na limpeza: `teste`, `viorica7078` e `cliente`
+      (este último apareceu em /app/data em 24/09; confirmar o que é)
 - [ ] Depois de um deploy, quem já visitou o site vê a versão antiga até
       recarregar — é o service worker do PWA. Visto em 23/09 (placa inteira
       numa aba aberta antes do deploy, corrigida no segundo reload)
@@ -534,8 +542,13 @@ Testado em `/catalogo/empresa-teste` pelo navegador, sem enviar formulário.
       `WHATSAPP` com rótulo
 - [x] Tabela de Leads com o telefone dentro da coluna Cliente — validada com
       login em 24/09: cabe na tela, sem rolagem lateral
-- [ ] A sessão do painel caiu para o login depois de o JWT vencer, com refresh
-      token de 7 dias válido em tese. Pode ser só a aba parada; verificar
+- [x] **Sessão caindo com refresh token válido — corrigido e validado em 24/09
+      (fca2326).** Era corrida: o backend troca o refresh token a cada uso, e as
+      várias chamadas de uma tela com JWT vencido renovavam juntas com o mesmo
+      token — a segunda era recusada e o painel deslogava. Agora compartilham
+      uma renovação. Teste: token invalidado + Painel Geral (12 chamadas em
+      paralelo) → **uma** chamada a /auth/refresh, token novo, continuou logado.
+      A primeira renovação logo após um deploy leva ~10s (cache frio); depois 0,2s
 - [x] **Por que o Google achou o Corolla e não o Civic** — o HTML do servidor
       era a listagem da loja, 99% igual nas seis páginas de veículo (o
       detalhe só abria no navegador). O Google indexou uma e tratou as outras
