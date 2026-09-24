@@ -22,7 +22,20 @@ Pra o sistema enviar notificações automáticas de test drive (confirmação, c
    - **Idioma**: Portuguese (BR)
    - **Body**: copie o texto da seção "Corpo da mensagem"
    - NÃO adicione header, footer, ou buttons — só body
+   - **Tipo de variável: Número** (não "Nome") — o sistema envia as variáveis pela posição
+   - **Período de validade personalizado**: ligue e escolha o máximo. O padrão descarta a
+     mensagem se o celular do cliente ficar 10 minutos sem internet
+   - Amostras para as variáveis: João · 25/09/2026 · 14:30 · Honda Civic EXL 2023 ·
+     Av. Brasil, 100 - São Paulo · Diamante Veículos
 5. Salve e submeta. Aprovação Meta: ~24h
+
+> **A Meta recusa variável no início ou no fim do corpo.** As versões antigas deste guia
+> terminavam em `_{{6}}_` e eram rejeitadas na criação ("As variáveis não podem estar no
+> início ou no fim do modelo"). Os textos abaixo são os enviados em 23/09/2026.
+>
+> **Número de teste da Meta não envia para o Brasil** (erro 130497, "Business account is
+> restricted from messaging users in this country"). O envio só funciona com um número
+> brasileiro registrado na conta do WhatsApp.
 6. Depois de aprovado, em ConnectVeículos `/integracoes` clique em **Configurar** no card "WhatsApp Business" e cole Access Token + Phone Number ID
 
 ---
@@ -44,8 +57,7 @@ Seu test drive está CONFIRMADO! ✅
 Lembre-se de trazer um documento de identificação com foto (CNH ou RG).
 Se precisar reagendar, é só responder esta mensagem.
 
-Te esperamos!
-_{{6}}_
+Te esperamos na {{6}}. Até breve!
 ```
 
 **Variáveis** (na ordem que o sistema envia):
@@ -64,17 +76,17 @@ _{{6}}_
 
 **Body:**
 ```
-Olá {{1}},
+Olá {{1}}, tudo bem?
 
 Infelizmente precisamos CANCELAR seu test drive ❌
 
 📅 Data: {{2}} às {{3}}
 🚗 Veículo: {{4}}
 
-Quer reagendar para outro horário? Responda esta mensagem ou nos chame que organizamos uma nova data.
+Quer reagendar para outro horário? Responda esta mensagem que organizamos uma nova data.
 
 Pedimos desculpas pelo transtorno.
-_{{5}}_
+Equipe {{5}}. Até breve!
 ```
 
 **Variáveis:**
@@ -106,8 +118,7 @@ Não esqueça:
 
 Se precisar remarcar, é só responder esta mensagem.
 
-Te esperamos!
-_{{6}}_
+Te esperamos na {{6}}. Até breve!
 ```
 
 **Variáveis:** mesmas do template 1 (incluem endereço da loja).

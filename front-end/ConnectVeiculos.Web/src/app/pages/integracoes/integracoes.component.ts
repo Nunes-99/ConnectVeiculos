@@ -41,6 +41,10 @@ export class IntegracoesComponent implements OnInit {
   // WhatsApp templates modal
   showWaTemplatesModal = false;
 
+  // Textos enviados a Meta em 23/09/2026. A Meta recusa variavel no inicio ou
+  // no fim do corpo — o "_{{6}}_" que fechava as versoes antigas nao passava.
+  // A tela mostra estas mesmas strings, para o que se le e o que se copia
+  // nunca divergirem.
   templateConfirmado = `Olá {{1}}, tudo bem?
 
 Seu test drive está CONFIRMADO! ✅
@@ -52,20 +56,19 @@ Seu test drive está CONFIRMADO! ✅
 Lembre-se de trazer um documento de identificação com foto (CNH ou RG).
 Se precisar reagendar, é só responder esta mensagem.
 
-Te esperamos!
-_{{6}}_`;
+Te esperamos na {{6}}. Até breve!`;
 
-  templateCancelado = `Olá {{1}},
+  templateCancelado = `Olá {{1}}, tudo bem?
 
 Infelizmente precisamos CANCELAR seu test drive ❌
 
 📅 Data: {{2}} às {{3}}
 🚗 Veículo: {{4}}
 
-Quer reagendar para outro horário? Responda esta mensagem ou nos chame que organizamos uma nova data.
+Quer reagendar para outro horário? Responda esta mensagem que organizamos uma nova data.
 
 Pedimos desculpas pelo transtorno.
-_{{5}}_`;
+Equipe {{5}}. Até breve!`;
 
   templateLembrete = `Olá {{1}}, tudo bem?
 
@@ -81,8 +84,7 @@ Não esqueça:
 
 Se precisar remarcar, é só responder esta mensagem.
 
-Te esperamos!
-_{{6}}_`;
+Te esperamos na {{6}}. Até breve!`;
 
   copiarTexto(texto: string): void {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
