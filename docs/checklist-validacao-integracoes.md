@@ -104,7 +104,7 @@ aplicativo comum), número dedicado a ela, e templates aprovados pela Meta.
       enviados para análise em 23/09/2026 (Utilidade, pt_BR, variáveis por
       número). A Meta recusa variável no fim do corpo — o `_{{6}}_` do
       `WHATSAPP_TEMPLATES.md` não passa; a última linha virou
-      `Te esperamos na {{6}}. Até breve!`. **Falta aprovação**
+      `Te esperamos na {{6}}. Até breve!`. **Aprovados — os 3 "Ativo" em 24/09**
 - [x] ~~O token do WhatsApp expira em 24h~~ — descoberto em 18/09/2026, resolvido
       pelo token permanente acima.
       Consultando o número na Graph API, a resposta foi:
