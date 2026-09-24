@@ -1122,13 +1122,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   /** Endereco da loja no Google Maps, para o mapa do rodape. */
   get urlMapa(): string | null {
     if (!this.loja?.lojEndereco) return null;
-    // Direto no /maps/embed. O formato antigo (/maps?q=...&output=embed) passou
-    // a responder com um redirect que traz X-Frame-Options: SAMEORIGIN, e o
-    // Chrome bloqueia o iframe — o mapa do rodape sumiu em 24/09/2026 sem
-    // nenhuma mudanca nossa. Este e' o endereco para onde o Google redireciona.
-    // O "!" separa campos no pb, entao precisa ir escapado.
-    const endereco = encodeURIComponent(this.loja.lojEndereco).replace(/!/g, '%21');
-    return `https://www.google.com/maps/embed?origin=mfe&pb=!1m2!2m1!1s${endereco}`;
+    return `https://www.google.com/maps?q=${encodeURIComponent(this.loja.lojEndereco)}&output=embed`;
   }
 
   /**
