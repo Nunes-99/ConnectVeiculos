@@ -61,6 +61,45 @@ namespace ConnectVeiculos.Tests.Tenancy
             DominioProprio.EhDaPlataforma(dominio).Should().Be(esperado);
         }
 
+        private const string Ip = "136.248.77.154";
+
+        [Fact]
+        public void Cadastro_DominioValidoQueApontaParaOServidor_EhAceito()
+        {
+            DominioProprio.MotivoParaRecusar(null, "diamanteveiculos.com.br", apontaParaServidor: true, Ip)
+                .Should().BeNull();
+        }
+
+        [Fact]
+        public void Cadastro_DominioQueNaoAponta_EhRecusadoComOIpNaMensagem()
+        {
+            DominioProprio.MotivoParaRecusar(null, "diamanteveiculos.com.br", apontaParaServidor: false, Ip)
+                .Should().Contain("ainda não aponta").And.Contain(Ip);
+        }
+
+        [Theory]
+        [InlineData("localhost")]
+        [InlineData("diamante.connectveiculos.dev.br")]
+        public void Cadastro_InvalidoOuDaPlataforma_EhRecusadoMesmoApontando(string dominio)
+        {
+            DominioProprio.MotivoParaRecusar(null, dominio, apontaParaServidor: true, Ip).Should().NotBeNull();
+        }
+
+        [Fact]
+        public void Cadastro_ComDominioJaCadastrado_NaoTrocaDireto()
+        {
+            DominioProprio.MotivoParaRecusar("diamanteveiculos.com.br", "outro.com.br", apontaParaServidor: true, Ip)
+                .Should().Contain("remova o atual");
+        }
+
+        [Fact]
+        public void Cadastro_MesmoDominioDeNovo_NaoEhRecusado()
+        {
+            // Inclusive se o DNS mudou depois: reenviar o mesmo nao altera nada.
+            DominioProprio.MotivoParaRecusar("diamanteveiculos.com.br", "diamanteveiculos.com.br", apontaParaServidor: false, Ip)
+                .Should().BeNull();
+        }
+
         [Fact]
         public void Tenant_DominioNovo_FicaPendenteAteAtivar()
         {

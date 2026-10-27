@@ -66,6 +66,30 @@ namespace ConnectVeiculos.Core.Catalogo
         public static bool EhDaPlataforma(string dominio)
             => DaPlataforma.Any(r => dominio == r || dominio.EndsWith("." + r, StringComparison.Ordinal));
 
+        /// <summary>
+        /// Por que o cadastro de <paramref name="novo"/> deve ser recusado, ou null
+        /// se pode gravar. <paramref name="novo"/> ja normalizado. Regras:
+        ///   - formato valido e fora dos dominios da plataforma;
+        ///   - com um dominio ja cadastrado nao se troca direto: remove e cadastra
+        ///     de novo (o mesmo dominio de novo e' aceito, nao muda nada);
+        ///   - o DNS ja tem de apontar para o servidor. Prova que o dominio existe,
+        ///     que vai responder, e que quem cadastra controla o dominio — senao
+        ///     qualquer loja poderia "reservar" o dominio de outra.
+        /// </summary>
+        public static string? MotivoParaRecusar(string? atual, string novo, bool apontaParaServidor, string ipServidor)
+        {
+            if (!EhValido(novo))
+                return "Domínio inválido. Use só o endereço, por exemplo: minhaloja.com.br";
+            if (EhDaPlataforma(novo))
+                return "Esse endereço já é da plataforma. Informe o domínio que a loja registrou.";
+            if (atual != null && atual != novo)
+                return $"A loja já tem o domínio {atual} cadastrado. Para usar outro, remova o atual primeiro.";
+            if (atual == null && !apontaParaServidor)
+                return $"O domínio {novo} ainda não aponta para o servidor. Crie o registro A de {novo} para {ipServidor} " +
+                       "no painel onde o domínio foi registrado e tente de novo (a mudança de DNS pode levar algumas horas).";
+            return null;
+        }
+
         /// <summary>URL base usada nos links publicos quando o dominio esta ativo.</summary>
         public static string UrlBase(string dominio) => $"https://{dominio}";
     }

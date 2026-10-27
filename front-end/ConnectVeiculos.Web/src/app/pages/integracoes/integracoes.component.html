@@ -1276,7 +1276,9 @@
     </div>
   </div>
 
-  <!-- Dominio proprio: o catalogo da loja no endereco dela (opcional). -->
+  <!-- Dominio proprio: o catalogo da loja no endereco dela (opcional).
+       So entra dominio que ja aponta para o servidor, e depois de cadastrado
+       nao se edita: para trocar, remove (com confirmacao) e cadastra outro. -->
   @if (dominioInfo) {
   <div class="integracao-card">
     <div class="card-header">
@@ -1290,7 +1292,7 @@
       @if (dominioInfo.ativo) {
         <span class="status-badge connected">Ativo</span>
       } @else if (dominioInfo.dominio) {
-        <span class="status-badge pending">Aguardando DNS</span>
+        <span class="status-badge pending">Ativando</span>
       } @else {
         <span class="status-badge disconnected">Opcional</span>
       }
@@ -1302,22 +1304,36 @@
         <code>connectveiculos.dev.br/catalogo/…</code>.
       </p>
 
+      @if (!dominioInfo.dominio) {
+        <div class="info-block">
+          <h4><span class="material-icons">dns</span> Antes de cadastrar, aponte o domínio</h4>
+          <p>No painel onde o domínio foi registrado (Registro.br, GoDaddy, Hostinger, Cloudflare…), crie:</p>
+          <ul class="dominio-dns">
+            <li>Registro <strong>A</strong> de <code>minhaloja.com.br</code> para <code>{{ dominioInfo.ipServidor }}</code></li>
+            <li>Registro <strong>A</strong> de <code>www.minhaloja.com.br</code> para <code>{{ dominioInfo.ipServidor }}</code> (recomendado)</li>
+          </ul>
+          <p>
+            O cadastro só é aceito depois que o domínio já aponta para o servidor — a mudança de DNS pode levar
+            algumas horas. No Cloudflare, deixe a nuvem cinza ("DNS only").
+          </p>
+        </div>
+      }
+
       <div class="verif-section">
         <label>Domínio da loja:</label>
         <div class="verif-row">
           <input type="text" [(ngModel)]="dominioTexto" [ngModelOptions]="{standalone: true}"
-                 [readonly]="!!dominioInfo.dominio && !dominioEditando"
+                 [readonly]="!!dominioInfo.dominio"
                  placeholder="minhaloja.com.br" autocomplete="off" />
-          @if (!!dominioInfo.dominio && !dominioEditando) {
-            <button class="btn-outline btn-verif" (click)="dominioEditando = true" title="Trocar domínio">
-              <span class="material-icons">edit</span> Trocar
-            </button>
-          } @else {
-            <button class="btn-primary btn-verif" (click)="salvarDominioProprio()" [disabled]="dominioSalvando">
-              <span class="material-icons">save</span> {{ dominioSalvando ? 'Salvando...' : 'Salvar' }}
+          @if (!dominioInfo.dominio) {
+            <button class="btn-primary btn-verif" (click)="salvarDominioProprio()" [disabled]="dominioSalvando || !dominioTexto.trim()">
+              <span class="material-icons">save</span> {{ dominioSalvando ? 'Verificando...' : 'Cadastrar' }}
             </button>
           }
         </div>
+        @if (dominioInfo.dominio) {
+          <small>Para usar outro domínio, remova este primeiro e cadastre o novo.</small>
+        }
         @if (dominioMensagem) {
           <div class="verif-result" [class.sucesso]="dominioMensagem.sucesso" [class.falha]="!dominioMensagem.sucesso">
             <span class="material-icons">{{ dominioMensagem.sucesso ? 'check_circle' : 'error' }}</span>
@@ -1328,22 +1344,21 @@
 
       @if (dominioInfo.dominio && !dominioInfo.ativo) {
         <div class="info-block">
-          <h4><span class="material-icons">dns</span> Falta apontar o domínio</h4>
-          <p>No painel onde o domínio foi registrado (Registro.br, GoDaddy, Hostinger, Cloudflare…), crie:</p>
+          <h4><span class="material-icons">lock_clock</span> Gerando o certificado</h4>
+          <p>
+            O certificado de segurança (HTTPS) de <code>{{ dominioInfo.dominio }}</code> é gerado sozinho em até
+            10 minutos e o domínio fica <strong>Ativo</strong>.
+          </p>
           <ul class="dominio-dns">
             <li>
-              Registro <strong>A</strong> de <code>{{ dominioInfo.dominio }}</code> para <code>{{ dominioInfo.ipServidor }}</code>
-              @if (dominioInfo.dnsAponta) { <span class="dns-ok">✓ já aponta</span> } @else { <span class="dns-pendente">ainda não aponta</span> }
+              <code>{{ dominioInfo.dominio }}</code> → <code>{{ dominioInfo.ipServidor }}</code>
+              @if (dominioInfo.dnsAponta) { <span class="dns-ok">✓ aponta</span> } @else { <span class="dns-pendente">não aponta mais — confira o registro A</span> }
             </li>
             <li>
-              Registro <strong>A</strong> de <code>www.{{ dominioInfo.dominio }}</code> para <code>{{ dominioInfo.ipServidor }}</code> (opcional)
-              @if (dominioInfo.wwwAponta) { <span class="dns-ok">✓ já aponta</span> } @else { <span class="dns-pendente">ainda não aponta</span> }
+              <code>www.{{ dominioInfo.dominio }}</code> → <code>{{ dominioInfo.ipServidor }}</code>
+              @if (dominioInfo.wwwAponta) { <span class="dns-ok">✓ aponta</span> } @else { <span class="dns-pendente">opcional, ainda não aponta</span> }
             </li>
           </ul>
-          <p>
-            Depois que o DNS apontar, o certificado de segurança (HTTPS) é gerado sozinho em até 10 minutos e o
-            domínio fica <strong>Ativo</strong>. A mudança de DNS pode levar algumas horas para valer.
-          </p>
         </div>
       }
 
@@ -1359,24 +1374,34 @@
         </div>
       }
 
-      <div class="card-actions">
-        @if (dominioInfo.dominio && !dominioInfo.ativo) {
-          <button class="btn-primary" (click)="loadDominioProprio(true)" [disabled]="dominioVerificando">
-            <span class="material-icons">refresh</span> {{ dominioVerificando ? 'Verificando...' : 'Verificar agora' }}
-          </button>
-        }
-        @if (dominioInfo.dominio) {
-          <button class="btn-outline" (click)="removerDominioProprio()" [disabled]="dominioSalvando">
+      @if (dominioInfo.dominio) {
+        <div class="card-actions">
+          @if (!dominioInfo.ativo) {
+            <button class="btn-primary" (click)="loadDominioProprio(true)" [disabled]="dominioVerificando">
+              <span class="material-icons">refresh</span> {{ dominioVerificando ? 'Verificando...' : 'Verificar agora' }}
+            </button>
+          }
+          <button class="btn-outline" (click)="showDominioRemoverModal = true" [disabled]="dominioSalvando">
             <span class="material-icons">link_off</span> Remover domínio
           </button>
-        }
-      </div>
+        </div>
+      }
     </div>
     <div class="card-footer">
       <span class="material-icons">info</span>
       <small>O painel continua em connectveiculos.dev.br. Só o catálogo público muda de endereço.</small>
     </div>
   </div>
+
+  <app-confirm-modal
+    [show]="showDominioRemoverModal"
+    titulo="Remover o domínio próprio?"
+    [mensagem]="'O catálogo deixa de abrir em ' + dominioInfo.dominio + ' e volta para connectveiculos.dev.br/catalogo/…. Os links dos posts e feeds voltam para o endereço da plataforma. Para usar o domínio de novo, é preciso cadastrá-lo outra vez.'"
+    textoBotaoConfirmar="Sim, remover"
+    textoBotaoCancelar="Cancelar"
+    tipo="danger"
+    (confirmar)="confirmarRemoverDominio()"
+    (cancelar)="showDominioRemoverModal = false" />
   }
 
   <!-- Modal config Google Merchant - DESATIVADO -->

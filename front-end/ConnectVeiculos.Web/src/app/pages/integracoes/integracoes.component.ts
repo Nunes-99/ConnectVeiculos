@@ -554,7 +554,7 @@ Te esperamos na {{6}}. Até breve!`;
   // ============================================================
   dominioInfo: DominioProprioInfo | null = null;
   dominioTexto = '';
-  dominioEditando = false;
+  showDominioRemoverModal = false;
   dominioSalvando = false;
   dominioVerificando = false;
   dominioMensagem: { sucesso: boolean; texto: string } | null = null;
@@ -578,7 +578,6 @@ Te esperamos na {{6}}. Até breve!`;
     this.integracaoService.saveDominioProprio((this.dominioTexto || '').trim()).subscribe({
       next: (r) => {
         this.dominioSalvando = false;
-        this.dominioEditando = false;
         this.dominioMensagem = { sucesso: true, texto: r.mensagem };
         this.toast.success(r.dominio ? 'Domínio salvo.' : 'Domínio removido.');
         this.loadDominioProprio();
@@ -592,7 +591,8 @@ Te esperamos na {{6}}. Até breve!`;
     });
   }
 
-  removerDominioProprio(): void {
+  confirmarRemoverDominio(): void {
+    this.showDominioRemoverModal = false;
     this.dominioTexto = '';
     this.salvarDominioProprio();
   }

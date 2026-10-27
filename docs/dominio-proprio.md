@@ -9,18 +9,25 @@ leads e WhatsApp aparecem igual nos dois endereços. O painel administrativo con
 
 ## Para cada loja nova (sem programar)
 
-1. **Painel da loja → Integrações → Domínio próprio:** digitar o domínio e salvar.
-2. **No registro do domínio** (Registro.br, GoDaddy, Hostinger, Cloudflare…), criar:
+1. **Primeiro o DNS.** No registro do domínio (Registro.br, GoDaddy, Hostinger, Cloudflare…), criar:
    - registro **A** de `dominio.com.br` → `136.248.77.154`;
    - registro **A** de `www.dominio.com.br` → `136.248.77.154` (opcional, recomendado).
-   - No Cloudflare, deixar a nuvem **cinza** ("DNS only"), senão o certificado não sai.
-3. **Esperar.** Em até 10 minutos depois de o DNS apontar, o servidor gera o certificado
-   HTTPS, configura o nginx e o card passa para **Ativo**. O botão "Verificar agora"
-   mostra se o DNS já aponta.
+   - No Cloudflare, deixar a nuvem **cinza** ("DNS only").
+2. **Depois o cadastro:** painel da loja → Integrações → Domínio próprio → Cadastrar.
+   O sistema só aceita domínio com formato válido, fora da plataforma e que **já aponta
+   para o servidor** — isso prova que o domínio existe, que vai responder e que quem
+   cadastra controla o domínio. Se ainda não aponta, a tela diz o que falta (a mudança
+   de DNS pode levar algumas horas).
+3. **Esperar.** Em até 10 minutos o servidor gera o certificado HTTPS, configura o nginx
+   e o card passa para **Ativo**.
 4. **Google:** cadastrar `dominio.com.br` no Search Console, escolher "Tag HTML", colar o
    código em Integrações → Marketing no Google (a tag sai em qualquer endereço da loja)
    e enviar `https://dominio.com.br/sitemap.xml`. Criar ou atualizar o **Perfil da Empresa no Google**
    com o site.
+
+**Depois de cadastrado, o domínio não se edita.** Para usar outro: **Remover domínio**
+(pede confirmação; o catálogo volta para `connectveiculos.dev.br`) e cadastrar o novo,
+que passa pela mesma validação. A API também recusa a troca direta.
 
 ## O que muda quando fica Ativo
 

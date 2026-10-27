@@ -76,13 +76,23 @@ namespace ConnectVeiculos.API.Controllers
             if (!_tenantContext.IsResolved) return BadRequest(new { error = "Tenant nao resolvido." });
 
             var dominio = DominioProprio.Normalizar(request.Dominio);
-            if (dominio != null && !DominioProprio.EhValido(dominio))
-                return BadRequest(new { error = "Domínio inválido. Use só o endereço, por exemplo: minhaloja.com.br" });
-            if (dominio != null && DominioProprio.EhDaPlataforma(dominio))
-                return BadRequest(new { error = "Esse endereço já é da plataforma. Informe o domínio que a loja registrou." });
-
             var anterior = await _store.GetByIdAsync(_tenantContext.TenantId, ct);
             var estavaAtivo = anterior?.DominioProprioAtivo() == true;
+
+            // null = remover, sempre permitido. Dominio novo so entra valido e
+            // ja apontando para o servidor; o atual nao se troca direto.
+            if (dominio != null)
+            {
+                var ip = IpServidor();
+                var aponta = DominioProprio.EhValido(dominio) && await ApontaParaAsync(dominio, ip, ct);
+                var motivo = DominioProprio.MotivoParaRecusar(anterior?.TenDominioProprio, dominio, aponta, ip);
+                if (motivo != null)
+                    return anterior?.TenDominioProprio != null && anterior.TenDominioProprio != dominio
+                        ? Conflict(new { error = motivo })
+                        : BadRequest(new { error = motivo });
+                if (dominio == anterior?.TenDominioProprio)
+                    return Ok(new { dominio, mensagem = "Esse domínio já está cadastrado." });
+            }
 
             try
             {
@@ -106,7 +116,7 @@ namespace ConnectVeiculos.API.Controllers
                 dominio,
                 mensagem = dominio == null
                     ? "Domínio próprio removido. O catálogo segue no endereço da plataforma."
-                    : $"Domínio salvo. Aponte o DNS de {dominio} para {IpServidor()}; o HTTPS é ativado sozinho em até 10 minutos depois disso."
+                    : $"Domínio {dominio} cadastrado. O certificado de segurança (HTTPS) é gerado sozinho em até 10 minutos e o domínio fica Ativo."
             });
         }
 
