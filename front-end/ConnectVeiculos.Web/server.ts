@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import bootstrap from './src/main.server';
+import { SITE_ORIGIN } from './src/app/core/tokens/site-origin.token';
 
 // =====================================================================
 // Verification meta tags (Google Search Console + Facebook Domain Verif)
@@ -69,6 +70,53 @@ function injectVerificationTags(html: string, tags: string): string {
   return html.replace('</head>', `${tags}\n  </head>`);
 }
 
+// =====================================================================
+// Dominio proprio por loja (ex: diamanteveiculos.com.br)
+// ---------------------------------------------------------------------
+// A API lista as lojas com dominio ATIVO (HTTPS ja confirmado pelo
+// scripts/dominios-proprios.sh). Com isso:
+//   - no dominio da loja, "/" vai para o catalogo dela e o sitemap/robots
+//     listam so ela, com o proprio dominio;
+//   - no endereco da plataforma, /catalogo/{slug} dessa loja redireciona
+//     para o dominio, para o Google nao ver o mesmo catalogo em dois lugares.
+// Loja sem dominio proprio segue exatamente como antes.
+// =====================================================================
+const PLATAFORMA_URL = (process.env['PLATFORM_URL'] || 'https://connectveiculos.dev.br').replace(/\/+$/, '');
+const DOMINIOS_CACHE_TTL_MS = 60 * 1000;
+let dominiosPorHost = new Map<string, string>();
+let dominiosPorSlug = new Map<string, string>();
+let dominiosExpiresAt = 0;
+
+async function carregarDominios(): Promise<void> {
+  const now = Date.now();
+  if (now < dominiosExpiresAt) return;
+  try {
+    const apiBase = process.env['API_BASE_URL'] || 'http://localhost:5219';
+    const resp = await fetch(`${apiBase}/api/catalogo/dominios`);
+    if (!resp.ok) {
+      dominiosExpiresAt = now + 15_000;
+      return;
+    }
+    const lista = (await resp.json()) as Array<{ slug: string; dominio: string }>;
+    dominiosPorHost = new Map(lista.map((d) => [d.dominio.toLowerCase(), d.slug.toLowerCase()]));
+    dominiosPorSlug = new Map(lista.map((d) => [d.slug.toLowerCase(), d.dominio.toLowerCase()]));
+    dominiosExpiresAt = now + DOMINIOS_CACHE_TTL_MS;
+  } catch {
+    // API fora: mantem o mapa anterior e tenta de novo em 15 s.
+    dominiosExpiresAt = now + 15_000;
+  }
+}
+
+/** Host da requisicao sem porta e sem "www.". */
+function hostNu(req: express.Request): string {
+  return (req.hostname || '').toLowerCase().replace(/^www\./, '');
+}
+
+/** Slug da loja dona do dominio desta requisicao, ou undefined. */
+function slugDoDominio(req: express.Request): string | undefined {
+  return dominiosPorHost.get(hostNu(req));
+}
+
 export function app(): express.Express {
   const server = express();
   const serverDistFolder = dirname(fileURLToPath(import.meta.url));
@@ -96,20 +144,79 @@ export function app(): express.Express {
     return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
   };
 
+  // Redirecionamentos do dominio proprio. Roda antes de tudo (sitemap,
+  // estaticos, SSR) para valer em qualquer caminho do catalogo.
+  server.use(async (req, res, next) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+    await carregarDominios();
+
+    const slugHost = slugDoDominio(req);
+    const catalogo = req.path.match(/^\/catalogo\/([^/]+)/);
+
+    if (slugHost) {
+      // www.loja.com.br -> loja.com.br: um endereco so para o Google.
+      if ((req.hostname || '').toLowerCase().startsWith('www.')) {
+        return res.redirect(301, `https://${hostNu(req)}${req.originalUrl}`);
+      }
+      if (req.path === '/') return res.redirect(302, `/catalogo/${slugHost}`);
+      // Catalogo de OUTRA loja no dominio desta: manda para a plataforma.
+      if (catalogo && catalogo[1].toLowerCase() !== slugHost) {
+        return res.redirect(302, `${PLATAFORMA_URL}${req.originalUrl}`);
+      }
+      return next();
+    }
+
+    // Endereco da plataforma, loja que tem dominio ativo: vai para o dominio.
+    // Menos dentro de iframe — o "Pre-visualizar" da tela de Lojas enquadra o
+    // catalogo na mesma origem e o X-Frame-Options barraria outro dominio.
+    if (catalogo && req.get('sec-fetch-dest') !== 'iframe') {
+      const dominio = dominiosPorSlug.get(catalogo[1].toLowerCase());
+      if (dominio) return res.redirect(302, `https://${dominio}${req.originalUrl}`);
+    }
+    next();
+  });
+
+  // robots.txt com o sitemap do proprio host (plataforma ou dominio da loja).
+  let robotsCache: string | null = null;
+  server.get('/robots.txt', async (req, res, next) => {
+    try {
+      if (robotsCache === null) robotsCache = await readFile(join(browserDistFolder, 'robots.txt'), 'utf-8');
+      res.set('Content-Type', 'text/plain; charset=utf-8');
+      res.set('Cache-Control', 'public, max-age=3600');
+      res.send(robotsCache.replace(/^Sitemap:.*$/m, `Sitemap: ${req.protocol}://${req.get('host')}/sitemap.xml`));
+    } catch (err) {
+      next(err);
+    }
+  });
+
   server.get('/sitemap.xml', async (req, res) => {
     try {
       const apiBase = process.env['API_BASE_URL'] || 'http://localhost:5219';
-      const siteBase = process.env['SITE_BASE_URL'] || `${req.protocol}://${req.get('host')}`;
+      const slugHost = slugDoDominio(req);
+      const siteBase = slugHost
+        ? `https://${hostNu(req)}`
+        : process.env['SITE_BASE_URL'] || `${req.protocol}://${req.get('host')}`;
 
-      // 1) Lista de tenants publicos
-      const tenantsResp = await fetch(`${apiBase}/api/catalogo/public-tenants`);
-      const tenants: Array<{ slug: string; nome: string }> = tenantsResp.ok ? await tenantsResp.json() : [];
+      // 1) Lista de tenants: no dominio proprio, so a loja dele; na plataforma,
+      //    os tenants publicos menos os que ja tem dominio (entram no sitemap
+      //    do proprio dominio — o protocolo nao aceita URL de outro host).
+      let tenants: Array<{ slug: string }>;
+      if (slugHost) {
+        tenants = [{ slug: slugHost }];
+      } else {
+        const tenantsResp = await fetch(`${apiBase}/api/catalogo/public-tenants`);
+        const publicos: Array<{ slug: string; nome: string }> = tenantsResp.ok ? await tenantsResp.json() : [];
+        tenants = publicos.filter((t) => !dominiosPorSlug.has(t.slug.toLowerCase()));
+      }
 
       let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
       xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
 
-      // Landing institucional - alvo principal pra busca por "connectveiculos"
-      xml += `  <url><loc>${siteBase}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>\n`;
+      // Landing institucional - alvo principal pra busca por "connectveiculos".
+      // No dominio da loja, "/" so redireciona para o catalogo: nao entra.
+      if (!slugHost) {
+        xml += `  <url><loc>${siteBase}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>\n`;
+      }
 
       // 2) Para cada tenant, busca seu catalogo e gera URLs especificas
       for (const tenant of tenants) {
@@ -201,7 +308,12 @@ function ssrHandler(commonEngine: CommonEngine, indexHtml: string, browserDistFo
         documentFilePath: indexHtml,
         url: `${protocol}://${headers.host}${originalUrl}`,
         publicPath: browserDistFolder,
-        providers: [{ provide: APP_BASE_HREF, useValue: baseUrl }],
+        providers: [
+          { provide: APP_BASE_HREF, useValue: baseUrl },
+          // Canonical/og:url com o host real: no dominio proprio da loja, o
+          // dominio dela; na plataforma, connectveiculos.dev.br como antes.
+          { provide: SITE_ORIGIN, useValue: `${protocol}://${headers.host}` },
+        ],
       })
       .then(async (html) => {
         const tags = await getVerificationMetaTags();

@@ -2,7 +2,7 @@ import { Component, inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { IntegracaoService, MercadoLivreContaInfo, MercadoLivreSincronizacaoResult, WhatsAppConfigInfo, EmailConfigInfo, FacebookConfigInfo, GoogleMerchantConfigInfo, TestIntegracaoResult, MetaConnectionInfo, MetaPageOption, FacebookPagePostConfigInfo, InstagramPostConfigInfo, MetaFeatureFlags } from '../../core/services/integracao.service';
+import { IntegracaoService, DominioProprioInfo, MercadoLivreContaInfo, MercadoLivreSincronizacaoResult, WhatsAppConfigInfo, EmailConfigInfo, FacebookConfigInfo, GoogleMerchantConfigInfo, TestIntegracaoResult, MetaConnectionInfo, MetaPageOption, FacebookPagePostConfigInfo, InstagramPostConfigInfo, MetaFeatureFlags } from '../../core/services/integracao.service';
 import { AuthService, LojaService, ToastService } from '../../core/services';
 import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal.component';
 import { HttpClient } from '@angular/common/http';
@@ -235,6 +235,7 @@ Te esperamos na {{6}}. Até breve!`;
     this.checkMetaStatus();
     this.loadMetaFeatureFlags();
     this.loadVerificationCodes();
+    this.loadDominioProprio();
     this.carregarLojaPadrao();
   }
 
@@ -546,6 +547,54 @@ Te esperamos na {{6}}. Até breve!`;
         this.toast.error(msg);
       }
     });
+  }
+
+  // ============================================================
+  // Dominio proprio do catalogo
+  // ============================================================
+  dominioInfo: DominioProprioInfo | null = null;
+  dominioTexto = '';
+  dominioEditando = false;
+  dominioSalvando = false;
+  dominioVerificando = false;
+  dominioMensagem: { sucesso: boolean; texto: string } | null = null;
+
+  loadDominioProprio(verificando = false): void {
+    this.dominioVerificando = verificando;
+    this.integracaoService.getDominioProprio().subscribe({
+      next: (info) => {
+        this.dominioInfo = info;
+        this.dominioTexto = info.dominio ?? '';
+        this.dominioVerificando = false;
+      },
+      error: () => { this.dominioVerificando = false; /* silencioso — sem permissao */ }
+    });
+  }
+
+  salvarDominioProprio(): void {
+    if (this.dominioSalvando) return;
+    this.dominioSalvando = true;
+    this.dominioMensagem = null;
+    this.integracaoService.saveDominioProprio((this.dominioTexto || '').trim()).subscribe({
+      next: (r) => {
+        this.dominioSalvando = false;
+        this.dominioEditando = false;
+        this.dominioMensagem = { sucesso: true, texto: r.mensagem };
+        this.toast.success(r.dominio ? 'Domínio salvo.' : 'Domínio removido.');
+        this.loadDominioProprio();
+      },
+      error: (err) => {
+        this.dominioSalvando = false;
+        const msg = err?.error?.error || 'Erro ao salvar o domínio.';
+        this.dominioMensagem = { sucesso: false, texto: msg };
+        this.toast.error(msg);
+      }
+    });
+  }
+
+  removerDominioProprio(): void {
+    this.dominioTexto = '';
+    this.salvarDominioProprio();
   }
 
   // ============================================================

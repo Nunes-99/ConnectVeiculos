@@ -32,6 +32,9 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
             t.Property(x => x.TenFacebookVerifCode).HasMaxLength(128);
              t.Property(x => x.TenPlaId);
              t.Property(x => x.TenTrialAte);
+            t.Property(x => x.TenDominioProprio).HasMaxLength(253);
+            t.HasIndex(x => x.TenDominioProprio).IsUnique();
+            t.Property(x => x.TenDominioAtivoEm);
 
              var p = modelBuilder.Entity<Plano>();
              p.ToTable("Planos");

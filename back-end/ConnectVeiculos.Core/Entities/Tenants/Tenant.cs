@@ -44,6 +44,20 @@ namespace ConnectVeiculos.Core.Entities.Tenants
          // sem trial (tenant cadastrado antes da feature ou nunca esteve em trial).
          public DateTime? TenTrialAte { get; private set; }
 
+        /// <summary>
+        /// Dominio proprio do catalogo (ex: "diamanteveiculos.com.br"), na forma
+        /// de <see cref="Catalogo.DominioProprio.Normalizar"/>. Opcional: sem ele
+        /// o catalogo segue em connectveiculos.dev.br/catalogo/{slug}.
+        /// </summary>
+        public string? TenDominioProprio { get; private set; }
+
+        /// <summary>
+        /// Quando o servidor confirmou o HTTPS do dominio (scripts/dominios-proprios.sh).
+        /// Null = aguardando o DNS apontar e o certificado sair. So com o dominio
+        /// ativo os links publicos (feeds, posts, sitemap) passam a usa-lo.
+        /// </summary>
+        public DateTime? TenDominioAtivoEm { get; private set; }
+
         public Tenant() { }
 
         public Tenant(string slug, string nome, string? databaseFile = null)
@@ -71,5 +85,20 @@ namespace ConnectVeiculos.Core.Entities.Tenants
          public void IniciarTrial(int dias) => TenTrialAte = DateTime.UtcNow.AddDays(dias);
 
          public bool EmTrial() => TenTrialAte.HasValue && TenTrialAte.Value > DateTime.UtcNow;
+
+        /// <summary>
+        /// Troca (ou limpa, com null) o dominio proprio. Dominio novo volta a ficar
+        /// pendente ate o servidor confirmar o certificado dele.
+        /// </summary>
+        public void SetDominioProprio(string? dominio)
+        {
+            if (dominio == TenDominioProprio) return;
+            TenDominioProprio = dominio;
+            TenDominioAtivoEm = null;
+        }
+
+        public void AtivarDominioProprio() => TenDominioAtivoEm ??= DateTime.UtcNow;
+
+        public bool DominioProprioAtivo() => TenDominioProprio != null && TenDominioAtivoEm.HasValue;
     }
 }

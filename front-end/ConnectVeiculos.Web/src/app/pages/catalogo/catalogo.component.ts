@@ -355,7 +355,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
           this.liberarListagemNoNavegador();
         } else {
           this.seoService.setCatalogPage(this.loja, this.router.url);
-          this.seoService.setCatalogJsonLd(this.veiculos);
+          this.seoService.setCatalogJsonLd(this.veiculos, this.tenantSlug);
         }
       },
       error: () => {

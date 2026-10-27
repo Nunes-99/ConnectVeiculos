@@ -65,6 +65,7 @@
   &.ml-icon { background: #ffe600; color: #333; }
   &.fb-icon { background: #1877f2; }
   &.google-icon { background: #4285f4; }
+  &.dominio-icon { background: #0f766e; .material-icons { font-size: 22px; } }
 }
 
 .status-badge {
@@ -77,6 +78,18 @@
   &.connected { background: #e8f5e9; color: #2e7d32; }
   &.disconnected { background: #fce4ec; color: #c62828; }
   &.feed { background: #e3f2fd; color: #1565c0; }
+  &.pending { background: #fff8e1; color: #8a5a00; }
+}
+
+.dominio-dns {
+  margin: 0 0 1rem;
+  padding-left: 1.2rem;
+  font-size: 0.85rem;
+  line-height: 1.8;
+  color: var(--text-secondary, #555);
+  code { background: rgba(0,0,0,0.06); padding: 1px 4px; border-radius: 3px; }
+  .dns-ok { color: #2e7d32; font-weight: 600; margin-left: 4px; white-space: nowrap; }
+  .dns-pendente { color: #8a5a00; margin-left: 4px; white-space: nowrap; }
 }
 
 .card-body {

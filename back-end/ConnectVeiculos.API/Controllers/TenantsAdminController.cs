@@ -1,10 +1,12 @@
 using System.Text.RegularExpressions;
+using ConnectVeiculos.Core.Catalogo;
 using ConnectVeiculos.Core.Entities.Tenants;
 using ConnectVeiculos.Core.Entities.Usuarios;
 using ConnectVeiculos.Core.Interfaces.Tenancy;
 using ConnectVeiculos.Infrastructure.Database.EntityFramework;
 using ConnectVeiculos.Infrastructure.Database.Interceptors;
 using ConnectVeiculos.Infrastructure.IoC;
+using ConnectVeiculos.Infrastructure.Tenancy;
 using Microsoft.Data.Sqlite;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -162,6 +164,61 @@ namespace ConnectVeiculos.API.Controllers
             _store.InvalidateCache();
             _logger.LogInformation("TenantStore cache invalidado via endpoint admin");
             return Ok(new { mensagem = "Cache do TenantStore invalidado. Proxima request fara releitura do master." });
+        }
+
+        /// <summary>
+        /// Dominios proprios cadastrados (ativos e pendentes). Consumido pelo
+        /// scripts/dominios-proprios.sh, que gera certificado e nginx de cada um.
+        /// </summary>
+        [HttpGet("dominios")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> ListarDominios(CancellationToken ct)
+        {
+            if (string.IsNullOrEmpty(_adminToken))
+                return StatusCode(503, new { message = "ADMIN_API_TOKEN não configurado." });
+            if (!Request.Headers.TryGetValue("X-Admin-Token", out var sent) || sent != _adminToken)
+                return Unauthorized(new { message = "Token administrativo inválido ou ausente." });
+
+            var tenants = await _store.ListActiveAsync(ct);
+            return Ok(tenants
+                .Where(t => t.TenDominioProprio != null)
+                .OrderBy(t => t.TenId)
+                .Select(t => new { slug = t.TenSlug, dominio = t.TenDominioProprio, ativo = t.DominioProprioAtivo() }));
+        }
+
+        /// <summary>
+        /// Chamado pelo scripts/dominios-proprios.sh depois que o HTTPS do dominio
+        /// respondeu. Marca o dominio como ativo e passa os links publicos de todas
+        /// as lojas do tenant (feeds, posts, e-mails) para o dominio proprio.
+        /// </summary>
+        [HttpPost("{slug}/dominio/ativar")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> AtivarDominio(string slug, CancellationToken ct)
+        {
+            if (string.IsNullOrEmpty(_adminToken))
+                return StatusCode(503, new { message = "ADMIN_API_TOKEN não configurado." });
+            if (!Request.Headers.TryGetValue("X-Admin-Token", out var sent) || sent != _adminToken)
+                return Unauthorized(new { message = "Token administrativo inválido ou ausente." });
+
+            var tenant = await _store.GetBySlugAsync(slug, ct);
+            if (tenant?.TenDominioProprio == null)
+                return NotFound(new { message = $"Tenant '{slug}' não existe ou não tem domínio próprio." });
+
+            tenant = await _store.AtivarDominioProprioAsync(tenant.TenId, ct);
+
+            var connStr = _connFactory.GetConnectionStringForTenant(tenant.TenSlug, tenant.TenDatabaseFile);
+            var options = new DbContextOptionsBuilder<ConnectVeiculosDbContext>()
+                .UseSqlite(connStr)
+                .AddInterceptors(_softDeleteInterceptor)
+                .Options;
+            using (var ctx = new ConnectVeiculosDbContext(options))
+                await DominioProprioLojas.AplicarUrlCatalogoAsync(ctx, DominioProprio.UrlBase(tenant.TenDominioProprio!), ct);
+
+            _logger.LogInformation("Dominio proprio {Dominio} do tenant {Slug} ativado", tenant.TenDominioProprio, tenant.TenSlug);
+            return Ok(new { slug = tenant.TenSlug, dominio = tenant.TenDominioProprio, ativoEm = tenant.TenDominioAtivoEm });
         }
 
         [HttpGet]

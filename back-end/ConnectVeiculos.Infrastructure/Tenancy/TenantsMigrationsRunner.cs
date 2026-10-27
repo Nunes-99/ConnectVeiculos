@@ -155,6 +155,15 @@ namespace ConnectVeiculos.Infrastructure.Tenancy
              EnsureColumn(conn, "Tenants", "TenPlaId", "INTEGER NULL");
              EnsureColumn(conn, "Tenants", "TenTrialAte", "TEXT NULL");
 
+            // Dominio proprio do catalogo. Unico (SQLite deixa varios NULL).
+            EnsureColumn(conn, "Tenants", "TenDominioProprio", "TEXT NULL");
+            EnsureColumn(conn, "Tenants", "TenDominioAtivoEm", "TEXT NULL");
+            using (var domCmd = conn.CreateCommand())
+            {
+                domCmd.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS IX_Tenants_TenDominioProprio ON Tenants(TenDominioProprio)";
+                domCmd.ExecuteNonQuery();
+            }
+
              // Seed dos planos default. UPSERT manual (insere se o nome ainda nao
              // existe). Permite atualizar limites ajustando a config aqui — basta
              // mudar nome ou apagar e recriar; tenants existentes mantem o

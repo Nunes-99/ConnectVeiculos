@@ -150,6 +150,18 @@ export interface MetaFeatureFlags {
   developmentMode: boolean;
 }
 
+/** Dominio proprio do catalogo (ex: diamanteveiculos.com.br). */
+export interface DominioProprioInfo {
+  dominio: string | null;
+  /** HTTPS confirmado no servidor: os links publicos ja usam o dominio. */
+  ativo: boolean;
+  ativoEm: string | null;
+  ipServidor: string;
+  dnsAponta: boolean;
+  wwwAponta: boolean;
+  urlCatalogo: string | null;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -270,6 +282,15 @@ export class IntegracaoService {
 
   saveGoogleVerificationCode(code: string): Observable<{ mensagem: string }> {
     return this.http.put<{ mensagem: string }>(`${this.baseUrl}/integracoes/google/verification-code`, { code });
+  }
+
+  // Dominio proprio do catalogo
+  getDominioProprio(): Observable<DominioProprioInfo> {
+    return this.http.get<DominioProprioInfo>(`${this.baseUrl}/integracoes/dominio-proprio`);
+  }
+
+  saveDominioProprio(dominio: string): Observable<{ dominio: string | null; mensagem: string }> {
+    return this.http.put<{ dominio: string | null; mensagem: string }>(`${this.baseUrl}/integracoes/dominio-proprio`, { dominio });
   }
 
   // Google Merchant

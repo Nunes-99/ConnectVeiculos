@@ -1276,6 +1276,109 @@
     </div>
   </div>
 
+  <!-- Dominio proprio: o catalogo da loja no endereco dela (opcional). -->
+  @if (dominioInfo) {
+  <div class="integracao-card">
+    <div class="card-header">
+      <div class="platform-info">
+        <span class="platform-icon dominio-icon"><span class="material-icons">language</span></span>
+        <div>
+          <h3>Domínio próprio</h3>
+          <p>O catálogo no endereço da sua loja</p>
+        </div>
+      </div>
+      @if (dominioInfo.ativo) {
+        <span class="status-badge connected">Ativo</span>
+      } @else if (dominioInfo.dominio) {
+        <span class="status-badge pending">Aguardando DNS</span>
+      } @else {
+        <span class="status-badge disconnected">Opcional</span>
+      }
+    </div>
+    <div class="card-body">
+      <p>
+        Se a loja já tem um domínio (por exemplo <code>minhaloja.com.br</code>), o catálogo pode abrir nele,
+        com os mesmos veículos, favoritos, test drives e leads daqui. Sem domínio próprio, o catálogo continua em
+        <code>connectveiculos.dev.br/catalogo/…</code>.
+      </p>
+
+      <div class="verif-section">
+        <label>Domínio da loja:</label>
+        <div class="verif-row">
+          <input type="text" [(ngModel)]="dominioTexto" [ngModelOptions]="{standalone: true}"
+                 [readonly]="!!dominioInfo.dominio && !dominioEditando"
+                 placeholder="minhaloja.com.br" autocomplete="off" />
+          @if (!!dominioInfo.dominio && !dominioEditando) {
+            <button class="btn-outline btn-verif" (click)="dominioEditando = true" title="Trocar domínio">
+              <span class="material-icons">edit</span> Trocar
+            </button>
+          } @else {
+            <button class="btn-primary btn-verif" (click)="salvarDominioProprio()" [disabled]="dominioSalvando">
+              <span class="material-icons">save</span> {{ dominioSalvando ? 'Salvando...' : 'Salvar' }}
+            </button>
+          }
+        </div>
+        @if (dominioMensagem) {
+          <div class="verif-result" [class.sucesso]="dominioMensagem.sucesso" [class.falha]="!dominioMensagem.sucesso">
+            <span class="material-icons">{{ dominioMensagem.sucesso ? 'check_circle' : 'error' }}</span>
+            {{ dominioMensagem.texto }}
+          </div>
+        }
+      </div>
+
+      @if (dominioInfo.dominio && !dominioInfo.ativo) {
+        <div class="info-block">
+          <h4><span class="material-icons">dns</span> Falta apontar o domínio</h4>
+          <p>No painel onde o domínio foi registrado (Registro.br, GoDaddy, Hostinger, Cloudflare…), crie:</p>
+          <ul class="dominio-dns">
+            <li>
+              Registro <strong>A</strong> de <code>{{ dominioInfo.dominio }}</code> para <code>{{ dominioInfo.ipServidor }}</code>
+              @if (dominioInfo.dnsAponta) { <span class="dns-ok">✓ já aponta</span> } @else { <span class="dns-pendente">ainda não aponta</span> }
+            </li>
+            <li>
+              Registro <strong>A</strong> de <code>www.{{ dominioInfo.dominio }}</code> para <code>{{ dominioInfo.ipServidor }}</code> (opcional)
+              @if (dominioInfo.wwwAponta) { <span class="dns-ok">✓ já aponta</span> } @else { <span class="dns-pendente">ainda não aponta</span> }
+            </li>
+          </ul>
+          <p>
+            Depois que o DNS apontar, o certificado de segurança (HTTPS) é gerado sozinho em até 10 minutos e o
+            domínio fica <strong>Ativo</strong>. A mudança de DNS pode levar algumas horas para valer.
+          </p>
+        </div>
+      }
+
+      @if (dominioInfo.ativo && dominioInfo.urlCatalogo) {
+        <div class="info-block">
+          <h4><span class="material-icons">check_circle</span> Catálogo no ar</h4>
+          <p>
+            O catálogo abre em <a [href]="'https://' + dominioInfo.dominio" target="_blank" rel="noopener">{{ dominioInfo.dominio }}</a>.
+            Os links dos posts do Facebook, dos feeds de catálogo e do Google passam a apontar para ele, e o endereço antigo
+            redireciona para cá. Para aparecer no Google, cadastre <code>{{ dominioInfo.dominio }}</code> no Search Console
+            e envie <code>https://{{ dominioInfo.dominio }}/sitemap.xml</code>.
+          </p>
+        </div>
+      }
+
+      <div class="card-actions">
+        @if (dominioInfo.dominio && !dominioInfo.ativo) {
+          <button class="btn-primary" (click)="loadDominioProprio(true)" [disabled]="dominioVerificando">
+            <span class="material-icons">refresh</span> {{ dominioVerificando ? 'Verificando...' : 'Verificar agora' }}
+          </button>
+        }
+        @if (dominioInfo.dominio) {
+          <button class="btn-outline" (click)="removerDominioProprio()" [disabled]="dominioSalvando">
+            <span class="material-icons">link_off</span> Remover domínio
+          </button>
+        }
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="material-icons">info</span>
+      <small>O painel continua em connectveiculos.dev.br. Só o catálogo público muda de endereço.</small>
+    </div>
+  </div>
+  }
+
   <!-- Modal config Google Merchant - DESATIVADO -->
   @if (false) {
   @if (showGmConfigModal) {

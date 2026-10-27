@@ -144,6 +144,8 @@ services:
       # Certificados Let's Encrypt (gerados pelo certbot no host)
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - /var/www/certbot:/var/www/certbot:ro
+      # Um .conf por dominio proprio de loja (scripts/dominios-proprios.sh)
+      - ./nginx/dominios:/etc/nginx/dominios:ro
     depends_on:
       - frontend-ssr
       - backend-cliente

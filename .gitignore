@@ -69,3 +69,6 @@ STATUS-PROJETO.md
 *_errors_for_feed_upload*.xlsx
 importar_veiculos*.csv
 
+
+# Gerados na VM por scripts/dominios-proprios.sh
+nginx/dominios/*.conf

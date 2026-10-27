@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using ConnectVeiculos.Core.Catalogo;
 using ConnectVeiculos.Core.Entities.Tenants;
 using ConnectVeiculos.Core.Interfaces.Tenancy;
 using ConnectVeiculos.Infrastructure.Database.EntityFramework;
@@ -18,6 +19,7 @@ namespace ConnectVeiculos.Infrastructure.Tenancy
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ConcurrentDictionary<string, Tenant> _bySlug = new(StringComparer.OrdinalIgnoreCase);
         private readonly ConcurrentDictionary<int, Tenant> _byId = new();
+        private readonly ConcurrentDictionary<string, Tenant> _byDominio = new(StringComparer.OrdinalIgnoreCase);
         private volatile bool _loaded;
         private readonly SemaphoreSlim _loadLock = new(1, 1);
 
@@ -38,6 +40,14 @@ namespace ConnectVeiculos.Infrastructure.Tenancy
             return _byId.TryGetValue(tenantId, out var t) ? t : null;
         }
 
+        public async Task<Tenant?> GetByDominioAsync(string host, CancellationToken ct = default)
+        {
+            var dominio = DominioProprio.Normalizar(host);
+            if (dominio == null) return null;
+            await EnsureLoadedAsync(ct);
+            return _byDominio.TryGetValue(dominio, out var t) ? t : null;
+        }
+
         public async Task<IReadOnlyList<Tenant>> ListActiveAsync(CancellationToken ct = default)
         {
             await EnsureLoadedAsync(ct);
@@ -49,6 +59,7 @@ namespace ConnectVeiculos.Infrastructure.Tenancy
             _loaded = false;
             _bySlug.Clear();
             _byId.Clear();
+            _byDominio.Clear();
         }
 
         public async Task UpdateVerificationCodesAsync(int tenantId, string? googleCode, string? facebookCode, CancellationToken ct = default)
@@ -66,8 +77,49 @@ namespace ConnectVeiculos.Infrastructure.Tenancy
             await master.SaveChangesAsync(ct);
 
             // Atualiza o cache in-place sem precisar invalidar tudo.
+            Cachear(tenant);
+        }
+
+        public async Task<Tenant> UpdateDominioProprioAsync(int tenantId, string? dominio, CancellationToken ct = default)
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var master = scope.ServiceProvider.GetRequiredService<MasterDbContext>();
+
+            var tenant = await master.Tenants.FirstOrDefaultAsync(x => x.TenId == tenantId, ct)
+                ?? throw new InvalidOperationException($"Tenant {tenantId} nao encontrado.");
+
+            if (dominio != null && await master.Tenants.AnyAsync(x => x.TenId != tenantId && x.TenDominioProprio == dominio, ct))
+                throw new InvalidOperationException($"O dominio {dominio} ja esta em uso por outra loja.");
+
+            tenant.SetDominioProprio(dominio);
+            await master.SaveChangesAsync(ct);
+            Cachear(tenant);
+            return tenant;
+        }
+
+        public async Task<Tenant> AtivarDominioProprioAsync(int tenantId, CancellationToken ct = default)
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var master = scope.ServiceProvider.GetRequiredService<MasterDbContext>();
+
+            var tenant = await master.Tenants.FirstOrDefaultAsync(x => x.TenId == tenantId, ct)
+                ?? throw new InvalidOperationException($"Tenant {tenantId} nao encontrado.");
+
+            tenant.AtivarDominioProprio();
+            await master.SaveChangesAsync(ct);
+            Cachear(tenant);
+            return tenant;
+        }
+
+        private void Cachear(Tenant tenant)
+        {
+            // O dominio pode ter mudado: tira a entrada antiga antes de por a nova.
+            foreach (var (dominio, t) in _byDominio)
+                if (t.TenId == tenant.TenId) _byDominio.TryRemove(dominio, out _);
+
             _bySlug[tenant.TenSlug] = tenant;
             _byId[tenant.TenId] = tenant;
+            if (tenant.TenDominioProprio != null) _byDominio[tenant.TenDominioProprio] = tenant;
         }
 
         private async Task EnsureLoadedAsync(CancellationToken ct)
@@ -84,11 +136,7 @@ namespace ConnectVeiculos.Infrastructure.Tenancy
                 await master.Database.EnsureCreatedAsync(ct);
 
                 var tenants = await master.Tenants.AsNoTracking().ToListAsync(ct);
-                foreach (var t in tenants)
-                {
-                    _bySlug[t.TenSlug] = t;
-                    _byId[t.TenId] = t;
-                }
+                foreach (var t in tenants) Cachear(t);
                 _loaded = true;
             }
             finally

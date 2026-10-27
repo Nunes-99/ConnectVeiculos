@@ -40,7 +40,11 @@ namespace ConnectVeiculos.API.Middlewares
                 return;
             }
 
-            var slug = ExtractTenantSlug(context.Request.Host.Host);
+            // Dominio proprio da loja (ex: diamanteveiculos.com.br) vence a
+            // heuristica de subdominio — senao "www.loja.com.br" viraria default
+            // e "vendas.loja.com.br" viraria o tenant "vendas".
+            var porDominio = await store.GetByDominioAsync(context.Request.Host.Host, context.RequestAborted);
+            var slug = porDominio?.TenSlug ?? ExtractTenantSlug(context.Request.Host.Host);
 
             // Override por query string (?tenant=slug). Usado pelas paginas
             // publicas (catalogo) onde o tenant vai como parametro de URL ao

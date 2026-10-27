@@ -19,6 +19,21 @@ namespace ConnectVeiculos.Core.Interfaces.Tenancy
         /// </summary>
         Task UpdateVerificationCodesAsync(int tenantId, string? googleCode, string? facebookCode, CancellationToken ct = default);
 
+        /// <summary>
+        /// Tenant dono do dominio proprio (aceita o Host com ou sem "www.").
+        /// Null quando o host nao e' dominio proprio de ninguem.
+        /// </summary>
+        Task<Tenant?> GetByDominioAsync(string host, CancellationToken ct = default);
+
+        /// <summary>
+        /// Grava (ou limpa, com null) o dominio proprio ja normalizado. Lanca
+        /// InvalidOperationException se outro tenant ja usa o dominio.
+        /// </summary>
+        Task<Tenant> UpdateDominioProprioAsync(int tenantId, string? dominio, CancellationToken ct = default);
+
+        /// <summary>Marca o dominio como ativo (HTTPS confirmado no servidor).</summary>
+        Task<Tenant> AtivarDominioProprioAsync(int tenantId, CancellationToken ct = default);
+
         /// <summary>Invalida o cache em memoria. Chame apos criar/atualizar/suspender tenant.</summary>
         void InvalidateCache();
     }

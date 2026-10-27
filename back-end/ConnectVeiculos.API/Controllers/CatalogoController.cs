@@ -164,5 +164,21 @@ namespace ConnectVeiculos.API.Controllers
                 .ToListAsync(ct);
             return Ok(tenants);
         }
+
+        /// <summary>
+        /// Lojas com dominio proprio ATIVO (HTTPS ja confirmado). Usado pelo SSR:
+        /// no dominio da loja, "/" abre o catalogo dela e o sitemap lista so ela;
+        /// no endereco da plataforma, /catalogo/{slug} redireciona para o dominio.
+        /// </summary>
+        [HttpGet("dominios")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ResponseCache(Duration = 60, Location = ResponseCacheLocation.Any)]
+        public async Task<IActionResult> ListarDominiosProprios([FromServices] ITenantStore store, CancellationToken ct)
+        {
+            var tenants = await store.ListActiveAsync(ct);
+            return Ok(tenants
+                .Where(t => t.DominioProprioAtivo())
+                .Select(t => new { slug = t.TenSlug, dominio = t.TenDominioProprio }));
+        }
     }
 }

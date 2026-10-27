@@ -209,7 +209,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             var selo = SeloDoStatus(statusVeiculo);
             var loja = await _lojaRepository.GetByIdAsync(veiculo.R_LojId);
             var baseUrl = NormalizeBaseUrl(loja?.LojUrlCatalogo) ?? NormalizeBaseUrl(_settings?.PublicSiteUrl);
-            var slug = loja?.LojSlug ?? veiculo.R_LojId.ToString();
+            var slug = _tenantContext.IsResolved ? _tenantContext.TenantSlug : null;
             var linkVeiculo = baseUrl == null ? "" : CatalogoUrl.Veiculo(baseUrl, slug, veiculoId);
 
             // Mantem a legenda original abaixo do selo: quem ja viu o post
