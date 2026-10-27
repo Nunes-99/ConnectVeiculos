@@ -584,9 +584,10 @@ Te esperamos na {{6}}. Até breve!`;
       },
       error: (err) => {
         this.dominioSalvando = false;
-        const msg = err?.error?.error || 'Erro ao salvar o domínio.';
+        // O http-error.interceptor ja mostrou o toast e repassa a mensagem da
+        // API em err.message (nao em err.error.error).
+        const msg = err?.message || 'Erro ao salvar o domínio.';
         this.dominioMensagem = { sucesso: false, texto: msg };
-        this.toast.error(msg);
       }
     });
   }
