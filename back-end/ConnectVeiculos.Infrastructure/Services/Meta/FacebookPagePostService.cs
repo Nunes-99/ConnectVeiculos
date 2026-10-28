@@ -244,6 +244,67 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             }
         }
 
+        public const string PLATAFORMA_STORY = "FacebookStory";
+
+        public async Task<PublicacaoResult?> PublicarStoryAsync(int veiculoId, string imageUrl)
+        {
+            var (token, pageId) = await ResolvePageCredentialsAsync();
+            if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(pageId))
+            {
+                _logger.LogDebug("Facebook Page nao configurada, story do veiculo {VeiculoId} pulado", veiculoId);
+                return null;
+            }
+
+            try
+            {
+                // Story de Page sao dois passos: a foto sobe sem ir pro feed
+                // (published=false) e o id dela vira o story.
+                var fotoUrl = $"https://graph.facebook.com/{_settings.ApiVersion}/{pageId}/photos";
+                var fotoPayload = new { url = imageUrl, published = false, access_token = token };
+                var fotoResp = await _httpClient.PostAsync(fotoUrl,
+                    new StringContent(JsonSerializer.Serialize(fotoPayload), Encoding.UTF8, "application/json"));
+                var fotoBody = await fotoResp.Content.ReadAsStringAsync();
+                if (!fotoResp.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("Facebook story veiculo {VeiculoId}: upload da foto falhou: {Body}", veiculoId, fotoBody);
+                    return null;
+                }
+
+                string? photoId;
+                using (var doc = JsonDocument.Parse(fotoBody))
+                    photoId = doc.RootElement.TryGetProperty("id", out var id) ? id.GetString() : null;
+                if (string.IsNullOrEmpty(photoId)) return null;
+
+                var storyUrl = $"https://graph.facebook.com/{_settings.ApiVersion}/{pageId}/photo_stories";
+                var storyPayload = new { photo_id = photoId, access_token = token };
+                var storyResp = await _httpClient.PostAsync(storyUrl,
+                    new StringContent(JsonSerializer.Serialize(storyPayload), Encoding.UTF8, "application/json"));
+                var storyBody = await storyResp.Content.ReadAsStringAsync();
+                if (!storyResp.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("Facebook story veiculo {VeiculoId} falhou: {Body}", veiculoId, storyBody);
+                    return null;
+                }
+
+                string? postId;
+                using (var doc = JsonDocument.Parse(storyBody))
+                    postId = doc.RootElement.TryGetProperty("post_id", out var pid) ? pid.GetString() : photoId;
+
+                _logger.LogInformation("Facebook story veiculo {VeiculoId}: OK", veiculoId);
+                return new PublicacaoResult
+                {
+                    ExternoId = postId ?? photoId,
+                    // Story nao tem endereco proprio estavel; a Page mostra o anel.
+                    Url = $"https://www.facebook.com/{pageId}"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao publicar story do veiculo {VeiculoId} na Facebook Page", veiculoId);
+                return null;
+            }
+        }
+
         /// <summary>
         /// Faixa que abre a legenda. Disponivel nao ganha nada: e o anuncio normal.
         /// </summary>

@@ -2,7 +2,7 @@ import { Component, inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { IntegracaoService, DominioProprioInfo, MercadoLivreContaInfo, MercadoLivreSincronizacaoResult, WhatsAppConfigInfo, EmailConfigInfo, FacebookConfigInfo, GoogleMerchantConfigInfo, TestIntegracaoResult, MetaConnectionInfo, MetaPageOption, FacebookPagePostConfigInfo, InstagramPostConfigInfo, MetaFeatureFlags } from '../../core/services/integracao.service';
+import { IntegracaoService, DominioProprioInfo, MercadoLivreContaInfo, MercadoLivreSincronizacaoResult, WhatsAppConfigInfo, EmailConfigInfo, FacebookConfigInfo, GoogleMerchantConfigInfo, TestIntegracaoResult, MetaConnectionInfo, MetaPageOption, FacebookPagePostConfigInfo, InstagramPostConfigInfo, MetaFeatureFlags, StoryConfigInfo, StoryConfigInput } from '../../core/services/integracao.service';
 import { AuthService, LojaService, ToastService } from '../../core/services';
 import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal.component';
 import { HttpClient } from '@angular/common/http';
@@ -202,6 +202,10 @@ Te esperamos na {{6}}. Até breve!`;
   metaPageIdSelecionada = '';
   fbPageConfig: FacebookPagePostConfigInfo = { pageConectada: false, autoPostHabilitado: false };
   igConfig: InstagramPostConfigInfo = { instagramConectado: false, autoPostHabilitado: false };
+  storyConfig: StoryConfigInfo = {
+    noInstagram: false, noFacebook: false, aoChegar: false, aoBaixarPreco: false, aoVender: false,
+    instagramConectado: false, facebookConectado: false
+  };
   fbCatalogConfig: FacebookConfigInfo = { configurado: false, tokenDefinido: false, autoPostHabilitado: false };
   fbPageTesteResultado: TestIntegracaoResult | null = null;
   igTesteResultado: TestIntegracaoResult | null = null;
@@ -264,6 +268,10 @@ Te esperamos na {{6}}. Até breve!`;
           });
           this.integracaoService.getFacebookConfig().subscribe({
             next: (c) => this.fbCatalogConfig = c,
+            error: () => { /* silencioso */ }
+          });
+          this.integracaoService.getStoriesStatus().subscribe({
+            next: (c) => this.storyConfig = c,
             error: () => { /* silencioso */ }
           });
         }
@@ -434,6 +442,32 @@ Te esperamos na {{6}}. Até breve!`;
       },
       error: () => this.toast.error('Não consegui alterar a configuração.')
     });
+  }
+
+  // Um interruptor por vez, mas a configuracao vai inteira: sao cinco
+  // ajustes que so fazem sentido juntos (evento ligado sem destino nao publica).
+  toggleStory(campo: keyof StoryConfigInput): void {
+    const anterior = this.storyConfig[campo];
+    const novo: StoryConfigInput = {
+      noInstagram: this.storyConfig.noInstagram,
+      noFacebook: this.storyConfig.noFacebook,
+      aoChegar: this.storyConfig.aoChegar,
+      aoBaixarPreco: this.storyConfig.aoBaixarPreco,
+      aoVender: this.storyConfig.aoVender,
+      [campo]: !anterior
+    };
+    this.storyConfig[campo] = !anterior;
+    this.integracaoService.setStoriesConfig(novo).subscribe({
+      next: (c) => this.storyConfig = c,
+      error: () => {
+        this.storyConfig[campo] = anterior;
+        this.toast.error('Não consegui alterar a configuração dos stories.');
+      }
+    });
+  }
+
+  get storySemDestino(): boolean {
+    return !this.storyConfig.noInstagram && !this.storyConfig.noFacebook;
   }
 
   toggleIgAutoPost(habilitado: boolean): void {

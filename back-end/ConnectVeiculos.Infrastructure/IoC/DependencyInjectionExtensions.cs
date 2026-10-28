@@ -349,6 +349,7 @@ namespace ConnectVeiculos.Infrastructure.IoC
                 .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(30));
             services.AddHttpClient<Core.Interfaces.Services.IInstagramPostService, Services.Meta.InstagramPostService>()
                 .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(30));
+            services.AddScoped<Core.Interfaces.Services.IStoryService, Services.Stories.StoryService>();
 
             // Worker que avisa por e-mail antes de a conexao com o ML cair. Sem
             // refresh_token o token dura 6h, e a loja descobria a queda pela

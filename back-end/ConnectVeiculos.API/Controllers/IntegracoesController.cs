@@ -1295,6 +1295,33 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
             return Ok(new { externoId = r.ExternoId, url = r.Url, mensagem = "Publicado na Facebook Page!" });
         }
 
+        // ----- Stories (Instagram + Facebook Page) -----
+
+        [HttpGet("stories/status")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> GetStoriesStatus([FromServices] IStoryService stories)
+            => Ok(await stories.GetConfigAsync());
+
+        [HttpPost("stories/config")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> SetStoriesConfig(
+            [FromServices] IStoryService stories,
+            [FromBody] StoryConfigInput input)
+        {
+            await stories.SalvarConfigAsync(input);
+            return Ok(await stories.GetConfigAsync());
+        }
+
+        // Botao "Publicar story" da lista de veiculos. Story some em 24h, entao
+        // publicar de novo o mesmo carro e' uso normal, nao engano.
+        [HttpPost("stories/publicar/{veiculoId}")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> PublicarStory([FromServices] IStoryService stories, int veiculoId)
+        {
+            var r = await stories.PublicarManualAsync(veiculoId);
+            return r.Sucesso ? Ok(r) : StatusCode(502, new { error = r.Mensagem });
+        }
+
         // ==========================================
         // PUBLICACOES
         // ==========================================

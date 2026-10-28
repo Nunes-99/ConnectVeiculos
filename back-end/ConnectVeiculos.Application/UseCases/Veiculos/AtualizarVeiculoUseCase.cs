@@ -149,6 +149,15 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                     _backgroundRunner.Enqueue<IFavoritoNotificacaoService>(
                         s => s.NotificarPrecoAlteradoAsync(idParaNotificar, precoAnterior, precoNovo),
                         $"notificar queda de preco do veiculo {idParaNotificar}");
+
+                    // Story so para carro que segue a venda: baixar o preco junto
+                    // com marcar vendido nao e' oferta.
+                    if (statusAnterior == "D" && inputModel.VeiSts == "D")
+                    {
+                        _backgroundRunner.Enqueue<IStoryService>(
+                            s => s.PublicarAutomaticoAsync(idParaNotificar, EventoStory.PrecoBaixou, precoAnterior),
+                            $"story de queda de preco do veiculo {idParaNotificar}");
+                    }
                 }
 
                 // Integracoes externas

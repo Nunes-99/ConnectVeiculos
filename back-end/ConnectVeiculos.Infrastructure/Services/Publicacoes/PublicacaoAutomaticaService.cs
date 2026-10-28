@@ -28,6 +28,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Publicacoes
         private readonly IFacebookPagePostService _facebookPagePostService;
         private readonly IInstagramPostService _instagramPostService;
         private readonly IGoogleMerchantService _googleService;
+        private readonly IStoryService _storyService;
         private readonly ILogger<PublicacaoAutomaticaService> _logger;
 
         private readonly int _tentativas;
@@ -43,10 +44,11 @@ namespace ConnectVeiculos.Infrastructure.Services.Publicacoes
             IFacebookPagePostService facebookPagePostService,
             IInstagramPostService instagramPostService,
             IGoogleMerchantService googleService,
+            IStoryService storyService,
             ILogger<PublicacaoAutomaticaService> logger)
             : this(veiculoRepository, imagemRepository, publicacaoRepository, mercadoLivreService,
                    facebookCatalogService, facebookPagePostService, instagramPostService,
-                   googleService, logger,
+                   googleService, storyService, logger,
                    TentativasPadrao, IntervaloPadraoMs, LeiturasEstaveisPadrao)
         {
         }
@@ -61,6 +63,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Publicacoes
             IFacebookPagePostService facebookPagePostService,
             IInstagramPostService instagramPostService,
             IGoogleMerchantService googleService,
+            IStoryService storyService,
             ILogger<PublicacaoAutomaticaService> logger,
             int tentativas,
             int intervaloMs,
@@ -74,6 +77,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Publicacoes
             _facebookPagePostService = facebookPagePostService;
             _instagramPostService = instagramPostService;
             _googleService = googleService;
+            _storyService = storyService;
             _logger = logger;
             _tentativas = tentativas;
             _intervaloMs = intervaloMs;
@@ -118,6 +122,9 @@ namespace ConnectVeiculos.Infrastructure.Services.Publicacoes
             await PublicarFacebookPageAsync(veiculoId);
             await PublicarInstagramAsync(veiculoId);
             await PublicarGoogleAsync(veiculoId);
+
+            // Por ultimo: o story e' o extra, nao pode atrasar os anuncios.
+            await _storyService.PublicarAutomaticoAsync(veiculoId, EventoStory.Novo);
         }
 
         public async Task MarcarVeiculoIndisponivelAsync(int veiculoId, string novoStatus)
@@ -154,6 +161,11 @@ namespace ConnectVeiculos.Infrastructure.Services.Publicacoes
                     await _facebookPagePostService.AtualizarLegendaDoPostAsync(fb.PubExternoId, veiculoId, novoStatus);
             }
             catch (Exception ex) { _logger.LogError(ex, "Erro ao marcar post do Facebook do veiculo {VeiculoId}", veiculoId); }
+
+            // Antes do bloco do Instagram, que encerra o metodo em varios pontos.
+            // So venda vira story: reservado ou inativo nao e' noticia pra seguidor.
+            if (novoStatus == "V")
+                await _storyService.PublicarAutomaticoAsync(veiculoId, EventoStory.Vendido);
 
             // Instagram: a Graph API nao permite editar legenda de midia publicada
             // (so ligar/desligar comentarios), entao nao da pra carimbar como nas

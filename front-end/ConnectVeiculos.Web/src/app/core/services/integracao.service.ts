@@ -141,6 +141,20 @@ export interface InstagramPostConfigInfo {
   excluirAoSairHabilitado?: boolean;
 }
 
+/** Stories: onde publicar e em quais eventos publicar sozinho. */
+export interface StoryConfigInput {
+  noInstagram: boolean;
+  noFacebook: boolean;
+  aoChegar: boolean;
+  aoBaixarPreco: boolean;
+  aoVender: boolean;
+}
+
+export interface StoryConfigInfo extends StoryConfigInput {
+  instagramConectado: boolean;
+  facebookConectado: boolean;
+}
+
 // Master switch + status do App Meta. Front usa pra (1) exibir/ocultar o card
 // Meta inteiro, (2) decidir se mostra banner "Modo Teste" vs "Live Mode".
 export interface MetaFeatureFlags {
@@ -396,6 +410,20 @@ export class IntegracaoService {
   publicarVeiculoFacebookPage(veiculoId: number): Observable<{ externoId: string; url: string; mensagem: string }> {
     return this.http.post<{ externoId: string; url: string; mensagem: string }>(
       `${this.baseUrl}/integracoes/facebook/page-publicar/${veiculoId}`, {});
+  }
+
+  // Stories (Instagram + Facebook Page)
+  getStoriesStatus(): Observable<StoryConfigInfo> {
+    return this.http.get<StoryConfigInfo>(`${this.baseUrl}/integracoes/stories/status`);
+  }
+
+  setStoriesConfig(config: StoryConfigInput): Observable<StoryConfigInfo> {
+    return this.http.post<StoryConfigInfo>(`${this.baseUrl}/integracoes/stories/config`, config);
+  }
+
+  publicarStory(veiculoId: number): Observable<{ sucesso: boolean; mensagem: string }> {
+    return this.http.post<{ sucesso: boolean; mensagem: string }>(
+      `${this.baseUrl}/integracoes/stories/publicar/${veiculoId}`, {});
   }
 }
 

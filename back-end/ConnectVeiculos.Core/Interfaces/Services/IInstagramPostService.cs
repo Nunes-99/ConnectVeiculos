@@ -43,6 +43,12 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         /// Usado pelo endpoint "Publicar agora" na tela de veiculos.
         /// </summary>
         Task<PublicacaoResult?> PublicarManualAsync(int veiculoId);
+
+        /// <summary>
+        /// Publica uma imagem 9:16 ja pronta como story. Divide com o feed o
+        /// limite diario de publicacoes da conta. Null se nao publicou.
+        /// </summary>
+        Task<PublicacaoResult?> PublicarStoryAsync(int veiculoId, string imageUrl);
     }
 
     public class InstagramPostConfigInfo

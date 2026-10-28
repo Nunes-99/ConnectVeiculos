@@ -32,6 +32,7 @@ namespace ConnectVeiculos.Tests.Publicacoes
         private readonly Mock<IFacebookPagePostService> _fbPage = new();
         private readonly Mock<IInstagramPostService> _instagram = new();
         private readonly Mock<IGoogleMerchantService> _google = new();
+        private readonly Mock<IStoryService> _stories = new();
 
         public PublicacaoAutomaticaServiceTests()
         {
@@ -224,6 +225,48 @@ namespace ConnectVeiculos.Tests.Publicacoes
             _instagram.Verify(x => x.ExcluirAoSairHabilitadoAsync(), Times.Never);
         }
 
+        [Fact]
+        public async Task CarroNovoDevePedirStoryDeChegadaDepoisDosPosts()
+        {
+            FotosNasLeituras(2, 2);
+
+            await Criar().PublicarNovoVeiculoAsync(VeiculoId);
+
+            _stories.Verify(x => x.PublicarAutomaticoAsync(VeiculoId, EventoStory.Novo, null), Times.Once);
+        }
+
+        [Fact]
+        public async Task CarroSemFotoNaoDevePedirStory()
+        {
+            FotosNasLeituras(0);
+
+            await Criar().PublicarNovoVeiculoAsync(VeiculoId);
+
+            _stories.Verify(x => x.PublicarAutomaticoAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<decimal?>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task VendaDevePedirStoryDeVendidoMesmoSemPostNoInstagram()
+        {
+            // Sem post no Instagram o metodo sai cedo no bloco dele; o story vem antes.
+            _publicacoes.Setup(x => x.GetAtivaByVeiculoEPlataformaAsync(VeiculoId, "Instagram"))
+                        .ReturnsAsync((VeiculoPublicacao)null);
+
+            await Criar().MarcarVeiculoIndisponivelAsync(VeiculoId, "V");
+
+            _stories.Verify(x => x.PublicarAutomaticoAsync(VeiculoId, EventoStory.Vendido, null), Times.Once);
+        }
+
+        [Theory]
+        [InlineData("R")]
+        [InlineData("I")]
+        public async Task ReservaOuInativacaoNaoViramStory(string status)
+        {
+            await Criar().MarcarVeiculoIndisponivelAsync(VeiculoId, status);
+
+            _stories.Verify(x => x.PublicarAutomaticoAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<decimal?>()), Times.Never);
+        }
+
         private VeiculoPublicacao PublicacaoAtivaNoInstagram()
         {
             var publicacao = new VeiculoPublicacao(VeiculoId, "Instagram", "ig-123", "https://ig/p");
@@ -234,7 +277,7 @@ namespace ConnectVeiculos.Tests.Publicacoes
 
         private PublicacaoAutomaticaService Criar() => new(
             _veiculos.Object, _imagens.Object, _publicacoes.Object, _ml.Object,
-            _fbCatalogo.Object, _fbPage.Object, _instagram.Object, _google.Object,
+            _fbCatalogo.Object, _fbPage.Object, _instagram.Object, _google.Object, _stories.Object,
             NullLogger<PublicacaoAutomaticaService>.Instance,
             tentativas: 6, intervaloMs: 1, leiturasEstaveis: 2);
 

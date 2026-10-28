@@ -24,6 +24,13 @@
     <PackageReference Include="QRCoder" Version="1.6.0" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
     <PackageReference Include="Lib.Net.Http.WebPush" Version="3.3.1" />
+    <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.7" />
+  </ItemGroup>
+
+  <!-- Fonte da arte dos stories. Embutida porque a imagem do aspnet no Docker
+       nao traz fonte nenhuma instalada. Licenca em Services/Stories/Fontes/OFL.txt. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Services\Stories\Fontes\*.ttf" />
   </ItemGroup>
 
   <ItemGroup>

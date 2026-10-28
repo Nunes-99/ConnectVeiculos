@@ -36,6 +36,7 @@ export class VeiculosComponent implements OnInit {
   // Set de veiculoId em publicacao no momento (pra desabilitar o botao durante request).
   publicandoIg = new Set<number>();
   publicandoFb = new Set<number>();
+  publicandoStory = new Set<number>();
 
 
   veiculos: Veiculo[] = [];
@@ -360,6 +361,23 @@ export class VeiculosComponent implements OnInit {
         this.publicandoFb.delete(veiculoId);
         const msg = err?.error?.error || 'Falha ao publicar no Facebook. Veja a tela de Integrações.';
         this.toast.error(msg);
+      }
+    });
+  }
+
+  // Story some em 24h, entao o botao nao vira "abrir": publicar de novo o
+  // mesmo carro e' uso normal. Vendido sai com a arte de VENDIDO, sem preco.
+  publicarStory(veiculo: Veiculo): void {
+    if (this.publicandoStory.has(veiculo.veiId)) return;
+    this.publicandoStory.add(veiculo.veiId);
+    this.integracaoService.publicarStory(veiculo.veiId).subscribe({
+      next: (r) => {
+        this.publicandoStory.delete(veiculo.veiId);
+        this.toast.success(r?.mensagem || 'Story publicado!');
+      },
+      error: (err) => {
+        this.publicandoStory.delete(veiculo.veiId);
+        this.toast.error(err?.error?.error || 'Falha ao publicar o story. Veja a tela de Integrações.');
       }
     });
   }

@@ -25,6 +25,7 @@ namespace ConnectVeiculos.Tests.UseCases.Veiculos
         private readonly Mock<IPublicacaoAutomaticaService> _publicacaoAutomaticaServiceMock;
         private readonly Mock<IGoogleMerchantService> _googleServiceMock;
         private readonly Mock<IVeiculoPublicacaoRepository> _publicacaoRepositoryMock;
+        private readonly Mock<ITenantBackgroundRunner> _backgroundRunnerMock = new();
         private readonly AtualizarVeiculoUseCase _useCase;
 
         public AtualizarVeiculoUseCaseTests()
@@ -52,7 +53,7 @@ namespace ConnectVeiculos.Tests.UseCases.Veiculos
                  new Mock<IFavoritoNotificacaoService>().Object,
                  new Mock<ITenantContext>().Object,
                  new Mock<IIndexNowService>().Object,
-                 new Mock<ITenantBackgroundRunner>().Object);
+                 _backgroundRunnerMock.Object);
         }
 
         /// <summary>
@@ -90,6 +91,36 @@ namespace ConnectVeiculos.Tests.UseCases.Veiculos
 
             _publicacaoAutomaticaServiceMock.Verify(
                 x => x.AtualizarPostDoVeiculoAsync(1, "D"), Times.Once);
+        }
+
+        [Fact]
+        public async Task Execute_QuandoOPrecoBaixaComCarroAVenda_DevePedirStory()
+        {
+            _veiculoRepositoryMock.Setup(x => x.GetByIdAsync(1)).ReturnsAsync(VeiculoDisponivel());
+
+            var input = InputComStatus("D");
+            input.VeiPreco = 139000m;
+
+            await _useCase.Execute(input);
+
+            _backgroundRunnerMock.Verify(
+                x => x.Enqueue(It.IsAny<Func<IStoryService, Task>>(), It.IsAny<string>()), Times.Once);
+        }
+
+        [Theory]
+        [InlineData(150000, "D")]   // preco subiu
+        [InlineData(139000, "V")]   // baixou junto com a venda
+        public async Task Execute_SemQuedaDePrecoComCarroAVenda_NaoDevePedirStory(int preco, string status)
+        {
+            _veiculoRepositoryMock.Setup(x => x.GetByIdAsync(1)).ReturnsAsync(VeiculoDisponivel());
+
+            var input = InputComStatus(status);
+            input.VeiPreco = preco;
+
+            await _useCase.Execute(input);
+
+            _backgroundRunnerMock.Verify(
+                x => x.Enqueue(It.IsAny<Func<IStoryService, Task>>(), It.IsAny<string>()), Times.Never);
         }
 
         [Fact]

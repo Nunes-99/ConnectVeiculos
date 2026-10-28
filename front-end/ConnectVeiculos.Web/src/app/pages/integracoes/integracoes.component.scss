@@ -797,3 +797,33 @@
     white-space: nowrap;
   }
 }
+
+// Stories: dois grupos de interruptores (onde / quando), um por linha.
+.story-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+
+  .story-grupo-titulo {
+    font-size: .78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: var(--text-secondary, #555);
+  }
+
+  .toggle-switch.desabilitado { opacity: .55; cursor: not-allowed; }
+}
+
+.story-aviso {
+  display: block;
+  margin-top: 10px;
+  font-size: .8rem;
+  color: #b45309;
+}
+
+.info-block .inline-icon {
+  font-size: 1rem;
+  vertical-align: text-bottom;
+}

@@ -21,6 +21,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
         public const string KEY_AUTO_POST = "META_IG_AUTO_POST";
         public const string KEY_EXCLUIR_AO_SAIR = "META_IG_EXCLUIR_AO_SAIR";
         public const string PLATAFORMA = "Instagram";
+        public const string PLATAFORMA_STORY = "InstagramStory";
 
         // Instagram Carrossel: minimo 2, maximo 10 itens. Single Photo se for 1.
         private const int MaxImagensCarrossel = 10;
@@ -200,8 +201,8 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             }
 
             // Throttle: max 25 posts/24h por conta IG Business (limite oficial Meta).
-            // Conta TODAS as publicacoes IG do tenant nas ultimas 24h.
-            var postsRecentes = await _publicacaoRepository.CountByPlataformaUltimasHorasAsync(PLATAFORMA, 24);
+            // Conta TODAS as publicacoes IG do tenant nas ultimas 24h, stories inclusive.
+            var postsRecentes = await PublicacoesUltimas24hAsync();
             if (postsRecentes >= MaxPostsPor24h)
             {
                 _logger.LogWarning(
@@ -279,6 +280,70 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
                 return null;
             }
         }
+
+        public async Task<PublicacaoResult?> PublicarStoryAsync(int veiculoId, string imageUrl)
+        {
+            var (token, igId) = await ResolveAsync();
+            if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(igId))
+            {
+                _logger.LogDebug("Instagram Business nao configurado, story do veiculo {VeiculoId} pulado", veiculoId);
+                return null;
+            }
+
+            // O limite de publicacoes pela API vale para a conta inteira: story
+            // gasta a mesma cota que o post do feed.
+            var postsRecentes = await PublicacoesUltimas24hAsync();
+            if (postsRecentes >= MaxPostsPor24h)
+            {
+                _logger.LogWarning(
+                    "Story do Instagram do veiculo {VeiculoId} bloqueado: {Count}/{Max} publicacoes nas ultimas 24h (rate limit Meta)",
+                    veiculoId, postsRecentes, MaxPostsPor24h);
+                return null;
+            }
+
+            try
+            {
+                var url = $"https://graph.facebook.com/{_settings.ApiVersion}/{igId}/media";
+                var payload = new Dictionary<string, string>
+                {
+                    ["image_url"] = imageUrl,
+                    ["media_type"] = "STORIES",
+                    ["access_token"] = token
+                };
+                var resp = await _httpClient.PostAsync(url, new FormUrlEncodedContent(payload));
+                var body = await resp.Content.ReadAsStringAsync();
+                if (!resp.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("Instagram story container veiculo {VeiculoId} falhou: {Body}", veiculoId, body);
+                    return null;
+                }
+
+                string? creationId;
+                using (var doc = JsonDocument.Parse(body))
+                    creationId = doc.RootElement.TryGetProperty("id", out var id) ? id.GetString() : null;
+                if (string.IsNullOrEmpty(creationId)) return null;
+
+                var mediaId = await PublishContainerAsync(igId, token, creationId, veiculoId);
+                if (string.IsNullOrEmpty(mediaId)) return null;
+
+                var username = await _configRepository.GetValorAsync(MetaOAuthService.KEY_IG_USERNAME);
+                return new PublicacaoResult
+                {
+                    ExternoId = mediaId,
+                    Url = await ResolverPermalinkAsync(mediaId, token)
+                          ?? $"https://www.instagram.com/stories/{username}/"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao publicar story do veiculo {VeiculoId} no Instagram", veiculoId);
+                return null;
+            }
+        }
+
+        private async Task<int> PublicacoesUltimas24hAsync()
+            => await _publicacaoRepository.CountByPlataformaUltimasHorasAsync(PLATAFORMA, 24)
+             + await _publicacaoRepository.CountByPlataformaUltimasHorasAsync(PLATAFORMA_STORY, 24);
 
         private async Task<string?> PublicarFotoUnicaAsync(string igId, string token, string imageUrl, string caption, int veiculoId)
         {

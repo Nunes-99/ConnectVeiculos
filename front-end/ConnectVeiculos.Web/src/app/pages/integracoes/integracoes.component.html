@@ -1072,6 +1072,48 @@
           </div>
         }
 
+        <!-- Stories. A arte 9:16 e' gerada no servidor (StoryArte): story pela
+             API nao tem legenda nem link, entao preco e loja vao na imagem. -->
+        <div class="info-block">
+          <h4><span class="material-icons">amp_stories</span> 3. Stories (somem em 24h)</h4>
+          <p>O sistema monta uma imagem vertical com a foto do carro, o preço e o nome da loja, nas cores da loja, e publica como story. Também dá para publicar na hora pelo botão <span class="material-icons inline-icon">amp_stories</span> na lista de veículos.</p>
+
+          <div class="story-grupo">
+            <span class="story-grupo-titulo">Onde publicar</span>
+            <label class="toggle-switch" [class.desabilitado]="!storyConfig.instagramConectado">
+              <input type="checkbox" [checked]="storyConfig.noInstagram"
+                     [disabled]="!storyConfig.instagramConectado"
+                     (change)="toggleStory('noInstagram')" />
+              <span class="toggle-label">Instagram{{ storyConfig.instagramConectado ? '' : ' (não vinculado)' }}</span>
+            </label>
+            <label class="toggle-switch">
+              <input type="checkbox" [checked]="storyConfig.noFacebook"
+                     (change)="toggleStory('noFacebook')" />
+              <span class="toggle-label">Facebook</span>
+            </label>
+          </div>
+
+          <div class="story-grupo">
+            <span class="story-grupo-titulo">Publicar sozinho quando</span>
+            <label class="toggle-switch">
+              <input type="checkbox" [checked]="storyConfig.aoChegar" (change)="toggleStory('aoChegar')" />
+              <span class="toggle-label">Um carro novo é cadastrado</span>
+            </label>
+            <label class="toggle-switch">
+              <input type="checkbox" [checked]="storyConfig.aoBaixarPreco" (change)="toggleStory('aoBaixarPreco')" />
+              <span class="toggle-label">O preço baixa (no máximo um por dia por carro)</span>
+            </label>
+            <label class="toggle-switch">
+              <input type="checkbox" [checked]="storyConfig.aoVender" (change)="toggleStory('aoVender')" />
+              <span class="toggle-label">O carro é vendido (sem mostrar o preço)</span>
+            </label>
+          </div>
+
+          @if (storySemDestino) {
+            <small class="story-aviso">Escolha Instagram e/ou Facebook acima — sem isso nenhum story é publicado.</small>
+          }
+        </div>
+
         <!-- Facebook Catalog (Vehicle Ads pago) — OCULTO.
              O interruptor nao liga nada: depende de Catalog ID + Token que nunca
              foram configurados, e o proprio card avisava que "toggle nao tera

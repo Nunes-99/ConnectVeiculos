@@ -34,6 +34,12 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         /// comentarios), entao la o post fica como esta.
         /// </summary>
         Task<bool> AtualizarLegendaDoPostAsync(string postId, int veiculoId, string statusVeiculo);
+
+        /// <summary>
+        /// Publica uma imagem 9:16 ja pronta como story da Page. Null se nao
+        /// publicou.
+        /// </summary>
+        Task<PublicacaoResult?> PublicarStoryAsync(int veiculoId, string imageUrl);
     }
 
     public class FacebookPagePostConfigInfo
