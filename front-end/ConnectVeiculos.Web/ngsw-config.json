@@ -34,7 +34,8 @@
       "urls": [
         "/api/dashboard/**",
         "/api/veiculos/**",
-        "/api/vendas/**"
+        "/api/vendas/**",
+        "/api/lojas/**"
       ],
       "cacheConfig": {
         "strategy": "freshness",
@@ -47,7 +48,6 @@
       "name": "api-cache",
       "urls": [
         "/api/categorias/**",
-        "/api/lojas/**",
         "/api/fipe/**"
       ],
       "cacheConfig": {

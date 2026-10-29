@@ -4,6 +4,12 @@ export interface Toast {
   id: number;
   message: string;
   type: 'success' | 'error' | 'warning' | 'info';
+  acao?: ToastAcao;
+}
+
+export interface ToastAcao {
+  rotulo: string;
+  executar: () => void;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -11,9 +17,9 @@ export class ToastService {
   toasts: Toast[] = [];
   private nextId = 0;
 
-  show(message: string, type: Toast['type'] = 'info', duration = 4000): void {
+  show(message: string, type: Toast['type'] = 'info', duration = 4000, acao?: ToastAcao): void {
     const id = this.nextId++;
-    this.toasts.push({ id, message, type });
+    this.toasts.push({ id, message, type, acao });
     if (duration > 0) {
       setTimeout(() => this.remove(id), duration);
     }

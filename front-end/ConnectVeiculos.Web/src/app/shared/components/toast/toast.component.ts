@@ -12,6 +12,11 @@ import { ToastService, Toast } from '../../../core/services/toast.service';
         <div class="toast" [class]="'toast-' + toast.type" (click)="toastService.remove(toast.id)">
           <span class="material-icons toast-icon">{{ getIcon(toast.type) }}</span>
           <span class="toast-message">{{ toast.message }}</span>
+          @if (toast.acao) {
+            <button class="toast-acao" (click)="toast.acao.executar(); toastService.remove(toast.id); $event.stopPropagation()">
+              {{ toast.acao.rotulo }}
+            </button>
+          }
           <button class="toast-close" (click)="toastService.remove(toast.id); $event.stopPropagation()">
             <span class="material-icons">close</span>
           </button>
@@ -52,6 +57,13 @@ import { ToastService, Toast } from '../../../core/services/toast.service';
 
     .toast-icon { font-size: 20px; flex-shrink: 0; }
     .toast-message { flex: 1; line-height: 1.4; }
+
+    .toast-acao {
+      background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.5);
+      color: #fff; font-weight: 600; font-size: 13px; padding: 6px 12px;
+      border-radius: 6px; cursor: pointer; flex-shrink: 0;
+      &:hover { background: rgba(255,255,255,0.3); }
+    }
 
     .toast-close {
       background: none; border: none; color: rgba(255,255,255,0.7);
