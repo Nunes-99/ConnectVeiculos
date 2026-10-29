@@ -1,234 +1,107 @@
-# Guia de Deploy - ConnectVeiculos
+# Deploy - ConnectVeiculos
 
-Este guia explica como fazer o deploy gratuito da aplicacao na nuvem.
+O sistema roda **só em produção**: https://connectveiculos.dev.br, numa VM da
+Oracle Cloud (Always Free, x86, 2 núcleos, 954 MB de RAM). Não há homologação.
+Vercel, Render e Supabase não são mais usados.
 
-## Arquitetura de Deploy
+Como a VM foi criada e configurada do zero: `DEPLOY_ORACLE.md`.
+
+## Arquitetura
 
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│     Vercel      │────►│     Render      │────►│    Supabase     │
-│   (Front-end)   │     │   (Back-end)    │     │  (PostgreSQL)   │
-│     GRATIS      │     │     GRATIS      │     │     GRATIS      │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
+              ┌──────────────── VM Oracle (136.248.77.154) ────────────────┐
+ internet ──► │ nginx (80/443) ──► frontend-ssr (Angular SSR, :4000)       │
+              │        └─────────► backend-cliente (.NET 8, :8080)         │
+              │                       └─ data/*.db (SQLite, 1 por loja)    │
+              └────────────────────────────────────────────────────────────┘
 ```
 
----
+- Repositório na VM: `/home/ubuntu/ConnectVeiculos` (branch `fix/auditoria-completa`,
+  que só avança por fast-forward a partir do `master`).
+- Configuração: `.env` na raiz do repositório na VM (fora do git).
+- Dados: `data/` (bancos), `uploads/cliente/` (fotos), `dpkeys/` (chaves que
+  cifram os tokens OAuth — **não apagar**, senão todas as integrações desconectam).
 
-## PASSO 1: Criar Banco de Dados no Supabase
+## Publicar uma versão
 
-### 1.1 Criar conta no Supabase
-1. Acesse https://supabase.com
-2. Clique em "Start your project"
-3. Faca login com GitHub ou email
+1. Commit e push no `master`.
+2. O GitHub Actions roda o **CI** (build e testes) e o **Imagens**, que constrói
+   as imagens Docker do back-end e do front-end e envia para o
+   `ghcr.io/nunes-99/connectveiculos-*`. Conferir se as duas ficaram verdes:
+   ```bash
+   gh run list --limit 4
+   ```
+3. Publicar (no PC, na raiz do repositório):
+   ```bash
+   bash scripts/publicar.sh
+   ```
+   Na VM, em segundo plano: backup dos bancos em `/home/ubuntu/backups/antes-publicar-<data>`,
+   `git merge --ff-only origin/master`, download das imagens do commit, troca dos
+   containers e limpeza das imagens antigas. A conexão SSH pode cair que nada se perde.
+4. Conferir o resultado:
+   ```bash
+   ssh -i ~/.ssh/connectveiculos-oracle.key ubuntu@136.248.77.154 tail -5 /home/ubuntu/publicar.log
+   ```
+   A última linha é `fim: ...` (deu certo) ou `ERRO: ...` (parou antes de trocar os containers).
 
-### 1.2 Criar novo projeto
-1. Clique em "New project"
-2. Preencha:
-   - **Name**: `connectveiculos`
-   - **Database Password**: (anote esta senha!)
-   - **Region**: South America (Sao Paulo)
-3. Clique em "Create new project"
-4. Aguarde ~2 minutos para o projeto ser criado
+O site fica fora do ar só os segundos da troca de container. Antes, a imagem era
+construída na própria VM e o site ficava lento por uns 13 minutos.
 
-### 1.3 Obter Connection String
-1. No painel do projeto, va em **Settings** > **Database**
-2. Role ate "Connection string"
-3. Selecione **URI**
-4. Copie a string e substitua `[YOUR-PASSWORD]` pela senha que voce criou
-5. Guarde esta string, sera usada no Render
+**Publicar é sempre manual.** O workflow Imagens só deixa a imagem pronta, não mexe em produção.
 
-**Formato da string:**
-```
-postgresql://postgres:[SUA-SENHA]@db.[ID-DO-PROJETO].supabase.co:5432/postgres
-```
+### Plano B: construir na VM
 
----
-
-## PASSO 2: Deploy do Back-end no Render
-
-### 2.1 Subir codigo para GitHub
-Primeiro, suba o projeto para um repositorio no GitHub:
+Se o GitHub estiver fora ou a imagem não existir:
 
 ```bash
-cd C:\Users\vitor.nunes\Documents\Vitor\ConnectVeiculos
-git init
-git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin https://github.com/SEU-USUARIO/connectveiculos.git
-git push -u origin main
+cd /home/ubuntu/ConnectVeiculos
+sudo docker compose up -d --build backend-cliente     # ~12 min
+sudo docker compose up -d --build frontend-ssr        # ~13 min, site lento enquanto isso
 ```
 
-### 2.2 Criar conta no Render
-1. Acesse https://render.com
-2. Clique em "Get Started for Free"
-3. Faca login com GitHub
+O nginx só muda quando `nginx/` muda: `sudo docker compose up -d --build nginx`.
 
-### 2.3 Criar Web Service
-1. No dashboard, clique em **New** > **Web Service**
-2. Conecte seu repositorio GitHub
-3. Selecione o repositorio `connectveiculos`
-4. Configure:
-   - **Name**: `connectveiculos-api`
-   - **Region**: Ohio (US East) ou o mais proximo
-   - **Branch**: `main`
-   - **Root Directory**: `back-end`
-   - **Runtime**: Docker
-   - **Instance Type**: Free
+## Voltar para a versão anterior
 
-### 2.4 Configurar Variaveis de Ambiente
-Na secao "Environment Variables", adicione:
+As imagens ficam marcadas com o commit. Para voltar o código e os containers:
 
-| Variavel | Valor |
-|----------|-------|
-| `DATABASE_URL` | `postgresql://postgres:SENHA@db.xxx.supabase.co:5432/postgres` |
-| `JWT_SECRET_KEY` | `SuaChaveSecretaMuitoSegura2024!@#$%` (crie uma chave forte) |
-| `ALLOWED_ORIGINS` | `https://connectveiculos.vercel.app` (ajustar apos deploy do front) |
-| `ASPNETCORE_ENVIRONMENT` | `Production` |
-
-### 2.5 Deploy
-1. Clique em "Create Web Service"
-2. Aguarde o build (~5-10 minutos)
-3. Apos o deploy, voce tera uma URL tipo: `https://connectveiculos-api.onrender.com`
-
-### 2.6 Testar API
-Acesse: `https://connectveiculos-api.onrender.com/swagger`
-
----
-
-## PASSO 3: Deploy do Front-end no Vercel
-
-### 3.1 Atualizar URL da API
-Antes do deploy, atualize o arquivo `front-end/ConnectVeiculos.Web/src/environments/environment.prod.ts`:
-
-```typescript
-export const environment = {
-  production: true,
-  apiUrl: 'https://connectveiculos-api.onrender.com/api' // URL do seu Render
-};
-```
-
-Faca commit e push:
 ```bash
-git add .
-git commit -m "Update API URL for production"
-git push
+cd /home/ubuntu/ConnectVeiculos
+git log --oneline -5                          # escolher o commit
+git reset --hard <commit>
+for n in backend frontend; do
+  sudo docker pull ghcr.io/nunes-99/connectveiculos-$n:<commit-completo>
+  sudo docker tag  ghcr.io/nunes-99/connectveiculos-$n:<commit-completo> ghcr.io/nunes-99/connectveiculos-$n:latest
+done
+sudo docker compose up -d --no-build backend-cliente frontend-ssr
 ```
 
-### 3.2 Criar conta no Vercel
-1. Acesse https://vercel.com
-2. Clique em "Start Deploying"
-3. Faca login com GitHub
+Se uma migração estragou dados, restaurar a pasta `data/` do backup feito pelo
+`publicar.sh` (com o back-end parado).
 
-### 3.3 Importar Projeto
-1. Clique em "Add New" > "Project"
-2. Selecione o repositorio `connectveiculos`
-3. Configure:
-   - **Framework Preset**: Other
-   - **Root Directory**: `front-end/ConnectVeiculos.Web`
-   - **Build Command**: `npm run build`
-   - **Output Directory**: `dist/connect-veiculos.web/browser`
+## Variáveis do `.env`
 
-### 3.4 Deploy
-1. Clique em "Deploy"
-2. Aguarde o build (~2-3 minutos)
-3. Voce tera uma URL tipo: `https://connectveiculos.vercel.app`
+As principais (lista completa e padrões em `docker-compose.yml`):
 
----
+| Variável | Para quê |
+|---|---|
+| `JWT_SECRET_KEY_CLIENTE` | Assinatura do login |
+| `ADMIN_API_TOKEN` | Rotas administrativas (criar/excluir loja) |
+| `META_APP_ID`, `META_APP_SECRET`, `META_INSTAGRAM_ENABLED` | App da Meta (Facebook, Instagram, stories) |
+| `ML_APP_ID`, `ML_CLIENT_SECRET` | Mercado Livre |
+| `WHATSAPP_VERIFY_TOKEN` | Verificação do webhook do WhatsApp |
+| `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_ID` | **Deixar vazias**: se preenchidas, valem para todas as lojas |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | Notificações push |
+| `GEMINI_API_KEY` | Leitura do CRLV por foto |
+| `SEARCH_CONSOLE_CLIENT_ID`, `SEARCH_CONSOLE_CLIENT_SECRET`, `SEARCH_CONSOLE_REFRESH_TOKEN` | Reenvio automático do sitemap ao Google (opcional; vazio = desligado) |
 
-## PASSO 4: Configurar CORS no Render
+Depois de mudar o `.env`: `sudo docker compose up -d backend-cliente` (recria o container com os valores novos).
 
-Apos o deploy do front-end, atualize a variavel `ALLOWED_ORIGINS` no Render:
+## Rotina na VM
 
-1. Va no dashboard do Render
-2. Selecione o servico `connectveiculos-api`
-3. Va em **Environment**
-4. Edite `ALLOWED_ORIGINS` para incluir a URL do Vercel:
-   ```
-   https://connectveiculos.vercel.app,https://seu-dominio-customizado.com
-   ```
-5. Clique em "Save Changes"
-6. O servico sera reiniciado automaticamente
+- Backup diário dos bancos às 03:30 (`scripts/backup-sqlite.sh`, cron do root).
+- Renovação do certificado HTTPS pelo certbot (`scripts/check-cert-expiry.sh`).
+- Domínios próprios das lojas a cada 5 min (`scripts/dominios-proprios.sh`).
 
----
-
-## PASSO 5: Testar a Aplicacao
-
-1. Acesse a URL do Vercel
-2. Faca login com:
-   - Email: `admin@connectveiculos.com.br`
-   - Senha: `admin123`
-3. Teste as funcionalidades
-
----
-
-## Variaveis de Ambiente Completas
-
-### Render (Back-end)
-
-| Variavel | Descricao | Exemplo |
-|----------|-----------|---------|
-| `DATABASE_URL` | Connection string PostgreSQL | `postgresql://postgres:xxx@db.xxx.supabase.co:5432/postgres` |
-| `JWT_SECRET_KEY` | Chave secreta para JWT | `MinhaChaveSecreta2024!@#` |
-| `ALLOWED_ORIGINS` | URLs permitidas (separadas por virgula) | `https://app.vercel.app` |
-| `ASPNETCORE_ENVIRONMENT` | Ambiente de execucao | `Production` |
-| `SMTP_SERVER` | Servidor SMTP (opcional) | `smtp.gmail.com` |
-| `SMTP_USERNAME` | Usuario SMTP (opcional) | `email@gmail.com` |
-| `SMTP_PASSWORD` | Senha SMTP (opcional) | `senha-app` |
-
----
-
-## Custos
-
-| Servico | Plano | Custo | Limitacoes |
-|---------|-------|-------|------------|
-| Supabase | Free | R$ 0 | 500MB banco, 2 projetos |
-| Render | Free | R$ 0 | Hiberna apos 15min inativo |
-| Vercel | Hobby | R$ 0 | 100GB bandwidth |
-
-**Nota**: O plano gratuito do Render "hiberna" o servico apos 15 minutos sem uso. A primeira requisicao apos hibernacao demora ~30 segundos. Para uso comercial, considere o plano pago ($7/mes).
-
----
-
-## Manutencao Centralizada
-
-Com esta arquitetura, voce tem controle total centralizado:
-
-1. **Atualizacoes de codigo**: Push para GitHub > Deploy automatico
-2. **Atualizacoes de banco**: Acesse Supabase > Execute SQL
-3. **Logs e monitoramento**: Dashboard do Render
-4. **Todos os clientes**: Usam a mesma API e banco (isolados por `lojaId`)
-
----
-
-## Dominio Customizado (Opcional)
-
-### Vercel
-1. Va em Settings > Domains
-2. Adicione seu dominio (ex: `app.connectveiculos.com.br`)
-3. Configure DNS no seu provedor
-
-### Render
-1. Va em Settings > Custom Domains
-2. Adicione seu dominio (ex: `api.connectveiculos.com.br`)
-3. Configure DNS no seu provedor
-
----
-
-## Troubleshooting
-
-### Erro de CORS
-- Verifique se `ALLOWED_ORIGINS` inclui a URL do front-end
-- Certifique-se de usar HTTPS
-
-### Erro de conexao com banco
-- Verifique se `DATABASE_URL` esta correto
-- Confirme que a senha nao tem caracteres especiais problemáticos
-
-### API nao responde
-- O servico pode estar hibernando (aguarde ~30s)
-- Verifique os logs no dashboard do Render
-
-### Build falha no Render
-- Verifique se o Dockerfile esta na pasta `back-end`
-- Confira os logs de build para erros especificos
+Detalhes, logs e monitoramento: `DEPLOY_ORACLE.md`, seção "Monitoring / Status".
+Lojas (criar, excluir, domínio próprio): `GUIA-OPERACAO-MULTI-TENANT.md` e `docs/dominio-proprio.md`.

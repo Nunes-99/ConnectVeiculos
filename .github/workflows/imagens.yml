@@ -1,0 +1,57 @@
+name: Imagens
+
+# Constroi as imagens Docker do back-end e do front-end aqui, e nao na VM.
+# A VM tem 2 nucleos e 954MB de RAM: construir nela deixava o site respondendo
+# em 1 a 6 s por ~13 min a cada publicacao. Agora a VM so baixa a imagem pronta
+# (scripts/publicar.sh). Publicar continua sendo manual: este workflow so
+# deixa a imagem disponivel, nao mexe em producao.
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: imagens-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  imagem:
+    name: ${{ matrix.nome }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        include:
+          - nome: backend
+            contexto: back-end
+          - nome: frontend
+            contexto: front-end/ConnectVeiculos.Web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Tag com o commit: o script de publicacao baixa exatamente a imagem do
+      # codigo que a VM tem, e nao "a ultima que terminou".
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.contexto }}
+          push: true
+          tags: |
+            ghcr.io/nunes-99/connectveiculos-${{ matrix.nome }}:${{ github.sha }}
+            ghcr.io/nunes-99/connectveiculos-${{ matrix.nome }}:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          cache-from: type=gha,scope=${{ matrix.nome }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.nome }}

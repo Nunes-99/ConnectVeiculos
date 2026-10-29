@@ -5,7 +5,8 @@ version: '3.8'
 #   frontend-ssr    -> Node Express servindo Angular SSR (porta interna 4000)
 #   backend-cliente -> .NET 8 API (porta interna 8080)
 #
-# Para subir: docker compose up -d --build
+# Para publicar: bash scripts/publicar.sh (baixa as imagens prontas do GitHub)
+# Plano B, construindo na VM: docker compose up -d --build
 # Para HTTPS: instalar certbot no host e gerar certificado contra ./nginx/certs (ver scripts/setup-https.sh)
 
 services:
@@ -13,6 +14,10 @@ services:
   # BACKEND - .NET 8 API
   # ============================
   backend-cliente:
+    # Imagem pronta, construida no GitHub Actions (.github/workflows/imagens.yml)
+    # e baixada por scripts/publicar.sh. O `build` abaixo continua valendo como
+    # plano B: `docker compose up -d --build backend-cliente` constroi na VM.
+    image: ghcr.io/nunes-99/connectveiculos-backend:latest
     build:
       context: ./back-end
       dockerfile: Dockerfile
@@ -75,6 +80,14 @@ services:
       - IndexNowSettings__Enabled=${INDEXNOW_ENABLED:-true}
       - IndexNowSettings__Key=${INDEXNOW_KEY:-8818d3a30c584c3b8c5b936a120d9527}
       - IndexNowSettings__PublicSiteUrl=${PUBLIC_SITE_URL:-https://connectveiculos.dev.br}
+      # Google nao usa IndexNow: pra ele o sitemap e' reenviado pela API do
+      # Search Console (no maximo 1x/hora). Sem as 3 credenciais, fica desligado.
+      # Refresh token da conta dona da propriedade, com escopo .../auth/webmasters.
+      - SearchConsoleSettings__ClientId=${SEARCH_CONSOLE_CLIENT_ID:-}
+      - SearchConsoleSettings__ClientSecret=${SEARCH_CONSOLE_CLIENT_SECRET:-}
+      - SearchConsoleSettings__RefreshToken=${SEARCH_CONSOLE_REFRESH_TOKEN:-}
+      - SearchConsoleSettings__SiteUrl=${SEARCH_CONSOLE_SITE_URL:-https://connectveiculos.dev.br/}
+      - SearchConsoleSettings__PublicSiteUrl=${PUBLIC_SITE_URL:-https://connectveiculos.dev.br}
     volumes:
       - ./data:/app/data
       # IMPORTANTE: backend salva em /app/uploads/veiculos/... (ImagensController.cs
@@ -104,6 +117,8 @@ services:
   # FRONTEND - Angular SSR (Node Express)
   # ============================
   frontend-ssr:
+    # Ver comentario em backend-cliente.
+    image: ghcr.io/nunes-99/connectveiculos-frontend:latest
     build:
       context: ./front-end/ConnectVeiculos.Web
       dockerfile: Dockerfile
