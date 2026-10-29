@@ -24,15 +24,21 @@ fi
 declare -A NOVAS
 
 read -r -p "Gerar nova JWT_SECRET_KEY_CLIENTE? Todo mundo precisa entrar de novo. [s/N] " r
-if [[ "$r" =~ ^[sS] ]]; then NOVAS[JWT_SECRET_KEY_CLIENTE]=$(openssl rand -base64 64 | tr -d '\n'); fi
+# O openssl do Git Bash termina as linhas com \r\n: sem tirar o \r, a chave
+# virava duas linhas no .env e o docker compose recusava o arquivo.
+if [[ "$r" =~ ^[sS] ]]; then NOVAS[JWT_SECRET_KEY_CLIENTE]=$(openssl rand -base64 64 | tr -d '\r\n'); fi
 
 read -r -p "Gerar novo ADMIN_API_TOKEN? [s/N] " r
-if [[ "$r" =~ ^[sS] ]]; then NOVAS[ADMIN_API_TOKEN]=$(openssl rand -hex 32); fi
+if [[ "$r" =~ ^[sS] ]]; then NOVAS[ADMIN_API_TOKEN]=$(openssl rand -hex 32 | tr -d '\r\n'); fi
 
 for k in META_APP_SECRET ML_CLIENT_SECRET GEMINI_API_KEY; do
   read -r -s -p "Novo $k (Enter vazio = manter o atual): " v; echo
   v=$(printf '%s' "$v" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
   if [ -n "$v" ]; then NOVAS[$k]=$v; fi
+done
+
+for k in "${!NOVAS[@]}"; do
+  [[ "${NOVAS[$k]}" =~ ^[^[:space:]]+$ ]] || { echo "$k ficou com espaco ou quebra de linha; nada foi alterado."; exit 1; }
 done
 
 if [ ${#NOVAS[@]} -eq 0 ]; then echo "Nada para trocar."; exit 0; fi
