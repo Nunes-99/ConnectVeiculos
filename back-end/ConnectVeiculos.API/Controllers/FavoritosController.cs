@@ -2,6 +2,7 @@ using ConnectVeiculos.Core.Entities.Favoritos;
 using ConnectVeiculos.Infrastructure.Database.EntityFramework;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace ConnectVeiculos.API.Controllers
@@ -21,6 +22,7 @@ namespace ConnectVeiculos.API.Controllers
         /// Registrar favorito (publico) - visitante informa e-mail para favoritar
         /// </summary>
         [HttpPost]
+        [EnableRateLimiting("public")]
         public async Task<IActionResult> Favoritar([FromBody] FavoritarRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Email))
@@ -62,6 +64,7 @@ namespace ConnectVeiculos.API.Controllers
         /// Remover favorito (publico)
         /// </summary>
         [HttpDelete]
+        [EnableRateLimiting("public")]
         public async Task<IActionResult> Desfavoritar([FromQuery] string email, [FromQuery] int veiculoId)
         {
             var favorito = await _context.Favoritos

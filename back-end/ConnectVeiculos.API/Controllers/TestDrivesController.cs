@@ -3,6 +3,7 @@ using ConnectVeiculos.Core.Interfaces.Services;
 using ConnectVeiculos.Infrastructure.Database.EntityFramework;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace ConnectVeiculos.API.Controllers
@@ -20,6 +21,7 @@ namespace ConnectVeiculos.API.Controllers
 
         // POST publico - agendar test drive
         [HttpPost]
+        [EnableRateLimiting("public")]
         public async Task<IActionResult> Agendar([FromBody] AgendarTestDriveRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.NomeCliente) || string.IsNullOrWhiteSpace(request.Telefone))

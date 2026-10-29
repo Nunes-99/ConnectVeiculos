@@ -247,7 +247,10 @@ namespace ConnectVeiculos.API.Controllers
 
             // Com transformacao: usado pelo Instagram/Facebook Page que precisam
             // de JPEG <= 8MB e lado maximo 1440px. Sanitiza inputs antes.
-            var alvo = Math.Clamp(max ?? 1440, 100, 2048);
+            // So tamanhos fixos: cada combinacao nova de max/ratio grava um arquivo
+            // em uploads/_cache, e a rota e' anonima — valores livres deixavam
+            // qualquer um encher o disco da VM variando o numero.
+            var alvo = TamanhosPermitidos.OrderBy(t => Math.Abs(t - (max ?? 1440))).First();
             var fmt = (format ?? "jpeg").ToLowerInvariant();
             var proporcao = ParseRatio(ratio);
 
@@ -323,9 +326,14 @@ namespace ConnectVeiculos.API.Controllers
         /// Le "1:1", "4:5", "1.91:1". Devolve null quando ausente ou invalido — nesse
         /// caso vale o comportamento antigo de apenas limitar o lado maior.
         /// </summary>
+        private static readonly int[] TamanhosPermitidos = { 320, 640, 1080, 1200, 1440, 2048 };
+        private static readonly HashSet<string> ProporcoesPermitidas = new() { "4:5", "1:1", "1.91:1" };
+
         private static (double Largura, double Altura)? ParseRatio(string? raw)
         {
             if (string.IsNullOrWhiteSpace(raw)) return null;
+            // Mesma razao dos tamanhos fixos: so as proporcoes que a Meta aceita.
+            if (!ProporcoesPermitidas.Contains(raw.Trim())) return null;
             var partes = raw.Split(':');
             if (partes.Length != 2) return null;
             if (!double.TryParse(partes[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var w)) return null;

@@ -112,12 +112,11 @@ builder.Services.AddCustomHangfire();
 // entao usamos o Host header diretamente como proxy do tenant.
 builder.Services.AddRateLimiter(options =>
 {
+    // So o IP (o real: UseForwardedHeaders pega o que o nginx anexou, nao o que
+    // o cliente mandou). Antes entrava tambem o Host, que o cliente escolhe: um
+    // Host diferente a cada request ganhava cota nova e o limite nao freava nada.
     static string TenantPartitionKey(HttpContext ctx)
-    {
-        var host = ctx.Request.Host.Host ?? "unknown";
-        var ip = ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-        return $"{host}:{ip}";
-    }
+        => ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
     // Login: teto por host + IP. Deliberadamente folgado (20/min): numa revenda
     // atras de NAT todos os funcionarios compartilham o mesmo IP publico, e um
@@ -156,6 +155,17 @@ builder.Services.AddRateLimiter(options =>
                 PermitLimit = 30,
                 Window = TimeSpan.FromMinutes(1),
                 QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
+
+    // Cadastro de loja: cada chamada cria um banco SQLite novo no disco da VM.
+    options.AddPolicy("registro", httpContext =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: TenantPartitionKey(httpContext),
+            factory: _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromHours(1),
                 QueueLimit = 0
             }));
 
@@ -406,6 +416,26 @@ app.UseErrorHandlingMiddleware();
 
 // Authentication & Authorization
 app.UseAuthentication();
+
+// Visualizador e' "somente leitura", mas os controllers so pedem [Authorize]:
+// ele conseguia inativar veiculo, editar venda, publicar no ML. Em vez de
+// marcar endpoint por endpoint, barra aqui qualquer escrita dele, exceto as da
+// propria sessao (/api/auth: sair, renovar token, trocar a propria senha).
+app.Use(async (ctx, next) =>
+{
+    var leitura = HttpMethods.IsGet(ctx.Request.Method) || HttpMethods.IsHead(ctx.Request.Method)
+                  || HttpMethods.IsOptions(ctx.Request.Method);
+    if (!leitura
+        && ctx.User.IsInRole("Visualizador")
+        && !ctx.Request.Path.StartsWithSegments("/api/auth"))
+    {
+        ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+        await ctx.Response.WriteAsJsonAsync(new { error = "Seu acesso é somente leitura." });
+        return;
+    }
+    await next();
+});
+
 app.UseAuthorization();
 
 app.MapControllers();

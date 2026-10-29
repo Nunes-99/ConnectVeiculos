@@ -51,7 +51,7 @@ namespace ConnectVeiculos.API.Controllers
         /// <response code="409">Slug derivado ja existe (raro — fallback gera unico automaticamente)</response>
         [HttpPost("registrar")]
         [AllowAnonymous]
-        [EnableRateLimiting("login")]
+        [EnableRateLimiting("registro")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]

@@ -2,6 +2,7 @@ using ConnectVeiculos.Core.Entities.Leads;
 using ConnectVeiculos.Infrastructure.Database.EntityFramework;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace ConnectVeiculos.API.Controllers
@@ -21,6 +22,7 @@ namespace ConnectVeiculos.API.Controllers
 
         // POST publico - registrar lead
         [HttpPost]
+        [EnableRateLimiting("public")]
         public async Task<IActionResult> Registrar([FromBody] RegistrarLeadRequest request)
         {
             // Clique no WhatsApp do catalogo: o visitante nao preenche nada — a conversa
