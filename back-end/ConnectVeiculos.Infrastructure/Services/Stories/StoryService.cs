@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Globalization;
 using ConnectVeiculos.Core.Entities.Lojas;
 using ConnectVeiculos.Core.Entities.Publicacoes;
@@ -8,6 +9,7 @@ using ConnectVeiculos.Core.Interfaces.Database.Repositories.Publicacoes;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.VeiculosImagens;
 using ConnectVeiculos.Core.Interfaces.Services;
+using ConnectVeiculos.Core.Interfaces.Tenancy;
 using ConnectVeiculos.Infrastructure.Services.Meta;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -37,6 +39,14 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
         // publicacoes diarias do Instagram, as mesmas dos posts do feed.
         private const int MaxStoriesPorSequencia = 3;
 
+        // A sequencia de 3 stories no Instagram + Facebook leva ~1 min; o nginx
+        // desiste em 60s e o painel mostrava erro enquanto o servidor terminava
+        // de publicar. Quem clicava de novo publicava tudo em dobro (e story no
+        // Instagram nao se apaga pela API). Entao o botao manual recusa carro
+        // que ja esta publicando ou que ganhou story ha pouco.
+        private const int MinutosEntreStoriesManuais = 10;
+        private static readonly ConcurrentDictionary<string, byte> PublicandoAgora = new();
+
         private static readonly CultureInfo PtBr = new("pt-BR");
 
         private readonly IConfiguracaoSistemaRepository _configRepository;
@@ -49,6 +59,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
         private readonly MetaSettings _settings;
         private readonly IHostEnvironment _environment;
         private readonly ILogger<StoryService> _logger;
+        private readonly ITenantContext? _tenant;
 
         public StoryService(
             IConfiguracaoSistemaRepository configRepository,
@@ -60,7 +71,8 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
             IFacebookPagePostService facebookPagePostService,
             IOptions<MetaSettings> settings,
             IHostEnvironment environment,
-            ILogger<StoryService> logger)
+            ILogger<StoryService> logger,
+            ITenantContext? tenant = null)
         {
             _configRepository = configRepository;
             _veiculoRepository = veiculoRepository;
@@ -72,6 +84,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
             _settings = settings.Value;
             _environment = environment;
             _logger = logger;
+            _tenant = tenant;
         }
 
         public async Task<StoryConfigInfo> GetConfigAsync()
@@ -131,8 +144,38 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
             }
         }
 
-        public Task<StoryPublicacaoResultado> PublicarManualAsync(int veiculoId)
-            => PublicarAsync(veiculoId, EventoStory.Manual, null);
+        public async Task<StoryPublicacaoResultado> PublicarManualAsync(int veiculoId)
+        {
+            var chave = $"{_tenant?.TenantSlug}:{veiculoId}";
+            if (!PublicandoAgora.TryAdd(chave, 0))
+                return Falha("O story deste carro já está sendo publicado. Aguarde cerca de 1 minuto e confira no Instagram.");
+            try
+            {
+                var ultimo = await UltimoStoryAsync(veiculoId);
+                if (ultimo.HasValue)
+                {
+                    var minutos = (int)Math.Max(0, (DateTime.UtcNow - ultimo.Value).TotalMinutes);
+                    if (minutos < MinutosEntreStoriesManuais)
+                        return Falha($"O story deste carro foi publicado há {(minutos == 0 ? "menos de 1 minuto" : minutos + " min")}. " +
+                                     $"Para não repetir no Instagram, espere {MinutosEntreStoriesManuais} minutos entre publicações.");
+                }
+                return await PublicarAsync(veiculoId, EventoStory.Manual, null);
+            }
+            finally
+            {
+                PublicandoAgora.TryRemove(chave, out _);
+            }
+        }
+
+        private async Task<DateTime?> UltimoStoryAsync(int veiculoId)
+        {
+            var datas = (await _publicacaoRepository.GetByVeiculoIdAsync(veiculoId) ?? Enumerable.Empty<VeiculoPublicacao>())
+                .Where(p => p.PubPlataforma == InstagramPostService.PLATAFORMA_STORY
+                            || p.PubPlataforma == FacebookPagePostService.PLATAFORMA_STORY)
+                .Select(p => (DateTime?)p.PubDtPublicacao)
+                .ToList();
+            return datas.Count == 0 ? null : datas.Max();
+        }
 
         private async Task<StoryPublicacaoResultado> PublicarAsync(int veiculoId, string evento, decimal? precoAnterior)
         {

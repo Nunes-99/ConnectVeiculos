@@ -201,6 +201,23 @@ namespace ConnectVeiculos.Tests.Publicacoes
         }
 
         [Fact]
+        public async Task ManualRepetidoLogoEmSeguidaNaoPublicaDeNovo()
+        {
+            // Foi o que aconteceu em producao: o nginx deu timeout, o painel
+            // mostrou erro, o usuario clicou de novo e saiu tudo em dobro.
+            Ligar(StoryService.KEY_NO_INSTAGRAM);
+            var servico = Criar();
+
+            var primeiro = await servico.PublicarManualAsync(VeiculoId);
+            var segundo = await servico.PublicarManualAsync(VeiculoId);
+
+            primeiro.Sucesso.Should().BeTrue();
+            segundo.Sucesso.Should().BeFalse();
+            segundo.Mensagem.Should().Contain("espere 10 minutos");
+            _instagram.Verify(x => x.PublicarStoryAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Once);
+        }
+
+        [Fact]
         public async Task ManualSemDestinoEscolhidoExplicaOQueFalta()
         {
             var r = await Criar().PublicarManualAsync(VeiculoId);

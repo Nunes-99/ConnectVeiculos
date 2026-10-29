@@ -43,8 +43,19 @@ export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
 
       let errorMessage = 'Ocorreu um erro inesperado';
 
+      // O nginx responde com pagina HTML quando o backend demora (504) ou caiu
+      // (502/503). O Angular tentava ler isso como JSON e o usuario via
+      // "Unexpected token '<' ... is not valid JSON".
+      const respostaHtml = error.error?.error instanceof SyntaxError
+        || (typeof error.error === 'string' && error.error.trimStart().startsWith('<'));
+
        // Limite de plano (403 do LimitePlanoExceptionFilter): mensagem amigavel
        // com numeros do uso atual e link pra tela 'Meu plano'.
+       if (respostaHtml && error.status === 504) {
+         errorMessage = 'O servidor demorou para responder, mas a operação pode ter terminado mesmo assim. Confira o resultado antes de tentar de novo.';
+       } else if (respostaHtml) {
+         errorMessage = 'O servidor está indisponível no momento. Tente de novo em instantes.';
+       } else
        if (error.status === 403 && error.error?.error === 'limite_plano') {
          const e = error.error;
          errorMessage = `Limite do plano ${e.plano} atingido: ${e.atual}/${e.limite} ${e.recurso}. Acesse "Meu plano" para fazer upgrade.`;
