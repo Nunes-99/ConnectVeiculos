@@ -200,6 +200,7 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
         }
 
         [HttpPost("mercadolivre/publicar/{veiculoId}")]
+        [Authorize(Roles = "Administrador,Gerente")]
         public async Task<IActionResult> PublicarMercadoLivre(
             [FromServices] IMercadoLivreService mlService,
             [FromServices] IVeiculoPublicacaoRepository pubRepo,
@@ -362,6 +363,7 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
          }
 
         [HttpDelete("mercadolivre/remover/{veiculoId}")]
+        [Authorize(Roles = "Administrador,Gerente")]
         public async Task<IActionResult> RemoverMercadoLivre(
             [FromServices] IMercadoLivreService mlService,
             [FromServices] IVeiculoPublicacaoRepository pubRepo,
@@ -538,9 +540,27 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
             [FromServices] ConnectVeiculos.Infrastructure.Database.EntityFramework.MasterDbContext master,
             [FromServices] ConnectVeiculos.Core.Interfaces.Tenancy.ITenantStore tenantStore,
             [FromServices] ConnectVeiculos.Core.Interfaces.Tenancy.ITenantContext tenantContext,
-            [FromBody] System.Text.Json.JsonElement payload)
+            [FromServices] Microsoft.Extensions.Options.IOptions<ConnectVeiculos.Infrastructure.Services.Meta.MetaSettings> metaOpts)
         {
             logger.LogInformation("WhatsApp webhook recebido");
+
+            // A rota e' anonima: sem conferir a assinatura, qualquer um criava leads
+            // e disparava alertas em qualquer loja com um POST inventado. A Meta
+            // assina o corpo cru com o app secret (X-Hub-Signature-256).
+            string corpo;
+            using (var leitor = new StreamReader(Request.Body, System.Text.Encoding.UTF8))
+                corpo = await leitor.ReadToEndAsync();
+            if (!AssinaturaMetaValida(corpo, Request.Headers["X-Hub-Signature-256"].ToString(), metaOpts.Value.AppSecret))
+            {
+                logger.LogWarning("WhatsApp webhook recusado: assinatura X-Hub-Signature-256 ausente ou invalida");
+                return Unauthorized();
+            }
+
+            System.Text.Json.JsonDocument documento;
+            try { documento = System.Text.Json.JsonDocument.Parse(corpo); }
+            catch (System.Text.Json.JsonException) { return BadRequest(); }
+            using var _ = documento;
+            var payload = documento.RootElement;
 
             try
             {
@@ -1034,6 +1054,25 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
             var facebook = tenants.Where(t => !string.IsNullOrWhiteSpace(t.TenFacebookVerifCode))
                                   .Select(t => t.TenFacebookVerifCode!).ToList();
             return Ok(new { google, facebook });
+        }
+
+        /// <summary>
+        /// Confere o X-Hub-Signature-256 ("sha256=" + HMAC-SHA256 hex do corpo
+        /// cru com o app secret). Sem app secret configurado nao ha como conferir:
+        /// recusa, em vez de aceitar qualquer coisa.
+        /// </summary>
+        public static bool AssinaturaMetaValida(string corpo, string? cabecalho, string? appSecret)
+        {
+            if (string.IsNullOrEmpty(appSecret) || string.IsNullOrEmpty(cabecalho)
+                || !cabecalho.StartsWith("sha256=", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            var esperado = System.Security.Cryptography.HMACSHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes(appSecret), System.Text.Encoding.UTF8.GetBytes(corpo));
+            byte[] recebido;
+            try { recebido = Convert.FromHexString(cabecalho["sha256=".Length..]); }
+            catch (FormatException) { return false; }
+            return System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(esperado, recebido);
         }
 
         public class VerificationCodeRequest

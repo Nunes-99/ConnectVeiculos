@@ -9,7 +9,8 @@ namespace ConnectVeiculos.API.Controllers
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    // Auditoria traz valores antigos e novos de tudo (inclusive dados de cliente).
+    [Authorize(Roles = "Administrador,Gerente")]
     [Produces("application/json")]
     public class LogsController : ControllerBase
     {
