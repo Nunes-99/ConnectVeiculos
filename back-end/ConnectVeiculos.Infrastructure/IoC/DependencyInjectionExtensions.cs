@@ -749,7 +749,10 @@ namespace ConnectVeiculos.Infrastructure.IoC
 
             // Admin padrao do tenant default — so seedado no startup do app, nao em
             // tenants criados via TenantsAdminController (que recebem admin proprio).
-            if (!dbContext.Usuarios.Any(u => u.UsuEmail == "admin@connectveiculos.com.br"))
+            // So em banco vazio: a senha esta no repositorio publico, e antes bastava
+            // apagar ou renomear esse usuario em producao para ele voltar no proximo
+            // deploy com admin123.
+            if (!dbContext.Usuarios.Any())
             {
                 var adminUser = new Core.Entities.Usuarios.Usuario(
                     0,
