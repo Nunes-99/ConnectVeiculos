@@ -43,6 +43,9 @@ namespace ConnectVeiculos.API.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] WebhookInputModel input)
         {
+            if (!await ConnectVeiculos.Infrastructure.Services.Webhook.UrlExterna.EhSeguraAsync(input?.Url, HttpContext.RequestAborted))
+                return BadRequest(new { error = "A URL precisa ser https:// e apontar para um endereço público na internet." });
+
             var secret = Guid.NewGuid().ToString("N");
             var webhook = new Webhook(
                 input.Url,

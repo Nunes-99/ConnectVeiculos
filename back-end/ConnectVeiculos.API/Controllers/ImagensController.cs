@@ -63,11 +63,18 @@ namespace ConnectVeiculos.API.Controllers
         [RequestFormLimits(MultipartBodyLengthLimit = TamanhoMaximoBytes)]
         public async Task<IActionResult> UploadImagem(
             [FromServices] IUploadImagemVeiculoUseCase uploadImagemUseCase,
+            [FromServices] ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos.IVeiculoRepository veiculos,
             int veiculoId,
             IFormFile arquivo)
         {
             if (arquivo == null || arquivo.Length == 0)
                 return BadRequest("Arquivo não enviado.");
+
+            // O repositorio e' do banco da loja logada: veiculo de outra loja (ou
+            // id inventado) nao existe aqui. Antes o arquivo era gravado antes de
+            // qualquer conferencia, e dava para encher o disco com ids soltos.
+            if (await veiculos.GetByIdAsync(veiculoId) == null)
+                return NotFound("Veículo não encontrado.");
 
             if (arquivo.Length > TamanhoMaximoBytes)
                 return BadRequest($"Arquivo muito grande. Maximo {TamanhoMaximoBytes / (1024 * 1024)} MB.");
@@ -132,22 +139,29 @@ namespace ConnectVeiculos.API.Controllers
         /// nao da: o banner e' grande e viajaria em toda resposta do catalogo
         /// publico, que e' a rota mais quente do sistema.
         /// </summary>
+        /// <param name="lojas">Lojas da loja logada (confere que a loja existe).</param>
         /// <param name="lojaId">Loja dona do arquivo.</param>
         /// <param name="tipo">"banner" ou "favicon" — define o tamanho maximo.</param>
         /// <param name="arquivo">Imagem enviada.</param>
         /// <response code="200">Caminho relativo do arquivo gravado.</response>
         /// <response code="400">Arquivo ausente, grande demais, tipo invalido ou corrompido.</response>
         [HttpPost("loja/{lojaId}")]
+        [Authorize(Roles = "Administrador,Gerente")]
         [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("api")]
         [RequestSizeLimit(TamanhoMaximoBytes)]
         [RequestFormLimits(MultipartBodyLengthLimit = TamanhoMaximoBytes)]
         public async Task<IActionResult> UploadImagemLoja(
+            [FromServices] ConnectVeiculos.Core.Interfaces.Database.Repositories.Lojas.ILojaRepository lojas,
             int lojaId,
             [FromQuery] string tipo,
             IFormFile arquivo)
         {
             if (arquivo == null || arquivo.Length == 0)
                 return BadRequest("Arquivo não enviado.");
+
+            // Ver UploadImagem: so loja que existe no banco da loja logada.
+            if (await lojas.GetByIdAsync(lojaId) == null)
+                return NotFound("Loja não encontrada.");
 
             if (arquivo.Length > TamanhoMaximoBytes)
                 return BadRequest($"Arquivo muito grande. Maximo {TamanhoMaximoBytes / (1024 * 1024)} MB.");

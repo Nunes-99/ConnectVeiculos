@@ -45,6 +45,14 @@ namespace ConnectVeiculos.Infrastructure.Services.Webhook
         {
             try
             {
+                // Confere de novo na hora de enviar: o DNS pode ter mudado desde o
+                // cadastro, e webhooks antigos nunca passaram pelo filtro.
+                if (!await UrlExterna.EhSeguraAsync(webhook.WebUrl))
+                {
+                    _logger.LogWarning("Webhook ignorado: URL {Url} nao e' https publica", webhook.WebUrl);
+                    return;
+                }
+
                 var body = new
                 {
                     evento,
