@@ -12,11 +12,34 @@ namespace ConnectVeiculos.API.Controllers
     public class FavoritosController : ControllerBase
     {
         private readonly ConnectVeiculosDbContext _context;
+        private readonly IConfiguration _configuration;
 
-        public FavoritosController(ConnectVeiculosDbContext context)
+        public FavoritosController(ConnectVeiculosDbContext context, IConfiguration configuration)
         {
             _context = context;
+            _configuration = configuration;
         }
+
+        /// <summary>
+        /// Prova de que quem pede e' o navegador que favoritou com esse e-mail.
+        /// Listar e remover eram so pelo e-mail: qualquer um via quais carros uma
+        /// pessoa marcou, ou apagava os favoritos dela. A chave sai na resposta
+        /// do favoritar e o catalogo guarda no localStorage.
+        /// </summary>
+        private string ChaveDoEmail(string email)
+        {
+            var segredo = _configuration["JwtSettings:SecretKey"] ?? string.Empty;
+            var hash = System.Security.Cryptography.HMACSHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes(segredo),
+                System.Text.Encoding.UTF8.GetBytes("favorito|" + email.Trim().ToLowerInvariant()));
+            return Convert.ToHexString(hash)[..32].ToLowerInvariant();
+        }
+
+        private bool ChaveConfere(string email, string? chave)
+            => !string.IsNullOrWhiteSpace(email) && !string.IsNullOrWhiteSpace(chave)
+               && System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(
+                   System.Text.Encoding.ASCII.GetBytes(ChaveDoEmail(email)),
+                   System.Text.Encoding.ASCII.GetBytes(chave.Trim().ToLowerInvariant()));
 
         /// <summary>
         /// Registrar favorito (publico) - visitante informa e-mail para favoritar
@@ -38,7 +61,7 @@ namespace ConnectVeiculos.API.Controllers
                 .FirstOrDefaultAsync(f => f.FavEmail == email && f.R_VeiId == request.VeiculoId);
 
             if (existente != null)
-                return Ok(new { id = existente.FavId, mensagem = "Veiculo ja esta nos favoritos." });
+                return Ok(new { id = existente.FavId, mensagem = "Veiculo ja esta nos favoritos.", chave = ChaveDoEmail(email) });
 
             var favorito = new Favorito(0, request.VeiculoId, email, request.Nome, request.Telefone);
             _context.Favoritos.Add(favorito);
@@ -53,11 +76,11 @@ namespace ConnectVeiculos.API.Controllers
                 var jaExistia = await _context.Favoritos
                     .FirstOrDefaultAsync(f => f.FavEmail == email && f.R_VeiId == request.VeiculoId);
                 if (jaExistia != null)
-                    return Ok(new { id = jaExistia.FavId, mensagem = "Veiculo ja esta nos favoritos." });
+                    return Ok(new { id = jaExistia.FavId, mensagem = "Veiculo ja esta nos favoritos.", chave = ChaveDoEmail(email) });
                 throw;
             }
 
-            return Ok(new { id = favorito.FavId, mensagem = "Veiculo adicionado aos favoritos!" });
+            return Ok(new { id = favorito.FavId, mensagem = "Veiculo adicionado aos favoritos!", chave = ChaveDoEmail(email) });
         }
 
         /// <summary>
@@ -65,8 +88,11 @@ namespace ConnectVeiculos.API.Controllers
         /// </summary>
         [HttpDelete]
         [EnableRateLimiting("public")]
-        public async Task<IActionResult> Desfavoritar([FromQuery] string email, [FromQuery] int veiculoId)
+        public async Task<IActionResult> Desfavoritar([FromQuery] string email, [FromQuery] int veiculoId, [FromQuery] string? chave)
         {
+            if (!ChaveConfere(email, chave)) return NotFound();
+            email = email.Trim().ToLowerInvariant();
+
             var favorito = await _context.Favoritos
                 .FirstOrDefaultAsync(f => f.FavEmail == email && f.R_VeiId == veiculoId);
 
@@ -81,10 +107,15 @@ namespace ConnectVeiculos.API.Controllers
         /// Listar favoritos de um visitante por e-mail (publico)
         /// </summary>
         [HttpGet("meus")]
-        public async Task<IActionResult> MeusFavoritos([FromQuery] string email)
+        [EnableRateLimiting("public")]
+        public async Task<IActionResult> MeusFavoritos([FromQuery] string email, [FromQuery] string? chave)
         {
             if (string.IsNullOrWhiteSpace(email))
                 return BadRequest("E-mail é obrigatório.");
+            // Sem a chave, lista vazia: o catalogo segue com os favoritos locais.
+            if (!ChaveConfere(email, chave))
+                return Ok(Array.Empty<int>());
+            email = email.Trim().ToLowerInvariant();
 
             var favoritos = await _context.Favoritos
                 .Where(f => f.FavEmail == email)

@@ -689,11 +689,12 @@ export class CatalogoComponent implements OnInit, OnDestroy {
       if (this.favoritos.has(veiId)) {
         this.favoritos.delete(veiId);
         this.saveFavoritosLocal();
-        this.favoritoService.desfavoritar(this.favoritoEmail, veiId).subscribe();
+        this.favoritoService.desfavoritar(this.favoritoEmail, veiId, this.favoritoChave()).subscribe();
       } else {
         this.favoritos.add(veiId);
         this.saveFavoritosLocal();
-        this.favoritoService.favoritar(veiId, this.favoritoEmail, this.favoritoNome, this.favoritoTelefone).subscribe();
+        this.favoritoService.favoritar(veiId, this.favoritoEmail, this.favoritoNome, this.favoritoTelefone)
+          .subscribe((r) => this.guardarChave(r?.chave));
       }
     } else {
       // Precisa pedir e-mail primeiro
@@ -712,14 +713,15 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     this.showFavoritoCadastro = false;
 
     // Carregar favoritos do servidor
-    this.favoritoService.meusFavoritos(this.favoritoEmail).subscribe({
+    this.favoritoService.meusFavoritos(this.favoritoEmail, this.favoritoChave()).subscribe({
       next: (ids) => {
-        this.favoritos = new Set(ids);
+        this.favoritos = new Set([...this.favoritos, ...ids]);
         // Adicionar o pendente
         if (this.favoritoPendente) {
           this.favoritos.add(this.favoritoPendente);
           this.saveFavoritosLocal();
-          this.favoritoService.favoritar(this.favoritoPendente, this.favoritoEmail, this.favoritoNome, this.favoritoTelefone).subscribe();
+          this.favoritoService.favoritar(this.favoritoPendente, this.favoritoEmail, this.favoritoNome, this.favoritoTelefone)
+            .subscribe((r) => this.guardarChave(r?.chave));
           this.favoritoPendente = null;
         }
       }
@@ -743,14 +745,26 @@ export class CatalogoComponent implements OnInit, OnDestroy {
       this.favoritoNome = localStorage.getItem('catalogo_fav_nome') || '';
       this.favoritoTelefone = localStorage.getItem('catalogo_fav_telefone') || '';
       this.favoritoLogado = true;
-      // Carregar do servidor
-      this.favoritoService.meusFavoritos(email).subscribe({
-        next: (ids) => { this.favoritos = new Set(ids); }
+      // Servidor + o que ja estava neste navegador: sem a chave (quem favoritou
+      // antes de ela existir) o servidor devolve vazio, e os locais nao somem.
+      const stored = localStorage.getItem('catalogo_favoritos');
+      if (stored) this.favoritos = new Set(JSON.parse(stored));
+      this.favoritoService.meusFavoritos(email, this.favoritoChave()).subscribe({
+        next: (ids) => { this.favoritos = new Set([...this.favoritos, ...ids]); }
       });
     } else {
       const stored = localStorage.getItem('catalogo_favoritos');
       if (stored) this.favoritos = new Set(JSON.parse(stored));
     }
+  }
+
+  private favoritoChave(): string {
+    if (!isPlatformBrowser(this.platformId)) return '';
+    return localStorage.getItem('catalogo_fav_chave') || '';
+  }
+
+  private guardarChave(chave?: string): void {
+    if (chave && isPlatformBrowser(this.platformId)) localStorage.setItem('catalogo_fav_chave', chave);
   }
 
   private saveFavoritosLocal(): void {
