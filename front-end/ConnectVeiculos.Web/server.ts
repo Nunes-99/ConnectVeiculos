@@ -153,6 +153,15 @@ export function app(): express.Express {
   // Hardening: esconde o header "X-Powered-By: Express" das responses.
   server.disable('x-powered-by');
 
+  // Protecoes que nao dependem de listar cada script/fonte do site (uma CSP
+  // completa quebraria Google Fonts, mapa e pixel): ninguem embute o site num
+  // iframe de outro dominio, nada de <object>/<embed>, e um <base> injetado nao
+  // consegue redirecionar os links relativos para outro host.
+  server.use((_req, res, next) => {
+    res.set('Content-Security-Policy', "frame-ancestors 'self'; object-src 'none'; base-uri 'self'");
+    next();
+  });
+
   // Express atras de nginx — confiar nos headers X-Forwarded-* pra que
   // req.protocol retorne "https" (do X-Forwarded-Proto do nginx) ao
   // inves de "http". Sem isso, sitemap.xml gera <loc>http://...</loc>
@@ -214,6 +223,11 @@ export function app(): express.Express {
     }
   });
 
+  // Cada geracao do sitemap faz 1 + N chamadas a API (uma por loja). Sem cache,
+  // repetir GET /sitemap.xml num loop era um jeito barato de ocupar o servidor.
+  const sitemapCache = new Map<string, { xml: string; expira: number }>();
+  const SITEMAP_TTL_MS = 10 * 60 * 1000;
+
   server.get('/sitemap.xml', async (req, res) => {
     try {
       const apiBase = process.env['API_BASE_URL'] || 'http://localhost:5219';
@@ -221,6 +235,14 @@ export function app(): express.Express {
       const siteBase = slugHost
         ? `https://${hostNu(req)}`
         : process.env['SITE_BASE_URL'] || `${req.protocol}://${req.get('host')}`;
+
+      const emCache = sitemapCache.get(siteBase);
+      if (emCache && emCache.expira > Date.now()) {
+        res.set('Content-Type', 'application/xml');
+        res.set('Cache-Control', 'public, max-age=3600');
+        res.send(emCache.xml);
+        return;
+      }
 
       // 1) Lista de tenants: no dominio proprio, so a loja dele; na plataforma,
       //    os tenants publicos menos os que ja tem dominio (entram no sitemap
@@ -274,6 +296,10 @@ export function app(): express.Express {
       }
 
       xml += '</urlset>';
+
+      // Host inventado vira chave nova: limita o tamanho do mapa.
+      if (sitemapCache.size > 200) sitemapCache.clear();
+      sitemapCache.set(siteBase, { xml, expira: Date.now() + SITEMAP_TTL_MS });
 
       res.set('Content-Type', 'application/xml');
       res.set('Cache-Control', 'public, max-age=3600');
