@@ -459,10 +459,8 @@ Te esperamos na {{6}}. Até breve!`;
     this.storyConfig[campo] = !anterior;
     this.integracaoService.setStoriesConfig(novo).subscribe({
       next: (c) => this.storyConfig = c,
-      error: () => {
-        this.storyConfig[campo] = anterior;
-        this.toast.error('Não consegui alterar a configuração dos stories.');
-      }
+      // A mensagem de erro sai pelo httpErrorInterceptor; aqui so desfaz o clique.
+      error: () => this.storyConfig[campo] = anterior
     });
   }
 

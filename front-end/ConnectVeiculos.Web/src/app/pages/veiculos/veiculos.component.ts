@@ -340,11 +340,10 @@ export class VeiculosComponent implements OnInit {
         this.toast.success(r?.mensagem || 'Publicado no Instagram!');
         this.loadData();
       },
-      error: (err) => {
-        this.publicandoIg.delete(veiculoId);
-        const msg = err?.error?.error || 'Falha ao publicar no Instagram. Veja a tela de Integrações.';
-        this.toast.error(msg);
-      }
+      // O httpErrorInterceptor ja mostra a mensagem do servidor. Mostrar outra
+      // aqui saia em dobro: o erro chega como Error, sem err.error, e caia
+      // sempre no texto generico por cima do motivo real.
+      error: () => this.publicandoIg.delete(veiculoId)
     });
   }
 
@@ -357,11 +356,8 @@ export class VeiculosComponent implements OnInit {
         this.toast.success(r?.mensagem || 'Publicado na Page Facebook!');
         this.loadData();
       },
-      error: (err) => {
-        this.publicandoFb.delete(veiculoId);
-        const msg = err?.error?.error || 'Falha ao publicar no Facebook. Veja a tela de Integrações.';
-        this.toast.error(msg);
-      }
+      // Mensagem de erro: ver publicarNoInstagram.
+      error: () => this.publicandoFb.delete(veiculoId)
     });
   }
 
@@ -375,10 +371,8 @@ export class VeiculosComponent implements OnInit {
         this.publicandoStory.delete(veiculo.veiId);
         this.toast.success(r?.mensagem || 'Story publicado!');
       },
-      error: (err) => {
-        this.publicandoStory.delete(veiculo.veiId);
-        this.toast.error(err?.error?.error || 'Falha ao publicar o story. Veja a tela de Integrações.');
-      }
+      // Mensagem de erro: ver publicarNoInstagram.
+      error: () => this.publicandoStory.delete(veiculo.veiId)
     });
   }
 
