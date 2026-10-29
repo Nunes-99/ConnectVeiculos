@@ -200,6 +200,22 @@ namespace ConnectVeiculos.Tests.Publicacoes
             _instagram.Verify(x => x.PublicarStoryAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Once);
         }
 
+        [Theory]
+        [InlineData(null, 3)]   // loja que nunca mexeu: padrao 3
+        [InlineData("1", 1)]
+        [InlineData("2", 2)]
+        [InlineData("9", 3)]    // fora da faixa vira o maximo
+        public async Task ManualPublicaAQuantidadeDeImagensConfigurada(string? configurado, int esperado)
+        {
+            Ligar(StoryService.KEY_NO_INSTAGRAM);
+            ComFotos(5);
+            if (configurado != null) _config[StoryService.KEY_QTD_IMAGENS] = configurado;
+
+            await Criar().PublicarManualAsync(VeiculoId);
+
+            _instagram.Verify(x => x.PublicarStoryAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Exactly(esperado));
+        }
+
         [Fact]
         public async Task ManualRepetidoLogoEmSeguidaNaoPublicaDeNovo()
         {
@@ -341,7 +357,7 @@ namespace ConnectVeiculos.Tests.Publicacoes
             using var foto = new Image<Rgba32>(largura, altura, Color.Teal);
             var dados = StoryService.MontarDados(Veiculo("D", 89900m), Loja(null), EventoStory.Manual, null);
 
-            using var arte = Image.Load(StoryArte.GerarFoto(foto, dados, 2, 3));
+            using var arte = Image.Load(StoryArte.GerarFoto(foto, dados));
 
             arte.Width.Should().Be(1080);
             arte.Height.Should().Be(1920);

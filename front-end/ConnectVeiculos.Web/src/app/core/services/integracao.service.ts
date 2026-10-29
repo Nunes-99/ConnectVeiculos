@@ -148,6 +148,8 @@ export interface StoryConfigInput {
   aoChegar: boolean;
   aoBaixarPreco: boolean;
   aoVender: boolean;
+  /** Imagens por story de carro novo / botão manual (1 a 3). */
+  quantidadeImagens: number;
 }
 
 export interface StoryConfigInfo extends StoryConfigInput {

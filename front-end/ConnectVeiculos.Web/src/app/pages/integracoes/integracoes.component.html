@@ -1109,6 +1109,17 @@
             </label>
           </div>
 
+          <div class="story-grupo">
+            <span class="story-grupo-titulo">Imagens por carro</span>
+            <select class="form-select form-select-sm story-qtd" [value]="'' + storyConfig.quantidadeImagens"
+                    (change)="setStoryQuantidade($any($event.target).value)">
+              <option value="1">1 — só a arte com o preço</option>
+              <option value="2">2 — a arte e mais 1 foto</option>
+              <option value="3">3 — a arte e mais 2 fotos</option>
+            </select>
+            <small class="text-muted">Vale para carro novo e para o botão da lista. As fotos seguem a ordem do cadastro. Preço baixou e vendido saem sempre com 1 imagem.</small>
+          </div>
+
           @if (storySemDestino) {
             <small class="story-aviso">Escolha Instagram e/ou Facebook acima — sem isso nenhum story é publicado.</small>
           }

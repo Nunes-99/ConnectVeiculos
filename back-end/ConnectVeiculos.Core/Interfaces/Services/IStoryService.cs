@@ -42,6 +42,12 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         public bool AoChegar { get; set; }
         public bool AoBaixarPreco { get; set; }
         public bool AoVender { get; set; }
+
+        /// <summary>
+        /// Quantas imagens o story de carro novo e o botao manual publicam: a
+        /// arte com preco e mais fotos do carro, na ordem do cadastro (1 a 3).
+        /// </summary>
+        public int QuantidadeImagens { get; set; } = 3;
     }
 
     public class StoryConfigInfo : StoryConfigInput

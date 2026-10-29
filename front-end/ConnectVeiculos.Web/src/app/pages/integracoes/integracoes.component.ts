@@ -204,7 +204,7 @@ Te esperamos na {{6}}. Até breve!`;
   igConfig: InstagramPostConfigInfo = { instagramConectado: false, autoPostHabilitado: false };
   storyConfig: StoryConfigInfo = {
     noInstagram: false, noFacebook: false, aoChegar: false, aoBaixarPreco: false, aoVender: false,
-    instagramConectado: false, facebookConectado: false
+    quantidadeImagens: 3, instagramConectado: false, facebookConectado: false
   };
   fbCatalogConfig: FacebookConfigInfo = { configurado: false, tokenDefinido: false, autoPostHabilitado: false };
   fbPageTesteResultado: TestIntegracaoResult | null = null;
@@ -446,21 +446,30 @@ Te esperamos na {{6}}. Até breve!`;
 
   // Um interruptor por vez, mas a configuracao vai inteira: sao cinco
   // ajustes que so fazem sentido juntos (evento ligado sem destino nao publica).
-  toggleStory(campo: keyof StoryConfigInput): void {
-    const anterior = this.storyConfig[campo];
+  toggleStory(campo: 'noInstagram' | 'noFacebook' | 'aoChegar' | 'aoBaixarPreco' | 'aoVender'): void {
+    this.salvarStory({ [campo]: !this.storyConfig[campo] });
+  }
+
+  setStoryQuantidade(valor: string): void {
+    this.salvarStory({ quantidadeImagens: Number(valor) });
+  }
+
+  private salvarStory(mudanca: Partial<StoryConfigInput>): void {
+    const anterior = { ...this.storyConfig };
     const novo: StoryConfigInput = {
       noInstagram: this.storyConfig.noInstagram,
       noFacebook: this.storyConfig.noFacebook,
       aoChegar: this.storyConfig.aoChegar,
       aoBaixarPreco: this.storyConfig.aoBaixarPreco,
       aoVender: this.storyConfig.aoVender,
-      [campo]: !anterior
+      quantidadeImagens: this.storyConfig.quantidadeImagens,
+      ...mudanca
     };
-    this.storyConfig[campo] = !anterior;
+    this.storyConfig = { ...this.storyConfig, ...mudanca };
     this.integracaoService.setStoriesConfig(novo).subscribe({
       next: (c) => this.storyConfig = c,
       // A mensagem de erro sai pelo httpErrorInterceptor; aqui so desfaz o clique.
-      error: () => this.storyConfig[campo] = anterior
+      error: () => this.storyConfig = anterior
     });
   }
 

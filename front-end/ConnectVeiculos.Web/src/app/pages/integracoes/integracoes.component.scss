@@ -799,6 +799,10 @@
 }
 
 // Stories: dois grupos de interruptores (onde / quando), um por linha.
+.story-qtd {
+  max-width: 280px;
+}
+
 .story-grupo {
   display: flex;
   flex-direction: column;

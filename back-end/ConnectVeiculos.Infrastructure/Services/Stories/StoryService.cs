@@ -26,6 +26,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
         public const string KEY_AO_CHEGAR = "META_STORY_AO_CHEGAR";
         public const string KEY_AO_BAIXAR_PRECO = "META_STORY_AO_BAIXAR_PRECO";
         public const string KEY_AO_VENDER = "META_STORY_AO_VENDER";
+        public const string KEY_QTD_IMAGENS = "META_STORY_QTD_IMAGENS";
 
         // A arte so precisa existir ate a Meta baixar. Dois dias de folga cobrem
         // uma nova tentativa manual sem deixar a pasta crescer para sempre.
@@ -37,7 +38,10 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
 
         // Arte completa + ate duas fotos. Cada story gasta uma das 25
         // publicacoes diarias do Instagram, as mesmas dos posts do feed.
-        private const int MaxStoriesPorSequencia = 3;
+        // Cada story leva ~10s no Instagram e ~6s no Facebook; acima de 3 o
+        // botao manual passa do limite de 60s do nginx.
+        public const int MinImagensPorSequencia = 1;
+        public const int MaxImagensPorSequencia = 3;
 
         // A sequencia de 3 stories no Instagram + Facebook leva ~1 min; o nginx
         // desiste em 60s e o painel mostrava erro enquanto o servidor terminava
@@ -96,6 +100,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
                 AoChegar = await LigadoAsync(KEY_AO_CHEGAR),
                 AoBaixarPreco = await LigadoAsync(KEY_AO_BAIXAR_PRECO),
                 AoVender = await LigadoAsync(KEY_AO_VENDER),
+                QuantidadeImagens = await QuantidadeImagensAsync(),
                 InstagramConectado = await _instagramPostService.IsConfiguredAsync(),
                 FacebookConectado = await _facebookPagePostService.IsConfiguredAsync()
             };
@@ -108,9 +113,11 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
             await GravarAsync(KEY_AO_CHEGAR, config.AoChegar);
             await GravarAsync(KEY_AO_BAIXAR_PRECO, config.AoBaixarPreco);
             await GravarAsync(KEY_AO_VENDER, config.AoVender);
+            var quantidade = Math.Clamp(config.QuantidadeImagens, MinImagensPorSequencia, MaxImagensPorSequencia);
+            await _configRepository.SetValorAsync(KEY_QTD_IMAGENS, quantidade.ToString(CultureInfo.InvariantCulture));
             _logger.LogInformation(
-                "Stories configurados: Instagram={Ig} Facebook={Fb} chegar={Chegar} preco={Preco} vender={Vender}",
-                config.NoInstagram, config.NoFacebook, config.AoChegar, config.AoBaixarPreco, config.AoVender);
+                "Stories configurados: Instagram={Ig} Facebook={Fb} chegar={Chegar} preco={Preco} vender={Vender} imagens={Qtd}",
+                config.NoInstagram, config.NoFacebook, config.AoChegar, config.AoBaixarPreco, config.AoVender, quantidade);
         }
 
         public async Task PublicarAutomaticoAsync(int veiculoId, string evento, decimal? precoAnterior = null)
@@ -218,13 +225,12 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
                 var extras = imagens.Skip(1)
                     .Select(i => CaminhoNoDisco(i.ImgCaminho))
                     .Where(File.Exists)
-                    .Take(MaxStoriesPorSequencia - 1)
+                    .Take(await QuantidadeImagensAsync() - 1)
                     .ToList();
-                var total = extras.Count + 1;
-                for (var i = 0; i < extras.Count; i++)
+                foreach (var extra in extras)
                 {
-                    using var foto = await Image.LoadAsync(extras[i]);
-                    urls.Add(await GravarArteAsync(StoryArte.GerarFoto(foto, dados, i + 2, total), baseUrl));
+                    using var foto = await Image.LoadAsync(extra);
+                    urls.Add(await GravarArteAsync(StoryArte.GerarFoto(foto, dados), baseUrl));
                 }
             }
 
@@ -374,6 +380,12 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
         private string CaminhoNoDisco(string caminhoRelativo)
             => Path.Combine(_environment.ContentRootPath,
                 caminhoRelativo.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+
+        // Sem valor gravado (loja que ainda nao mexeu na tela) vale o maximo.
+        private async Task<int> QuantidadeImagensAsync()
+            => int.TryParse(await _configRepository.GetValorAsync(KEY_QTD_IMAGENS), NumberStyles.Integer, CultureInfo.InvariantCulture, out var n)
+                ? Math.Clamp(n, MinImagensPorSequencia, MaxImagensPorSequencia)
+                : MaxImagensPorSequencia;
 
         private async Task<bool> LigadoAsync(string chave)
             => string.Equals(await _configRepository.GetValorAsync(chave), "true", StringComparison.OrdinalIgnoreCase);
