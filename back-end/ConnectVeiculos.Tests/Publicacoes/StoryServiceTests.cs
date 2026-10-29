@@ -217,6 +217,40 @@ namespace ConnectVeiculos.Tests.Publicacoes
         }
 
         [Fact]
+        public async Task PrepararReservaOCarroAteAPublicacaoTerminar()
+        {
+            // O botao agenda e responde na hora; um segundo clique antes de a
+            // publicacao em segundo plano terminar nao pode agendar outra.
+            Ligar(StoryService.KEY_NO_INSTAGRAM);
+            var servico = Criar();
+
+            var primeiro = await servico.PrepararManualAsync(VeiculoId);
+            var segundo = await servico.PrepararManualAsync(VeiculoId);
+            await servico.PublicarManualAsync(VeiculoId);
+            var depois = await servico.PrepararManualAsync(VeiculoId);
+
+            primeiro.Sucesso.Should().BeTrue();
+            primeiro.Mensagem.Should().Contain("Publicando");
+            segundo.Sucesso.Should().BeFalse();
+            segundo.Mensagem.Should().Contain("já está sendo publicado");
+            depois.Sucesso.Should().BeFalse();
+            depois.Mensagem.Should().Contain("espere 10 minutos");
+            _instagram.Verify(x => x.PublicarStoryAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task PrepararSemFotoAvisaNaHoraENaoReserva()
+        {
+            Ligar(StoryService.KEY_NO_INSTAGRAM);
+            _imagens.Setup(x => x.GetByVeiculoIdAsync(VeiculoId)).ReturnsAsync(Array.Empty<VeiculoImagem>());
+
+            var r = await Criar().PrepararManualAsync(VeiculoId);
+
+            r.Sucesso.Should().BeFalse();
+            r.Mensagem.Should().Contain("não tem foto");
+        }
+
+        [Fact]
         public async Task ManualRepetidoLogoEmSeguidaNaoPublicaDeNovo()
         {
             // Foi o que aconteceu em producao: o nginx deu timeout, o painel

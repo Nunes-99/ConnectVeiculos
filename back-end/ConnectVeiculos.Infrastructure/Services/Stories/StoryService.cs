@@ -51,6 +51,12 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
         private const int MinutosEntreStoriesManuais = 10;
         private static readonly ConcurrentDictionary<string, byte> PublicandoAgora = new();
 
+        // Entre o clique (PrepararManualAsync) e o inicio do trabalho em segundo
+        // plano o carro ja esta reservado; a reserva expira sozinha se o
+        // trabalho nunca comecar (servidor reiniciou no meio).
+        private static readonly ConcurrentDictionary<string, DateTime> Agendados = new();
+        private static readonly TimeSpan ValidadeDoAgendamento = TimeSpan.FromMinutes(5);
+
         private static readonly CultureInfo PtBr = new("pt-BR");
 
         private readonly IConfiguracaoSistemaRepository _configRepository;
@@ -151,26 +157,70 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
             }
         }
 
+        public async Task<StoryPublicacaoResultado> PrepararManualAsync(int veiculoId)
+        {
+            var chave = ChaveManual(veiculoId);
+            if (PublicandoAgora.ContainsKey(chave)
+                || (Agendados.TryGetValue(chave, out var desde) && DateTime.UtcNow - desde < ValidadeDoAgendamento))
+                return Falha("O story deste carro já está sendo publicado. Em cerca de 2 minutos ele aparece no Instagram.");
+
+            var recente = await MotivoStoryRecenteAsync(veiculoId);
+            if (recente != null) return Falha(recente);
+
+            var noInstagram = await LigadoAsync(KEY_NO_INSTAGRAM) && await _instagramPostService.IsConfiguredAsync();
+            var noFacebook = await LigadoAsync(KEY_NO_FACEBOOK) && await _facebookPagePostService.IsConfiguredAsync();
+            if (!noInstagram && !noFacebook)
+                return Falha("Escolha onde publicar os stories em Integrações (Instagram e/ou Facebook conectados).");
+
+            var veiculo = await _veiculoRepository.GetByIdAsync(veiculoId);
+            if (veiculo == null) return Falha("Veículo não encontrado.");
+            if (veiculo.VeiSts == "I") return Falha("Veículo inativo não ganha story.");
+            if (!(await _imagemRepository.GetByVeiculoIdAsync(veiculoId)).Any(i => i.ImgSts))
+                return Falha("O veículo não tem foto.");
+
+            Agendados[chave] = DateTime.UtcNow;
+            var qtd = await QuantidadeImagensAsync();
+            var redes = noInstagram && noFacebook ? "no Instagram e no Facebook" : noInstagram ? "no Instagram" : "no Facebook";
+            return new StoryPublicacaoResultado
+            {
+                Sucesso = true,
+                Mensagem = $"Publicando {(qtd == 1 ? "o story" : $"até {qtd} stories")} {redes}. Em cerca de 2 minutos estarão no ar."
+            };
+        }
+
+        private string ChaveManual(int veiculoId) => $"{_tenant?.TenantSlug}:{veiculoId}";
+
+        private async Task<string?> MotivoStoryRecenteAsync(int veiculoId)
+        {
+            var ultimo = await UltimoStoryAsync(veiculoId);
+            if (!ultimo.HasValue) return null;
+            var minutos = (int)Math.Max(0, (DateTime.UtcNow - ultimo.Value).TotalMinutes);
+            return minutos < MinutosEntreStoriesManuais
+                ? $"O story deste carro foi publicado há {(minutos == 0 ? "menos de 1 minuto" : minutos + " min")}. " +
+                  $"Para não repetir no Instagram, espere {MinutosEntreStoriesManuais} minutos entre publicações."
+                : null;
+        }
+
         public async Task<StoryPublicacaoResultado> PublicarManualAsync(int veiculoId)
         {
-            var chave = $"{_tenant?.TenantSlug}:{veiculoId}";
+            var chave = ChaveManual(veiculoId);
             if (!PublicandoAgora.TryAdd(chave, 0))
                 return Falha("O story deste carro já está sendo publicado. Aguarde cerca de 1 minuto e confira no Instagram.");
             try
             {
-                var ultimo = await UltimoStoryAsync(veiculoId);
-                if (ultimo.HasValue)
-                {
-                    var minutos = (int)Math.Max(0, (DateTime.UtcNow - ultimo.Value).TotalMinutes);
-                    if (minutos < MinutosEntreStoriesManuais)
-                        return Falha($"O story deste carro foi publicado há {(minutos == 0 ? "menos de 1 minuto" : minutos + " min")}. " +
-                                     $"Para não repetir no Instagram, espere {MinutosEntreStoriesManuais} minutos entre publicações.");
-                }
-                return await PublicarAsync(veiculoId, EventoStory.Manual, null);
+                var recente = await MotivoStoryRecenteAsync(veiculoId);
+                if (recente != null) return Falha(recente);
+
+                var r = await PublicarAsync(veiculoId, EventoStory.Manual, null);
+                // Em segundo plano ninguem ve o retorno: o motivo fica no log.
+                if (!r.Sucesso)
+                    _logger.LogWarning("Story manual do veiculo {VeiculoId} nao publicado: {Motivo}", veiculoId, r.Mensagem);
+                return r;
             }
             finally
             {
                 PublicandoAgora.TryRemove(chave, out _);
+                Agendados.TryRemove(chave, out _);
             }
         }
 

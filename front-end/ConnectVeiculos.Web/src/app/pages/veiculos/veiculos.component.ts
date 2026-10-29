@@ -388,10 +388,12 @@ export class VeiculosComponent implements OnInit {
     if (this.publicandoStory.has(veiculo.veiId)) return;
     this.publicandoStory.add(veiculo.veiId);
     this.integracaoService.publicarStory(veiculo.veiId).subscribe({
+      // O servidor so confere e agenda; a publicacao leva ~2 min. Recarrega
+      // depois disso para o icone ficar colorido sem o usuario atualizar.
       next: (r) => {
         this.publicandoStory.delete(veiculo.veiId);
-        this.toast.success(r?.mensagem || 'Story publicado!');
-        this.loadData();
+        this.toast.success(r?.mensagem || 'Publicando o story. Em cerca de 2 minutos estará no ar.');
+        setTimeout(() => this.loadData(), 150_000);
       },
       // Mensagem de erro: ver publicarNoInstagram.
       error: () => this.publicandoStory.delete(veiculo.veiId)

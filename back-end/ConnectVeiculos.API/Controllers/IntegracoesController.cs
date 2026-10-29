@@ -1392,13 +1392,23 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
         }
 
         // Botao "Publicar story" da lista de veiculos. Story some em 24h, entao
-        // publicar de novo o mesmo carro e' uso normal, nao engano.
+        // publicar de novo o mesmo carro e' uso normal, nao engano. A sequencia
+        // leva ~2 min (mais que os 60s do nginx): confere o que da na hora,
+        // responde, e publica em segundo plano.
         [HttpPost("stories/publicar/{veiculoId}")]
         [Authorize(Roles = "Administrador,Gerente")]
-        public async Task<IActionResult> PublicarStory([FromServices] IStoryService stories, int veiculoId)
+        public async Task<IActionResult> PublicarStory(
+            [FromServices] IStoryService stories,
+            [FromServices] ITenantBackgroundRunner backgroundRunner,
+            int veiculoId)
         {
-            var r = await stories.PublicarManualAsync(veiculoId);
-            return r.Sucesso ? Ok(r) : StatusCode(502, new { error = r.Mensagem });
+            var r = await stories.PrepararManualAsync(veiculoId);
+            if (!r.Sucesso) return UnprocessableEntity(new { error = r.Mensagem });
+
+            backgroundRunner.Enqueue<IStoryService>(
+                s => s.PublicarManualAsync(veiculoId),
+                $"story manual do veiculo {veiculoId}");
+            return Accepted(r);
         }
 
         // ==========================================

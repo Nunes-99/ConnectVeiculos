@@ -25,6 +25,14 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         /// de evento, mas respeita onde a loja escolheu publicar.
         /// </summary>
         Task<StoryPublicacaoResultado> PublicarManualAsync(int veiculoId);
+
+        /// <summary>
+        /// Confere na hora o que impede o botao manual (sem destino, carro
+        /// inativo ou sem foto, story recente, publicacao em andamento) e reserva
+        /// o carro. Com sucesso, o chamador enfileira <see cref="PublicarManualAsync"/>
+        /// em segundo plano: a sequencia leva ~2 min, mais que o nginx espera.
+        /// </summary>
+        Task<StoryPublicacaoResultado> PrepararManualAsync(int veiculoId);
     }
 
     public static class EventoStory
