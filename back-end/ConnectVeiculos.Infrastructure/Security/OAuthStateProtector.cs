@@ -1,5 +1,6 @@
 using System.Text.Json;
 using ConnectVeiculos.Core.Interfaces.Security;
+using Microsoft.AspNetCore.Http;
 
 namespace ConnectVeiculos.Infrastructure.Security
 {
@@ -7,11 +8,19 @@ namespace ConnectVeiculos.Infrastructure.Security
     {
         private static readonly TimeSpan StateTtl = TimeSpan.FromMinutes(10);
 
-        private readonly ITokenProtector _tokenProtector;
+        // O state sozinho so prova "foi gerado para esta loja". Um admin de outra
+        // loja podia gerar um link de conexao e mandar para o dono de uma Page ou
+        // conta do ML: quem aprovasse ligava a propria conta na loja do atacante.
+        // O cookie amarra o state ao navegador que pediu a conexao.
+        private const string PrefixoCookie = "cv_oauth_";
 
-        public OAuthStateProtector(ITokenProtector tokenProtector)
+        private readonly ITokenProtector _tokenProtector;
+        private readonly IHttpContextAccessor? _httpContextAccessor;
+
+        public OAuthStateProtector(ITokenProtector tokenProtector, IHttpContextAccessor? httpContextAccessor = null)
         {
             _tokenProtector = tokenProtector;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public string Proteger(string tenantSlug)
@@ -21,6 +30,18 @@ namespace ConnectVeiculos.Infrastructure.Security
                 Guid.NewGuid().ToString("N"),
                 DateTime.UtcNow.Add(StateTtl));
             var json = JsonSerializer.Serialize(payload);
+
+            _httpContextAccessor?.HttpContext?.Response.Cookies.Append(PrefixoCookie + payload.Nonce, "1",
+                new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    // Lax: o retorno do Facebook/ML e' navegacao de topo (GET), que leva o cookie.
+                    SameSite = SameSiteMode.Lax,
+                    Path = "/api/integracoes",
+                    MaxAge = StateTtl
+                });
+
             return _tokenProtector.Protect(json);
         }
 
@@ -32,6 +53,17 @@ namespace ConnectVeiculos.Infrastructure.Security
                 throw new OAuthStateException(
                     $"State pertence a outro tenant ('{payload.TenantSlug}' != '{tenantSlugAtual}'). " +
                     "Confirme que esta conectando no subdomain certo.");
+
+            var http = _httpContextAccessor?.HttpContext;
+            if (http != null)
+            {
+                var nome = PrefixoCookie + payload.Nonce;
+                if (!http.Request.Cookies.ContainsKey(nome))
+                    throw new OAuthStateException(
+                        "Esta autorizacao nao foi iniciada neste navegador. Clique em Conectar no painel da loja e aprove na mesma janela.");
+                // Uso unico.
+                http.Response.Cookies.Delete(nome, new CookieOptions { Path = "/api/integracoes", Secure = true, HttpOnly = true, SameSite = SameSiteMode.Lax });
+            }
 
             return payload;
         }
