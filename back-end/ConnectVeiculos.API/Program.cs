@@ -235,10 +235,20 @@ builder.Services.AddSwaggerGen(c =>
 
 // Configurar JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-// Priorizar variavel de ambiente para a chave secreta (mais seguro em producao)
-var secretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
-    ?? jwtSettings["SecretKey"]
+// Mesma fonte que assina o token (AuthController/LoginUseCase leem
+// JwtSettings:SecretKey). Antes a validacao preferia JWT_SECRET_KEY, e as duas
+// podiam divergir sem ninguem perceber.
+var secretKey = jwtSettings["SecretKey"]
     ?? throw new InvalidOperationException("JWT SecretKey not configured");
+
+// O repositorio e' publico: chave padrao ou curta permite forjar token de admin
+// de qualquer loja. Em producao, melhor nao subir do que subir assim.
+if (builder.Environment.IsProduction()
+    && (secretKey.Length < 32
+        || secretKey.Contains("${", StringComparison.Ordinal)
+        || secretKey.StartsWith("ChaveSecreta", StringComparison.OrdinalIgnoreCase)))
+    throw new InvalidOperationException(
+        "JwtSettings:SecretKey ausente, curta ou igual a um valor padrao do repositorio. Defina JWT_SECRET_KEY_CLIENTE no .env.");
 
 builder.Services.AddAuthentication(options =>
 {

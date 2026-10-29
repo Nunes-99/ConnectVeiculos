@@ -413,6 +413,25 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
             if (string.IsNullOrWhiteSpace(request.AccessToken) || string.IsNullOrWhiteSpace(request.PhoneId) || string.IsNullOrWhiteSpace(request.VerifyToken))
                 return BadRequest(new { error = "AccessToken, PhoneId e VerifyToken sao obrigatorios." });
 
+            // O numero vai para o mapa global e passa a receber as mensagens dele.
+            // Sem conferir que o token e' dono do numero, uma loja que soubesse o
+            // phone_number_id de outra puxava para si os leads dela.
+            try
+            {
+                var versao = HttpContext.RequestServices
+                    .GetService<Microsoft.Extensions.Options.IOptions<ConnectVeiculos.Infrastructure.Services.Meta.MetaSettings>>()?.Value.ApiVersion ?? "v18.0";
+                var http = HttpContext.RequestServices.GetRequiredService<IHttpClientFactory>().CreateClient();
+                http.Timeout = TimeSpan.FromSeconds(15);
+                var resp = await http.GetAsync(
+                    $"https://graph.facebook.com/{versao}/{Uri.EscapeDataString(request.PhoneId.Trim())}?fields=id&access_token={Uri.EscapeDataString(request.AccessToken.Trim())}");
+                if (!resp.IsSuccessStatusCode)
+                    return BadRequest(new { error = "A Meta não confirmou que esse token tem acesso a esse número (PhoneId). Confira os dois." });
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+            {
+                return StatusCode(502, new { error = "Não foi possível falar com a Meta para conferir o número. Tente de novo." });
+            }
+
             await whatsApp.SalvarConfigAsync(request.AccessToken, request.PhoneId, request.VerifyToken);
 
             // Registra o numero no mapa global. E o que permite o webhook saber de

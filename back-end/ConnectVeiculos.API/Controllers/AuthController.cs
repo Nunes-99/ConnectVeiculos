@@ -426,10 +426,11 @@ namespace ConnectVeiculos.API.Controllers
                 return BadRequest("Email e senha são obrigatórios.");
 
             var emailNormalizado = input.Email.Trim().ToLowerInvariant();
+            var ipOrigem = HttpContext.Connection.RemoteIpAddress?.ToString();
 
             // Freio por conta: segue o e-mail mesmo que o atacante troque de IP,
             // e nao pune o colega que divide o IP publico da loja.
-            var bloqueio = tentativas.SegundosBloqueioRestantes(emailNormalizado);
+            var bloqueio = tentativas.SegundosBloqueioRestantes(emailNormalizado, ipOrigem);
             if (bloqueio.HasValue)
             {
                 Response.Headers.RetryAfter = bloqueio.Value.ToString();
@@ -493,7 +494,7 @@ namespace ConnectVeiculos.API.Controllers
                 writeCtx.RefreshTokens.Add(refresh);
                 await writeCtx.SaveChangesAsync(ct);
 
-                tentativas.LimparFalhas(emailNormalizado);
+                tentativas.LimparFalhas(emailNormalizado, ipOrigem);
                 logger.LogInformation("Login OK: usuario {Email} no tenant {Slug}", emailNormalizado, tenant.TenSlug);
 
                 return Ok(new Application.ViewModels.Auth.LoginViewModel
@@ -512,7 +513,7 @@ namespace ConnectVeiculos.API.Controllers
                 });
             }
 
-            tentativas.RegistrarFalha(emailNormalizado);
+            tentativas.RegistrarFalha(emailNormalizado, ipOrigem);
             logger.LogInformation("Login FALHOU: e-mail {Email} nao encontrado em nenhum tenant ativo", emailNormalizado);
             return Unauthorized("Email ou senha inválidos.");
         }

@@ -3,6 +3,7 @@ using ConnectVeiculos.Application.InputModels.RecuperacaoSenha;
 using ConnectVeiculos.Application.Interfaces.RecuperacaoSenha;
 using ConnectVeiculos.Core.Interfaces.Database.Operations.RecuperacaoSenha;
 using ConnectVeiculos.Core.Interfaces.Database.Operations.Usuarios;
+using ConnectVeiculos.Core.Interfaces.Database.Repositories.RefreshTokens;
 
 namespace ConnectVeiculos.Application.UseCases.RecuperacaoSenha
 {
@@ -10,13 +11,16 @@ namespace ConnectVeiculos.Application.UseCases.RecuperacaoSenha
     {
         private readonly IRecuperacaoSenhaOperations _recuperacaoOperations;
         private readonly IUsuarioOperations _usuarioOperations;
+        private readonly IRefreshTokenRepository _refreshTokens;
 
         public RedefinirSenhaUseCase(
             IRecuperacaoSenhaOperations recuperacaoOperations,
-            IUsuarioOperations usuarioOperations)
+            IUsuarioOperations usuarioOperations,
+            IRefreshTokenRepository refreshTokens = null)
         {
             _recuperacaoOperations = recuperacaoOperations;
             _usuarioOperations = usuarioOperations;
+            _refreshTokens = refreshTokens;
         }
 
         public async Task ExecutarAsync(RedefinirSenhaInputModel input)
@@ -38,6 +42,12 @@ namespace ConnectVeiculos.Application.UseCases.RecuperacaoSenha
 
             // Atualizar senha do usuario
             await _usuarioOperations.AtualizarSenhaAsync(recuperacao.RecUsuId, senhaHash);
+
+            // Senha nova derruba as sessoes abertas em outros aparelhos: quem trocou
+            // a senha por desconfiar de invasao esperava tirar o intruso, mas o
+            // refresh token dele continuava valendo por 7 dias.
+            if (_refreshTokens != null)
+                await _refreshTokens.RevokeAllByUsuarioIdAsync(recuperacao.RecUsuId);
 
             // Marcar token como utilizado
             recuperacao.MarcarComoUtilizado();
