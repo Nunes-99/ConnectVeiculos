@@ -335,11 +335,14 @@ namespace ConnectVeiculos.Infrastructure.IoC
                 .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(30));
 
             // Services - IndexNow (Bing/Yandex/DuckDuckGo crawl on-demand quando
-            // veiculo muda). Google NAO suporta o protocolo — pra ele continuamos
-            // dependendo do sitemap.xml + Search Console manual.
+            // veiculo muda). Google NAO suporta o protocolo — pra ele o sitemap.xml
+            // e' reenviado pela API do Search Console (SearchConsoleService).
             services.Configure<Services.Seo.IndexNowSettings>(configuration.GetSection("IndexNowSettings"));
             services.AddHttpClient<Core.Interfaces.Services.IIndexNowService, Services.Seo.IndexNowService>()
                 .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(10));
+            services.Configure<Services.Seo.SearchConsoleSettings>(configuration.GetSection("SearchConsoleSettings"));
+            services.AddHttpClient<Core.Interfaces.Services.ISearchConsoleService, Services.Seo.SearchConsoleService>()
+                .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(15));
 
             // Services - Meta (OAuth unificado FB + IG + Page Posts + Instagram Posts)
             services.Configure<Services.Meta.MetaSettings>(configuration.GetSection("MetaSettings"));

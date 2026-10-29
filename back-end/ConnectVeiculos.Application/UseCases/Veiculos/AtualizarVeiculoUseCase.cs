@@ -108,6 +108,10 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                 _backgroundRunner.Enqueue<IIndexNowService>(
                     s => s.NotifyVeiculoAsync(slugParaIndexNow, idParaIndexNow),
                     $"IndexNow veiculo {idParaIndexNow}");
+                // Google nao usa IndexNow: pra ele, reenvia o sitemap.
+                _backgroundRunner.Enqueue<ISearchConsoleService>(
+                    s => s.ReenviarSitemapAsync(default),
+                    "reenviar sitemap ao Search Console");
 
                 // Notificar se veiculo foi reservado (usuarios internos)
                 if (statusAnterior != "R" && inputModel.VeiSts == "R")

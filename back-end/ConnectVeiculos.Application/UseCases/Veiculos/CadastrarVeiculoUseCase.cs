@@ -108,6 +108,10 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                     _backgroundRunner.Enqueue<IIndexNowService>(
                         s => s.NotifyVeiculoAsync(slugParaIndexNow, id),
                         $"IndexNow veiculo {id}");
+                    // Google nao usa IndexNow: pra ele, reenvia o sitemap.
+                    _backgroundRunner.Enqueue<ISearchConsoleService>(
+                        s => s.ReenviarSitemapAsync(default),
+                        "reenviar sitemap ao Search Console");
                 }
 
                 // Publicar nas plataformas externas se disponivel.
