@@ -306,6 +306,27 @@ export class VeiculosComponent implements OnInit {
     return 'Publicar na Página do Facebook';
   }
 
+  // Colorido enquanto o ultimo story esta no ar (24h, igual ao story).
+  storyNoAr(veiculo: Veiculo): boolean {
+    return !!veiculo.storyNoArAte && new Date(veiculo.storyNoArAte).getTime() > Date.now();
+  }
+
+  corStory(veiculo: Veiculo): string | null {
+    if (this.publicandoStory.has(veiculo.veiId)) return this.COR_APAGADA;
+    return this.storyNoAr(veiculo) ? '#C13584' : null;
+  }
+
+  tituloStory(veiculo: Veiculo): string {
+    if (this.publicandoStory.has(veiculo.veiId)) return 'Publicando story…';
+    if (this.storyNoAr(veiculo)) {
+      const ate = new Date(veiculo.storyNoArAte!);
+      const hora = ate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      const dia = ate.toDateString() === new Date().toDateString() ? 'hoje' : 'amanhã';
+      return `Story no ar até ${dia} às ${hora} — clique para publicar outro`;
+    }
+    return 'Publicar story (Instagram/Facebook)';
+  }
+
   private quando(data?: string): string {
     if (!data) return '';
     const d = new Date(data);
@@ -370,6 +391,7 @@ export class VeiculosComponent implements OnInit {
       next: (r) => {
         this.publicandoStory.delete(veiculo.veiId);
         this.toast.success(r?.mensagem || 'Story publicado!');
+        this.loadData();
       },
       // Mensagem de erro: ver publicarNoInstagram.
       error: () => this.publicandoStory.delete(veiculo.veiId)

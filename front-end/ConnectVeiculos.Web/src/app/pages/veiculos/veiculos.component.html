@@ -131,8 +131,8 @@
                   <button class="btn-icon"
                           (click)="publicarStory(veiculo)"
                           [disabled]="publicandoStory.has(veiculo.veiId) || veiculo.veiSts === 'I'"
-                          [title]="publicandoStory.has(veiculo.veiId) ? 'Publicando story…' : 'Publicar story (Instagram/Facebook)'">
-                    <span class="material-icons">amp_stories</span>
+                          [title]="tituloStory(veiculo)">
+                    <span class="material-icons" [style.color]="corStory(veiculo)">amp_stories</span>
                   </button>
                 }
                 <button class="btn-icon" (click)="openImagensModal(veiculo)" title="Imagens">

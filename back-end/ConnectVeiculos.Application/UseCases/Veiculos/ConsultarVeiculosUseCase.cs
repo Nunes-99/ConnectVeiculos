@@ -11,6 +11,8 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
         private readonly IVeiculoOperations _veiculoOperations;
         private readonly IVeiculoPublicacaoRepository _publicacaoRepository;
 
+        private const int DuracaoStoryHoras = 24;
+
         public ConsultarVeiculosUseCase(
             IVeiculoOperations veiculoOperations,
             IVeiculoPublicacaoRepository publicacaoRepository)
@@ -80,6 +82,18 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                 {
                     veiculo.PublicacaoFacebookUrl = fb.PubUrl;
                     veiculo.PublicacaoFacebookEm = fb.PubDtPublicacao;
+                }
+
+                // Story some sozinho 24h depois de publicado; o icone fica
+                // colorido ate la. Data em UTC explicito: o SQLite devolve sem
+                // fuso e o navegador leria como horario local.
+                var ultimoStory = doVeiculo
+                    .Where(p => p.PubPlataforma is "InstagramStory" or "FacebookStory" && p.PubDtPublicacao.HasValue)
+                    .Max(p => p.PubDtPublicacao);
+                if (ultimoStory.HasValue)
+                {
+                    var expira = DateTime.SpecifyKind(ultimoStory.Value, DateTimeKind.Utc).AddHours(DuracaoStoryHoras);
+                    if (expira > DateTime.UtcNow) veiculo.StoryNoArAte = expira;
                 }
             }
 
