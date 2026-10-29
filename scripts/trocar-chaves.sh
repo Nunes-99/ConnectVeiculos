@@ -34,6 +34,11 @@ if [[ "$r" =~ ^[sS] ]]; then NOVAS[ADMIN_API_TOKEN]=$(openssl rand -hex 32 | tr 
 for k in META_APP_SECRET ML_CLIENT_SECRET GEMINI_API_KEY; do
   read -r -s -p "Novo $k (Enter vazio = manter o atual): " v; echo
   v=$(printf '%s' "$v" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+  # No PowerShell o botao direito ja cola; somado ao Ctrl+V a chave vinha dobrada.
+  h=$(( ${#v} / 2 ))
+  if [ -n "$v" ] && [ $(( ${#v} % 2 )) -eq 0 ] && [ "${v:0:$h}" = "${v:$h}" ]; then
+    v=${v:0:$h}; echo "  (a chave veio colada 2 vezes; usando uma so)"
+  fi
   if [ -n "$v" ]; then NOVAS[$k]=$v; fi
 done
 
