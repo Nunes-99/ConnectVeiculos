@@ -22,6 +22,8 @@ namespace ConnectVeiculos.API.Controllers
         // ==========================================
 
         [HttpGet("mercadolivre/auth-url")]
+        // Conectar troca a conta do ML da loja inteira: vendedor nao pode.
+        [Authorize(Roles = "Administrador,Gerente")]
         public IActionResult GetMercadoLivreAuthUrl([FromServices] IMercadoLivreService mlService)
         {
             try
@@ -306,6 +308,7 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
 
         [HttpPost("mercadolivre/notifications")]
         [AllowAnonymous]
+        [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("api")]
         public IActionResult MercadoLivreNotifications(
             [FromServices] IMercadoLivreWebhookRouter router,
             [FromServices] ILogger<IntegracoesController> logger,
@@ -1048,12 +1051,17 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
         [ResponseCache(Duration = 300)]
         public async Task<IActionResult> ListVerificationCodes([FromServices] ITenantStore store)
         {
+            // Por loja, e nao uma lista unica: o SSR pinta no <head> so os codigos
+            // da loja dona do host. Com a lista unica, todos os codigos saiam em
+            // todas as paginas, inclusive na raiz da plataforma — qualquer loja
+            // cadastrada gratis conseguia se verificar como dona de
+            // connectveiculos.dev.br no Search Console e no Meta.
             var tenants = await store.ListActiveAsync(HttpContext.RequestAborted);
-            var google = tenants.Where(t => !string.IsNullOrWhiteSpace(t.TenGoogleVerifCode))
-                                .Select(t => t.TenGoogleVerifCode!).ToList();
-            var facebook = tenants.Where(t => !string.IsNullOrWhiteSpace(t.TenFacebookVerifCode))
-                                  .Select(t => t.TenFacebookVerifCode!).ToList();
-            return Ok(new { google, facebook });
+            var lojas = tenants
+                .Where(t => !string.IsNullOrWhiteSpace(t.TenGoogleVerifCode) || !string.IsNullOrWhiteSpace(t.TenFacebookVerifCode))
+                .Select(t => new { slug = t.TenSlug, google = t.TenGoogleVerifCode, facebook = t.TenFacebookVerifCode })
+                .ToList();
+            return Ok(new { lojas });
         }
 
         /// <summary>

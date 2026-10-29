@@ -247,6 +247,9 @@ namespace ConnectVeiculos.API.Controllers
         /// </summary>
         [HttpPost("refresh")]
         [AllowAnonymous]
+        // Token desconhecido e' procurado em todas as lojas: sem limite, um loop
+        // de tokens inventados abria todos os bancos a cada chamada.
+        [EnableRateLimiting("api")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> RefreshToken(
@@ -524,6 +527,8 @@ namespace ConnectVeiculos.API.Controllers
         /// <response code="400">Dados de entrada invalidos</response>
         [HttpPost("recuperar-senha")]
         [AllowAnonymous]
+        // Sem limite, dava para encher a caixa de e-mail de alguem com links.
+        [EnableRateLimiting("login")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> SolicitarRecuperacao(

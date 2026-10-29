@@ -58,6 +58,7 @@ namespace ConnectVeiculos.API.Controllers
         private const int LadoMaximoPx = 1920;
 
         [HttpPost("veiculo/{veiculoId}")]
+        [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("api")]
         [RequestSizeLimit(TamanhoMaximoBytes)]
         [RequestFormLimits(MultipartBodyLengthLimit = TamanhoMaximoBytes)]
         public async Task<IActionResult> UploadImagem(
@@ -88,7 +89,7 @@ namespace ConnectVeiculos.API.Controllers
                 // Decodificar com ImageSharp faz as vezes de validacao de conteudo:
                 // extensao .png num executavel/HTML nao passa daqui. Antes a checagem
                 // era so pela extensao do nome do arquivo.
-                using var image = await Image.LoadAsync(FormatosAceitos, arquivo.OpenReadStream());
+                using var image = await CarregarUploadAsync(arquivo);
 
                 // Redimensiona o que vier maior que LadoMaximoPx. Foto de celular
                 // tem 4000px+ e ia inteira pro catalogo publico.
@@ -137,6 +138,7 @@ namespace ConnectVeiculos.API.Controllers
         /// <response code="200">Caminho relativo do arquivo gravado.</response>
         /// <response code="400">Arquivo ausente, grande demais, tipo invalido ou corrompido.</response>
         [HttpPost("loja/{lojaId}")]
+        [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("api")]
         [RequestSizeLimit(TamanhoMaximoBytes)]
         [RequestFormLimits(MultipartBodyLengthLimit = TamanhoMaximoBytes)]
         public async Task<IActionResult> UploadImagemLoja(
@@ -169,7 +171,7 @@ namespace ConnectVeiculos.API.Controllers
 
             try
             {
-                using var image = await Image.LoadAsync(FormatosAceitos, arquivo.OpenReadStream());
+                using var image = await CarregarUploadAsync(arquivo);
 
                 if (image.Width > ladoMaximo || image.Height > ladoMaximo)
                 {
@@ -326,6 +328,21 @@ namespace ConnectVeiculos.API.Controllers
         /// Le "1:1", "4:5", "1.91:1". Devolve null quando ausente ou invalido — nesse
         /// caso vale o comportamento antigo de apenas limitar o lado maior.
         /// </summary>
+        // Foto de celular tem ~12-50 MP. Acima disso e' quase sempre um PNG
+        // pequeno no disco e gigante na memoria, feito para derrubar o servidor.
+        private const long PixelsMaximos = 60_000_000;
+
+        private static async Task<Image> CarregarUploadAsync(IFormFile arquivo)
+        {
+            await using (var cabecalho = arquivo.OpenReadStream())
+            {
+                var info = await Image.IdentifyAsync(FormatosAceitos, cabecalho);
+                if ((long)info.Width * info.Height > PixelsMaximos)
+                    throw new InvalidImageContentException("Imagem grande demais.");
+            }
+            return await Image.LoadAsync(FormatosAceitos, arquivo.OpenReadStream());
+        }
+
         private static readonly int[] TamanhosPermitidos = { 320, 640, 1080, 1200, 1440, 2048 };
         private static readonly HashSet<string> ProporcoesPermitidas = new() { "4:5", "1:1", "1.91:1" };
 

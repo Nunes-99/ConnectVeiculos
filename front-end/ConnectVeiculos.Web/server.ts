@@ -17,35 +17,60 @@ import { SITE_ORIGIN } from './src/app/core/tokens/site-origin.token';
 // requisicao apos esse intervalo.
 // =====================================================================
 const VERIFICATION_CACHE_TTL_MS = 5 * 60 * 1000;
-let verificationCacheTags = '';
+// Tags de verificacao POR LOJA (slug -> tags). Cada pagina recebe so as da
+// loja dona do host: antes todas as lojas saiam em todas as paginas, e qualquer
+// loja cadastrada gratis se verificava como dona de connectveiculos.dev.br.
+let verificationPorSlug = new Map<string, string>();
 let verificationCacheExpiresAt = 0;
 
-async function getVerificationMetaTags(): Promise<string> {
+async function carregarVerificacoes(): Promise<void> {
   const now = Date.now();
-  if (now < verificationCacheExpiresAt) return verificationCacheTags;
+  if (now < verificationCacheExpiresAt) return;
 
   try {
     const apiBase = process.env['API_BASE_URL'] || 'http://localhost:5219';
     const resp = await fetch(`${apiBase}/api/integracoes/verification-codes`);
     if (!resp.ok) {
       verificationCacheExpiresAt = now + 30_000; // backoff curto em caso de erro
-      return verificationCacheTags;
+      return;
     }
-    const data = (await resp.json()) as { google?: string[]; facebook?: string[] };
-    const tags: string[] = [];
-    for (const code of data.google || []) {
-      tags.push(`    <meta name="google-site-verification" content="${escapeAttr(code)}" />`);
+    const data = (await resp.json()) as { lojas?: Array<{ slug: string; google?: string | null; facebook?: string | null }> };
+    const mapa = new Map<string, string>();
+    for (const loja of data.lojas || []) {
+      const tags: string[] = [];
+      if (loja.google) tags.push(`    <meta name="google-site-verification" content="${escapeAttr(loja.google)}" />`);
+      if (loja.facebook) tags.push(`    <meta name="facebook-domain-verification" content="${escapeAttr(loja.facebook)}" />`);
+      if (tags.length) mapa.set(loja.slug.toLowerCase(), tags.join('\n'));
     }
-    for (const code of data.facebook || []) {
-      tags.push(`    <meta name="facebook-domain-verification" content="${escapeAttr(code)}" />`);
-    }
-    verificationCacheTags = tags.join('\n');
+    verificationPorSlug = mapa;
     verificationCacheExpiresAt = now + VERIFICATION_CACHE_TTL_MS;
-    return verificationCacheTags;
   } catch {
     verificationCacheExpiresAt = now + 30_000;
-    return verificationCacheTags;
   }
+}
+
+/**
+ * Tags da loja dona deste host: dominio proprio -> a loja dele; subdominio
+ * da plataforma (loja.connectveiculos.dev.br) -> essa loja; raiz da
+ * plataforma -> so os tenants da propria plataforma (VERIFICACAO_RAIZ_SLUGS).
+ */
+// "empresa-teste" entra porque, em 29/10/2026, nao se sabia qual dos dois
+// codigos verificou a propriedade da plataforma no Search Console; tirar o
+// errado faria o Google desverificar. Quando a Diamante tiver admin proprio,
+// deixar so "default" (com o codigo da plataforma cadastrado nele).
+const VERIFICACAO_RAIZ_SLUGS = (process.env['VERIFICACAO_RAIZ_SLUGS'] || 'default,empresa-teste')
+  .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+
+async function getVerificationMetaTags(req: express.Request): Promise<string> {
+  await Promise.all([carregarVerificacoes(), carregarDominios()]);
+  const host = hostNu(req);
+  const raiz = new URL(PLATAFORMA_URL).hostname.toLowerCase().replace(/^www\./, '');
+  const slugs: string[] = [];
+  const doDominio = slugDoDominio(req);
+  if (doDominio) slugs.push(doDominio);
+  else if (host === raiz) slugs.push(...VERIFICACAO_RAIZ_SLUGS);
+  else if (host.endsWith('.' + raiz)) slugs.push(host.slice(0, -(raiz.length + 1)));
+  return slugs.map((s) => verificationPorSlug.get(s)).filter(Boolean).join('\n');
 }
 
 function escapeAttr(value: string): string {
@@ -287,7 +312,7 @@ export function app(): express.Express {
       if (csrTemplateCache === null) {
         csrTemplateCache = await readFile(join(browserDistFolder, 'index.csr.html'), 'utf-8');
       }
-      const tags = await getVerificationMetaTags();
+      const tags = await getVerificationMetaTags(req);
       res.set('Content-Type', 'text/html; charset=utf-8');
       res.send(injectVerificationTags(csrTemplateCache, tags));
     } catch (err) {
@@ -316,7 +341,7 @@ function ssrHandler(commonEngine: CommonEngine, indexHtml: string, browserDistFo
         ],
       })
       .then(async (html) => {
-        const tags = await getVerificationMetaTags();
+        const tags = await getVerificationMetaTags(req);
         res.send(injectVerificationTags(html, tags));
       })
       .catch((err) => next(err));
