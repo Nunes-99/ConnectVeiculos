@@ -236,9 +236,8 @@ namespace ConnectVeiculos.API.Controllers
             if (string.IsNullOrEmpty(path))
                 return NotFound();
 
-            var filePath = Path.Combine(_environment.ContentRootPath, path.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-
-            if (!System.IO.File.Exists(filePath))
+            var filePath = ResolverArquivoDeUpload(path);
+            if (filePath == null || !System.IO.File.Exists(filePath))
                 return NotFound();
 
             // Sem transformacao: serve direto (path do disco, zero alocacao).
@@ -366,6 +365,33 @@ namespace ConnectVeiculos.API.Controllers
             }
             catch { /* cache e otimizacao: falhar aqui nao pode derrubar o request */ }
             finally { conteudo.Position = 0; }
+        }
+
+        /// <summary>
+        /// Caminho absoluto de uma imagem dentro de uploads/, ou null. A rota e'
+        /// publica (catalogo, Meta e Google baixam por ela) e antes juntava o
+        /// parametro direto ao ContentRoot: "../app/data/cliente.db" baixava o
+        /// banco da loja sem login, e o mesmo valia pra qualquer arquivo do
+        /// container. Agora so sai imagem, e so de dentro de uploads/.
+        /// </summary>
+        private string? ResolverArquivoDeUpload(string path)
+        {
+            var raizUploads = Path.GetFullPath(Path.Combine(_environment.ContentRootPath, "uploads"))
+                .TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            string completo;
+            try
+            {
+                completo = Path.GetFullPath(Path.Combine(_environment.ContentRootPath,
+                    path.TrimStart('/', '\\').Replace('/', Path.DirectorySeparatorChar)));
+            }
+            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+            {
+                return null;
+            }
+
+            if (!completo.StartsWith(raizUploads, StringComparison.Ordinal))
+                return null;
+            return GetContentType(completo) == "application/octet-stream" ? null : completo;
         }
 
         private static string GetContentType(string path)
