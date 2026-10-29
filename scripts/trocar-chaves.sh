@@ -39,6 +39,10 @@ for k in META_APP_SECRET ML_CLIENT_SECRET GEMINI_API_KEY; do
   if [ -n "$v" ] && [ $(( ${#v} % 2 )) -eq 0 ] && [ "${v:0:$h}" = "${v:$h}" ]; then
     v=${v:0:$h}; echo "  (a chave veio colada 2 vezes; usando uma so)"
   fi
+  if [ -n "$v" ] && [ "$k" = META_APP_SECRET ] && ! [[ "$v" =~ ^[0-9a-f]{32}$ ]]; then
+    echo "  META_APP_SECRET tem 32 caracteres de 0-9 e a-f; o que foi colado (${#v} caracteres) nao e' a chave. Nada foi alterado."
+    exit 1
+  fi
   if [ -n "$v" ]; then NOVAS[$k]=$v; fi
 done
 
