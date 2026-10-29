@@ -17,9 +17,10 @@
        [class.tem-mais-abaixo]="temMaisAbaixo()">
   <nav class="sidebar-nav" #navEl (scroll)="atualizarPistasDeRolagem()">
     @for (group of menuGroups; track group.title) {
+      @if (itensVisiveis(group.items).length) {
       <div class="nav-group">
         <span class="nav-group-title">{{ group.title }}</span>
-        @for (item of group.items; track item.route) {
+        @for (item of itensVisiveis(group.items); track item.route) {
           <a [routerLink]="item.route" routerLinkActive="active" class="nav-item">
             <span class="material-icons">{{ item.icon }}</span>
             <span class="nav-label">{{ item.label }}</span>
@@ -29,6 +30,7 @@
           </a>
         }
       </div>
+      }
     }
   </nav>
     @if (temMaisAbaixo()) {

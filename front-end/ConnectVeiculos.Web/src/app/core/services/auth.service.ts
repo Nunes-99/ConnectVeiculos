@@ -230,6 +230,14 @@ export class AuthService extends ApiService {
     return this.hasRole(['Administrador', 'Gerente']);
   }
 
+  /** Quem pode abrir o Painel Geral (faturamento e lucro da loja). */
+  static readonly PAPEIS_PAINEL = ['Administrador', 'Gerente', 'Visualizador'];
+
+  /** Para onde mandar depois do login: o vendedor nao tem acesso ao painel. */
+  paginaInicial(): string {
+    return this.hasRole(AuthService.PAPEIS_PAINEL) ? '/dashboard' : '/veiculos';
+  }
+
   isVendedor(): boolean {
     return this.hasRole(['Administrador', 'Gerente', 'Vendedor']);
   }

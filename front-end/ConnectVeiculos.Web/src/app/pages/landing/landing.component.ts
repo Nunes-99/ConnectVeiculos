@@ -226,6 +226,6 @@ export class LandingComponent implements OnInit {
   }
 
   irParaDashboard(): void {
-    this.router.navigate(['/dashboard']);
+    this.router.navigate([this.authService.paginaInicial()]);
   }
 }

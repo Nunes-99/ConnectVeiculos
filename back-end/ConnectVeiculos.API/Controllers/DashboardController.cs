@@ -11,7 +11,8 @@ namespace ConnectVeiculos.API.Controllers
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    // O painel mostra faturamento e lucro da loja: vendedor nao ve.
+    [Authorize(Roles = "Administrador,Gerente,Visualizador")]
     [Produces("application/json")]
     public class DashboardController : ControllerBase
     {

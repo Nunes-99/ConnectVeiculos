@@ -15,7 +15,12 @@ interface MenuItem {
   label: string;
   icon: string;
   route: string;
+  /** Mesmos papeis do roleGuard da rota; sem isso, todo usuario logado ve. */
+  roles?: string[];
 }
+
+const ADMIN = ['Administrador'];
+const GESTAO = ['Administrador', 'Gerente'];
 
 @Component({
   selector: 'app-sidebar',
@@ -159,12 +164,12 @@ export class SidebarComponent implements AfterViewInit, OnDestroy {
     return nova === conf ? null : { mismatch: true };
   }
 
-  menuGroups = [
+  menuGroups: { title: string; items: MenuItem[] }[] = [
     {
       title: 'Principal',
       items: [
-        { label: 'Painel Geral', icon: 'dashboard', route: '/dashboard' },
-        { label: 'Lojas', icon: 'store', route: '/lojas' },
+        { label: 'Painel Geral', icon: 'dashboard', route: '/dashboard', roles: AuthService.PAPEIS_PAINEL },
+        { label: 'Lojas', icon: 'store', route: '/lojas', roles: GESTAO },
         { label: 'Veículos', icon: 'directions_car', route: '/veiculos' },
         { label: 'Documentos', icon: 'description', route: '/documentos' },
         { label: 'Vendas', icon: 'point_of_sale', route: '/vendas' },
@@ -174,9 +179,9 @@ export class SidebarComponent implements AfterViewInit, OnDestroy {
     {
       title: 'Gestão',
       items: [
-        { label: 'Usuários', icon: 'people', route: '/usuarios' },
+        { label: 'Usuários', icon: 'people', route: '/usuarios', roles: ADMIN },
         { label: 'Categorias', icon: 'category', route: '/categorias' },
-        { label: 'Relatórios', icon: 'assessment', route: '/relatorios' },
+        { label: 'Relatórios', icon: 'assessment', route: '/relatorios', roles: GESTAO },
       ]
     },
     {
@@ -185,20 +190,24 @@ export class SidebarComponent implements AfterViewInit, OnDestroy {
         { label: 'Captação de Clientes', icon: 'people_outline', route: '/leads' },
         // { label: 'Negociações', icon: 'handshake', route: '/negociacoes' }, // TODO: reabilitar quando feature estiver pronta
         { label: 'Test Drives', icon: 'event', route: '/test-drives' },
-        { label: 'Favoritos', icon: 'favorite', route: '/favoritos' },
+        { label: 'Favoritos', icon: 'favorite', route: '/favoritos', roles: GESTAO },
       ]
     },
     {
       title: 'Sistema',
       items: [
-        { label: 'Integrações', icon: 'hub', route: '/integracoes' },
-         { label: 'Meu plano', icon: 'card_membership', route: '/plano' },
-        { label: 'Logs', icon: 'history', route: '/logs' },
+        { label: 'Integrações', icon: 'hub', route: '/integracoes', roles: GESTAO },
+         { label: 'Meu plano', icon: 'card_membership', route: '/plano', roles: GESTAO },
+        { label: 'Logs', icon: 'history', route: '/logs', roles: ADMIN },
       ]
     }
   ];
 
   menuItems: MenuItem[] = this.menuGroups.flatMap(g => g.items);
+
+  itensVisiveis(items: MenuItem[]): MenuItem[] {
+    return items.filter(i => !i.roles || this.authService.hasRole(i.roles));
+  }
 
   constructor() {
     this.lojaService.getAll().subscribe({

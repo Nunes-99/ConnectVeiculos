@@ -90,7 +90,7 @@ export class LoginComponent implements OnInit, OnDestroy {
 
     this.authService.login(email, senha).subscribe({
       next: () => {
-        this.router.navigate(['/dashboard']);
+        this.router.navigate([this.authService.paginaInicial()]);
       },
       error: (error) => {
         this.loading = false;

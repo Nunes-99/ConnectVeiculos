@@ -59,7 +59,9 @@ export const routes: Routes = [
     children: [
       {
         path: 'dashboard',
-        loadComponent: () => import('./pages/dashboard/dashboard.component').then(m => m.DashboardComponent)
+        loadComponent: () => import('./pages/dashboard/dashboard.component').then(m => m.DashboardComponent),
+        canActivate: [roleGuard],
+        data: { roles: ['Administrador', 'Gerente', 'Visualizador'] }
       },
       {
         path: 'usuarios',

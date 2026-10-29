@@ -1,6 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { AuthService } from '../../core/services';
 
 @Component({
   selector: 'app-acesso-negado',
@@ -16,9 +17,9 @@ import { RouterModule } from '@angular/router';
         <p>Você não tem permissão para acessar esta página.</p>
         <p class="text-muted">Entre em contato com o administrador do sistema se acredita que deveria ter acesso.</p>
         <div class="actions">
-          <a routerLink="/dashboard" class="btn btn-primary">
+          <a [routerLink]="inicio" class="btn btn-primary">
             <i class="bi bi-house-door me-2"></i>
-            Voltar ao Dashboard
+            Voltar ao início
           </a>
         </div>
       </div>
@@ -87,4 +88,6 @@ import { RouterModule } from '@angular/router';
     }
   `]
 })
-export class AcessoNegadoComponent {}
+export class AcessoNegadoComponent {
+  inicio = inject(AuthService).paginaInicial();
+}
