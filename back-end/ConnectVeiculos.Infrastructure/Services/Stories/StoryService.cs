@@ -212,7 +212,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
             var sequencia = publicadosPorRede > 1 ? $" ({publicadosPorRede} stories em sequência)" : "";
             resultado.Sucesso = publicados.Count > 0;
             resultado.Mensagem = publicados.Count == 0
-                ? "A Meta recusou o story. Veja os logs da integração para o motivo."
+                ? await MotivoDaRecusaAsync(noInstagram)
                 : falhas.Count == 0
                     ? $"Story publicado no {string.Join(" e no ", publicados)}{sequencia}!"
                     : $"Story publicado no {publicados[0]}{sequencia}, mas falhou no {falhas[0]}.";
@@ -337,6 +337,18 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
 
         private Task GravarAsync(string chave, bool valor)
             => _configRepository.SetValorAsync(chave, valor ? "true" : "false");
+
+        // Nada saiu: se a conexao com a Meta caiu, e' isso que o lojista precisa
+        // saber (ele resolve reconectando); o resto so os logs explicam.
+        private async Task<string> MotivoDaRecusaAsync(bool noInstagram)
+        {
+            var teste = noInstagram
+                ? await _instagramPostService.TestarAsync()
+                : await _facebookPagePostService.TestarAsync();
+            return teste is { Sucesso: false } && !string.IsNullOrWhiteSpace(teste.Mensagem)
+                ? teste.Mensagem
+                : "A Meta recusou o story. Veja os logs da integração para o motivo.";
+        }
 
         private static StoryPublicacaoResultado Falha(string mensagem)
             => new() { Sucesso = false, Mensagem = mensagem };

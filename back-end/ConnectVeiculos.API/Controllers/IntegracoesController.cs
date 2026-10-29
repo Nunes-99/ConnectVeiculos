@@ -1262,7 +1262,14 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
         {
             var r = await ig.PublicarManualAsync(veiculoId);
             if (r == null)
-                return StatusCode(502, new { error = "Falha ao publicar. Verifique: conexão Meta, imagens, URL HTTPS, rate limit 25/24h. Veja logs pro motivo exato." });
+            {
+                // Conexao com a Meta caida e' o motivo que o lojista consegue
+                // resolver sozinho: confere antes de cair no texto generico.
+                var teste = await ig.TestarAsync();
+                return StatusCode(502, new { error = teste.Sucesso
+                    ? "Falha ao publicar. Verifique: imagens, URL HTTPS, rate limit 25/24h. Veja logs pro motivo exato."
+                    : teste.Mensagem });
+            }
 
             var existente = await pubRepo.GetAtivaByVeiculoEPlataformaAsync(veiculoId, "Instagram");
             if (existente != null)
@@ -1283,7 +1290,13 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
         {
             var r = await fp.PublicarManualAsync(veiculoId);
             if (r == null)
-                return StatusCode(502, new { error = "Falha ao publicar na Page. Verifique: conexão Meta, imagens, URL HTTPS. Veja logs pro motivo exato." });
+            {
+                // Ver PublicarVeiculoInstagram.
+                var teste = await fp.TestarAsync();
+                return StatusCode(502, new { error = teste.Sucesso
+                    ? "Falha ao publicar na Page. Verifique: imagens, URL HTTPS. Veja logs pro motivo exato."
+                    : teste.Mensagem });
+            }
 
             var existente = await pubRepo.GetAtivaByVeiculoEPlataformaAsync(veiculoId, "FacebookPage");
             if (existente != null)

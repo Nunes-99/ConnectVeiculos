@@ -163,7 +163,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
                 var resp = await _httpClient.GetAsync(url);
                 var body = await resp.Content.ReadAsStringAsync();
                 if (!resp.IsSuccessStatusCode)
-                    return new TestIntegracaoResult { Sucesso = false, Mensagem = $"Falha ({(int)resp.StatusCode}): {body}" };
+                    return new TestIntegracaoResult { Sucesso = false, Mensagem = MetaErro.Descrever((int)resp.StatusCode, body) };
 
                 using var doc = JsonDocument.Parse(body);
                 var username = doc.RootElement.TryGetProperty("username", out var u) ? u.GetString() : "";
