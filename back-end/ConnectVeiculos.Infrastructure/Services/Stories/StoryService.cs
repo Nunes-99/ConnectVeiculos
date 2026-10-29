@@ -33,6 +33,10 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
         // stories do mesmo carro. Um por dia ja avisa quem segue a loja.
         private const int HorasEntreStoriesDePreco = 20;
 
+        // Arte completa + ate duas fotos. Cada story gasta uma das 25
+        // publicacoes diarias do Instagram, as mesmas dos posts do feed.
+        private const int MaxStoriesPorSequencia = 3;
+
         private static readonly CultureInfo PtBr = new("pt-BR");
 
         private readonly IConfiguracaoSistemaRepository _configRepository;
@@ -141,52 +145,63 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
             if (veiculo == null) return Falha("Veículo não encontrado.");
             if (veiculo.VeiSts == "I") return Falha("Veículo inativo não ganha story.");
 
-            var imagem = (await _imagemRepository.GetByVeiculoIdAsync(veiculoId))
+            var imagens = (await _imagemRepository.GetByVeiculoIdAsync(veiculoId))
                 .Where(i => i.ImgSts)
                 .OrderBy(i => i.ImgOrdem)
-                .FirstOrDefault();
-            if (imagem == null) return Falha("O veículo não tem foto.");
+                .ToList();
+            if (imagens.Count == 0) return Falha("O veículo não tem foto.");
 
             var loja = await _lojaRepository.GetByIdAsync(veiculo.R_LojId);
             var baseUrl = NormalizeBaseUrl(loja?.LojUrlCatalogo) ?? NormalizeBaseUrl(_settings?.PublicSiteUrl);
             if (baseUrl == null || !baseUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                 return Falha("O endereço público do site precisa ser HTTPS para a Meta baixar a imagem.");
 
-            var arquivoFoto = CaminhoNoDisco(imagem.ImgCaminho);
+            var arquivoFoto = CaminhoNoDisco(imagens[0].ImgCaminho);
             if (!File.Exists(arquivoFoto)) return Falha("O arquivo da foto principal não existe no servidor.");
 
             // Manual de carro que ja saiu mostra o que aconteceu com ele, nao preco.
             if (evento == EventoStory.Manual && veiculo.VeiSts == "V") evento = EventoStory.Vendido;
 
-            byte[] jpeg;
-            using (var foto = await Image.LoadAsync(arquivoFoto))
-                jpeg = StoryArte.Gerar(foto, MontarDados(veiculo, loja, evento, precoAnterior));
+            var dados = MontarDados(veiculo, loja, evento, precoAnterior);
+            var urls = new List<string>();
 
-            var caminhoRelativo = await GravarArteAsync(jpeg);
-            var imageUrl = $"{baseUrl}/api/imagens/file?path={Uri.EscapeDataString(caminhoRelativo)}";
+            using (var foto = await Image.LoadAsync(arquivoFoto))
+                urls.Add(await GravarArteAsync(StoryArte.Gerar(foto, dados), baseUrl));
+
+            // Carro novo e o botao manual viram um "tour": a arte completa e mais
+            // algumas fotos. Preco e venda sao recados, uma arte so basta.
+            if (evento == EventoStory.Novo || evento == EventoStory.Manual)
+            {
+                var extras = imagens.Skip(1)
+                    .Select(i => CaminhoNoDisco(i.ImgCaminho))
+                    .Where(File.Exists)
+                    .Take(MaxStoriesPorSequencia - 1)
+                    .ToList();
+                var total = extras.Count + 1;
+                for (var i = 0; i < extras.Count; i++)
+                {
+                    using var foto = await Image.LoadAsync(extras[i]);
+                    urls.Add(await GravarArteAsync(StoryArte.GerarFoto(foto, dados, i + 2, total), baseUrl));
+                }
+            }
 
             var resultado = new StoryPublicacaoResultado();
+            var publicadosPorRede = 0;
 
             if (noInstagram)
             {
-                var ig = await _instagramPostService.PublicarStoryAsync(veiculoId, imageUrl);
-                if (ig != null)
-                {
-                    await _publicacaoRepository.CreateAsync(
-                        new VeiculoPublicacao(veiculoId, InstagramPostService.PLATAFORMA_STORY, ig.ExternoId, ig.Url));
-                    resultado.InstagramUrl = ig.Url;
-                }
+                var (url, qtd) = await PublicarSequenciaAsync(veiculoId, urls,
+                    InstagramPostService.PLATAFORMA_STORY, _instagramPostService.PublicarStoryAsync);
+                resultado.InstagramUrl = url;
+                publicadosPorRede = Math.Max(publicadosPorRede, qtd);
             }
 
             if (noFacebook)
             {
-                var fb = await _facebookPagePostService.PublicarStoryAsync(veiculoId, imageUrl);
-                if (fb != null)
-                {
-                    await _publicacaoRepository.CreateAsync(
-                        new VeiculoPublicacao(veiculoId, FacebookPagePostService.PLATAFORMA_STORY, fb.ExternoId, fb.Url));
-                    resultado.FacebookUrl = fb.Url;
-                }
+                var (url, qtd) = await PublicarSequenciaAsync(veiculoId, urls,
+                    FacebookPagePostService.PLATAFORMA_STORY, _facebookPagePostService.PublicarStoryAsync);
+                resultado.FacebookUrl = url;
+                publicadosPorRede = Math.Max(publicadosPorRede, qtd);
             }
 
             var publicados = new List<string>();
@@ -194,13 +209,42 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
             if (noInstagram) (resultado.InstagramUrl != null ? publicados : falhas).Add("Instagram");
             if (noFacebook) (resultado.FacebookUrl != null ? publicados : falhas).Add("Facebook");
 
+            var sequencia = publicadosPorRede > 1 ? $" ({publicadosPorRede} stories em sequência)" : "";
             resultado.Sucesso = publicados.Count > 0;
             resultado.Mensagem = publicados.Count == 0
                 ? "A Meta recusou o story. Veja os logs da integração para o motivo."
                 : falhas.Count == 0
-                    ? $"Story publicado no {string.Join(" e no ", publicados)}!"
-                    : $"Story publicado no {publicados[0]}, mas falhou no {falhas[0]}.";
+                    ? $"Story publicado no {string.Join(" e no ", publicados)}{sequencia}!"
+                    : $"Story publicado no {publicados[0]}{sequencia}, mas falhou no {falhas[0]}.";
             return resultado;
+        }
+
+        /// <summary>
+        /// Publica as artes na ordem numa rede. Se a primeira (a completa) falha,
+        /// nao manda as fotos soltas: sem ela o "2 de 3" nao faz sentido. Devolve
+        /// o link da primeira e quantas sairam.
+        /// </summary>
+        private async Task<(string? Url, int Quantidade)> PublicarSequenciaAsync(
+            int veiculoId, List<string> urls, string plataforma, Func<int, string, Task<PublicacaoResult?>> publicar)
+        {
+            string? primeira = null;
+            var quantidade = 0;
+            foreach (var url in urls)
+            {
+                var r = await publicar(veiculoId, url);
+                if (r == null)
+                {
+                    if (primeira == null) break;
+                    continue;
+                }
+
+                // Cada story vira um registro: o limite diario do Instagram e'
+                // contado pelo historico, e cada um gasta uma publicacao.
+                await _publicacaoRepository.CreateAsync(new VeiculoPublicacao(veiculoId, plataforma, r.ExternoId, r.Url));
+                primeira ??= r.Url;
+                quantidade++;
+            }
+            return (primeira, quantidade);
         }
 
         /// <summary>O texto da arte para cada evento. Public para os testes.</summary>
@@ -259,9 +303,9 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
 
         /// <summary>
         /// Grava a arte onde o /api/imagens/file ja serve arquivos, e aproveita
-        /// para apagar as antigas. Devolve o caminho relativo usado na URL.
+        /// para apagar as antigas. Devolve a URL publica que a Meta vai baixar.
         /// </summary>
-        private async Task<string> GravarArteAsync(byte[] jpeg)
+        private async Task<string> GravarArteAsync(byte[] jpeg, string baseUrl)
         {
             var pasta = Path.Combine(_environment.ContentRootPath, "uploads", "_stories");
             Directory.CreateDirectory(pasta);
@@ -281,7 +325,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
 
             var nome = $"{Guid.NewGuid():N}.jpg";
             await File.WriteAllBytesAsync(Path.Combine(pasta, nome), jpeg);
-            return $"/uploads/_stories/{nome}";
+            return $"{baseUrl}/api/imagens/file?path={Uri.EscapeDataString($"/uploads/_stories/{nome}")}";
         }
 
         private string CaminhoNoDisco(string caminhoRelativo)

@@ -162,6 +162,68 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
                     Escrever(ctx, dados.Contato!, fonteContato, CinzaClaro, centro, y + 14);
             });
 
+            return ParaJpeg(arte);
+        }
+
+        /// <summary>
+        /// Story de continuacao ("tour" do carro): so a foto, grande, com o
+        /// contador e uma faixa curta de modelo e preco. Os dados completos ja
+        /// sairam na primeira arte da sequencia; repetir tudo aqui so tamparia a foto.
+        /// </summary>
+        public static byte[] GerarFoto(Image foto, StoryArteDados dados, int posicao, int total)
+        {
+            var (_, semiBold, extraBold) = Fontes.Value;
+            var fonteContador = extraBold.CreateFont(40);
+            var fonteTitulo = semiBold.CreateFont(54);
+            var fontePreco = extraBold.CreateFont(76);
+
+            var destaque = ParseCor(dados.CorDestaque);
+            var contador = $"{posicao} DE {total}";
+
+            var hContador = Medir(contador, fonteContador).Height + 36;
+            var hTitulo = Medir(dados.Titulo, fonteTitulo).Height;
+            var hPreco = Vazio(dados.Preco) ? 0f : Medir(dados.Preco!, fontePreco).Height + 6;
+            const float gapContador = 40, gapFoto = 44;
+
+            var disponivel = Altura - 2 * MargemSegura;
+            var textos = hContador + gapContador + gapFoto + hTitulo + hPreco;
+            var fotoAltura = (int)Math.Max(FotoAlturaMin, disponivel - textos);
+
+            using var fotoCentral = foto.CloneAs<Rgba32>();
+            fotoCentral.Mutate(x => x.Resize(new ResizeOptions
+            {
+                Mode = ResizeMode.Max,
+                Size = new Size(Largura, fotoAltura)
+            }));
+
+            using var arte = MontarFundo(foto);
+
+            var y = MargemSegura + Math.Max(0, (disponivel - textos - fotoCentral.Height) / 2f);
+            var centro = Largura / 2f;
+
+            arte.Mutate(ctx =>
+            {
+                var w = Medir(contador, fonteContador).Width + 64;
+                DesenharPilula(ctx, destaque, centro - w / 2, y, w, hContador);
+                Escrever(ctx, contador, fonteContador, Branco, centro, y + 18);
+                y += hContador + gapContador;
+
+                // Sem moldura: a foto vai de borda a borda quando e' horizontal.
+                ctx.DrawImage(fotoCentral, new Point((Largura - fotoCentral.Width) / 2, (int)y), 1f);
+                y += fotoCentral.Height + gapFoto;
+
+                Escrever(ctx, dados.Titulo, fonteTitulo, Branco, centro, y);
+                y += hTitulo;
+
+                if (hPreco > 0)
+                    Escrever(ctx, dados.Preco!, fontePreco, Branco, centro, y + 6);
+            });
+
+            return ParaJpeg(arte);
+        }
+
+        private static byte[] ParaJpeg(Image arte)
+        {
             using var ms = new MemoryStream();
             arte.SaveAsJpeg(ms, new JpegEncoder { Quality = 88 });
             return ms.ToArray();

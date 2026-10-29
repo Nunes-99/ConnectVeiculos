@@ -248,6 +248,105 @@ namespace ConnectVeiculos.Tests.Publicacoes
             c.AoChegar.Should().BeFalse();
         }
 
+        [Fact]
+        public async Task ManualComVariasFotosViraSequenciaDeTres()
+        {
+            Ligar(StoryService.KEY_NO_INSTAGRAM);
+            ComFotos(5);
+            var urls = new List<string>();
+            _instagram.Setup(x => x.PublicarStoryAsync(It.IsAny<int>(), It.IsAny<string>()))
+                      .Callback((int _, string u) => urls.Add(u))
+                      .ReturnsAsync(new PublicacaoResult { ExternoId = "ig", Url = "https://ig/s" });
+
+            var r = await Criar().PublicarManualAsync(VeiculoId);
+
+            urls.Should().HaveCount(3).And.OnlyHaveUniqueItems();
+            _historico.Should().HaveCount(3, "cada story gasta uma publicacao do limite diario");
+            r.Mensagem.Should().Be("Story publicado no Instagram (3 stories em sequência)!");
+        }
+
+        [Fact]
+        public async Task CarroNovoTambemViraSequencia()
+        {
+            Ligar(StoryService.KEY_NO_FACEBOOK, StoryService.KEY_AO_CHEGAR);
+            ComFotos(2);
+
+            await Criar().PublicarAutomaticoAsync(VeiculoId, EventoStory.Novo);
+
+            _facebook.Verify(x => x.PublicarStoryAsync(VeiculoId, It.IsAny<string>()), Times.Exactly(2));
+        }
+
+        [Fact]
+        public async Task PrecoEVendaFicamNumaArteSo()
+        {
+            Ligar(StoryService.KEY_NO_INSTAGRAM, StoryService.KEY_AO_BAIXAR_PRECO, StoryService.KEY_AO_VENDER);
+            ComFotos(4);
+            var servico = Criar();
+
+            await servico.PublicarAutomaticoAsync(VeiculoId, EventoStory.PrecoBaixou, 95000m);
+            _historico.Clear();
+            await servico.PublicarAutomaticoAsync(VeiculoId, EventoStory.Vendido);
+
+            _instagram.Verify(x => x.PublicarStoryAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Exactly(2));
+        }
+
+        [Fact]
+        public async Task SeAArteCompletaFalhaAsFotosNaoSaemSoltas()
+        {
+            Ligar(StoryService.KEY_NO_INSTAGRAM);
+            ComFotos(3);
+            _instagram.Setup(x => x.PublicarStoryAsync(It.IsAny<int>(), It.IsAny<string>()))
+                      .ReturnsAsync((PublicacaoResult?)null);
+
+            var r = await Criar().PublicarManualAsync(VeiculoId);
+
+            r.Sucesso.Should().BeFalse();
+            _instagram.Verify(x => x.PublicarStoryAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task FotoExtraSemArquivoEPulada()
+        {
+            Ligar(StoryService.KEY_NO_INSTAGRAM);
+            ComFotos(3);
+            File.Delete(Path.Combine(_raiz, "uploads", "veiculos", VeiculoId.ToString(), "foto2.jpg"));
+
+            await Criar().PublicarManualAsync(VeiculoId);
+
+            _instagram.Verify(x => x.PublicarStoryAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Exactly(2));
+        }
+
+        [Theory]
+        [InlineData(1600, 1200)]
+        [InlineData(900, 1600)]
+        public void ArteDeContinuacaoSaiEm9por16(int largura, int altura)
+        {
+            using var foto = new Image<Rgba32>(largura, altura, Color.Teal);
+            var dados = StoryService.MontarDados(Veiculo("D", 89900m), Loja(null), EventoStory.Manual, null);
+
+            using var arte = Image.Load(StoryArte.GerarFoto(foto, dados, 2, 3));
+
+            arte.Width.Should().Be(1080);
+            arte.Height.Should().Be(1920);
+        }
+
+        /// <summary>A foto principal do construtor mais (quantidade - 1) fotos.</summary>
+        private void ComFotos(int quantidade)
+        {
+            var pasta = Path.Combine(_raiz, "uploads", "veiculos", VeiculoId.ToString());
+            var lista = new List<VeiculoImagem>
+            {
+                new(1, VeiculoId, $"/uploads/veiculos/{VeiculoId}/foto.jpg", 0, true)
+            };
+            for (var i = 2; i <= quantidade; i++)
+            {
+                using (var foto = new Image<Rgba32>(1200, 900, Color.Olive))
+                    foto.SaveAsJpeg(Path.Combine(pasta, $"foto{i}.jpg"));
+                lista.Add(new VeiculoImagem(i, VeiculoId, $"/uploads/veiculos/{VeiculoId}/foto{i}.jpg", i, true));
+            }
+            _imagens.Setup(x => x.GetByVeiculoIdAsync(VeiculoId)).ReturnsAsync(lista);
+        }
+
         private void Ligar(params string[] chaves)
         {
             foreach (var k in chaves) _config[k] = "true";
