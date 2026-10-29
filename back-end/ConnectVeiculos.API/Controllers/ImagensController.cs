@@ -5,7 +5,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats;
+using SixLabors.ImageSharp.Formats.Gif;
 using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.Processing;
 
 namespace ConnectVeiculos.API.Controllers
@@ -16,6 +20,22 @@ namespace ConnectVeiculos.API.Controllers
     public class ImagensController : ControllerBase
     {
         private readonly IWebHostEnvironment _environment;
+
+        // Upload so decodifica os formatos aceitos. O ImageSharp reconhece o
+        // formato pelo conteudo, nao pela extensao: um TIFF renomeado pra .jpg
+        // passaria pelo decodificador de TIFF, que tem falhas conhecidas na 3.1.12
+        // (GHSA-v76p-62qx-wwq2, GHSA-wmxv-xphr-5c9g). SkipMetadata pula o perfil
+        // ICC, cujo parser tambem tem falha (GHSA-gwg2-r3hj-4w44); a foto e'
+        // regravada em JPEG sem metadados de qualquer jeito.
+        private static readonly DecoderOptions FormatosAceitos = new()
+        {
+            SkipMetadata = true,
+            Configuration = new Configuration(
+                new JpegConfigurationModule(),
+                new PngConfigurationModule(),
+                new GifConfigurationModule(),
+                new WebpConfigurationModule())
+        };
 
         public ImagensController(IWebHostEnvironment environment)
         {
@@ -68,7 +88,7 @@ namespace ConnectVeiculos.API.Controllers
                 // Decodificar com ImageSharp faz as vezes de validacao de conteudo:
                 // extensao .png num executavel/HTML nao passa daqui. Antes a checagem
                 // era so pela extensao do nome do arquivo.
-                using var image = await Image.LoadAsync(arquivo.OpenReadStream());
+                using var image = await Image.LoadAsync(FormatosAceitos, arquivo.OpenReadStream());
 
                 // Redimensiona o que vier maior que LadoMaximoPx. Foto de celular
                 // tem 4000px+ e ia inteira pro catalogo publico.
@@ -149,7 +169,7 @@ namespace ConnectVeiculos.API.Controllers
 
             try
             {
-                using var image = await Image.LoadAsync(arquivo.OpenReadStream());
+                using var image = await Image.LoadAsync(FormatosAceitos, arquivo.OpenReadStream());
 
                 if (image.Width > ladoMaximo || image.Height > ladoMaximo)
                 {
