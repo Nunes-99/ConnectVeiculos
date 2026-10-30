@@ -33,6 +33,8 @@ export interface MeuPlano {
   pagamentoNoCartao: boolean;
   /** Plano pago por Pix vale até esta data (cada Pix soma 30 dias). */
   planoPagoAte: string | null;
+  /** Até quando cancelar devolve o dinheiro (7 dias do pagamento). Null se já passou. */
+  reembolsoAte: string | null;
   /** Assinatura mensal no cartão (status do Mercado Pago: authorized, paused, cancelled). */
   assinatura: { status: string; planoId: number | null; atualizadaEm: string | null } | null;
   uso: {

@@ -82,8 +82,7 @@ namespace ConnectVeiculos.API.Controllers
             if (!tenantContext.IsResolved) return BadRequest(new { error = "tenant_nao_resolvido" });
             try
             {
-                await _assinaturas.CancelarAsync(tenantContext.TenantId, ct);
-                return Ok(new { mensagem = "Assinatura cancelada. A loja voltou para o plano gratuito." });
+                return Ok(new { mensagem = await _assinaturas.CancelarAsync(tenantContext.TenantId, ct) });
             }
             catch (AssinaturaException ex)
             {

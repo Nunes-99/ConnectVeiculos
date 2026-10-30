@@ -25,8 +25,12 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         /// <summary>Volta ao Free as lojas cujo periodo pago por Pix acabou.</summary>
         Task<int> EncerrarPeriodosPixVencidosAsync(CancellationToken ct = default);
 
-        /// <summary>Cancela a assinatura ativa no Mercado Pago e volta a loja para o Free.</summary>
-        Task CancelarAsync(int tenantId, CancellationToken ct = default);
+        /// <summary>
+        /// Cancela. Ate 7 dias do pagamento (direito de arrependimento) devolve
+        /// o valor e volta ao Free na hora; depois, o cartao deixa de cobrar e o
+        /// plano segue ate o fim do periodo pago. Devolve a mensagem para a loja.
+        /// </summary>
+        Task<string> CancelarAsync(int tenantId, CancellationToken ct = default);
 
         /// <summary>
         /// Trata um aviso do Mercado Pago. Os dados sao sempre relidos na API

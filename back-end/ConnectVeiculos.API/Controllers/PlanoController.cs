@@ -84,6 +84,8 @@ namespace ConnectVeiculos.API.Controllers
                  },
                  pagamentoNoCartao = assinaturas.Configurado,
                  planoPagoAte = tenant.TenPlanoPagoAte,
+                 // Ate quando cancelar devolve o dinheiro (7 dias, CDC art. 49).
+                 reembolsoAte = Infrastructure.Services.Pagamentos.MercadoPagoAssinaturaService.PrazoReembolso(tenant, DateTime.UtcNow),
                  assinatura = tenant.TenAssinaturaId == null ? null : new
                  {
                      status = tenant.TenAssinaturaStatus,

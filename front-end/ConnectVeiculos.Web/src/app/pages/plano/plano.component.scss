@@ -342,3 +342,12 @@
   }
   small { color: #4b5563; display: inline-flex; align-items: center; gap: 4px; }
 }
+
+.assinar-form .garantia {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #15803d;
+  font-weight: 600;
+  .material-icons { font-size: 14px; }
+}

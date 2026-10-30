@@ -129,6 +129,75 @@ namespace ConnectVeiculos.Tests.Pagamentos
             LerReferenciaPix(ReferenciaExterna(7, 3), out _, out _).Should().BeFalse();
         }
 
+        [Fact]
+        public void Cartao_pode_ser_devolvido_ate_7_dias_da_confirmacao()
+        {
+            var t = new Tenant("loja", "Loja");
+            t.RegistrarAssinatura("a1", StatusAssinatura.Ativa, 3);
+            var inicio = t.TenAssinaturaInicio!.Value;
+
+            PrazoReembolso(t, inicio.AddDays(5)).Should().Be(inicio.AddDays(7));
+            PrazoReembolso(t, inicio.AddDays(8)).Should().BeNull();
+        }
+
+        [Fact]
+        public void Aviso_repetido_da_mesma_assinatura_nao_reinicia_os_7_dias()
+        {
+            var t = new Tenant("loja", "Loja");
+            t.RegistrarAssinatura("a1", StatusAssinatura.Ativa, 3);
+            var inicio = t.TenAssinaturaInicio;
+
+            t.RegistrarAssinatura("a1", StatusAssinatura.Ativa, 3);
+            t.TenAssinaturaInicio.Should().Be(inicio);
+        }
+
+        [Fact]
+        public void Pix_pode_ser_devolvido_ate_7_dias_do_pagamento()
+        {
+            var t = new Tenant("loja", "Loja");
+            var pago = DateTime.UtcNow.AddDays(-3);
+            t.RegistrarPagamentoPix("p1", 3, 30, pago);
+
+            PrazoReembolso(t, DateTime.UtcNow).Should().Be(pago.AddDays(7));
+            PrazoReembolso(t, pago.AddDays(10)).Should().BeNull();
+        }
+
+        [Fact]
+        public void Devolver_o_unico_Pix_volta_ao_gratuito()
+        {
+            var t = new Tenant("loja", "Loja");
+            var agora = DateTime.UtcNow;
+            t.RegistrarPagamentoPix("p1", 3, 30, agora.AddDays(-2));
+
+            t.DesfazerPagamentoPix(30, agora).Should().BeTrue();
+            t.TenPlanoPagoAte.Should().BeNull();
+        }
+
+        [Fact]
+        public void Devolver_a_renovacao_mantem_o_periodo_anterior()
+        {
+            var t = new Tenant("loja", "Loja");
+            var agora = DateTime.UtcNow;
+            t.RegistrarPagamentoPix("p1", 3, 30, agora.AddDays(-20));   // vale ate +10
+            t.RegistrarPagamentoPix("p2", 3, 30, agora.AddDays(-1));    // renovou: ate +40
+
+            t.DesfazerPagamentoPix(30, agora).Should().BeFalse();
+            t.TenPlanoPagoAte.Should().Be(agora.AddDays(-20).AddDays(30));
+        }
+
+        [Fact]
+        public void Cartao_cancelado_depois_dos_7_dias_mantem_o_plano_ate_o_fim_do_periodo()
+        {
+            var t = new Tenant("loja", "Loja");
+            t.RegistrarAssinatura("a1", StatusAssinatura.Ativa, 3);
+            var fim = DateTime.UtcNow.AddDays(12);
+            t.RegistrarAssinatura("a1", StatusAssinatura.Cancelada, 3);
+            t.ManterPlanoAte(fim);
+
+            PeriodoPixVenceu(t, DateTime.UtcNow).Should().BeFalse();
+            PeriodoPixVenceu(t, fim.AddMinutes(1)).Should().BeTrue();
+        }
+
         private static Tenant Loja(string? assinaturaId = null, string? status = null)
         {
             var t = new Tenant("loja", "Loja");

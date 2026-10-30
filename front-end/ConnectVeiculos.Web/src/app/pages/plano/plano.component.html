@@ -41,13 +41,19 @@
         <span class="material-icons">credit_card</span>
         <div>
           <strong>Assinatura ativa</strong>
-          <small>Cobrança mensal no cartão pelo Mercado Pago.</small>
+          <small>Cobrança mensal no cartão pelo Mercado Pago.@if (meu.reembolsoAte) { Cancelando até {{ meu.reembolsoAte | date:'dd/MM':'':'pt-BR' }}, devolvemos 100%.}</small>
         </div>
         @if (!confirmandoCancelamento) {
-          <button class="btn-cancelar" (click)="confirmandoCancelamento = true">Cancelar assinatura</button>
+          <button class="btn-cancelar" (click)="confirmandoCancelamento = true">
+            {{ meu.reembolsoAte ? 'Cancelar e receber reembolso' : 'Cancelar assinatura' }}
+          </button>
         } @else {
           <div class="confirmar-cancelamento">
-            <span>A loja volta para o plano Free na hora. Confirma?</span>
+            @if (meu.reembolsoAte) {
+              <span>Devolvemos o valor pago e a loja volta para o plano Free na hora. Confirma?</span>
+            } @else {
+              <span>Não haverá novas cobranças. O plano continua até o fim do período já pago e depois volta para o Free. Confirma?</span>
+            }
             <button class="btn-cancelar" [disabled]="enviando" (click)="cancelarAssinatura()">Sim, cancelar</button>
             <button class="btn-voltar" (click)="confirmandoCancelamento = false">Não</button>
           </div>
@@ -55,13 +61,24 @@
       </div>
     } @else if (meu.planoPagoAte && diasPagosPorPix !== null) {
       <div class="assinatura-info" [class.aviso]="diasPagosPorPix <= 5">
-        <span class="material-icons">pix</span>
+        <span class="material-icons">event_available</span>
         <div>
-          <strong>Pago por Pix até {{ meu.planoPagoAte | date:'dd/MM/yyyy':'':'pt-BR' }}</strong>
+          <strong>Plano pago até {{ meu.planoPagoAte | date:'dd/MM/yyyy':'':'pt-BR' }}</strong>
           <small>{{ diasPagosPorPix === 0 ? 'Vence hoje' : 'Faltam ' + diasPagosPorPix + (diasPagosPorPix === 1 ? ' dia' : ' dias') }}. Sem renovar, a loja volta para o plano Free. Renovar antes não perde os dias que faltam.</small>
         </div>
         @if (planoAtualPublico; as atual) {
           <button class="btn-renovar" [disabled]="enviando" (click)="gerarPix(atual)">Renovar com Pix</button>
+        }
+        @if (meu.reembolsoAte) {
+          @if (!confirmandoCancelamento) {
+            <button class="btn-cancelar" (click)="confirmandoCancelamento = true">Desistir e receber reembolso</button>
+          } @else {
+            <div class="confirmar-cancelamento">
+              <span>Devolvemos o último Pix (até {{ meu.reembolsoAte | date:'dd/MM':'':'pt-BR' }}). Confirma?</span>
+              <button class="btn-cancelar" [disabled]="enviando" (click)="cancelarAssinatura()">Sim, devolver</button>
+              <button class="btn-voltar" (click)="confirmandoCancelamento = false">Não</button>
+            </div>
+          }
         }
       </div>
     } @else if (meu.assinatura && (meu.assinatura.status === 'paused' || meu.assinatura.status === 'cancelled')) {
@@ -203,6 +220,7 @@
                 </button>
                 <small>Um Pix por mês: o plano vale 30 dias a cada pagamento.</small>
               }
+              <small class="garantia"><span class="material-icons">verified</span> Desistiu em até 7 dias? Devolvemos 100% do valor.</small>
               <button class="btn-voltar" (click)="assinandoPlanoId = null">Voltar</button>
             </div>
           }

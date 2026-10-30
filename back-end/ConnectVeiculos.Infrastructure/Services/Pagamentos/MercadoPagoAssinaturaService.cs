@@ -25,6 +25,9 @@ namespace ConnectVeiculos.Infrastructure.Services.Pagamentos
     {
         private const string Api = "https://api.mercadopago.com";
         public const int DiasPorPix = 30;
+        // Direito de arrependimento em compra pela internet (CDC art. 49).
+        public const int DiasParaReembolso = 7;
+        private static readonly CultureInfo PtBr = new("pt-BR");
 
         private readonly HttpClient _http;
         private readonly MercadoPagoSettings _settings;
@@ -187,25 +190,153 @@ namespace ConnectVeiculos.Infrastructure.Services.Pagamentos
             => t.TenPlanoPagoAte.HasValue && t.TenPlanoPagoAte.Value <= agora
                && t.TenAssinaturaStatus != StatusAssinatura.Ativa;
 
-        public async Task CancelarAsync(int tenantId, CancellationToken ct = default)
+        /// <summary>
+        /// Ate quando a loja pode desistir com devolucao: 7 dias da confirmacao
+        /// do cartao, ou do ultimo Pix (enquanto o periodo dele vale). Null se
+        /// ja passou ou se nao ha pagamento.
+        /// </summary>
+        public static DateTime? PrazoReembolso(Tenant t, DateTime agora)
+        {
+            DateTime? desde = t.TenAssinaturaStatus == StatusAssinatura.Ativa
+                ? t.TenAssinaturaInicio
+                : t.TenPlanoPagoAte > agora ? t.TenPixUltimoPagamentoEm : null;
+            var ate = desde?.AddDays(DiasParaReembolso);
+            return ate > agora ? ate : null;
+        }
+
+        public async Task<string> CancelarAsync(int tenantId, CancellationToken ct = default)
         {
             var tenant = await _tenants.GetByIdAsync(tenantId, ct)
                 ?? throw new AssinaturaException("Loja não encontrada.");
-            if (string.IsNullOrEmpty(tenant.TenAssinaturaId) || tenant.TenAssinaturaStatus != StatusAssinatura.Ativa)
-                throw new AssinaturaException("A loja não tem assinatura ativa.");
-
-            if (!await MudarStatusNoMercadoPagoAsync(tenant.TenAssinaturaId, StatusAssinatura.Cancelada, ct))
-                throw new AssinaturaException("Não consegui cancelar no Mercado Pago. Tente de novo em instantes.");
-
+            var agora = DateTime.UtcNow;
+            var prazo = PrazoReembolso(tenant, agora);
             var free = await PlanoGratuitoAsync(ct);
-            var id = tenant.TenAssinaturaId;
-            await _tenants.AtualizarAsync(tenantId, t =>
+
+            if (!string.IsNullOrEmpty(tenant.TenAssinaturaId) && tenant.TenAssinaturaStatus == StatusAssinatura.Ativa)
             {
-                t.RegistrarAssinatura(id, StatusAssinatura.Cancelada, t.TenAssinaturaPlaId);
-                if (free.HasValue) t.AlterarPlano(free.Value);
-            }, ct);
-            _logger.LogInformation("Assinatura {Id} da loja {Tenant} cancelada pelo painel", id, tenantId);
+                var id = tenant.TenAssinaturaId;
+                // Antes de cancelar: depois o Mercado Pago apaga a proxima data.
+                var proximaCobranca = await ProximaCobrancaAsync(id, ct);
+                if (!await MudarStatusNoMercadoPagoAsync(id, StatusAssinatura.Cancelada, ct))
+                    throw new AssinaturaException("Não consegui cancelar no Mercado Pago. Tente de novo em instantes.");
+
+                if (prazo.HasValue)
+                {
+                    var pagamento = await PrimeiroPagamentoDaAssinaturaAsync(id, tenant.TenId, tenant.TenAssinaturaPlaId, ct);
+                    var devolvido = pagamento != null && await ReembolsarAsync(pagamento.Value.Id, ct);
+                    await _tenants.AtualizarAsync(tenantId, t =>
+                    {
+                        t.RegistrarAssinatura(id, StatusAssinatura.Cancelada, t.TenAssinaturaPlaId);
+                        t.EncerrarPeriodoPix();
+                        if (free.HasValue) t.AlterarPlano(free.Value);
+                    }, ct);
+                    _logger.LogInformation("Assinatura {Id} da loja {Tenant} cancelada no prazo de arrependimento; devolvido={Devolvido}", id, tenantId, devolvido);
+                    return devolvido
+                        ? $"Assinatura cancelada e {pagamento!.Value.Valor.ToString("C", PtBr)} devolvidos ao cartão (pode levar alguns dias para aparecer na fatura). A loja voltou para o plano Free."
+                        : "Assinatura cancelada e a loja voltou para o plano Free. A devolução automática não foi possível: fale com o suporte que devolvemos o valor.";
+                }
+
+                var manter = proximaCobranca > agora;
+                await _tenants.AtualizarAsync(tenantId, t =>
+                {
+                    t.RegistrarAssinatura(id, StatusAssinatura.Cancelada, t.TenAssinaturaPlaId);
+                    if (manter) t.ManterPlanoAte(proximaCobranca!.Value);
+                    else if (free.HasValue) t.AlterarPlano(free.Value);
+                }, ct);
+                _logger.LogInformation("Assinatura {Id} da loja {Tenant} cancelada; plano mantido ate {Ate:u}", id, tenantId, proximaCobranca);
+                return manter
+                    ? $"Assinatura cancelada: não haverá novas cobranças. O plano continua até {proximaCobranca!.Value.AddHours(-3):dd/MM/yyyy} (fim do período já pago) e depois a loja volta para o Free."
+                    : "Assinatura cancelada. A loja voltou para o plano Free.";
+            }
+
+            if (prazo.HasValue && !string.IsNullOrEmpty(tenant.TenPixUltimoPagamentoId))
+            {
+                var pagamentoId = tenant.TenPixUltimoPagamentoId;
+                if (!await ReembolsarAsync(pagamentoId, ct))
+                    throw new AssinaturaException("Não consegui devolver o Pix agora. Tente de novo em instantes ou fale com o suporte.");
+
+                var voltouAoFree = false;
+                await _tenants.AtualizarAsync(tenantId, t =>
+                {
+                    voltouAoFree = t.DesfazerPagamentoPix(DiasPorPix, agora);
+                    if (voltouAoFree && free.HasValue) t.AlterarPlano(free.Value);
+                }, ct);
+                _logger.LogInformation("Pix {Id} da loja {Tenant} devolvido no prazo de arrependimento", pagamentoId, tenantId);
+                return voltouAoFree
+                    ? "Pix devolvido (o valor volta para a conta de quem pagou). A loja voltou para o plano Free."
+                    : "Pix devolvido (o valor volta para a conta de quem pagou). O período pago anterior continua valendo.";
+            }
+
+            throw new AssinaturaException(tenant.TenPlanoPagoAte > agora
+                ? "O Pix não renova sozinho: é só não pagar o próximo. O prazo de 7 dias para devolução já passou."
+                : "A loja não tem assinatura para cancelar.");
         }
+
+        private async Task<DateTime?> ProximaCobrancaAsync(string assinaturaId, CancellationToken ct)
+        {
+            using var req = Requisicao(HttpMethod.Get, $"/preapproval/{Uri.EscapeDataString(assinaturaId)}");
+            using var resp = await _http.SendAsync(req, ct);
+            if (!resp.IsSuccessStatusCode) return null;
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync(ct));
+            return Data(doc.RootElement, "next_payment_date");
+        }
+
+        /// <summary>
+        /// A cobranca que o cartao fez ao assinar (a que se devolve no
+        /// arrependimento). Procura pelas cobrancas da assinatura e, se a busca
+        /// delas falhar, pelos pagamentos com a referencia da loja.
+        /// </summary>
+        private async Task<(string Id, decimal Valor)?> PrimeiroPagamentoDaAssinaturaAsync(
+            string assinaturaId, int tenantId, int? planoId, CancellationToken ct)
+        {
+            using (var req = Requisicao(HttpMethod.Get, $"/authorized_payments/search?preapproval_id={Uri.EscapeDataString(assinaturaId)}"))
+            using (var resp = await _http.SendAsync(req, ct))
+            {
+                if (resp.IsSuccessStatusCode)
+                {
+                    using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync(ct));
+                    if (doc.RootElement.TryGetProperty("results", out var lista) && lista.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var c in lista.EnumerateArray())
+                        {
+                            if (!c.TryGetProperty("payment", out var p) || Texto(p, "status") != "approved") continue;
+                            var id = Texto(p, "id");
+                            decimal valor = c.TryGetProperty("transaction_amount", out var v) && v.ValueKind == JsonValueKind.Number ? v.GetDecimal() : 0;
+                            if (id != null) return (id, valor);
+                        }
+                    }
+                }
+            }
+
+            if (planoId == null) return null;
+            var referencia = Uri.EscapeDataString(ReferenciaExterna(tenantId, planoId.Value));
+            using var req2 = Requisicao(HttpMethod.Get, $"/v1/payments/search?external_reference={referencia}&status=approved&sort=date_created&criteria=asc&limit=1");
+            using var resp2 = await _http.SendAsync(req2, ct);
+            if (!resp2.IsSuccessStatusCode) return null;
+            using var doc2 = JsonDocument.Parse(await resp2.Content.ReadAsStringAsync(ct));
+            if (!doc2.RootElement.TryGetProperty("results", out var r) || r.GetArrayLength() == 0) return null;
+            var primeiro = r[0];
+            var pid = Texto(primeiro, "id");
+            decimal val = primeiro.TryGetProperty("transaction_amount", out var tv) && tv.ValueKind == JsonValueKind.Number ? tv.GetDecimal() : 0;
+            return pid == null ? null : (pid, val);
+        }
+
+        private async Task<bool> ReembolsarAsync(string pagamentoId, CancellationToken ct)
+        {
+            using var req = Requisicao(HttpMethod.Post, $"/v1/payments/{Uri.EscapeDataString(pagamentoId)}/refunds");
+            // Mesmo pagamento, mesma chave: clique duplo nao devolve duas vezes.
+            req.Headers.Add("X-Idempotency-Key", $"reembolso-{pagamentoId}");
+            req.Content = JsonContent.Create(new { });
+            using var resp = await _http.SendAsync(req, ct);
+            if (resp.IsSuccessStatusCode) return true;
+            _logger.LogError("Mercado Pago recusou devolver o pagamento {Id}: HTTP {Status} {Body}",
+                pagamentoId, (int)resp.StatusCode, await resp.Content.ReadAsStringAsync(ct));
+            return false;
+        }
+
+        private static DateTime? Data(JsonElement e, string prop)
+            => Texto(e, prop) is { } s && DateTimeOffset.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)
+                ? d.UtcDateTime : null;
 
         public async Task ProcessarAvisoAsync(string tipo, string id, CancellationToken ct = default)
         {
@@ -278,13 +409,19 @@ namespace ConnectVeiculos.Infrastructure.Services.Pagamentos
                     break;
 
                 case Decisao.VoltarAoGratuito:
+                    // Cancelada pelo cliente no app do Mercado Pago: o mes ja pago
+                    // continua valendo. Pausada (cartao recusado): volta na hora.
+                    var fimPago = status == StatusAssinatura.Cancelada ? Data(raiz, "next_payment_date") : null;
+                    var manter = fimPago > DateTime.UtcNow;
                     var free = await PlanoGratuitoAsync(ct);
                     await _tenants.AtualizarAsync(tenantId, t =>
                     {
                         t.RegistrarAssinatura(assinaturaId, status, t.TenAssinaturaPlaId);
-                        if (free.HasValue) t.AlterarPlano(free.Value);
+                        if (manter) t.ManterPlanoAte(fimPago!.Value);
+                        else if (free.HasValue) t.AlterarPlano(free.Value);
                     }, ct);
-                    _logger.LogInformation("Assinatura {Id} da loja {Tenant} ficou {Status}: plano voltou ao gratuito", assinaturaId, tenantId, status);
+                    _logger.LogInformation("Assinatura {Id} da loja {Tenant} ficou {Status}: plano {Destino}", assinaturaId, tenantId, status,
+                        manter ? $"mantido ate {fimPago:u}" : "voltou ao gratuito");
                     break;
 
                 case Decisao.ValorAbaixoDoPlano:

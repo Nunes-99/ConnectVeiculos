@@ -172,6 +172,9 @@ namespace ConnectVeiculos.Infrastructure.Tenancy
             // Plano pago por Pix (30 dias por pagamento).
             EnsureColumn(conn, "Tenants", "TenPlanoPagoAte", "TEXT NULL");
             EnsureColumn(conn, "Tenants", "TenPixUltimoPagamentoId", "TEXT NULL");
+            // Direito de arrependimento: 7 dias desde o pagamento.
+            EnsureColumn(conn, "Tenants", "TenPixUltimoPagamentoEm", "TEXT NULL");
+            EnsureColumn(conn, "Tenants", "TenAssinaturaInicio", "TEXT NULL");
 
              // Seed dos planos default. UPSERT manual (insere se o nome ainda nao
              // existe). Permite atualizar limites ajustando a config aqui — basta

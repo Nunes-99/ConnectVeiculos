@@ -135,7 +135,8 @@ export class LandingComponent implements OnInit {
          '1 loja, até 3 usuários',
          '200 leads por mês',
          'Todas as integrações e recursos',
-         'Cartão ou Pix, cancele quando quiser'
+         'Cartão ou Pix, cancele quando quiser',
+         '7 dias para desistir com reembolso total'
        ],
        cta: 'Assinar Basic'
      },
@@ -149,7 +150,8 @@ export class LandingComponent implements OnInit {
          'Até 3 lojas, até 10 usuários',
          '2.000 leads por mês',
          'Todas as integrações e recursos',
-         'Cartão ou Pix, cancele quando quiser'
+         'Cartão ou Pix, cancele quando quiser',
+         '7 dias para desistir com reembolso total'
        ],
        cta: 'Assinar Pro'
      },
@@ -162,7 +164,8 @@ export class LandingComponent implements OnInit {
          'Veículos, lojas e usuários ilimitados',
          'Leads ilimitados',
          'Todas as integrações e recursos',
-         'Cartão ou Pix, cancele quando quiser'
+         'Cartão ou Pix, cancele quando quiser',
+         '7 dias para desistir com reembolso total'
        ],
        cta: 'Assinar Enterprise'
      }
@@ -187,7 +190,7 @@ export class LandingComponent implements OnInit {
     },
     {
       pergunta: 'Como pago e como cancelo?',
-      resposta: 'Pelo próprio painel, em "Meu plano", com pagamento processado pelo Mercado Pago. No cartão de crédito, a mensalidade é cobrada automaticamente todo mês. No Pix, cada pagamento libera o plano por 30 dias. Você cancela quando quiser, sem multa: a loja volta para o plano Free e nada é apagado.'
+      resposta: 'Pelo próprio painel, em "Meu plano", com pagamento processado pelo Mercado Pago. No cartão de crédito, a mensalidade é cobrada automaticamente todo mês; no Pix, cada pagamento libera o plano por 30 dias. Desistiu em até 7 dias do pagamento? Devolvemos 100%. Depois disso você cancela quando quiser, sem multa: o plano segue até o fim do período pago, a loja volta para o Free e nada é apagado.'
     },
     {
       pergunta: 'Meus dados ficam seguros?',

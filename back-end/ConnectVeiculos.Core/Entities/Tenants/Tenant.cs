@@ -69,12 +69,19 @@ namespace ConnectVeiculos.Core.Entities.Tenants
         public DateTime? TenAssinaturaAtualizadaEm { get; private set; }
 
         /// <summary>
+        /// Quando a assinatura atual do cartao foi confirmada: conta os 7 dias
+        /// do direito de arrependimento (CDC art. 49).
+        /// </summary>
+        public DateTime? TenAssinaturaInicio { get; private set; }
+
+        /// <summary>
         /// Plano pago por Pix (sem debito automatico): vale ate esta data (UTC).
         /// Cada Pix aprovado soma 30 dias; vencido, o job volta a loja ao Free.
         /// O id do ultimo pagamento evita somar duas vezes o mesmo aviso.
         /// </summary>
         public DateTime? TenPlanoPagoAte { get; private set; }
         public string? TenPixUltimoPagamentoId { get; private set; }
+        public DateTime? TenPixUltimoPagamentoEm { get; private set; }
 
         public Tenant() { }
 
@@ -115,14 +122,37 @@ namespace ConnectVeiculos.Core.Entities.Tenants
             var aproveita = TenPlaId == planoId && TenPlanoPagoAte.HasValue && TenPlanoPagoAte.Value > agora;
             TenPlanoPagoAte = (aproveita ? TenPlanoPagoAte!.Value : agora).AddDays(dias);
             TenPixUltimoPagamentoId = pagamentoId;
+            TenPixUltimoPagamentoEm = agora;
             TenPlaId = planoId;
             return true;
         }
 
         public void EncerrarPeriodoPix() => TenPlanoPagoAte = null;
 
+        /// <summary>
+        /// Pix devolvido: tira os dias que ele tinha dado. Devolve true se nao
+        /// sobrou periodo pago (a loja deve voltar ao Free).
+        /// </summary>
+        public bool DesfazerPagamentoPix(int dias, DateTime agora)
+        {
+            TenPixUltimoPagamentoEm = null;
+            if (TenPlanoPagoAte.HasValue) TenPlanoPagoAte = TenPlanoPagoAte.Value.AddDays(-dias);
+            if (TenPlanoPagoAte.HasValue && TenPlanoPagoAte.Value > agora) return false;
+            TenPlanoPagoAte = null;
+            return true;
+        }
+
+        /// <summary>
+        /// Cartao cancelado depois dos 7 dias: o plano segue ate o fim do mes
+        /// ja cobrado e o job das horas volta a loja ao Free nessa data.
+        /// </summary>
+        public void ManterPlanoAte(DateTime fim) => TenPlanoPagoAte = fim;
+
         public void RegistrarAssinatura(string assinaturaId, string status, int? planoId)
         {
+            if (status == Interfaces.Services.StatusAssinatura.Ativa
+                && (TenAssinaturaId != assinaturaId || TenAssinaturaInicio == null))
+                TenAssinaturaInicio = DateTime.UtcNow;
             TenAssinaturaId = assinaturaId;
             TenAssinaturaStatus = status;
             TenAssinaturaPlaId = planoId;
