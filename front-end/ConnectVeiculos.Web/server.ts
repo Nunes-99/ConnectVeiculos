@@ -55,12 +55,19 @@ async function carregarVerificacoes(): Promise<void> {
  * da plataforma (loja.connectveiculos.dev.br) -> essa loja; raiz da
  * plataforma -> so os tenants da propria plataforma (VERIFICACAO_RAIZ_SLUGS).
  */
-// "empresa-teste" entra porque, em 29/10/2026, nao se sabia qual dos dois
-// codigos verificou a propriedade da plataforma no Search Console; tirar o
-// errado faria o Google desverificar. Quando a Diamante tiver admin proprio,
-// deixar so "default" (com o codigo da plataforma cadastrado nele).
+// "empresa-teste" continua: a meta do Facebook dela pode ser a que verifica
+// o dominio da plataforma na Meta.
 const VERIFICACAO_RAIZ_SLUGS = (process.env['VERIFICACAO_RAIZ_SLUGS'] || 'default,empresa-teste')
   .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+
+// Codigos Google fixos da raiz da plataforma. Em 29/10/2026 nao se sabia qual
+// dos dois codigos (o da loja "default" ou o antigo da Diamante) verificou
+// connectveiculos.dev.br no Search Console. Em 30/10 a Diamante trocou o dela
+// pelo do proprio dominio (diamanteveiculossalto.com.br); o antigo fica aqui
+// para a plataforma nao perder a verificacao. Codigo de verificacao e' publico
+// (sai no HTML), nao e' segredo.
+const VERIFICACAO_RAIZ_GOOGLE_FIXOS = (process.env['VERIFICACAO_RAIZ_GOOGLE'] || 'LlCIrMvkdbBYifIkgCBRtShWRyez1Kke9xDlx9IHkQI')
+  .split(',').map((s) => s.trim()).filter(Boolean);
 
 async function getVerificationMetaTags(req: express.Request): Promise<string> {
   await Promise.all([carregarVerificacoes(), carregarDominios()]);
@@ -71,7 +78,15 @@ async function getVerificationMetaTags(req: express.Request): Promise<string> {
   if (doDominio) slugs.push(doDominio);
   else if (host === raiz) slugs.push(...VERIFICACAO_RAIZ_SLUGS);
   else if (host.endsWith('.' + raiz)) slugs.push(host.slice(0, -(raiz.length + 1)));
-  return slugs.map((s) => verificationPorSlug.get(s)).filter(Boolean).join('\n');
+  const tags = slugs.map((s) => verificationPorSlug.get(s)).filter(Boolean) as string[];
+  if (host === raiz) {
+    for (const codigo of VERIFICACAO_RAIZ_GOOGLE_FIXOS) {
+      if (!tags.some((t) => t.includes(`"${codigo}"`))) {
+        tags.push(`    <meta name="google-site-verification" content="${escapeAttr(codigo)}" />`);
+      }
+    }
+  }
+  return tags.join('\n');
 }
 
 function escapeAttr(value: string): string {
