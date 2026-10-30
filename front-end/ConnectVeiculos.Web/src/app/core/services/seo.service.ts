@@ -159,10 +159,13 @@ export class SeoService {
       'description': description,
       'applicationCategory': 'BusinessApplication',
       'operatingSystem': 'Web',
+      // Free ate o Enterprise (mensal). Manter igual aos planos do backend.
       'offers': {
-        '@type': 'Offer',
+        '@type': 'AggregateOffer',
         'priceCurrency': 'BRL',
-        'price': '0'
+        'lowPrice': '0',
+        'highPrice': '199.99',
+        'offerCount': 4
       }
     };
     this.setJsonLd(jsonLd);

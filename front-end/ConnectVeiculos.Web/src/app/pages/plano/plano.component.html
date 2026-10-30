@@ -193,9 +193,9 @@
               <input id="email-pag-{{ p.id }}" type="email" [(ngModel)]="emailPagamento" autocomplete="email" />
               <button class="btn-upgrade" [disabled]="enviando || !emailPagamento" (click)="assinar(p)">
                 <span class="material-icons">{{ enviando ? 'autorenew' : 'credit_card' }}</span>
-                Cobrança automática
+                Cartão de crédito (automático)
               </button>
-              <small>Todo mês, {{ p.preco | currency:'BRL':'symbol':'1.2-2':'pt-BR' }} no cartão (ou Pix Automático, se o Mercado Pago oferecer). Você cadastra na página segura do Mercado Pago e cancela aqui quando quiser.</small>
+              <small>Todo mês, {{ p.preco | currency:'BRL':'symbol':'1.2-2':'pt-BR' }} no cartão de crédito. Você cadastra o cartão na página segura do Mercado Pago e cancela aqui quando quiser.</small>
               @if (!assinaturaAtiva) {
                 <button class="btn-pix" [disabled]="enviando || !emailPagamento" (click)="gerarPix(p)">
                   <span class="material-icons">pix</span>

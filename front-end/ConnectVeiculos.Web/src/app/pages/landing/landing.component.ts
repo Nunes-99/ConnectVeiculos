@@ -191,6 +191,10 @@ export class LandingComponent implements OnInit {
       resposta: 'Sim. Ao se cadastrar você ganha 30 dias de trial com TODOS os recursos liberados, independente do plano que escolher. Depois do trial, o plano Free continua gratuito (até 5 veículos, 1 loja, 1 usuário). Sem cartão de crédito.'
     },
     {
+      pergunta: 'Como pago e como cancelo?',
+      resposta: 'Pelo próprio painel, em "Meu plano", com pagamento processado pelo Mercado Pago. No cartão de crédito, a mensalidade é cobrada automaticamente todo mês. No Pix, cada pagamento libera o plano por 30 dias. Você cancela quando quiser, sem multa: a loja volta para o plano Free e nada é apagado.'
+    },
+    {
       pergunta: 'Meus dados ficam seguros?',
       resposta: 'Sim. Cada revenda tem seu banco de dados isolado (arquitetura multi-tenant), comunicação criptografada (HTTPS), senhas protegidas com hash forte e backup automático diário. Em conformidade com a LGPD.'
     },
