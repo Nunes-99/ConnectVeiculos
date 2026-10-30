@@ -40,6 +40,7 @@ namespace ConnectVeiculos.API.Controllers
              [FromServices] ITenantStore tenantStore,
              [FromServices] ITenantContext tenantContext,
              [FromServices] ConnectVeiculosDbContext tenantDb,
+             [FromServices] Core.Interfaces.Services.IAssinaturaService assinaturas,
              CancellationToken ct)
          {
              if (!tenantContext.IsResolved)
@@ -80,6 +81,13 @@ namespace ConnectVeiculos.API.Controllers
                      maxLojas = plano.PlaMaxLojas,
                      maxUsuarios = plano.PlaMaxUsuarios,
                      maxLeadsMes = plano.PlaMaxLeadsMes
+                 },
+                 pagamentoNoCartao = assinaturas.Configurado,
+                 assinatura = tenant.TenAssinaturaId == null ? null : new
+                 {
+                     status = tenant.TenAssinaturaStatus,
+                     planoId = tenant.TenAssinaturaPlaId,
+                     atualizadaEm = tenant.TenAssinaturaAtualizadaEm
                  },
                  uso = new
                  {

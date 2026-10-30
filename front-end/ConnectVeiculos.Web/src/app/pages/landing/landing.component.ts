@@ -128,7 +128,7 @@ export class LandingComponent implements OnInit {
      },
      {
        nome: 'Basic',
-       preco: 'R$ 99',
+       preco: 'R$ 49,99',
        periodo: '/mês',
        destaque: false,
        recursos: [
@@ -143,7 +143,7 @@ export class LandingComponent implements OnInit {
      },
      {
        nome: 'Pro',
-       preco: 'R$ 299',
+       preco: 'R$ 99,99',
        periodo: '/mês',
        destaque: true,
        recursos: [
@@ -159,8 +159,8 @@ export class LandingComponent implements OnInit {
      },
      {
        nome: 'Enterprise',
-       preco: 'Sob consulta',
-       periodo: '',
+       preco: 'R$ 199,99',
+       periodo: '/mês',
        destaque: false,
        recursos: [
          'Veículos, lojas e usuários ilimitados',
@@ -169,7 +169,7 @@ export class LandingComponent implements OnInit {
          'Importação CSV em massa',
          'Suporte por e-mail prioritário'
        ],
-       cta: 'Falar com vendas'
+       cta: 'Assinar Enterprise'
      }
    ];
 

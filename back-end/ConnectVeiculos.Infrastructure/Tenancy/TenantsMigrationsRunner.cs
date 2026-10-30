@@ -164,14 +164,27 @@ namespace ConnectVeiculos.Infrastructure.Tenancy
                 domCmd.ExecuteNonQuery();
             }
 
+            // Assinatura mensal no Mercado Pago.
+            EnsureColumn(conn, "Tenants", "TenAssinaturaId", "TEXT NULL");
+            EnsureColumn(conn, "Tenants", "TenAssinaturaStatus", "TEXT NULL");
+            EnsureColumn(conn, "Tenants", "TenAssinaturaPlaId", "INTEGER NULL");
+            EnsureColumn(conn, "Tenants", "TenAssinaturaAtualizadaEm", "TEXT NULL");
+
              // Seed dos planos default. UPSERT manual (insere se o nome ainda nao
              // existe). Permite atualizar limites ajustando a config aqui — basta
              // mudar nome ou apagar e recriar; tenants existentes mantem o
              // TenPlaId que ja tinham.
              SeedPlanoSeNaoExistir(conn, "Free",       0,    5,   1,  1,   20, 1);
-             SeedPlanoSeNaoExistir(conn, "Basic",     99,   50,   1,  3,  200, 2);
-             SeedPlanoSeNaoExistir(conn, "Pro",      299,  500,   3, 10, 2000, 3);
-             SeedPlanoSeNaoExistir(conn, "Enterprise", 0, null, null, null, null, 4);
+             SeedPlanoSeNaoExistir(conn, "Basic",  49.99m,   50,   1,  3,  200, 2);
+             SeedPlanoSeNaoExistir(conn, "Pro",    99.99m,  500,   3, 10, 2000, 3);
+             SeedPlanoSeNaoExistir(conn, "Enterprise", 199.99m, null, null, null, null, 4);
+
+             // Precos de 30/10/2026 (cobranca mensal no cartao). So troca se o
+             // plano ainda estiver com o preco antigo: um ajuste feito depois no
+             // banco nao e' desfeito a cada reinicio.
+             AtualizarPrecoSeAinda(conn, "Basic", 99m, 49.99m);
+             AtualizarPrecoSeAinda(conn, "Pro", 299m, 99.99m);
+             AtualizarPrecoSeAinda(conn, "Enterprise", 0m, 199.99m);
 
              // Tenants sem plano atribuido -> Free, com trial 30 dias a partir do
              // momento que essa migration roda (idempotente: so atribui se TenPlaId IS NULL).
@@ -199,6 +212,17 @@ namespace ConnectVeiculos.Infrastructure.Tenancy
              AddParam(ins, "$ordem", ordem);
              AddParam(ins, "$dt", DateTime.UtcNow.ToString("o"));
              ins.ExecuteNonQuery();
+         }
+
+         private static void AtualizarPrecoSeAinda(System.Data.Common.DbConnection conn, string nome, decimal antigo, decimal novo)
+         {
+             // PlaPreco e' gravado como texto ("99", "0") pelo seed e decimal pelo EF.
+             using var upd = conn.CreateCommand();
+             upd.CommandText = "UPDATE Planos SET PlaPreco=$novo WHERE PlaNome=$nome AND CAST(PlaPreco AS REAL)=$antigo";
+             AddParam(upd, "$novo", novo.ToString(System.Globalization.CultureInfo.InvariantCulture));
+             AddParam(upd, "$nome", nome);
+             AddParam(upd, "$antigo", (double)antigo);
+             upd.ExecuteNonQuery();
          }
 
          private static void AddParam(System.Data.Common.DbCommand cmd, string name, object value)

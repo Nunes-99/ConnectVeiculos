@@ -218,3 +218,67 @@
     &:hover { background: #283593; }
   }
 }
+
+// Assinatura no cartão (Mercado Pago)
+.assinatura-info {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: rgba(22, 163, 74, .08);
+  color: var(--text-primary, #1f2937);
+
+  > .material-icons { color: #16a34a; }
+  div { display: flex; flex-direction: column; flex: 1; min-width: 180px; }
+  small { color: var(--text-secondary, #555); }
+
+  &.aguardando { background: rgba(37, 99, 235, .08); .material-icons { color: #2563eb; } }
+  &.aviso { background: rgba(217, 119, 6, .1); .material-icons { color: #d97706; } }
+}
+
+.confirmar-cancelamento {
+  display: flex;
+  flex-direction: row !important;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.btn-cancelar {
+  border: 1px solid #dc2626;
+  background: transparent;
+  color: #dc2626;
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  &:disabled { opacity: .6; cursor: default; }
+}
+
+.btn-voltar {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary, #555);
+  cursor: pointer;
+  padding: 6px 8px;
+}
+
+.assinar-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+
+  label { font-size: .8rem; font-weight: 600; }
+  input {
+    padding: 8px 10px;
+    border: 1px solid var(--border-color, #d1d5db);
+    border-radius: 8px;
+    font-size: .9rem;
+    background: var(--bg-input, #fff);
+    color: inherit;
+  }
+  small { font-size: .75rem; color: var(--text-secondary, #555); }
+}

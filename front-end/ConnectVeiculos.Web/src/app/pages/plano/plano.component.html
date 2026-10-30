@@ -13,7 +13,7 @@
         <span class="plano-label">Plano atual</span>
         <h2>{{ meu.plano?.nome || 'Sem plano' }}</h2>
         @if (meu.plano && meu.plano.preco > 0) {
-          <span class="plano-preco">R$ {{ meu.plano.preco }}<span class="por-mes">/mês</span></span>
+          <span class="plano-preco">{{ meu.plano.preco | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}<span class="por-mes">/mês</span></span>
         } @else if (meu.plano) {
           <span class="plano-preco-free">Grátis</span>
         }
@@ -28,6 +28,37 @@
         </div>
       }
     </div>
+
+    @if (aguardandoConfirmacao) {
+      <p class="assinatura-info aguardando">
+        <span class="material-icons spin">autorenew</span>
+        Aguardando a confirmação do Mercado Pago. O plano muda sozinho em instantes.
+      </p>
+    }
+
+    @if (assinaturaAtiva) {
+      <div class="assinatura-info">
+        <span class="material-icons">credit_card</span>
+        <div>
+          <strong>Assinatura ativa</strong>
+          <small>Cobrança mensal no cartão pelo Mercado Pago.</small>
+        </div>
+        @if (!confirmandoCancelamento) {
+          <button class="btn-cancelar" (click)="confirmandoCancelamento = true">Cancelar assinatura</button>
+        } @else {
+          <div class="confirmar-cancelamento">
+            <span>A loja volta para o plano Free na hora. Confirma?</span>
+            <button class="btn-cancelar" [disabled]="enviando" (click)="cancelarAssinatura()">Sim, cancelar</button>
+            <button class="btn-voltar" (click)="confirmandoCancelamento = false">Não</button>
+          </div>
+        }
+      </div>
+    } @else if (meu.assinatura && (meu.assinatura.status === 'paused' || meu.assinatura.status === 'cancelled')) {
+      <p class="assinatura-info aviso">
+        <span class="material-icons">warning</span>
+        A assinatura no cartão foi {{ meu.assinatura.status === 'paused' ? 'pausada (pagamento não aprovado)' : 'cancelada' }}. Escolha um plano abaixo para assinar de novo.
+      </p>
+    }
 
     @if (meu.emTrial) {
       <p class="trial-info">
@@ -105,9 +136,7 @@
         <div class="plano-card" [class.atual]="p.id === meu.plano?.id">
           <h4>{{ p.nome }}</h4>
           @if (p.preco > 0) {
-            <div class="preco">R$ {{ p.preco }}<span>/mês</span></div>
-          } @else if (p.nome === 'Enterprise') {
-            <div class="preco-custom">Sob consulta</div>
+            <div class="preco">{{ p.preco | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}<span>/mês</span></div>
           } @else {
             <div class="preco-free">Grátis</div>
           }
@@ -119,11 +148,29 @@
           </ul>
           @if (p.id === meu.plano?.id) {
             <button class="btn-atual" disabled>Plano atual</button>
-          } @else {
+          } @else if (p.preco <= 0) {
+            <!-- Free: chega-se a ele cancelando a assinatura. -->
+          } @else if (!meu.pagamentoNoCartao) {
             <button class="btn-upgrade" (click)="contatarUpgrade(p.nome)">
               <span class="material-icons">chat</span>
-              {{ p.nome === 'Enterprise' ? 'Falar com vendas' : 'Solicitar upgrade' }}
+              Solicitar upgrade
             </button>
+          } @else if (assinandoPlanoId !== p.id) {
+            <button class="btn-upgrade" (click)="abrirAssinatura(p)">
+              <span class="material-icons">credit_card</span>
+              Assinar
+            </button>
+          } @else {
+            <div class="assinar-form">
+              <label for="email-pag-{{ p.id }}">E-mail da sua conta Mercado Pago</label>
+              <input id="email-pag-{{ p.id }}" type="email" [(ngModel)]="emailPagamento" autocomplete="email" />
+              <small>Você cadastra o cartão na página segura do Mercado Pago. A cobrança de {{ p.preco | currency:'BRL':'symbol':'1.2-2':'pt-BR' }} é mensal e pode ser cancelada aqui a qualquer momento.</small>
+              <button class="btn-upgrade" [disabled]="enviando || !emailPagamento" (click)="assinar(p)">
+                <span class="material-icons">{{ enviando ? 'autorenew' : 'lock' }}</span>
+                Ir para o pagamento
+              </button>
+              <button class="btn-voltar" (click)="assinandoPlanoId = null">Voltar</button>
+            </div>
           }
         </div>
       }

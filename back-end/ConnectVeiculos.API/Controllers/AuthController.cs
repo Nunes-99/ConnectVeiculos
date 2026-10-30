@@ -31,6 +31,9 @@ namespace ConnectVeiculos.API.Controllers
     [Produces("application/json")]
     public class AuthController : ControllerBase
     {
+        // Teste gratis de quem se cadastra sozinho (a landing promete 30 dias).
+        private const int DiasDeTeste = 30;
+
         private static readonly Regex SlugSanitize = new("[^a-z0-9-]+", RegexOptions.Compiled);
 
         public sealed class RegistrarInputModel
@@ -94,6 +97,18 @@ namespace ConnectVeiculos.API.Controllers
             var slug = await ResolverSlugUnicoAsync(master, slugBase, ct);
 
             var tenant = new Tenant(slug, input.NomeEmpresa.Trim());
+            // Plano Free com 30 dias de teste ja no cadastro. Antes isso so
+            // acontecia no proximo reinicio do servidor (TenantsMigrationsRunner),
+            // e a loja ficava sem plano e com o teste comecando atrasado.
+            var planoGratuito = await master.Planos
+                .Where(p => p.PlaNome == Core.Entities.Tenants.Plano.NomeGratuito)
+                .Select(p => (int?)p.PlaId)
+                .FirstOrDefaultAsync(ct);
+            if (planoGratuito.HasValue)
+            {
+                tenant.AlterarPlano(planoGratuito.Value);
+                tenant.IniciarTrial(DiasDeTeste);
+            }
             master.Tenants.Add(tenant);
             await master.SaveChangesAsync(ct);
 

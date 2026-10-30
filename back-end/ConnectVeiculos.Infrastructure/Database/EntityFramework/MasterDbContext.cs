@@ -35,6 +35,10 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
             t.Property(x => x.TenDominioProprio).HasMaxLength(253);
             t.HasIndex(x => x.TenDominioProprio).IsUnique();
             t.Property(x => x.TenDominioAtivoEm);
+            t.Property(x => x.TenAssinaturaId).HasMaxLength(64);
+            t.Property(x => x.TenAssinaturaStatus).HasMaxLength(20);
+            t.Property(x => x.TenAssinaturaPlaId);
+            t.Property(x => x.TenAssinaturaAtualizadaEm);
 
              var p = modelBuilder.Entity<Plano>();
              p.ToTable("Planos");

@@ -88,6 +88,11 @@ services:
       - SearchConsoleSettings__RefreshToken=${SEARCH_CONSOLE_REFRESH_TOKEN:-}
       - SearchConsoleSettings__SiteUrl=${SEARCH_CONSOLE_SITE_URL:-https://connectveiculos.dev.br/}
       - SearchConsoleSettings__PublicSiteUrl=${PUBLIC_SITE_URL:-https://connectveiculos.dev.br}
+      # Assinatura mensal dos planos no cartao (conta Mercado Pago da plataforma).
+      # Sem o token, a tela "Meu plano" volta a oferecer o WhatsApp.
+      - MercadoPagoSettings__AccessToken=${MERCADOPAGO_ACCESS_TOKEN:-}
+      - MercadoPagoSettings__WebhookSecret=${MERCADOPAGO_WEBHOOK_SECRET:-}
+      - MercadoPagoSettings__PublicSiteUrl=${PUBLIC_SITE_URL:-https://connectveiculos.dev.br}
     volumes:
       - ./data:/app/data
       # IMPORTANTE: backend salva em /app/uploads/veiculos/... (ImagensController.cs

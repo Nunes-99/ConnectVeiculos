@@ -6,8 +6,9 @@
 #   bash scripts/trocar-chaves.sh
 #
 # - JWT_SECRET_KEY_CLIENTE e ADMIN_API_TOKEN: gerados aqui (opcional).
-# - META_APP_SECRET, ML_CLIENT_SECRET, GEMINI_API_KEY: cole a nova (gerada no
-#   painel de cada um) ou deixe vazio para manter a atual.
+# - META_APP_SECRET, ML_CLIENT_SECRET, GEMINI_API_KEY, MERCADOPAGO_ACCESS_TOKEN,
+#   MERCADOPAGO_WEBHOOK_SECRET: cole a nova (gerada no painel de cada um) ou
+#   deixe vazio para manter a atual.
 # Faz backup do .env na VM, atualiza o arquivo de credenciais do PC e reinicia
 # so o backend-cliente.
 set -euo pipefail
@@ -31,7 +32,7 @@ if [[ "$r" =~ ^[sS] ]]; then NOVAS[JWT_SECRET_KEY_CLIENTE]=$(openssl rand -base6
 read -r -p "Gerar novo ADMIN_API_TOKEN? [s/N] " r
 if [[ "$r" =~ ^[sS] ]]; then NOVAS[ADMIN_API_TOKEN]=$(openssl rand -hex 32 | tr -d '\r\n'); fi
 
-for k in META_APP_SECRET ML_CLIENT_SECRET GEMINI_API_KEY; do
+for k in META_APP_SECRET ML_CLIENT_SECRET GEMINI_API_KEY MERCADOPAGO_ACCESS_TOKEN MERCADOPAGO_WEBHOOK_SECRET; do
   read -r -s -p "Novo $k (Enter vazio = manter o atual): " v; echo
   v=$(printf '%s' "$v" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
   # No PowerShell o botao direito ja cola; somado ao Ctrl+V a chave vinha dobrada.

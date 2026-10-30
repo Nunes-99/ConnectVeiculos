@@ -58,6 +58,16 @@ namespace ConnectVeiculos.Core.Entities.Tenants
         /// </summary>
         public DateTime? TenDominioAtivoEm { get; private set; }
 
+        /// <summary>
+        /// Assinatura mensal no Mercado Pago (id do /preapproval), o status dela
+        /// (<see cref="Interfaces.Services.StatusAssinatura"/>) e o plano pago.
+        /// O TenPlaId so muda quando o aviso do Mercado Pago confirma.
+        /// </summary>
+        public string? TenAssinaturaId { get; private set; }
+        public string? TenAssinaturaStatus { get; private set; }
+        public int? TenAssinaturaPlaId { get; private set; }
+        public DateTime? TenAssinaturaAtualizadaEm { get; private set; }
+
         public Tenant() { }
 
         public Tenant(string slug, string nome, string? databaseFile = null)
@@ -85,6 +95,14 @@ namespace ConnectVeiculos.Core.Entities.Tenants
          public void IniciarTrial(int dias) => TenTrialAte = DateTime.UtcNow.AddDays(dias);
 
          public bool EmTrial() => TenTrialAte.HasValue && TenTrialAte.Value > DateTime.UtcNow;
+
+        public void RegistrarAssinatura(string assinaturaId, string status, int? planoId)
+        {
+            TenAssinaturaId = assinaturaId;
+            TenAssinaturaStatus = status;
+            TenAssinaturaPlaId = planoId;
+            TenAssinaturaAtualizadaEm = DateTime.UtcNow;
+        }
 
         /// <summary>
         /// Troca (ou limpa, com null) o dominio proprio. Dominio novo volta a ficar

@@ -29,6 +29,10 @@ export interface MeuPlano {
     maxUsuarios: number | null;
     maxLeadsMes: number | null;
   } | null;
+  /** Mercado Pago configurado no servidor: sem isso, upgrade continua pelo WhatsApp. */
+  pagamentoNoCartao: boolean;
+  /** Assinatura mensal no cartão (status do Mercado Pago: authorized, paused, cancelled). */
+  assinatura: { status: string; planoId: number | null; atualizadaEm: string | null } | null;
   uso: {
     veiculos: number;
     lojas: number;
@@ -49,5 +53,14 @@ export class PlanoService extends ApiService {
 
   meuPlano(): Observable<MeuPlano> {
     return this.get<MeuPlano>('plano/meu');
+  }
+
+  /** Cria a assinatura e devolve a página do Mercado Pago onde o cartão é cadastrado. */
+  assinar(planoId: number, email: string): Observable<{ initPoint: string }> {
+    return this.post<{ initPoint: string }>('assinatura/checkout', { planoId, email });
+  }
+
+  cancelarAssinatura(): Observable<{ mensagem: string }> {
+    return this.post<{ mensagem: string }>('assinatura/cancelar', {});
   }
 }

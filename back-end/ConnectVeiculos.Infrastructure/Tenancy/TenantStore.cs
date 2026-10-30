@@ -111,6 +111,20 @@ namespace ConnectVeiculos.Infrastructure.Tenancy
             return tenant;
         }
 
+        public async Task<Tenant> AtualizarAsync(int tenantId, Action<Tenant> mudanca, CancellationToken ct = default)
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var master = scope.ServiceProvider.GetRequiredService<MasterDbContext>();
+
+            var tenant = await master.Tenants.FirstOrDefaultAsync(x => x.TenId == tenantId, ct)
+                ?? throw new InvalidOperationException($"Tenant {tenantId} nao encontrado.");
+
+            mudanca(tenant);
+            await master.SaveChangesAsync(ct);
+            Cachear(tenant);
+            return tenant;
+        }
+
         private void Cachear(Tenant tenant)
         {
             // O dominio pode ter mudado: tira a entrada antiga antes de por a nova.

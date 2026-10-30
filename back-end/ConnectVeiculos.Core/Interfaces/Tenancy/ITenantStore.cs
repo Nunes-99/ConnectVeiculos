@@ -34,6 +34,12 @@ namespace ConnectVeiculos.Core.Interfaces.Tenancy
         /// <summary>Marca o dominio como ativo (HTTPS confirmado no servidor).</summary>
         Task<Tenant> AtivarDominioProprioAsync(int tenantId, CancellationToken ct = default);
 
+        /// <summary>
+        /// Aplica <paramref name="mudanca"/> no tenant do master, salva e atualiza
+        /// o cache (sem isso o plano novo so valeria depois de reiniciar).
+        /// </summary>
+        Task<Tenant> AtualizarAsync(int tenantId, Action<Tenant> mudanca, CancellationToken ct = default);
+
         /// <summary>Invalida o cache em memoria. Chame apos criar/atualizar/suspender tenant.</summary>
         void InvalidateCache();
     }

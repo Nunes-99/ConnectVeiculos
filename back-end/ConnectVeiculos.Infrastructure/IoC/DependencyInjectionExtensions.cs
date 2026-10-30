@@ -344,6 +344,11 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.AddHttpClient<Core.Interfaces.Services.ISearchConsoleService, Services.Seo.SearchConsoleService>()
                 .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(15));
 
+            // Assinatura mensal dos planos (Mercado Pago, conta da plataforma)
+            services.Configure<Services.Pagamentos.MercadoPagoSettings>(configuration.GetSection("MercadoPagoSettings"));
+            services.AddHttpClient<Core.Interfaces.Services.IAssinaturaService, Services.Pagamentos.MercadoPagoAssinaturaService>()
+                .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(20));
+
             // Services - Meta (OAuth unificado FB + IG + Page Posts + Instagram Posts)
             services.Configure<Services.Meta.MetaSettings>(configuration.GetSection("MetaSettings"));
             services.AddHttpClient<Core.Interfaces.Services.IMetaOAuthService, Services.Meta.MetaOAuthService>()
