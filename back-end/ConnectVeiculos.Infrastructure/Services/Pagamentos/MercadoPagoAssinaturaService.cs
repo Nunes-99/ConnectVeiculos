@@ -24,6 +24,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Pagamentos
     public class MercadoPagoAssinaturaService : IAssinaturaService
     {
         private const string Api = "https://api.mercadopago.com";
+        public const int DiasPorPix = 30;
 
         private readonly HttpClient _http;
         private readonly MercadoPagoSettings _settings;
@@ -102,6 +103,90 @@ namespace ConnectVeiculos.Infrastructure.Services.Pagamentos
             return link;
         }
 
+        public async Task<PixGerado> GerarPixAsync(int tenantId, int planoId, string emailPagador, CancellationToken ct = default)
+        {
+            if (!Configurado)
+                throw new AssinaturaException("O pagamento por Pix ainda não está disponível. Fale com o suporte.");
+
+            var tenant = await _tenants.GetByIdAsync(tenantId, ct)
+                ?? throw new AssinaturaException("Loja não encontrada.");
+            var plano = await _planos.GetByIdAsync(planoId, ct);
+            if (plano == null || !plano.PlaAtivo || plano.PlaPreco <= 0)
+                throw new AssinaturaException("Plano inválido.");
+            // Pix por cima do cartao cobraria duas vezes no mesmo mes.
+            if (tenant.TenAssinaturaStatus == StatusAssinatura.Ativa)
+                throw new AssinaturaException("Sua loja já paga pelo cartão. Para usar Pix, cancele a assinatura do cartão primeiro.");
+
+            var email = emailPagador?.Trim() ?? "";
+            if (!MailAddress.TryCreate(email, out _))
+                throw new AssinaturaException("Informe um e-mail válido para o pagamento.");
+
+            var site = (_settings.PublicSiteUrl ?? "").Trim().TrimEnd('/');
+            var expira = DateTime.UtcNow.AddHours(24);
+            var corpo = new
+            {
+                transaction_amount = plano.PlaPreco,
+                description = $"ConnectVeiculos - Plano {plano.PlaNome} ({DiasPorPix} dias)",
+                payment_method_id = "pix",
+                payer = new { email },
+                external_reference = ReferenciaPix(tenantId, planoId),
+                notification_url = $"{site}/api/assinatura/webhook/mercadopago",
+                date_of_expiration = expira.ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'", CultureInfo.InvariantCulture)
+            };
+
+            using var req = Requisicao(HttpMethod.Post, "/v1/payments");
+            req.Headers.Add("X-Idempotency-Key", Guid.NewGuid().ToString());
+            req.Content = JsonContent.Create(corpo);
+            using var resp = await _http.SendAsync(req, ct);
+            var body = await resp.Content.ReadAsStringAsync(ct);
+            if (!resp.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Mercado Pago recusou gerar Pix da loja {Tenant} no plano {Plano}: HTTP {Status} {Body}",
+                    tenantId, plano.PlaNome, (int)resp.StatusCode, body);
+                throw new AssinaturaException("O Mercado Pago não gerou o Pix. Tente de novo em instantes.");
+            }
+
+            using var doc = JsonDocument.Parse(body);
+            var dados = doc.RootElement.TryGetProperty("point_of_interaction", out var poi)
+                        && poi.TryGetProperty("transaction_data", out var td) ? td : default;
+            var codigo = dados.ValueKind == JsonValueKind.Object ? Texto(dados, "qr_code") : null;
+            if (string.IsNullOrEmpty(codigo))
+                throw new AssinaturaException("O Mercado Pago não devolveu o QR Code. Tente de novo.");
+
+            _logger.LogInformation("Pix {Id} gerado para a loja {Tenant}, plano {Plano}", Texto(doc.RootElement, "id"), tenantId, plano.PlaNome);
+            return new PixGerado
+            {
+                Codigo = codigo,
+                QrCodeBase64 = Texto(dados, "qr_code_base64") ?? "",
+                Valor = plano.PlaPreco,
+                ExpiraEm = expira
+            };
+        }
+
+        public async Task<int> EncerrarPeriodosPixVencidosAsync(CancellationToken ct = default)
+        {
+            var free = await PlanoGratuitoAsync(ct);
+            var agora = DateTime.UtcNow;
+            var encerradas = 0;
+            foreach (var t in await _tenants.ListActiveAsync(ct))
+            {
+                if (!PeriodoPixVenceu(t, agora)) continue;
+                await _tenants.AtualizarAsync(t.TenId, x =>
+                {
+                    x.EncerrarPeriodoPix();
+                    if (free.HasValue) x.AlterarPlano(free.Value);
+                }, ct);
+                encerradas++;
+                _logger.LogInformation("Periodo pago por Pix da loja {Tenant} acabou: plano voltou ao gratuito", t.TenSlug);
+            }
+            return encerradas;
+        }
+
+        /// <summary>Pix vencido e sem cartao ativo segurando o plano.</summary>
+        public static bool PeriodoPixVenceu(Tenant t, DateTime agora)
+            => t.TenPlanoPagoAte.HasValue && t.TenPlanoPagoAte.Value <= agora
+               && t.TenAssinaturaStatus != StatusAssinatura.Ativa;
+
         public async Task CancelarAsync(int tenantId, CancellationToken ct = default)
         {
             var tenant = await _tenants.GetByIdAsync(tenantId, ct)
@@ -125,6 +210,12 @@ namespace ConnectVeiculos.Infrastructure.Services.Pagamentos
         public async Task ProcessarAvisoAsync(string tipo, string id, CancellationToken ct = default)
         {
             if (!Configurado || string.IsNullOrWhiteSpace(id)) return;
+
+            if (tipo == "payment")
+            {
+                await ProcessarPagamentoAsync(id, ct);
+                return;
+            }
 
             string? assinaturaId = tipo switch
             {
@@ -201,6 +292,54 @@ namespace ConnectVeiculos.Infrastructure.Services.Pagamentos
                         assinaturaId, tenantId, valor, plano.PlaNome, plano.PlaPreco);
                     break;
             }
+        }
+
+        // Pagamento avulso: so os Pix do plano (referencia "cvpix:"). As cobrancas
+        // mensais do cartao tambem chegam como "payment", mas sem essa referencia.
+        private async Task ProcessarPagamentoAsync(string pagamentoId, CancellationToken ct)
+        {
+            using var req = Requisicao(HttpMethod.Get, $"/v1/payments/{Uri.EscapeDataString(pagamentoId)}");
+            using var resp = await _http.SendAsync(req, ct);
+            var body = await resp.Content.ReadAsStringAsync(ct);
+            if (!resp.IsSuccessStatusCode)
+                throw new InvalidOperationException($"Mercado Pago: GET /v1/payments/{pagamentoId} -> HTTP {(int)resp.StatusCode}");
+
+            using var doc = JsonDocument.Parse(body);
+            var raiz = doc.RootElement;
+            if (!LerReferenciaPix(Texto(raiz, "external_reference"), out var tenantId, out var planoId)) return;
+
+            var status = Texto(raiz, "status");
+            if (status != "approved")
+            {
+                _logger.LogInformation("Pix {Id} da loja {Tenant}: {Status}", pagamentoId, tenantId, status);
+                return;
+            }
+
+            decimal valor = raiz.TryGetProperty("transaction_amount", out var v) && v.ValueKind == JsonValueKind.Number ? v.GetDecimal() : 0;
+            var plano = await _planos.GetByIdAsync(planoId, ct);
+            if (plano == null || await _tenants.GetByIdAsync(tenantId, ct) == null) return;
+            if (valor < plano.PlaPreco)
+            {
+                _logger.LogWarning("Pix {Id} da loja {Tenant}: valor {Valor} abaixo do plano {Plano}; plano NAO alterado", pagamentoId, tenantId, valor, plano.PlaNome);
+                return;
+            }
+
+            var contado = false;
+            var t = await _tenants.AtualizarAsync(tenantId, x => contado = x.RegistrarPagamentoPix(pagamentoId, planoId, DiasPorPix, DateTime.UtcNow), ct);
+            if (contado)
+                _logger.LogInformation("Pix {Id} aprovado: loja {Tenant} no plano {Plano} ate {Ate:u}", pagamentoId, tenantId, plano.PlaNome, t.TenPlanoPagoAte);
+        }
+
+        public static string ReferenciaPix(int tenantId, int planoId)
+            => $"cvpix:{tenantId.ToString(CultureInfo.InvariantCulture)}:{planoId.ToString(CultureInfo.InvariantCulture)}";
+
+        public static bool LerReferenciaPix(string? referencia, out int tenantId, out int planoId)
+        {
+            tenantId = planoId = 0;
+            var partes = referencia?.Split(':');
+            return partes is { Length: 3 } && partes[0] == "cvpix"
+                && int.TryParse(partes[1], NumberStyles.None, CultureInfo.InvariantCulture, out tenantId)
+                && int.TryParse(partes[2], NumberStyles.None, CultureInfo.InvariantCulture, out planoId);
         }
 
         public enum Decisao { Nada, Ativar, VoltarAoGratuito, ValorAbaixoDoPlano }

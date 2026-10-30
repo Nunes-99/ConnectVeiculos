@@ -68,6 +68,14 @@ namespace ConnectVeiculos.Core.Entities.Tenants
         public int? TenAssinaturaPlaId { get; private set; }
         public DateTime? TenAssinaturaAtualizadaEm { get; private set; }
 
+        /// <summary>
+        /// Plano pago por Pix (sem debito automatico): vale ate esta data (UTC).
+        /// Cada Pix aprovado soma 30 dias; vencido, o job volta a loja ao Free.
+        /// O id do ultimo pagamento evita somar duas vezes o mesmo aviso.
+        /// </summary>
+        public DateTime? TenPlanoPagoAte { get; private set; }
+        public string? TenPixUltimoPagamentoId { get; private set; }
+
         public Tenant() { }
 
         public Tenant(string slug, string nome, string? databaseFile = null)
@@ -95,6 +103,23 @@ namespace ConnectVeiculos.Core.Entities.Tenants
          public void IniciarTrial(int dias) => TenTrialAte = DateTime.UtcNow.AddDays(dias);
 
          public bool EmTrial() => TenTrialAte.HasValue && TenTrialAte.Value > DateTime.UtcNow;
+
+        /// <summary>
+        /// Soma <paramref name="dias"/> ao periodo pago. Renovar antes de vencer
+        /// nao perde os dias que faltavam; trocar de plano comeca do zero.
+        /// Devolve false se esse pagamento ja tinha sido contado.
+        /// </summary>
+        public bool RegistrarPagamentoPix(string pagamentoId, int planoId, int dias, DateTime agora)
+        {
+            if (TenPixUltimoPagamentoId == pagamentoId) return false;
+            var aproveita = TenPlaId == planoId && TenPlanoPagoAte.HasValue && TenPlanoPagoAte.Value > agora;
+            TenPlanoPagoAte = (aproveita ? TenPlanoPagoAte!.Value : agora).AddDays(dias);
+            TenPixUltimoPagamentoId = pagamentoId;
+            TenPlaId = planoId;
+            return true;
+        }
+
+        public void EncerrarPeriodoPix() => TenPlanoPagoAte = null;
 
         public void RegistrarAssinatura(string assinaturaId, string status, int? planoId)
         {

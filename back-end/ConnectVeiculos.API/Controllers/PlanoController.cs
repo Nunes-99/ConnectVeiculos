@@ -83,6 +83,7 @@ namespace ConnectVeiculos.API.Controllers
                      maxLeadsMes = plano.PlaMaxLeadsMes
                  },
                  pagamentoNoCartao = assinaturas.Configurado,
+                 planoPagoAte = tenant.TenPlanoPagoAte,
                  assinatura = tenant.TenAssinaturaId == null ? null : new
                  {
                      status = tenant.TenAssinaturaStatus,

@@ -54,6 +54,27 @@ namespace ConnectVeiculos.API.Controllers
             }
         }
 
+        // Pix de 30 dias: devolve o QR Code; o plano muda quando o pagamento
+        // aprovado for avisado pelo Mercado Pago.
+        [HttpPost("pix")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        [EnableRateLimiting("api")]
+        public async Task<IActionResult> Pix(
+            [FromBody] CheckoutInput input,
+            [FromServices] ITenantContext tenantContext,
+            CancellationToken ct)
+        {
+            if (!tenantContext.IsResolved) return BadRequest(new { error = "tenant_nao_resolvido" });
+            try
+            {
+                return Ok(await _assinaturas.GerarPixAsync(tenantContext.TenantId, input.PlanoId, input.Email, ct));
+            }
+            catch (AssinaturaException ex)
+            {
+                return UnprocessableEntity(new { error = ex.Message });
+            }
+        }
+
         [HttpPost("cancelar")]
         [Authorize(Roles = "Administrador,Gerente")]
         public async Task<IActionResult> Cancelar([FromServices] ITenantContext tenantContext, CancellationToken ct)
@@ -98,8 +119,15 @@ namespace ConnectVeiculos.API.Controllers
             if (string.IsNullOrEmpty(tipo) || string.IsNullOrEmpty(id))
                 return Ok(); // aviso que nao nos interessa
 
-            if (!MercadoPagoAssinaturaService.AvisoAutentico(
-                    Request.Headers["x-signature"].FirstOrDefault(),
+            // Aviso sem x-signature (ex.: notification_url de um Pix) ainda e'
+            // tratado: o conteudo e' relido na API com o nosso token e cada
+            // pagamento so conta uma vez, entao o pior que um aviso falso faz e'
+            // uma releitura. Assinatura presente e errada, porem, e' recusada.
+            var assinatura = Request.Headers["x-signature"].FirstOrDefault();
+            if (assinatura == null)
+                _logger.LogInformation("Aviso do Mercado Pago sem x-signature ({Tipo} {Id}): relendo na API", tipo, id);
+            else if (!MercadoPagoAssinaturaService.AvisoAutentico(
+                    assinatura,
                     Request.Headers["x-request-id"].FirstOrDefault(),
                     id,
                     settings.Value.WebhookSecret))

@@ -31,6 +31,8 @@ export interface MeuPlano {
   } | null;
   /** Mercado Pago configurado no servidor: sem isso, upgrade continua pelo WhatsApp. */
   pagamentoNoCartao: boolean;
+  /** Plano pago por Pix vale até esta data (cada Pix soma 30 dias). */
+  planoPagoAte: string | null;
   /** Assinatura mensal no cartão (status do Mercado Pago: authorized, paused, cancelled). */
   assinatura: { status: string; planoId: number | null; atualizadaEm: string | null } | null;
   uso: {
@@ -39,6 +41,13 @@ export interface MeuPlano {
     usuarios: number;
     leadsMes: number;
   };
+}
+
+export interface PixGerado {
+  codigo: string;
+  qrCodeBase64: string;
+  valor: number;
+  expiraEm: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -58,6 +67,11 @@ export class PlanoService extends ApiService {
   /** Cria a assinatura e devolve a página do Mercado Pago onde o cartão é cadastrado. */
   assinar(planoId: number, email: string): Observable<{ initPoint: string }> {
     return this.post<{ initPoint: string }>('assinatura/checkout', { planoId, email });
+  }
+
+  /** Pix de 30 dias: QR Code e copia e cola. O plano muda quando o pagamento for aprovado. */
+  gerarPix(planoId: number, email: string): Observable<PixGerado> {
+    return this.post<PixGerado>('assinatura/pix', { planoId, email });
   }
 
   cancelarAssinatura(): Observable<{ mensagem: string }> {

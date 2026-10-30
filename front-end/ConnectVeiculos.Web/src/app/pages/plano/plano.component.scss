@@ -282,3 +282,48 @@
   }
   small { font-size: .75rem; color: var(--text-secondary, #555); }
 }
+
+.btn-pix, .btn-renovar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid #32bcad;
+  background: transparent;
+  color: #1b8a7e;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: 600;
+  &:disabled { opacity: .6; cursor: default; }
+}
+
+.pix-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px dashed #32bcad;
+  border-radius: 12px;
+  text-align: center;
+
+  h4 { margin: 0; font-size: 1rem; }
+  img { background: #fff; border-radius: 8px; padding: 6px; }
+  label { align-self: flex-start; font-size: .8rem; font-weight: 600; }
+  textarea {
+    width: 100%;
+    font-family: monospace;
+    font-size: .75rem;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color, #d1d5db);
+    background: var(--bg-input, #fff);
+    color: inherit;
+    resize: none;
+    word-break: break-all;
+  }
+  .pix-acoes { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  small { color: var(--text-secondary, #555); display: inline-flex; align-items: center; gap: 4px; }
+}

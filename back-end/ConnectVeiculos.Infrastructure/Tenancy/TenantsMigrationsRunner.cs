@@ -169,6 +169,9 @@ namespace ConnectVeiculos.Infrastructure.Tenancy
             EnsureColumn(conn, "Tenants", "TenAssinaturaStatus", "TEXT NULL");
             EnsureColumn(conn, "Tenants", "TenAssinaturaPlaId", "INTEGER NULL");
             EnsureColumn(conn, "Tenants", "TenAssinaturaAtualizadaEm", "TEXT NULL");
+            // Plano pago por Pix (30 dias por pagamento).
+            EnsureColumn(conn, "Tenants", "TenPlanoPagoAte", "TEXT NULL");
+            EnsureColumn(conn, "Tenants", "TenPixUltimoPagamentoId", "TEXT NULL");
 
              // Seed dos planos default. UPSERT manual (insere se o nome ainda nao
              // existe). Permite atualizar limites ajustando a config aqui — basta

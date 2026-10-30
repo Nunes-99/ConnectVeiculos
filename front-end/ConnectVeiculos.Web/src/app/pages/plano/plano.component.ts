@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService, PlanoService, MeuPlano, PlanoPublico, ToastService } from '../../core/services';
+import { PixGerado } from '../../core/services/plano.service';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -31,6 +32,11 @@ export class PlanoComponent implements OnInit, OnDestroy {
   // Voltou do Mercado Pago: o plano muda quando o aviso deles chegar.
   aguardandoConfirmacao = false;
   private consultas?: ReturnType<typeof setInterval>;
+
+  // Pix gerado (QR Code aberto na tela) e o plano dele.
+  pix: PixGerado | null = null;
+  pixPlano: PlanoPublico | null = null;
+  private pagoAteAntes: string | null = null;
 
   ngOnInit(): void {
     this.emailPagamento = this.auth.getUser()?.usuEmail || '';
@@ -91,6 +97,63 @@ export class PlanoComponent implements OnInit, OnDestroy {
           this.aguardandoConfirmacao = false;
           if (m.assinatura?.status === 'authorized')
             this.toast.success(`Pagamento confirmado! Sua loja está no plano ${m.plano?.nome}.`);
+        }
+      });
+    }, 5000);
+  }
+
+  get diasPagosPorPix(): number | null {
+    if (!this.meu?.planoPagoAte) return null;
+    return Math.max(0, Math.ceil((new Date(this.meu.planoPagoAte).getTime() - Date.now()) / 86_400_000));
+  }
+
+  get planoAtualPublico(): PlanoPublico | undefined {
+    return this.planosDisponiveis.find(p => p.id === this.meu?.plano?.id);
+  }
+
+  gerarPix(p: PlanoPublico): void {
+    if (this.enviando) return;
+    this.enviando = true;
+    this.planoService.gerarPix(p.id, this.emailPagamento).subscribe({
+      next: (pix) => {
+        this.enviando = false;
+        this.pix = pix;
+        this.pixPlano = p;
+        this.assinandoPlanoId = null;
+        this.pagoAteAntes = this.meu?.planoPagoAte ?? null;
+        this.aguardarPix();
+      },
+      error: () => this.enviando = false
+    });
+  }
+
+  copiarPix(): void {
+    if (!this.pix) return;
+    navigator.clipboard.writeText(this.pix.codigo).then(
+      () => this.toast.success('Código Pix copiado. Cole no app do seu banco.'),
+      () => this.toast.error('Não consegui copiar. Selecione o código e copie.'));
+  }
+
+  fecharPix(): void {
+    this.pix = null;
+    this.pixPlano = null;
+    if (this.consultas) clearInterval(this.consultas);
+  }
+
+  // O QR Code vale 24h; consulta a cada 5s por até 15 min com a tela aberta.
+  private aguardarPix(): void {
+    if (this.consultas) clearInterval(this.consultas);
+    let tentativas = 0;
+    this.consultas = setInterval(() => {
+      tentativas++;
+      this.carregar((m) => {
+        if (m.planoPagoAte && m.planoPagoAte !== this.pagoAteAntes) {
+          clearInterval(this.consultas);
+          this.toast.success(`Pix recebido! Sua loja está no plano ${m.plano?.nome}.`);
+          this.pix = null;
+          this.pixPlano = null;
+        } else if (tentativas >= 180) {
+          clearInterval(this.consultas);
         }
       });
     }, 5000);

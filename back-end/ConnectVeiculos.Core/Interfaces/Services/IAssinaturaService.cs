@@ -16,6 +16,15 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         /// </summary>
         Task<string> IniciarAsync(int tenantId, int planoId, string emailPagador, CancellationToken ct = default);
 
+        /// <summary>
+        /// Pix de 30 dias do plano (sem debito automatico): devolve o QR Code.
+        /// O plano muda quando o aviso do pagamento aprovado chegar.
+        /// </summary>
+        Task<PixGerado> GerarPixAsync(int tenantId, int planoId, string emailPagador, CancellationToken ct = default);
+
+        /// <summary>Volta ao Free as lojas cujo periodo pago por Pix acabou.</summary>
+        Task<int> EncerrarPeriodosPixVencidosAsync(CancellationToken ct = default);
+
         /// <summary>Cancela a assinatura ativa no Mercado Pago e volta a loja para o Free.</summary>
         Task CancelarAsync(int tenantId, CancellationToken ct = default);
 
@@ -24,6 +33,16 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         /// deles com o nosso token: o corpo do aviso so diz o que mudou.
         /// </summary>
         Task ProcessarAvisoAsync(string tipo, string id, CancellationToken ct = default);
+    }
+
+    public class PixGerado
+    {
+        /// <summary>Codigo "copia e cola".</summary>
+        public string Codigo { get; set; } = "";
+        /// <summary>PNG do QR Code em base64 (sem o prefixo data:).</summary>
+        public string QrCodeBase64 { get; set; } = "";
+        public decimal Valor { get; set; }
+        public DateTime ExpiraEm { get; set; }
     }
 
     public class AssinaturaException : Exception

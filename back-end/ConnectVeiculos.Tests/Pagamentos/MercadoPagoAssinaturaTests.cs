@@ -61,6 +61,74 @@ namespace ConnectVeiculos.Tests.Pagamentos
             LerReferencia(referencia, out _, out _).Should().BeFalse();
         }
 
+        [Fact]
+        public void Pix_conta_30_dias_e_renovar_antes_soma()
+        {
+            var t = new Tenant("loja", "Loja");
+            var hoje = new DateTime(2026, 11, 1, 12, 0, 0, DateTimeKind.Utc);
+
+            t.RegistrarPagamentoPix("p1", 3, 30, hoje).Should().BeTrue();
+            t.TenPlaId.Should().Be(3);
+            t.TenPlanoPagoAte.Should().Be(hoje.AddDays(30));
+
+            // Renovou 5 dias antes de vencer: nao perde os 5 dias.
+            t.RegistrarPagamentoPix("p2", 3, 30, hoje.AddDays(25)).Should().BeTrue();
+            t.TenPlanoPagoAte.Should().Be(hoje.AddDays(60));
+        }
+
+        [Fact]
+        public void Mesmo_aviso_de_Pix_duas_vezes_conta_uma()
+        {
+            var t = new Tenant("loja", "Loja");
+            var hoje = DateTime.UtcNow;
+            t.RegistrarPagamentoPix("p1", 3, 30, hoje);
+
+            t.RegistrarPagamentoPix("p1", 3, 30, hoje).Should().BeFalse();
+            t.TenPlanoPagoAte.Should().Be(hoje.AddDays(30));
+        }
+
+        [Fact]
+        public void Trocar_de_plano_no_Pix_comeca_o_periodo_do_zero()
+        {
+            var t = new Tenant("loja", "Loja");
+            var hoje = DateTime.UtcNow;
+            t.RegistrarPagamentoPix("p1", 2, 30, hoje);
+
+            t.RegistrarPagamentoPix("p2", 3, 30, hoje.AddDays(10));
+            t.TenPlaId.Should().Be(3);
+            t.TenPlanoPagoAte.Should().Be(hoje.AddDays(40));
+        }
+
+        [Fact]
+        public void Pix_vencido_sem_cartao_volta_ao_gratuito()
+        {
+            var t = new Tenant("loja", "Loja");
+            var hoje = DateTime.UtcNow;
+            t.RegistrarPagamentoPix("p1", 3, 30, hoje.AddDays(-31));
+
+            PeriodoPixVenceu(t, hoje).Should().BeTrue();
+
+            t.RegistrarAssinatura("a1", StatusAssinatura.Ativa, 3);
+            PeriodoPixVenceu(t, hoje).Should().BeFalse("o cartao ativo segura o plano");
+        }
+
+        [Fact]
+        public void Pix_dentro_do_periodo_nao_vence()
+        {
+            var t = new Tenant("loja", "Loja");
+            t.RegistrarPagamentoPix("p1", 3, 30, DateTime.UtcNow);
+            PeriodoPixVenceu(t, DateTime.UtcNow).Should().BeFalse();
+        }
+
+        [Fact]
+        public void Referencia_do_Pix_e_separada_da_assinatura()
+        {
+            LerReferenciaPix(ReferenciaPix(7, 3), out var tenant, out var plano).Should().BeTrue();
+            (tenant, plano).Should().Be((7, 3));
+            LerReferencia(ReferenciaPix(7, 3), out _, out _).Should().BeFalse();
+            LerReferenciaPix(ReferenciaExterna(7, 3), out _, out _).Should().BeFalse();
+        }
+
         private static Tenant Loja(string? assinaturaId = null, string? status = null)
         {
             var t = new Tenant("loja", "Loja");

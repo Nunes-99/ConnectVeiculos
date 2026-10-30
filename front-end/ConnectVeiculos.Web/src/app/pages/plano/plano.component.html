@@ -53,11 +53,38 @@
           </div>
         }
       </div>
+    } @else if (meu.planoPagoAte && diasPagosPorPix !== null) {
+      <div class="assinatura-info" [class.aviso]="diasPagosPorPix <= 5">
+        <span class="material-icons">pix</span>
+        <div>
+          <strong>Pago por Pix até {{ meu.planoPagoAte | date:'dd/MM/yyyy':'':'pt-BR' }}</strong>
+          <small>{{ diasPagosPorPix === 0 ? 'Vence hoje' : 'Faltam ' + diasPagosPorPix + (diasPagosPorPix === 1 ? ' dia' : ' dias') }}. Sem renovar, a loja volta para o plano Free. Renovar antes não perde os dias que faltam.</small>
+        </div>
+        @if (planoAtualPublico; as atual) {
+          <button class="btn-renovar" [disabled]="enviando" (click)="gerarPix(atual)">Renovar com Pix</button>
+        }
+      </div>
     } @else if (meu.assinatura && (meu.assinatura.status === 'paused' || meu.assinatura.status === 'cancelled')) {
       <p class="assinatura-info aviso">
         <span class="material-icons">warning</span>
         A assinatura no cartão foi {{ meu.assinatura.status === 'paused' ? 'pausada (pagamento não aprovado)' : 'cancelada' }}. Escolha um plano abaixo para assinar de novo.
       </p>
+    }
+
+    @if (pix) {
+      <div class="pix-box">
+        <h4>Pague com Pix: {{ pix.valor | currency:'BRL':'symbol':'1.2-2':'pt-BR' }} — plano {{ pixPlano?.nome }} por 30 dias</h4>
+        @if (pix.qrCodeBase64) {
+          <img [src]="'data:image/png;base64,' + pix.qrCodeBase64" alt="QR Code do Pix" width="220" height="220" />
+        }
+        <label for="pix-codigo">Pix copia e cola</label>
+        <textarea id="pix-codigo" readonly rows="3">{{ pix.codigo }}</textarea>
+        <div class="pix-acoes">
+          <button class="btn-upgrade" (click)="copiarPix()"><span class="material-icons">content_copy</span> Copiar código</button>
+          <button class="btn-voltar" (click)="fecharPix()">Fechar</button>
+        </div>
+        <small><span class="material-icons spin">autorenew</span> Aguardando o pagamento. O plano muda sozinho assim que o Pix for aprovado. O código vale até {{ pix.expiraEm | date:'dd/MM HH:mm':'':'pt-BR' }}.</small>
+      </div>
     }
 
     @if (meu.emTrial) {
@@ -164,11 +191,18 @@
             <div class="assinar-form">
               <label for="email-pag-{{ p.id }}">E-mail da sua conta Mercado Pago</label>
               <input id="email-pag-{{ p.id }}" type="email" [(ngModel)]="emailPagamento" autocomplete="email" />
-              <small>Você cadastra o cartão na página segura do Mercado Pago. A cobrança de {{ p.preco | currency:'BRL':'symbol':'1.2-2':'pt-BR' }} é mensal e pode ser cancelada aqui a qualquer momento.</small>
               <button class="btn-upgrade" [disabled]="enviando || !emailPagamento" (click)="assinar(p)">
-                <span class="material-icons">{{ enviando ? 'autorenew' : 'lock' }}</span>
-                Ir para o pagamento
+                <span class="material-icons">{{ enviando ? 'autorenew' : 'credit_card' }}</span>
+                Cobrança automática
               </button>
+              <small>Todo mês, {{ p.preco | currency:'BRL':'symbol':'1.2-2':'pt-BR' }} no cartão (ou Pix Automático, se o Mercado Pago oferecer). Você cadastra na página segura do Mercado Pago e cancela aqui quando quiser.</small>
+              @if (!assinaturaAtiva) {
+                <button class="btn-pix" [disabled]="enviando || !emailPagamento" (click)="gerarPix(p)">
+                  <span class="material-icons">pix</span>
+                  Pagar com Pix (30 dias)
+                </button>
+                <small>Um Pix por mês: o plano vale 30 dias a cada pagamento.</small>
+              }
               <button class="btn-voltar" (click)="assinandoPlanoId = null">Voltar</button>
             </div>
           }

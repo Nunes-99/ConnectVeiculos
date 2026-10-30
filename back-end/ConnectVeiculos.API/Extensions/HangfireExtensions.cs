@@ -31,6 +31,7 @@ namespace ConnectVeiculos.API.Extensions
             services.AddScoped<AlertarDocumentosVencendoJob>();
             services.AddScoped<LembreteTestDriveJob>();
             services.AddScoped<LimparTokensRecuperacaoJob>();
+            services.AddScoped<EncerrarPlanosPixVencidosJob>();
 
             return services;
         }
@@ -81,6 +82,12 @@ namespace ConnectVeiculos.API.Extensions
                 "lembrete-testdrive",
                 job => job.ExecuteAsync(),
                 Cron.Daily(9));
+
+            // Plano pago por Pix que venceu volta ao Free - de hora em hora
+            RecurringJob.AddOrUpdate<EncerrarPlanosPixVencidosJob>(
+                "encerrar-planos-pix-vencidos",
+                job => job.ExecuteAsync(),
+                Cron.Hourly());
 
             // Limpar tokens de recuperacao expirados - Diariamente as 4h
             RecurringJob.AddOrUpdate<LimparTokensRecuperacaoJob>(
