@@ -228,15 +228,16 @@
   margin-top: 16px;
   padding: 12px 16px;
   border-radius: 10px;
-  background: rgba(22, 163, 74, .08);
-  color: var(--text-primary, #1f2937);
+  // Fica dentro do cartao azul do plano atual: fundo claro proprio.
+  background: #ecfdf5;
+  color: #1f2937;
 
   > .material-icons { color: #16a34a; }
   div { display: flex; flex-direction: column; flex: 1; min-width: 180px; }
-  small { color: var(--text-secondary, #555); }
+  small { color: #4b5563; }
 
-  &.aguardando { background: rgba(37, 99, 235, .08); .material-icons { color: #2563eb; } }
-  &.aviso { background: rgba(217, 119, 6, .1); .material-icons { color: #d97706; } }
+  &.aguardando { background: #eff6ff; .material-icons { color: #2563eb; } }
+  &.aviso { background: #fffbeb; .material-icons { color: #d97706; } }
 }
 
 .confirmar-cancelamento {
@@ -308,6 +309,8 @@
   border: 1px dashed #32bcad;
   border-radius: 12px;
   text-align: center;
+  background: #fff;
+  color: #1f2937;
 
   h4 { margin: 0; font-size: 1rem; }
   img { background: #fff; border-radius: 8px; padding: 6px; }
@@ -318,12 +321,24 @@
     font-size: .75rem;
     padding: 8px;
     border-radius: 8px;
-    border: 1px solid var(--border-color, #d1d5db);
-    background: var(--bg-input, #fff);
-    color: inherit;
+    border: 1px solid #d1d5db;
+    background: #f9fafb;
+    color: #1f2937;
     resize: none;
     word-break: break-all;
   }
   .pix-acoes { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-  small { color: var(--text-secondary, #555); display: inline-flex; align-items: center; gap: 4px; }
+  .btn-upgrade {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #1a237e;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 14px;
+    cursor: pointer;
+    .material-icons { font-size: 16px; }
+  }
+  small { color: #4b5563; display: inline-flex; align-items: center; gap: 4px; }
 }
