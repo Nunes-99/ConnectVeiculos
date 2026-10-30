@@ -5,7 +5,8 @@ namespace ConnectVeiculos.Infrastructure.Services.Seo
          // Credencial OAuth da conta Google dona da propriedade no Search Console
          // (a da plataforma, nao a de cada loja: o sitemap e' um so pra todas).
          // O refresh token precisa do escopo
-         // https://www.googleapis.com/auth/webmasters. Qualquer um vazio
+         // https://www.googleapis.com/auth/webmasters (e siteverification, para o
+         // cadastro automatico dos dominios das lojas). Qualquer um vazio
          // desliga o reenvio.
          public string ClientId { get; set; } = string.Empty;
          public string ClientSecret { get; set; } = string.Empty;

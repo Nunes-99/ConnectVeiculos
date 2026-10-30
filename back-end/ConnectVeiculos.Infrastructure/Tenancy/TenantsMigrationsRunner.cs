@@ -158,6 +158,9 @@ namespace ConnectVeiculos.Infrastructure.Tenancy
             // Dominio proprio do catalogo. Unico (SQLite deixa varios NULL).
             EnsureColumn(conn, "Tenants", "TenDominioProprio", "TEXT NULL");
             EnsureColumn(conn, "Tenants", "TenDominioAtivoEm", "TEXT NULL");
+            // Cadastro automatico do dominio no Search Console.
+            EnsureColumn(conn, "Tenants", "TenGoogleVerifAuto", "TEXT NULL");
+            EnsureColumn(conn, "Tenants", "TenSearchConsoleEm", "TEXT NULL");
             using (var domCmd = conn.CreateCommand())
             {
                 domCmd.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS IX_Tenants_TenDominioProprio ON Tenants(TenDominioProprio)";

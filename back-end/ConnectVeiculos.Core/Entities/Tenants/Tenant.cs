@@ -59,6 +59,15 @@ namespace ConnectVeiculos.Core.Entities.Tenants
         public DateTime? TenDominioAtivoEm { get; private set; }
 
         /// <summary>
+        /// Cadastro automatico do dominio no Search Console da plataforma
+        /// (SearchConsoleDominiosJob): o codigo de verificacao que o Google deu
+        /// para esse dominio (o SSR o poe no &lt;head&gt; dele) e quando a
+        /// propriedade foi verificada e o sitemap enviado. Trocar o dominio zera.
+        /// </summary>
+        public string? TenGoogleVerifAuto { get; private set; }
+        public DateTime? TenSearchConsoleEm { get; private set; }
+
+        /// <summary>
         /// Assinatura mensal no Mercado Pago (id do /preapproval), o status dela
         /// (<see cref="Interfaces.Services.StatusAssinatura"/>) e o plano pago.
         /// O TenPlaId so muda quando o aviso do Mercado Pago confirma.
@@ -168,7 +177,13 @@ namespace ConnectVeiculos.Core.Entities.Tenants
             if (dominio == TenDominioProprio) return;
             TenDominioProprio = dominio;
             TenDominioAtivoEm = null;
+            TenGoogleVerifAuto = null;
+            TenSearchConsoleEm = null;
         }
+
+        public void RegistrarCodigoSearchConsole(string codigo) => TenGoogleVerifAuto = codigo;
+
+        public void RegistrarNoSearchConsole() => TenSearchConsoleEm ??= DateTime.UtcNow;
 
         public void AtivarDominioProprio() => TenDominioAtivoEm ??= DateTime.UtcNow;
 

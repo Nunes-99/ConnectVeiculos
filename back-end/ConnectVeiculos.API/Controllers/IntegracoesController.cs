@@ -1076,9 +1076,12 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
             // cadastrada gratis conseguia se verificar como dona de
             // connectveiculos.dev.br no Search Console e no Meta.
             var tenants = await store.ListActiveAsync(HttpContext.RequestAborted);
+            // googleAuto: codigo do cadastro automatico no Search Console da
+            // plataforma (so sai no dominio proprio da loja, nunca na raiz).
             var lojas = tenants
-                .Where(t => !string.IsNullOrWhiteSpace(t.TenGoogleVerifCode) || !string.IsNullOrWhiteSpace(t.TenFacebookVerifCode))
-                .Select(t => new { slug = t.TenSlug, google = t.TenGoogleVerifCode, facebook = t.TenFacebookVerifCode })
+                .Where(t => !string.IsNullOrWhiteSpace(t.TenGoogleVerifCode) || !string.IsNullOrWhiteSpace(t.TenFacebookVerifCode)
+                    || !string.IsNullOrWhiteSpace(t.TenGoogleVerifAuto))
+                .Select(t => new { slug = t.TenSlug, google = t.TenGoogleVerifCode, facebook = t.TenFacebookVerifCode, googleAuto = t.TenGoogleVerifAuto })
                 .ToList();
             return Ok(new { lojas });
         }

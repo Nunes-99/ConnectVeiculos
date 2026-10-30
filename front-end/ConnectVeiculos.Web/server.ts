@@ -22,6 +22,9 @@ const VERIFICATION_CACHE_TTL_MS = 5 * 60 * 1000;
 // loja dona do host: antes todas as lojas saiam em todas as paginas, e qualquer
 // loja cadastrada gratis se verificava como dona de connectveiculos.dev.br.
 let verificationPorSlug = new Map<string, string>();
+// Codigo do cadastro automatico no Search Console (SearchConsoleDominiosJob):
+// so sai no dominio proprio da loja, nunca na raiz da plataforma.
+let verificationAutoPorSlug = new Map<string, string>();
 let verificationCacheExpiresAt = 0;
 
 async function carregarVerificacoes(): Promise<void> {
@@ -35,15 +38,20 @@ async function carregarVerificacoes(): Promise<void> {
       verificationCacheExpiresAt = now + 30_000; // backoff curto em caso de erro
       return;
     }
-    const data = (await resp.json()) as { lojas?: Array<{ slug: string; google?: string | null; facebook?: string | null }> };
+    const data = (await resp.json()) as {
+      lojas?: Array<{ slug: string; google?: string | null; facebook?: string | null; googleAuto?: string | null }>;
+    };
     const mapa = new Map<string, string>();
+    const auto = new Map<string, string>();
     for (const loja of data.lojas || []) {
+      if (loja.googleAuto && loja.googleAuto !== loja.google) auto.set(loja.slug.toLowerCase(), loja.googleAuto);
       const tags: string[] = [];
       if (loja.google) tags.push(`    <meta name="google-site-verification" content="${escapeAttr(loja.google)}" />`);
       if (loja.facebook) tags.push(`    <meta name="facebook-domain-verification" content="${escapeAttr(loja.facebook)}" />`);
       if (tags.length) mapa.set(loja.slug.toLowerCase(), tags.join('\n'));
     }
     verificationPorSlug = mapa;
+    verificationAutoPorSlug = auto;
     verificationCacheExpiresAt = now + VERIFICATION_CACHE_TTL_MS;
   } catch {
     verificationCacheExpiresAt = now + 30_000;
@@ -79,6 +87,8 @@ async function getVerificationMetaTags(req: express.Request): Promise<string> {
   else if (host === raiz) slugs.push(...VERIFICACAO_RAIZ_SLUGS);
   else if (host.endsWith('.' + raiz)) slugs.push(host.slice(0, -(raiz.length + 1)));
   const tags = slugs.map((s) => verificationPorSlug.get(s)).filter(Boolean) as string[];
+  const auto = doDominio ? verificationAutoPorSlug.get(doDominio) : undefined;
+  if (auto) tags.push(`    <meta name="google-site-verification" content="${escapeAttr(auto)}" />`);
   if (host === raiz) {
     for (const codigo of VERIFICACAO_RAIZ_GOOGLE_FIXOS) {
       if (!tags.some((t) => t.includes(`"${codigo}"`))) {

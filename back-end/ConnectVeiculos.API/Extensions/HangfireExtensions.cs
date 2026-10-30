@@ -32,6 +32,7 @@ namespace ConnectVeiculos.API.Extensions
             services.AddScoped<LembreteTestDriveJob>();
             services.AddScoped<LimparTokensRecuperacaoJob>();
             services.AddScoped<EncerrarPlanosPixVencidosJob>();
+            services.AddScoped<SearchConsoleDominiosJob>();
 
             return services;
         }
@@ -88,6 +89,12 @@ namespace ConnectVeiculos.API.Extensions
                 "encerrar-planos-pix-vencidos",
                 job => job.ExecuteAsync(),
                 Cron.Hourly());
+
+            // Dominio proprio ativo entra sozinho no Search Console - a cada 10 min
+            RecurringJob.AddOrUpdate<SearchConsoleDominiosJob>(
+                "search-console-dominios",
+                job => job.ExecuteAsync(),
+                "*/10 * * * *");
 
             // Limpar tokens de recuperacao expirados - Diariamente as 4h
             RecurringJob.AddOrUpdate<LimparTokensRecuperacaoJob>(

@@ -20,10 +20,17 @@ leads e WhatsApp aparecem igual nos dois endereços. O painel administrativo con
    de DNS pode levar algumas horas).
 3. **Esperar.** Em até 10 minutos o servidor gera o certificado HTTPS, configura o nginx
    e o card passa para **Ativo**.
-4. **Google:** cadastrar `dominio.com.br` no Search Console, escolher "Tag HTML", colar o
-   código em Integrações → Marketing no Google (a tag sai em qualquer endereço da loja)
-   e enviar `https://dominio.com.br/sitemap.xml`. Criar ou atualizar o **Perfil da Empresa no Google**
-   com o site.
+4. **Google (automático):** em até ~20 minutos depois de ficar Ativo, o
+   `SearchConsoleDominiosJob` (a cada 10 min) pede o código de verificação ao Google, o SSR
+   passa a servi-lo no domínio, e na passada seguinte a propriedade
+   `https://dominio.com.br/` é verificada e adicionada ao Search Console **da conta da
+   plataforma**, com o sitemap enviado (`Tenants.TenGoogleVerifAuto` / `TenSearchConsoleEm`).
+   Precisa do refresh token `SEARCH_CONSOLE_REFRESH_TOKEN` com os escopos `webmasters` **e**
+   `siteverification`, e da "Site Verification API" ativada no projeto do Google Cloud.
+   Se a loja quiser ver os relatórios, adicione o e-mail dela como usuário da propriedade.
+   O manual (Tag HTML em Integrações → Marketing no Google) continua valendo para quem
+   quiser a propriedade na própria conta. Criar ou atualizar o **Perfil da Empresa no
+   Google** com o site.
 
 **Depois de cadastrado, o domínio não se edita.** Para usar outro: **Remover domínio**
 (pede confirmação; o catálogo volta para `connectveiculos.dev.br`) e cadastrar o novo,
