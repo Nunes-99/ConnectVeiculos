@@ -12,6 +12,7 @@ import { TelefonePipe } from '../../shared/pipes';
 import { CatalogoVeiculo, CatalogoFiltro, CatalogoLoja, CatalogoLojaResumo } from '../../core/models';
 import * as signalR from '@microsoft/signalr';
 import { environment } from '../../../environments/environment';
+import { caminhoCatalogo, caminhoVeiculo, injectLojaDoDominio } from '../../core/tokens/loja-do-dominio.token';
 
 // Imagem placeholder SVG "sem foto" em base64
 const NO_IMAGE_PLACEHOLDER = `data:image/svg+xml;base64,${btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400">
@@ -78,6 +79,8 @@ export class CatalogoComponent implements OnInit, OnDestroy {
    */
   listagemAdiada = false;
   private injector = inject(Injector);
+  /** Slug da loja dona do dominio proprio aberto, ou null na plataforma. */
+  private lojaDoDominio = injectLojaDoDominio();
 
   // Subscriptions
   private routeSubscription: Subscription | null = null;
@@ -192,8 +195,10 @@ export class CatalogoComponent implements OnInit, OnDestroy {
       this.loadFavoritos();
     }
     this.routeSubscription = this.route.params.subscribe(params => {
-      if (params['tenantSlug']) {
-        this.tenantSlug = params['tenantSlug'];
+      // No dominio proprio da loja a rota nao tem slug ("/" e "/veiculo/:id").
+      const slug = params['tenantSlug'] || this.lojaDoDominio;
+      if (slug) {
+        this.tenantSlug = slug;
         this.lojaId = null;
         this.lojaSlug = null;
       } else if (params['lojaId']) {
@@ -432,9 +437,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
    * cai na query string, que resolve o tenant do mesmo jeito.
    */
   private urlDoVeiculo(veiculoId: number): string {
-    return this.tenantSlug
-      ? `/catalogo/${this.tenantSlug}/veiculo/${veiculoId}`
-      : `/catalogo?veiculo=${veiculoId}`;
+    return caminhoVeiculo(this.tenantSlug, this.lojaDoDominio, veiculoId);
   }
 
   private liberarListagemNoNavegador(): void {
@@ -496,7 +499,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
         } else {
           // Chegou direto na URL do veiculo: troca pela do catalogo sem criar
           // entrada nova, pra nao prender a pessoa num ciclo de Voltar.
-          this.location.replaceState(this.tenantSlug ? `/catalogo/${this.tenantSlug}` : '/catalogo');
+          this.location.replaceState(caminhoCatalogo(this.tenantSlug, this.lojaDoDominio));
         }
       }
       this.empurrouHistorico = false;
@@ -1032,6 +1035,17 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     this.showShare = true;
   }
 
+  /** A URL e' do endereco da plataforma (connectveiculos.dev.br), nao de um dominio de loja? */
+  private ehUrlDaPlataforma(url: string): boolean {
+    const plataforma = (environment as any).siteBaseUrl || environment.apiUrl.replace(/\/api\/?$/, '');
+    try {
+      const host = (u: string) => new URL(u).hostname.replace(/^www\./, '');
+      return host(url) === host(plataforma);
+    } catch {
+      return true;
+    }
+  }
+
   fecharShare(): void {
     this.showShare = false;
     this.shareVeiculo = null;
@@ -1044,10 +1058,11 @@ export class CatalogoComponent implements OnInit, OnDestroy {
      // do TENANT, nao da loja. Antes usavamos lojSlug aqui e o backend retornava
      // 404 'Tenant lo... nao encontrado' quando o link era aberto.
      // Ordem: tenantSlug do route param atual > tenantSlug do admin logado > vazio.
-     const tenantSlug = this.tenantSlug || this.authService.getTenantSlug() || '';
-     return tenantSlug
-       ? `${base}/catalogo/${tenantSlug}/veiculo/${veiculo.veiId}`
-       : `${base}/catalogo?veiculo=${veiculo.veiId}`;
+     const tenantSlug = this.tenantSlug || this.authService.getTenantSlug() || null;
+     // lojUrlCatalogo de loja com dominio ativo e' o proprio dominio, onde o
+     // veiculo fica em /veiculo/:id; o slug so entra no endereco da plataforma.
+     const doDominio = urlCatalogo && tenantSlug && !this.ehUrlDaPlataforma(base) ? tenantSlug : this.lojaDoDominio;
+     return `${base}${caminhoVeiculo(tenantSlug, doDominio, veiculo.veiId)}`;
   }
 
   copiarLink(): void {

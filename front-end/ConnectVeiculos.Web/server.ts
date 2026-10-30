@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import bootstrap from './src/main.server';
 import { SITE_ORIGIN } from './src/app/core/tokens/site-origin.token';
+import { LOJA_DO_DOMINIO, META_LOJA_DO_DOMINIO } from './src/app/core/tokens/loja-do-dominio.token';
 
 // =====================================================================
 // Verification meta tags (Google Search Console + Facebook Domain Verif)
@@ -142,6 +143,22 @@ function slugDoDominio(req: express.Request): string | undefined {
   return dominiosPorHost.get(hostNu(req));
 }
 
+/**
+ * No dominio da propria loja o catalogo fica na raiz: /catalogo/{slug}/veiculo/5?x=1
+ * vira /veiculo/5?x=1 e /catalogo/{slug} vira /. A query e' mantida.
+ */
+function caminhoNoDominio(originalUrl: string, slugNaUrl: string): string {
+  const resto = originalUrl.slice(`/catalogo/${slugNaUrl}`.length);
+  if (resto === '' || resto === '/') return '/';
+  if (resto.startsWith('?')) return `/${resto}`;
+  return resto;
+}
+
+/** Meta que diz ao Angular no navegador de qual loja e' este dominio. */
+function metaLojaDoDominio(slug: string | undefined): string {
+  return slug ? `    <meta name="${META_LOJA_DO_DOMINIO}" content="${escapeAttr(slug)}" />` : '';
+}
+
 export function app(): express.Express {
   const server = express();
   const serverDistFolder = dirname(fileURLToPath(import.meta.url));
@@ -192,10 +209,13 @@ export function app(): express.Express {
       if ((req.hostname || '').toLowerCase().startsWith('www.')) {
         return res.redirect(301, `https://${hostNu(req)}${req.originalUrl}`);
       }
-      if (req.path === '/') return res.redirect(302, `/catalogo/${slugHost}`);
-      // Catalogo de OUTRA loja no dominio desta: manda para a plataforma.
-      if (catalogo && catalogo[1].toLowerCase() !== slugHost) {
-        return res.redirect(302, `${PLATAFORMA_URL}${req.originalUrl}`);
+      if (catalogo) {
+        // Catalogo de OUTRA loja no dominio desta: manda para a plataforma.
+        if (catalogo[1].toLowerCase() !== slugHost) {
+          return res.redirect(302, `${PLATAFORMA_URL}${req.originalUrl}`);
+        }
+        // Endereco antigo (/catalogo/{slug}/...) da propria loja: vai para a raiz.
+        return res.redirect(301, caminhoNoDominio(req.originalUrl, catalogo[1]));
       }
       return next();
     }
@@ -205,7 +225,8 @@ export function app(): express.Express {
     // catalogo na mesma origem e o X-Frame-Options barraria outro dominio.
     if (catalogo && req.get('sec-fetch-dest') !== 'iframe') {
       const dominio = dominiosPorSlug.get(catalogo[1].toLowerCase());
-      if (dominio) return res.redirect(302, `https://${dominio}${req.originalUrl}`);
+      // 302: se a loja tirar o dominio, o navegador nao pode ter guardado o desvio.
+      if (dominio) return res.redirect(302, `https://${dominio}${caminhoNoDominio(req.originalUrl, catalogo[1])}`);
     }
     next();
   });
@@ -260,7 +281,7 @@ export function app(): express.Express {
       xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
 
       // Landing institucional - alvo principal pra busca por "connectveiculos".
-      // No dominio da loja, "/" so redireciona para o catalogo: nao entra.
+      // No dominio da loja, "/" e' o catalogo dela: entra logo abaixo.
       if (!slugHost) {
         xml += `  <url><loc>${siteBase}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>\n`;
       }
@@ -283,12 +304,14 @@ export function app(): express.Express {
           // veiculo muda, entao vale a data mais recente entre eles.
           const datas = veiculos.map((v: any) => dataSitemap(v.veiDtAtualizacao)).filter(Boolean).sort();
           const lastmodLoja = datas.length ? `<lastmod>${datas[datas.length - 1]}</lastmod>` : '';
-          xml += `  <url><loc>${siteBase}/catalogo/${tenant.slug}</loc>${lastmodLoja}<changefreq>daily</changefreq><priority>0.8</priority></url>\n`;
+          // No dominio da loja o catalogo fica na raiz (/ e /veiculo/{id}).
+          const prefixo = slugHost ? '' : `/catalogo/${tenant.slug}`;
+          xml += `  <url><loc>${siteBase}${prefixo || '/'}</loc>${lastmodLoja}<changefreq>daily</changefreq><priority>0.8</priority></url>\n`;
 
           for (const v of veiculos) {
             const dt = dataSitemap(v.veiDtAtualizacao);
             const lastmod = dt ? `<lastmod>${dt}</lastmod>` : '';
-            xml += `  <url><loc>${siteBase}/catalogo/${tenant.slug}/veiculo/${v.veiId}</loc>${lastmod}<changefreq>weekly</changefreq><priority>0.9</priority></url>\n`;
+            xml += `  <url><loc>${siteBase}${prefixo}/veiculo/${v.veiId}</loc>${lastmod}<changefreq>weekly</changefreq><priority>0.9</priority></url>\n`;
           }
         } catch {
           // tenant individual falhou — continua os outros
@@ -327,6 +350,10 @@ export function app(): express.Express {
   server.get('/catalogo', ssrHandler(commonEngine, indexHtml, browserDistFolder));
   server.get('/catalogo/:tenantSlug', ssrHandler(commonEngine, indexHtml, browserDistFolder));
   server.get('/catalogo/:tenantSlug/veiculo/:veiculoId', ssrHandler(commonEngine, indexHtml, browserDistFolder));
+  // Veiculo no dominio proprio da loja (o catalogo dela fica na raiz).
+  const ssrVeiculoNoDominio = ssrHandler(commonEngine, indexHtml, browserDistFolder);
+  server.get('/veiculo/:veiculoId', (req, res, next) =>
+    slugDoDominio(req) ? ssrVeiculoNoDominio(req, res, next) : next());
 
   // Demais rotas: servir o index estático (client-side only).
   // Angular 17+ gera o template CSR como `index.csr.html` (em vez de `index.html`).
@@ -340,7 +367,7 @@ export function app(): express.Express {
       }
       const tags = await getVerificationMetaTags(req);
       res.set('Content-Type', 'text/html; charset=utf-8');
-      res.send(injectVerificationTags(csrTemplateCache, tags));
+      res.send(injectVerificationTags(csrTemplateCache, [tags, metaLojaDoDominio(slugDoDominio(req))].filter(Boolean).join('\n')));
     } catch (err) {
       next(err);
     }
@@ -352,6 +379,7 @@ export function app(): express.Express {
 function ssrHandler(commonEngine: CommonEngine, indexHtml: string, browserDistFolder: string) {
   return (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const { protocol, originalUrl, baseUrl, headers } = req;
+    const lojaDoDominio = slugDoDominio(req);
 
     commonEngine
       .render({
@@ -364,11 +392,13 @@ function ssrHandler(commonEngine: CommonEngine, indexHtml: string, browserDistFo
           // Canonical/og:url com o host real: no dominio proprio da loja, o
           // dominio dela; na plataforma, connectveiculos.dev.br como antes.
           { provide: SITE_ORIGIN, useValue: `${protocol}://${headers.host}` },
+          // Loja dona deste dominio ('' na plataforma): o catalogo dela na raiz.
+          { provide: LOJA_DO_DOMINIO, useValue: lojaDoDominio ?? '' },
         ],
       })
       .then(async (html) => {
         const tags = await getVerificationMetaTags(req);
-        res.send(injectVerificationTags(html, tags));
+        res.send(injectVerificationTags(html, [tags, metaLojaDoDominio(lojaDoDominio)].filter(Boolean).join('\n')));
       })
       .catch((err) => next(err));
   };

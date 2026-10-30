@@ -31,9 +31,13 @@ que passa pela mesma validação. A API também recusa a troca direta.
 
 ## O que muda quando fica Ativo
 
-- `dominio.com.br` abre o catálogo da loja; `www.` redireciona para o endereço sem `www`.
-- `connectveiculos.dev.br/catalogo/<loja>/...` redireciona para o domínio (o
-  "Pré-visualizar" da tela de Lojas não redireciona).
+- `dominio.com.br/` é o catálogo da loja e `dominio.com.br/veiculo/123` o veículo, sem
+  `/catalogo/<loja>` no endereço; `www.` redireciona para o endereço sem `www`.
+- `connectveiculos.dev.br/catalogo/<loja>/...` redireciona (302) para o domínio, já no
+  caminho novo (o "Pré-visualizar" da tela de Lojas não redireciona). No próprio domínio,
+  `/catalogo/<loja>/...` redireciona (301) para a raiz: links antigos continuam valendo.
+- No navegador, o Angular sabe de qual loja é o domínio pela meta `cv-loja-dominio` que o
+  `server.ts` injeta (no SSR, pelo token `LOJA_DO_DOMINIO`).
 - Links dos posts do Facebook, feeds de catálogo (Facebook/Google), Google Merchant e
   e-mails passam a usar o domínio (`Loja.LojUrlCatalogo`).
 - Sitemap, `robots.txt`, canonical e og:url com o domínio. O sitemap da plataforma

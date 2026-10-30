@@ -3,6 +3,7 @@ import { Meta, Title } from '@angular/platform-browser';
 import { DOCUMENT } from '@angular/common';
 import { environment } from '../../../environments/environment';
 import { SITE_ORIGIN } from '../tokens/site-origin.token';
+import { caminhoVeiculo, injectLojaDoDominio } from '../tokens/loja-do-dominio.token';
 
 @Injectable({ providedIn: 'root' })
 export class SeoService {
@@ -10,6 +11,7 @@ export class SeoService {
   private title = inject(Title);
   private doc = inject(DOCUMENT);
   private siteOrigin = inject(SITE_ORIGIN, { optional: true });
+  private lojaDoDominio = injectLojaDoDominio();
 
   setVehiclePage(veiculo: any, pageUrl?: string): void {
     const origin = this.resolveOrigin(pageUrl);
@@ -311,7 +313,6 @@ export class SeoService {
 
   setCatalogJsonLd(veiculos: any[], tenantSlug: string | null): void {
     const base = this.resolveOrigin();
-    const prefixo = tenantSlug ? `/catalogo/${encodeURIComponent(tenantSlug)}` : '/catalogo';
     const jsonLd = {
       '@context': 'https://schema.org',
       '@type': 'ItemList',
@@ -319,7 +320,7 @@ export class SeoService {
         '@type': 'ListItem',
         'position': i + 1,
         'name': `${v.veiMarca} ${v.veiModelo} ${v.veiAno}`,
-        'url': `${base}${prefixo}/veiculo/${v.veiId}`
+        'url': `${base}${caminhoVeiculo(tenantSlug, this.lojaDoDominio, v.veiId)}`
       }))
     };
 

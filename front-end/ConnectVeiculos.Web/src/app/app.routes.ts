@@ -1,8 +1,24 @@
-import { Routes } from '@angular/router';
+import { CanMatchFn, Routes } from '@angular/router';
 import { authGuard, roleGuard } from './core/guards';
+import { injectLojaDoDominio } from './core/tokens/loja-do-dominio.token';
 import { MainLayoutComponent } from './layout/main-layout/main-layout.component';
 
+// No dominio proprio de uma loja o catalogo dela fica na raiz: "/" e
+// "/veiculo/:id" em vez de /catalogo/{slug}/... (ver loja-do-dominio.token).
+const noDominioDeLoja: CanMatchFn = () => !!injectLojaDoDominio();
+
 export const routes: Routes = [
+  {
+    path: '',
+    pathMatch: 'full',
+    canMatch: [noDominioDeLoja],
+    loadComponent: () => import('./pages/catalogo/catalogo.component').then(m => m.CatalogoComponent)
+  },
+  {
+    path: 'veiculo/:veiculoId',
+    canMatch: [noDominioDeLoja],
+    loadComponent: () => import('./pages/catalogo/catalogo.component').then(m => m.CatalogoComponent)
+  },
   {
     path: '',
     pathMatch: 'full',

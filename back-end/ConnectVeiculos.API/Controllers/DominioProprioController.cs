@@ -61,8 +61,9 @@ namespace ConnectVeiculos.API.Controllers
                 ipServidor = ip,
                 dnsAponta = dominio != null && await ApontaParaAsync(dominio, ip, ct),
                 wwwAponta = dominio != null && await ApontaParaAsync("www." + dominio, ip, ct),
+                // No dominio da loja o catalogo fica na raiz (server.ts do SSR).
                 urlCatalogo = dominio != null && tenant.DominioProprioAtivo()
-                    ? CatalogoUrl.Listagem(DominioProprio.UrlBase(dominio), tenant.TenSlug)
+                    ? DominioProprio.UrlBase(dominio) + "/"
                     : null,
             });
         }
