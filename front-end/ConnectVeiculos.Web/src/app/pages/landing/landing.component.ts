@@ -59,7 +59,7 @@ export class LandingComponent implements OnInit {
     {
       icon: 'share',
       title: 'Mercado Livre + Facebook em 1 clique',
-      desc: 'Publicação automática no Mercado Livre e catálogo conectado ao Facebook (e Instagram via vitrine). Cadastra o veículo uma vez e ele propaga.'
+      desc: 'Publicação automática no Mercado Livre e posts e stories no Facebook e no Instagram. Cadastra o veículo uma vez e ele propaga.'
     },
     {
       icon: 'group',
@@ -107,8 +107,8 @@ export class LandingComponent implements OnInit {
   ];
 
    // Sincronizado com os planos do backend (TenantsMigrationsRunner.SeedPlanoSeNaoExistir).
-   // Trial: ao se cadastrar, todo tenant ganha 30 dias com TODOS os limites liberados,
-   // independente do plano que escolher. Apos o trial, os limites do plano voltam a valer.
+   // So o que o sistema realmente diferencia por plano: os limites. Recursos
+   // (integracoes, relatorios, importacao por planilha) valem para todos.
    planos = [
      {
        nome: 'Free',
@@ -116,13 +116,12 @@ export class LandingComponent implements OnInit {
        periodo: '/mês',
        destaque: false,
        recursos: [
-         '30 dias grátis com todos os recursos liberados',
+         '30 dias grátis com todos os limites liberados',
          'Até 5 veículos no catálogo',
          '1 loja, 1 usuário',
          '20 leads por mês',
          'Catálogo público com SEO',
-         'Integrações Mercado Livre, Facebook Catalog e WhatsApp',
-         'Suporte por e-mail'
+         'Todas as integrações e recursos'
        ],
        cta: 'Começar grátis'
      },
@@ -135,9 +134,8 @@ export class LandingComponent implements OnInit {
          'Até 50 veículos',
          '1 loja, até 3 usuários',
          '200 leads por mês',
-         'Todas as integrações',
-         'Relatórios e exportação',
-         'Suporte por e-mail'
+         'Todas as integrações e recursos',
+         'Cartão ou Pix, cancele quando quiser'
        ],
        cta: 'Assinar Basic'
      },
@@ -150,10 +148,8 @@ export class LandingComponent implements OnInit {
          'Até 500 veículos',
          'Até 3 lojas, até 10 usuários',
          '2.000 leads por mês',
-         'Todas as integrações',
-         'Relatórios avançados',
-         'Importação CSV em massa',
-         'Suporte por e-mail prioritário'
+         'Todas as integrações e recursos',
+         'Cartão ou Pix, cancele quando quiser'
        ],
        cta: 'Assinar Pro'
      },
@@ -165,9 +161,8 @@ export class LandingComponent implements OnInit {
        recursos: [
          'Veículos, lojas e usuários ilimitados',
          'Leads ilimitados',
-         'Integrações sob demanda',
-         'Importação CSV em massa',
-         'Suporte por e-mail prioritário'
+         'Todas as integrações e recursos',
+         'Cartão ou Pix, cancele quando quiser'
        ],
        cta: 'Assinar Enterprise'
      }
@@ -200,7 +195,7 @@ export class LandingComponent implements OnInit {
     },
     {
       pergunta: 'Posso migrar meu estoque atual?',
-      resposta: 'Sim. O sistema suporta importação em massa via planilha CSV nos planos Pro e Enterprise — você sobe o arquivo no painel e os veículos são cadastrados em lote. Fotos podem ser adicionadas depois pelo painel ou via app.'
+      resposta: 'Sim. Em qualquer plano você importa o estoque por planilha (CSV) — sobe o arquivo no painel e os veículos são cadastrados em lote. Fotos podem ser adicionadas depois pelo painel ou pelo celular.'
     }
   ];
 
