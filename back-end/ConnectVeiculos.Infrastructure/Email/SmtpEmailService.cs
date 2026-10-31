@@ -136,13 +136,21 @@ namespace ConnectVeiculos.Infrastructure.Email
 
         public async Task<EmailConfigInfo> GetConfigAsync()
         {
+            // So o que a propria loja cadastrou. O padrao do appsettings (remetente
+            // da plataforma, sem usuario nem senha) aparecia como "Configurado" em
+            // toda loja nova, como se fosse dela.
+            var server = await _configRepository.GetValorAsync(KEY_SERVER);
+            var sender = await _configRepository.GetValorAsync(KEY_SENDER_EMAIL);
+            if (string.IsNullOrEmpty(server) || string.IsNullOrEmpty(sender))
+                return new EmailConfigInfo { Configurado = false, SmtpPort = _settings.SmtpPort, EnableSsl = _settings.EnableSsl };
+
             var s = await ResolveSettingsAsync();
             return new EmailConfigInfo
             {
-                Configurado = !string.IsNullOrEmpty(s.SmtpServer) && !string.IsNullOrEmpty(s.SenderEmail),
-                SmtpServer = string.IsNullOrEmpty(s.SmtpServer) ? null : s.SmtpServer,
+                Configurado = true,
+                SmtpServer = s.SmtpServer,
                 SmtpPort = s.SmtpPort,
-                SenderEmail = string.IsNullOrEmpty(s.SenderEmail) ? null : s.SenderEmail,
+                SenderEmail = s.SenderEmail,
                 SenderName = string.IsNullOrEmpty(s.SenderName) ? null : s.SenderName,
                 Username = string.IsNullOrEmpty(s.Username) ? null : s.Username,
                 EnableSsl = s.EnableSsl

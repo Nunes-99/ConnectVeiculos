@@ -74,7 +74,17 @@ namespace ConnectVeiculos.Infrastructure.Services.MercadoLivre
              IVeiculoPublicacaoRepository publicacaoRepo)
         {
             _httpClient = httpClient;
-            _settings = settings.Value;
+            // Copia so a configuracao do app. IOptions<T>.Value e' um objeto unico
+            // no processo: os tokens eram gravados nele e a loja seguinte via a
+            // conta do Mercado Livre da anterior (31/10/2026: loja recem-criada
+            // aparecia "Conectado como" a conta de outra). Agora cada instancia
+            // (uma por requisicao/escopo de tenant) carrega os tokens do proprio banco.
+            _settings = new MercadoLivreSettings
+            {
+                AppId = settings.Value.AppId,
+                ClientSecret = settings.Value.ClientSecret,
+                RedirectUri = settings.Value.RedirectUri
+            };
             _logger = logger;
             _veiculoRepository = veiculoRepository;
             _imagemRepository = imagemRepository;
