@@ -9,6 +9,7 @@ using ConnectVeiculos.Core.Interfaces.Database.Repositories.Renave;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Security;
 using ConnectVeiculos.Core.Renave;
+using ConnectVeiculos.Infrastructure.Services.Certificados;
 using ConnectVeiculos.Infrastructure.Services.Renave;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -72,7 +73,7 @@ namespace ConnectVeiculos.Tests.Services
             protector.Setup(p => p.Unprotect(It.IsAny<string>())).Returns((string s) => s[1..]);
 
             _service = new RenaveService(_http, Options.Create(new RenaveSettings()), _config, _registros,
-                veiculos.Object, protector.Object, NullLogger<RenaveService>.Instance);
+                veiculos.Object, new CertificadoDigitalService(_config, protector.Object, NullLogger<CertificadoDigitalService>.Instance), NullLogger<RenaveService>.Instance);
         }
 
         private Task ConfigurarAsync(string ambiente = RenaveAmbiente.Homologacao, string? cnpjEstab = null)

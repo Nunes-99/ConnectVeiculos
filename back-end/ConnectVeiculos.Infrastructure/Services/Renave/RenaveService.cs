@@ -9,7 +9,6 @@ using ConnectVeiculos.Core.Entities.Renave;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Configuracoes;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Renave;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
-using ConnectVeiculos.Core.Interfaces.Security;
 using ConnectVeiculos.Core.Interfaces.Services;
 using ConnectVeiculos.Core.Renave;
 using Microsoft.Extensions.Logging;
@@ -31,10 +30,6 @@ namespace ConnectVeiculos.Infrastructure.Services.Renave
         private const string KeyOperadorNome = "RENAVE_OPERADOR_NOME";
         private const string KeyEmailLoja = "RENAVE_EMAIL_LOJA";
         private const string KeyCnpjEstabelecimento = "RENAVE_CNPJ_ESTABELECIMENTO";
-        private const string KeyCertPfx = "RENAVE_CERT_PFX";
-        private const string KeyCertSenha = "RENAVE_CERT_SENHA";
-        private const string KeyCertTitular = "RENAVE_CERT_TITULAR";
-        private const string KeyCertValidade = "RENAVE_CERT_VALIDADE";
 
         // O Renave e' do Brasil: datas sem fuso, no horario de Brasilia.
         private static readonly TimeZoneInfo Brasilia = ObterFusoBrasilia();
@@ -50,7 +45,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Renave
         private readonly IConfiguracaoSistemaRepository _config;
         private readonly IVeiculoRenaveRepository _registros;
         private readonly IVeiculoRepository _veiculos;
-        private readonly ITokenProtector _protector;
+        private readonly ICertificadoDigitalService _certificado;
         private readonly ILogger<RenaveService> _logger;
 
         public RenaveService(
@@ -59,7 +54,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Renave
             IConfiguracaoSistemaRepository config,
             IVeiculoRenaveRepository registros,
             IVeiculoRepository veiculos,
-            ITokenProtector protector,
+            ICertificadoDigitalService certificado,
             ILogger<RenaveService> logger)
         {
             _transporte = transporte;
@@ -67,7 +62,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Renave
             _config = config;
             _registros = registros;
             _veiculos = veiculos;
-            _protector = protector;
+            _certificado = certificado;
             _logger = logger;
         }
 
@@ -84,12 +79,11 @@ namespace ConnectVeiculos.Infrastructure.Services.Renave
                 OperadorNome = Vazio(await _config.GetValorAsync(KeyOperadorNome)),
                 EmailLoja = Vazio(await _config.GetValorAsync(KeyEmailLoja)),
                 CnpjEstabelecimento = Vazio(await _config.GetValorAsync(KeyCnpjEstabelecimento)),
-                CertificadoCadastrado = !string.IsNullOrEmpty(await _config.GetValorAsync(KeyCertPfx)),
-                CertificadoTitular = Vazio(await _config.GetValorAsync(KeyCertTitular)),
             };
-            if (DateTime.TryParse(await _config.GetValorAsync(KeyCertValidade), CultureInfo.InvariantCulture,
-                    DateTimeStyles.RoundtripKind, out var validade))
-                info.CertificadoValidade = validade;
+            var cert = await _certificado.ObterInfoAsync(ct);
+            info.CertificadoCadastrado = cert.Cadastrado;
+            info.CertificadoTitular = cert.Titular;
+            info.CertificadoValidade = cert.Validade;
 
             var certOk = info.CertificadoCadastrado && info.CertificadoValidade > DateTime.UtcNow;
             info.Pronto = info.OperadorCpf != null && info.EmailLoja != null
@@ -119,36 +113,20 @@ namespace ConnectVeiculos.Infrastructure.Services.Renave
 
         public async Task<RenaveConfigInfo> SalvarCertificadoAsync(byte[] pfx, string senha, CancellationToken ct = default)
         {
-            X509Certificate2 cert;
             try
             {
-                cert = CarregarCertificado(pfx, senha);
+                await _certificado.SalvarAsync(pfx, senha, ct);
             }
-            catch (CryptographicException)
+            catch (CertificadoDigitalException ex)
             {
-                throw new RenaveException("Não foi possível abrir o certificado. Confira o arquivo (.pfx/.p12) e a senha.");
+                throw new RenaveException(ex.Message);
             }
-
-            using (cert)
-            {
-                if (!cert.HasPrivateKey)
-                    throw new RenaveException("O arquivo não tem a chave privada. Exporte o certificado A1 com a chave (.pfx).");
-                if (cert.NotAfter.ToUniversalTime() <= DateTime.UtcNow)
-                    throw new RenaveException($"Certificado vencido em {cert.NotAfter:dd/MM/yyyy}.");
-
-                await _config.SetValorAsync(KeyCertPfx, _protector.Protect(Convert.ToBase64String(pfx)));
-                await _config.SetValorAsync(KeyCertSenha, _protector.Protect(senha ?? ""));
-                await _config.SetValorAsync(KeyCertTitular, cert.GetNameInfo(X509NameType.SimpleName, false));
-                await _config.SetValorAsync(KeyCertValidade, cert.NotAfter.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
-            }
-            _logger.LogInformation("Renave: certificado A1 cadastrado");
             return await ObterConfigAsync(ct);
         }
 
         public async Task<RenaveConfigInfo> RemoverCertificadoAsync(CancellationToken ct = default)
         {
-            foreach (var k in new[] { KeyCertPfx, KeyCertSenha, KeyCertTitular, KeyCertValidade })
-                await _config.SetValorAsync(k, "");
+            await _certificado.RemoverAsync(ct);
             return await ObterConfigAsync(ct);
         }
 
@@ -471,7 +449,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Renave
         // HTTP
         // ================================================================
 
-        private sealed record Contexto(RenaveConfigInfo Config, string BaseUrl, byte[]? Pfx, string? Senha);
+        private sealed record Contexto(RenaveConfigInfo Config, string BaseUrl, bool ComCertificado);
 
         private async Task<Contexto> ContextoAsync(bool exigirOperador, CancellationToken ct)
         {
@@ -479,32 +457,16 @@ namespace ConnectVeiculos.Infrastructure.Services.Renave
             if (exigirOperador && (config.OperadorCpf == null || config.EmailLoja == null))
                 throw new RenaveException("Configure o Renave em Integrações: CPF do operador responsável e e-mail da loja.");
 
-            byte[]? pfx = null;
-            string? senha = null;
-            var pfxCifrado = await _config.GetValorAsync(KeyCertPfx);
-            if (!string.IsNullOrEmpty(pfxCifrado))
-            {
-                try
-                {
-                    pfx = Convert.FromBase64String(_protector.Unprotect(pfxCifrado));
-                    senha = _protector.Unprotect(await _config.GetValorAsync(KeyCertSenha) ?? "");
-                }
-                catch (CryptographicException)
-                {
-                    throw new RenaveException("Não foi possível ler o certificado guardado. Envie o certificado A1 de novo em Integrações → Renave.");
-                }
-            }
-
             if (config.Ambiente == RenaveAmbiente.Producao)
             {
-                if (pfx == null)
+                if (!config.CertificadoCadastrado)
                     throw new RenaveException("Envie o certificado A1 da loja em Integrações → Renave para operar em produção.");
                 if (config.CertificadoValidade <= DateTime.UtcNow)
                     throw new RenaveException("O certificado A1 da loja venceu. Envie o certificado novo em Integrações → Renave.");
             }
 
             var baseUrl = (config.Ambiente == RenaveAmbiente.Producao ? _settings.UrlProducao : _settings.UrlHomologacao).TrimEnd('/');
-            return new Contexto(config, baseUrl, pfx, senha);
+            return new Contexto(config, baseUrl, config.CertificadoCadastrado);
         }
 
         private async Task<JsonDocument> ChamarComRegistroAsync(Contexto ctx, VeiculoRenave registro,
@@ -539,12 +501,12 @@ namespace ConnectVeiculos.Infrastructure.Services.Renave
             HttpResponseMessage response;
             try
             {
-                if (ctx.Pfx != null) cert = CarregarCertificado(ctx.Pfx, ctx.Senha ?? "");
+                if (ctx.ComCertificado) cert = await _certificado.CarregarAsync(ct);
                 response = await _transporte.EnviarAsync(request, cert, ct);
             }
-            catch (CryptographicException)
+            catch (CertificadoDigitalException ex)
             {
-                throw new RenaveException("O certificado A1 guardado não abre mais. Envie o certificado de novo em Integrações → Renave.");
+                throw new RenaveException(ex.Message);
             }
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
             {
@@ -666,14 +628,6 @@ namespace ConnectVeiculos.Infrastructure.Services.Renave
             }
             if (r.RnvChaveNfSaida == null) return "Informar a chave da NF-e de venda";
             return "Concluído";
-        }
-
-        private static X509Certificate2 CarregarCertificado(byte[] pfx, string senha)
-        {
-            // Linux (servidor): chave so em memoria. Windows nao aceita chave
-            // efemera no TLS do cliente, entao la usa o armazenamento padrao.
-            var flags = OperatingSystem.IsWindows() ? X509KeyStorageFlags.DefaultKeySet : X509KeyStorageFlags.EphemeralKeySet;
-            return new X509Certificate2(pfx, senha, flags);
         }
 
         private static string TipoCrv(string? tipo)

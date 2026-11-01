@@ -5,6 +5,7 @@ using ConnectVeiculos.Core.Interfaces.Database.Repositories.Renave;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Security;
 using ConnectVeiculos.Core.Renave;
+using ConnectVeiculos.Infrastructure.Services.Certificados;
 using ConnectVeiculos.Infrastructure.Services.Renave;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -49,8 +50,9 @@ namespace ConnectVeiculos.Tests.Services
 
             var veiculos = new Mock<IVeiculoRepository>();
             var protector = new Mock<ITokenProtector>();
-            var service = new RenaveService(new RenaveTransporte(), Options.Create(new RenaveSettings()), new Config(),
-                new Registros(), veiculos.Object, protector.Object, NullLogger<RenaveService>.Instance);
+            var config = new Config();
+            var service = new RenaveService(new RenaveTransporte(), Options.Create(new RenaveSettings()), config,
+                new Registros(), veiculos.Object, new CertificadoDigitalService(config, protector.Object, NullLogger<CertificadoDigitalService>.Instance), NullLogger<RenaveService>.Instance);
 
             await service.SalvarConfigAsync(new RenaveConfigInput
             {

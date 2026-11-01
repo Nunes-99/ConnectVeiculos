@@ -350,6 +350,8 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.Configure<Services.Renave.RenaveSettings>(configuration.GetSection("RenaveSettings"));
             services.AddSingleton<Services.Renave.IRenaveTransporte, Services.Renave.RenaveTransporte>();
             services.AddScoped<Core.Interfaces.Services.IRenaveService, Services.Renave.RenaveService>();
+            // Certificado A1 da loja: um so, usado pelo Renave e pela NF-e.
+            services.AddScoped<Core.Interfaces.Services.ICertificadoDigitalService, Services.Certificados.CertificadoDigitalService>();
 
             // Assinatura mensal dos planos (Mercado Pago, conta da plataforma)
             services.Configure<Services.Pagamentos.MercadoPagoSettings>(configuration.GetSection("MercadoPagoSettings"));
