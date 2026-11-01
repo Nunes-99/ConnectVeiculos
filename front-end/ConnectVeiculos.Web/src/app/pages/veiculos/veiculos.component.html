@@ -141,6 +141,11 @@
                 <button class="btn-icon" (click)="abrirConsultaDetran(veiculo)" title="Consultar débitos no Detran" [disabled]="!veiculo.veiPlaca">
                   <span class="material-icons">gavel</span>
                 </button>
+                @if (podeRenave) {
+                  <button class="btn-icon" (click)="renaveVeiculo = veiculo" title="Renave (entrada e saída do estoque)" [disabled]="!veiculo.veiPlaca">
+                    <span class="material-icons">assignment_turned_in</span>
+                  </button>
+                }
                 <button class="btn-icon" (click)="openModal(veiculo)" title="Editar">
                   <span class="material-icons">edit</span>
                 </button>
@@ -715,6 +720,10 @@
       </div>
     </div>
   </div>
+}
+
+@if (renaveVeiculo) {
+  <app-renave-veiculo [veiculo]="renaveVeiculo" (fechar)="renaveVeiculo = null"></app-renave-veiculo>
 }
 
 <!-- Modal: Consultar Detran -->

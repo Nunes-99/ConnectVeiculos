@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { IntegracaoService, DominioProprioInfo, MercadoLivreContaInfo, MercadoLivreSincronizacaoResult, WhatsAppConfigInfo, EmailConfigInfo, FacebookConfigInfo, GoogleMerchantConfigInfo, TestIntegracaoResult, MetaConnectionInfo, MetaPageOption, FacebookPagePostConfigInfo, InstagramPostConfigInfo, MetaFeatureFlags, StoryConfigInfo, StoryConfigInput } from '../../core/services/integracao.service';
 import { AuthService, LojaService, ToastService } from '../../core/services';
+import { RenaveConfigComponent } from '../../shared/components/renave/renave-config.component';
 import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal.component';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
@@ -11,7 +12,7 @@ import { environment } from '../../../environments/environment';
 @Component({
   selector: 'app-integracoes',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, ConfirmModalComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, ConfirmModalComponent, RenaveConfigComponent],
   templateUrl: './integracoes.component.html',
   styleUrl: './integracoes.component.scss'
 })
@@ -126,6 +127,9 @@ Te esperamos na {{6}}. Até breve!`;
   // SMTP / E-mail
   smtpConfig: EmailConfigInfo = { configurado: false, smtpPort: 587, enableSsl: true };
   smtpLoading = false;
+
+  // Renave: o cartao (RenaveConfigComponent) avisa quando esta pronto para operar.
+  renavePronto = false;
   showSmtpConfigModal = false;
   showSmtpDesconectarModal = false;
   smtpForm: FormGroup = this.fb.group({

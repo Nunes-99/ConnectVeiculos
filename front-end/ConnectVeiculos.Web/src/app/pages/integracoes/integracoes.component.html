@@ -367,6 +367,31 @@
     </div>
   </div>
 
+  <!-- Renave (estoque eletronico da Senatran/Serpro) -->
+  <div class="integracao-card">
+    <div class="card-header">
+      <div class="platform-info">
+        <span class="platform-icon renave-icon">
+          <span class="material-icons">assignment_turned_in</span>
+        </span>
+        <div>
+          <h3>Renave</h3>
+          <p>Entrada e saída de veículos no estoque eletrônico (Senatran)</p>
+        </div>
+      </div>
+      <span class="status-badge" [class.connected]="renavePronto" [class.disconnected]="!renavePronto">
+        {{ renavePronto ? 'Configurado' : 'Não configurado' }}
+      </span>
+    </div>
+    <div class="card-body">
+      <app-renave-config (prontoChange)="renavePronto = $event"></app-renave-config>
+    </div>
+    <div class="card-footer">
+      <span class="material-icons">info</span>
+      <small>Custo: cobrado pelo Serpro por operação de entrada ou saída, direto da loja. Os testes (homologação) são gratuitos.</small>
+    </div>
+  </div>
+
   <!-- Modal config SMTP -->
   @if (showSmtpConfigModal) {
     <div class="modal-overlay">
