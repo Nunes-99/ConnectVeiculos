@@ -547,14 +547,20 @@ namespace ConnectVeiculos.Infrastructure.IoC
                       RnvValorCompra TEXT,
                       RnvDtAssinaturaVendedor TEXT,
                       RnvChaveNfEntrada TEXT,
+                      RnvVendedorDocumento TEXT,
+                      RnvVendedorEmail TEXT,
                       RnvDtSaida TEXT,
                       RnvValorVenda TEXT,
                       RnvCompradorDocumento TEXT,
                       RnvCompradorNome TEXT,
+                      RnvCompradorEmail TEXT,
                       RnvChaveNfSaida TEXT,
                       RnvNumeroAtpv TEXT,
                       RnvUltimoErro TEXT,
                       RnvAtualizadoEm TEXT NOT NULL");
+                AddColumnIfNotExists(connection, "VeiculoRenave", "RnvVendedorDocumento", "TEXT");
+                AddColumnIfNotExists(connection, "VeiculoRenave", "RnvVendedorEmail", "TEXT");
+                AddColumnIfNotExists(connection, "VeiculoRenave", "RnvCompradorEmail", "TEXT");
 
                 // NF-e de veiculos emitida pelo sistema (entrada na compra, saida na venda)
                 CreateTableIfNotExists(connection, "NotaFiscal",

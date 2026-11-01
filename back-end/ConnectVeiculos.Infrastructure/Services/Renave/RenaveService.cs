@@ -268,7 +268,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Renave
             using var doc = await ChamarComRegistroAsync(ctx, registro, HttpMethod.Post, "/api/solicitacoes-entrada-estoque", corpo, ct);
             var r = doc.RootElement;
             registro.RegistrarEntrada(r.GetProperty("id").GetInt64(), Texto(r, "estado") ?? "SOLICITADO",
-                input.DataCompra.Date, input.ValorCompra);
+                input.DataCompra.Date, input.ValorCompra, vendedor, Vazio(input.EmailVendedor?.Trim()));
             await _registros.SalvarAsync(registro);
             _logger.LogInformation("Renave: entrada do veiculo {VeiculoId} registrada (estoque {Estoque})", veiculoId, registro.RnvIdEstoque);
             return ParaSituacao(veiculoId, registro);
@@ -377,7 +377,8 @@ namespace ConnectVeiculos.Infrastructure.Services.Renave
 
             using var doc = await ChamarComRegistroAsync(ctx, registro, HttpMethod.Post, "/api/solicitacoes-saida-estoque", corpo, ct);
             registro.RegistrarSaida(Texto(doc.RootElement, "estado") ?? registro.RnvEstado ?? "",
-                input.DataVenda.Date, input.ValorVenda, comprador, Vazio(input.NomeComprador?.Trim()));
+                input.DataVenda.Date, input.ValorVenda, comprador, Vazio(input.NomeComprador?.Trim()),
+                Vazio(input.EmailComprador?.Trim()));
             await _registros.SalvarAsync(registro);
             _logger.LogInformation("Renave: saida do veiculo {VeiculoId} registrada (estoque {Estoque})", veiculoId, registro.RnvIdEstoque);
             return ParaSituacao(veiculoId, registro);

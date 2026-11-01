@@ -71,6 +71,18 @@ export interface NfeEmissao {
   informacoesComplementares: string | null;
 }
 
+/** Dados ja conhecidos para preencher a nota; origem diz de onde vieram. */
+export interface NfeSugestao {
+  dados: NfeEmissao;
+  origem: 'nota' | 'venda' | 'renave' | null;
+}
+
+export const ORIGEM_SUGESTAO: Record<string, string> = {
+  nota: 'da última tentativa desta nota',
+  venda: 'da venda registrada',
+  renave: 'do Renave'
+};
+
 export interface NfeResumo {
   id: number;
   veiculoId: number;
@@ -140,6 +152,10 @@ export class NfeService {
 
   doVeiculo(veiculoId: number): Observable<NfeResumo[]> {
     return this.http.get<NfeResumo[]>(`${this.url}/veiculos/${veiculoId}`);
+  }
+
+  sugestao(veiculoId: number, tipo: 'ENTRADA' | 'SAIDA'): Observable<NfeSugestao> {
+    return this.http.get<NfeSugestao>(`${this.url}/veiculos/${veiculoId}/sugestao`, { params: { tipo } });
   }
 
   emitir(veiculoId: number, dados: NfeEmissao): Observable<NfeResumo> {

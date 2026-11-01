@@ -1,5 +1,10 @@
 using System.Security.Cryptography.X509Certificates;
+using System.Net;
 using ConnectVeiculos.Core.Entities.NotasFiscais;
+using ConnectVeiculos.Core.Entities.Renave;
+using ConnectVeiculos.Core.Entities.Vendas;
+using ConnectVeiculos.Core.Interfaces.Database.Repositories.Renave;
+using ConnectVeiculos.Core.Interfaces.Database.Repositories.Vendas;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Configuracoes;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.NotasFiscais;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
@@ -72,6 +77,18 @@ namespace ConnectVeiculos.Tests.NotasFiscais
         private readonly Notas _notas = new();
         private readonly SefazFalsa _sefaz = new();
         private readonly Mock<IRenaveService> _renave = new();
+        private readonly Mock<IVendaRepository> _vendas = new();
+        private readonly Mock<IVeiculoRenaveRepository> _registrosRenave = new();
+
+        /// <summary>IBGE falso: devolve sempre os mesmos municipios.</summary>
+        private sealed class IbgeFalso : HttpMessageHandler
+        {
+            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+                => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("[{\"id\":3545209,\"nome\":\"Salto\"},{\"id\":3550308,\"nome\":\"São Paulo\"}]")
+                });
+        }
         private readonly NfeService _service;
 
         public NfeServiceTests()
@@ -92,8 +109,9 @@ namespace ConnectVeiculos.Tests.NotasFiscais
             var tenant = new Mock<ITenantContext>();
             tenant.SetupGet(t => t.TenantSlug).Returns("loja-teste");
 
-            _service = new NfeService(_config, _notas, veiculos.Object, cert.Object, _sefaz, _renave.Object, tenant.Object,
-                new HttpClient(), NullLogger<NfeService>.Instance);
+            _service = new NfeService(_config, _notas, veiculos.Object, _vendas.Object, _registrosRenave.Object,
+                cert.Object, _sefaz, _renave.Object, tenant.Object,
+                new HttpClient(new IbgeFalso()), NullLogger<NfeService>.Instance);
         }
 
         private Task ConfigurarAsync(int proximoNumero = 10)
@@ -101,6 +119,104 @@ namespace ConnectVeiculos.Tests.NotasFiscais
             var cfg = NfeVeiculoBuilderTests.Config();
             cfg.ProximoNumero = proximoNumero;
             return _service.SalvarConfigAsync(cfg);
+        }
+
+        [Fact]
+        public async Task Sugestao_Da_Venda_Traz_Comprador_Endereco_E_Municipio()
+        {
+            await ConfigurarAsync();
+            _vendas.Setup(v => v.GetByVeiculoIdAsync(42)).ReturnsAsync(new[]
+            {
+                new Venda(1, 42, 1, DateTime.Today, "Toyota", "Corolla", 2020, "9BRBL3HE0L0123456", 87000m, 0, 0,
+                    "Maria Souza", "529.982.247-25", "11999990000", "maria@exemplo.com",
+                    "Rua das Flores, 120, Centro, Salto, SP, 13320-000", "PIX")
+            });
+
+            var s = await _service.SugerirAsync(42, "SAIDA");
+
+            s.Origem.Should().Be("venda");
+            s.Dados.Documento.Should().Be("52998224725");
+            s.Dados.Nome.Should().Be("Maria Souza");
+            s.Dados.Valor.Should().Be(87000m);
+            s.Dados.MeioPagamento.Should().Be("17");
+            s.Dados.Endereco.Logradouro.Should().Be("Rua das Flores");
+            s.Dados.Endereco.Numero.Should().Be("120");
+            s.Dados.Endereco.Bairro.Should().Be("Centro");
+            s.Dados.Endereco.Cep.Should().Be("13320000");
+            s.Dados.Endereco.Uf.Should().Be("SP");
+            s.Dados.Endereco.CodigoMunicipio.Should().Be(3545209);
+        }
+
+        [Fact]
+        public async Task Sugestao_Ignora_Venda_Estornada_E_Usa_O_Renave()
+        {
+            await ConfigurarAsync();
+            var estornada = new Venda(1, 42, 1, DateTime.Today, "Toyota", "Corolla", 2020, "9BRBL3HE0L0123456", 87000m, 0, 0,
+                "Outra Pessoa", "52998224725");
+            estornada.Estornar();
+            _vendas.Setup(v => v.GetByVeiculoIdAsync(42)).ReturnsAsync(new[] { estornada });
+            var registro = new VeiculoRenave(42);
+            registro.RegistrarEntrada(1, "CONFIRMADO", DateTime.Today, 50000m, "11144477735", "vendedor@exemplo.com");
+            registro.RegistrarSaida("CONFIRMADO", DateTime.Today, 88000m, "52998224725", "Maria Souza", "maria@exemplo.com");
+            _registrosRenave.Setup(r => r.GetByVeiculoAsync(42)).ReturnsAsync(registro);
+
+            var venda = await _service.SugerirAsync(42, "SAIDA");
+            venda.Origem.Should().Be("renave");
+            venda.Dados.Nome.Should().Be("Maria Souza");
+            venda.Dados.Email.Should().Be("maria@exemplo.com");
+            venda.Dados.Valor.Should().Be(88000m);
+
+            var compra = await _service.SugerirAsync(42, "ENTRADA");
+            compra.Origem.Should().Be("renave");
+            compra.Dados.Documento.Should().Be("11144477735");
+            compra.Dados.Email.Should().Be("vendedor@exemplo.com");
+            compra.Dados.Valor.Should().Be(50000m);
+        }
+
+        [Fact]
+        public async Task Sugestao_Prefere_A_Nota_Anterior_Do_Veiculo()
+        {
+            await ConfigurarAsync();
+            _sefaz.Respostas.Enqueue(new NfeRetornoAutorizacao { Autorizada = false, CStat = 539, Motivo = "Duplicidade" });
+            var dados = NfeVeiculoBuilderTests.Venda();
+            await FluentActions.Awaiting(() => _service.EmitirAsync(42, dados)).Should().ThrowAsync<NfeException>();
+
+            var s = await _service.SugerirAsync(42, "SAIDA");
+
+            s.Origem.Should().Be("nota");
+            s.Dados.Documento.Should().Be(dados.Documento);
+            s.Dados.Endereco.CodigoMunicipio.Should().Be(dados.Endereco.CodigoMunicipio);
+        }
+
+        [Fact]
+        public async Task Sem_Dados_A_Sugestao_Vem_So_Com_Valor_E_UF()
+        {
+            await ConfigurarAsync();
+            _vendas.Setup(v => v.GetByVeiculoIdAsync(42)).ReturnsAsync(Array.Empty<Venda>());
+
+            var s = await _service.SugerirAsync(42, "ENTRADA");
+
+            s.Origem.Should().BeNull();
+            s.Dados.Documento.Should().BeEmpty();
+            s.Dados.Valor.Should().Be(NfeVeiculoBuilderTests.Carro().VeiPrecoCompra);
+            s.Dados.Endereco.Uf.Should().Be(NfeVeiculoBuilderTests.Config().Uf);
+        }
+
+        [Theory]
+        [InlineData("Rua A, 10, Centro, Salto, SP, 13320-000", "Rua A", "10", "Centro", "Salto", "SP", "13320000")]
+        [InlineData("Rua A, Centro, Salto, SP, 13320000", "Rua A", null, "Centro", "Salto", "SP", "13320000")]
+        [InlineData("Rua A, S/N, Salto, MG", "Rua A", "S/N", null, "Salto", "MG", null)]
+        [InlineData("Av. Brasil, 500, Jardim Paulista, Bloco B, São Paulo, SP", "Av. Brasil", "500", "Jardim Paulista, Bloco B", "São Paulo", "SP", null)]
+        public void Le_O_Endereco_Gravado_Pela_Tela_De_Vendas(string texto, string rua, string? numero, string? bairro,
+            string cidade, string uf, string? cep)
+        {
+            var e = NfeService.LerEnderecoDaVenda(texto, "RJ");
+            e.Logradouro.Should().Be(rua);
+            e.Numero.Should().Be(numero);
+            e.Bairro.Should().Be(bairro);
+            e.Municipio.Should().Be(cidade);
+            e.Uf.Should().Be(uf);
+            e.Cep.Should().Be(cep);
         }
 
         [Fact]

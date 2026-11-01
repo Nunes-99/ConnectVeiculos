@@ -36,7 +36,10 @@
     <div class="form-group"><label>Número</label><input type="text" [(ngModel)]="config.numero" /></div>
     <div class="form-group"><label>Complemento</label><input type="text" [(ngModel)]="config.complemento" /></div>
     <div class="form-group"><label>Bairro</label><input type="text" [(ngModel)]="config.bairro" /></div>
-    <div class="form-group"><label>CEP</label><input type="text" [(ngModel)]="config.cep" inputmode="numeric" /></div>
+    <div class="form-group">
+      <label>CEP <small>(preenche o endereço)</small></label>
+      <input type="text" [(ngModel)]="config.cep" (blur)="buscarCep()" (keyup.enter)="buscarCep()" inputmode="numeric" maxlength="9" />
+    </div>
     <div class="form-group"><label>Telefone</label><input type="text" [(ngModel)]="config.telefone" inputmode="tel" /></div>
     <div class="form-group">
       <label>UF</label>

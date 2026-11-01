@@ -80,17 +80,23 @@
           </div>
         } @else {
           <h4>{{ form.tipo === 'ENTRADA' ? 'NF-e de compra (vendedor)' : 'NF-e de venda (comprador)' }}</h4>
+          @if (origemDados) {
+            <div class="rnv-ok"><span class="material-icons">auto_fix_high</span> Preenchido com os dados {{ origemDados }}. Confira antes de emitir.</div>
+          }
           <div class="rnv-grid">
             <div class="form-group"><label>CPF/CNPJ</label><input type="text" [(ngModel)]="form.documento" inputmode="numeric" /></div>
             <div class="form-group"><label>Nome / razão social</label><input type="text" [(ngModel)]="form.nome" /></div>
             <div class="form-group"><label>Inscrição estadual <small>(só se for contribuinte)</small></label><input type="text" [(ngModel)]="form.inscricaoEstadual" /></div>
             <div class="form-group"><label>E-mail</label><input type="email" [(ngModel)]="form.email" /></div>
             <div class="form-group"><label>Telefone</label><input type="text" [(ngModel)]="form.telefone" inputmode="tel" /></div>
+            <div class="form-group">
+              <label>CEP <small>{{ buscandoCep ? '(buscando...)' : '(preenche o endereço)' }}</small></label>
+              <input type="text" [(ngModel)]="form.endereco.cep" (blur)="buscarCep()" (keyup.enter)="buscarCep()" inputmode="numeric" maxlength="9" />
+            </div>
             <div class="form-group"><label>Endereço</label><input type="text" [(ngModel)]="form.endereco.logradouro" /></div>
             <div class="form-group"><label>Número</label><input type="text" [(ngModel)]="form.endereco.numero" /></div>
             <div class="form-group"><label>Complemento</label><input type="text" [(ngModel)]="form.endereco.complemento" /></div>
             <div class="form-group"><label>Bairro</label><input type="text" [(ngModel)]="form.endereco.bairro" /></div>
-            <div class="form-group"><label>CEP</label><input type="text" [(ngModel)]="form.endereco.cep" inputmode="numeric" /></div>
             <div class="form-group">
               <label>UF</label>
               <select [(ngModel)]="form.endereco.uf" (ngModelChange)="form.endereco.codigoMunicipio = 0; form.endereco.municipio = ''">

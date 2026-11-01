@@ -15,6 +15,7 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         Task<IReadOnlyList<NfeMunicipio>> BuscarMunicipiosAsync(string uf, string? nome, CancellationToken ct = default);
 
         Task<IReadOnlyList<NfeResumo>> ListarDoVeiculoAsync(int veiculoId, CancellationToken ct = default);
+        Task<NfeSugestao> SugerirAsync(int veiculoId, string tipo, CancellationToken ct = default);
         Task<NfeResumo> EmitirAsync(int veiculoId, NfeEmissaoInput input, CancellationToken ct = default);
         Task<NfeResumo> ReenviarAsync(int notaId, NfeEmissaoInput? correcao, CancellationToken ct = default);
         Task<NfeResumo> CancelarAsync(int notaId, string justificativa, CancellationToken ct = default);

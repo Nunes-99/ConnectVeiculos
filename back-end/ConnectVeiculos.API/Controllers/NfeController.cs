@@ -48,6 +48,10 @@ namespace ConnectVeiculos.API.Controllers
         public async Task<IActionResult> DoVeiculo(int veiculoId, CancellationToken ct)
             => Ok(await _nfe.ListarDoVeiculoAsync(veiculoId, ct));
 
+        [HttpGet("veiculos/{veiculoId:int}/sugestao")]
+        public Task<IActionResult> Sugestao(int veiculoId, [FromQuery] string tipo, CancellationToken ct)
+            => Executar(() => _nfe.SugerirAsync(veiculoId, tipo, ct));
+
         [HttpPost("veiculos/{veiculoId:int}")]
         public Task<IActionResult> Emitir(int veiculoId, [FromBody] NfeEmissaoInput input, CancellationToken ct)
             => Executar(() => _nfe.EmitirAsync(veiculoId, input, ct));

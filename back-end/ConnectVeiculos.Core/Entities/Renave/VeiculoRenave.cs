@@ -22,10 +22,15 @@ namespace ConnectVeiculos.Core.Entities.Renave
         public DateTime? RnvDtAssinaturaVendedor { get; private set; }
         public string? RnvChaveNfEntrada { get; private set; }
 
+        /// <summary>Quem vendeu o veiculo para a loja: reaproveitado na NF-e de compra.</summary>
+        public string? RnvVendedorDocumento { get; private set; }
+        public string? RnvVendedorEmail { get; private set; }
+
         public DateTime? RnvDtSaida { get; private set; }
         public decimal? RnvValorVenda { get; private set; }
         public string? RnvCompradorDocumento { get; private set; }
         public string? RnvCompradorNome { get; private set; }
+        public string? RnvCompradorEmail { get; private set; }
         public string? RnvChaveNfSaida { get; private set; }
         public string? RnvNumeroAtpv { get; private set; }
 
@@ -43,9 +48,12 @@ namespace ConnectVeiculos.Core.Entities.Renave
 
         public bool EmEstoque => RnvIdEstoque.HasValue && RnvDtSaida == null;
 
-        public void RegistrarEntrada(long idEstoque, string estado, DateTime dataCompra, decimal valorCompra)
+        public void RegistrarEntrada(long idEstoque, string estado, DateTime dataCompra, decimal valorCompra,
+            string? documentoVendedor = null, string? emailVendedor = null)
         {
             RnvIdEstoque = idEstoque;
+            RnvVendedorDocumento = documentoVendedor;
+            RnvVendedorEmail = emailVendedor;
             RnvEstado = estado;
             RnvDtEntrada = dataCompra;
             RnvValorCompra = valorCompra;
@@ -67,8 +75,10 @@ namespace ConnectVeiculos.Core.Entities.Renave
             Tocar();
         }
 
-        public void RegistrarSaida(string estado, DateTime dataVenda, decimal valorVenda, string documentoComprador, string? nomeComprador)
+        public void RegistrarSaida(string estado, DateTime dataVenda, decimal valorVenda, string documentoComprador, string? nomeComprador,
+            string? emailComprador = null)
         {
+            RnvCompradorEmail = emailComprador;
             RnvEstado = estado;
             RnvDtSaida = dataVenda;
             RnvValorVenda = valorVenda;

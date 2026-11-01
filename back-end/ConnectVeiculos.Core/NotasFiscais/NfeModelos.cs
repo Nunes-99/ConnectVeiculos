@@ -86,6 +86,18 @@ namespace ConnectVeiculos.Core.NotasFiscais
         public string? Uf { get; set; }
     }
 
+    /// <summary>
+    /// Dados ja conhecidos para preencher uma nota (ou a saida do Renave):
+    /// vem da nota anterior do veiculo, da venda registrada ou do Renave.
+    /// </summary>
+    public class NfeSugestao
+    {
+        public NfeEmissaoInput Dados { get; set; } = new();
+
+        /// <summary>De onde vieram os dados ("nota", "venda", "renave"), ou null se nada foi achado.</summary>
+        public string? Origem { get; set; }
+    }
+
     /// <summary>Dados de uma nota de veiculo: a outra parte (vendedor na compra, comprador na venda) e os valores.</summary>
     public class NfeEmissaoInput
     {

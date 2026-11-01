@@ -3,8 +3,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Veiculo } from '../../../core/models';
 import { ToastService } from '../../../core/services/toast.service';
+import { CepService } from '../../../core/services/cep.service';
 import {
-  MEIOS_PAGAMENTO_NFE, NfeConfig, NfeEmissao, NfeMunicipio, NfeResumo, NfeService, baixarArquivo, erroApi
+  MEIOS_PAGAMENTO_NFE, NfeConfig, NfeEmissao, NfeMunicipio, NfeResumo, NfeService, ORIGEM_SUGESTAO, baixarArquivo, erroApi
 } from '../../../core/services/nfe.service';
 
 /**
@@ -21,6 +22,7 @@ import {
 export class NfeVeiculoComponent implements OnInit {
   private nfe = inject(NfeService);
   private toast = inject(ToastService);
+  private cep = inject(CepService);
 
   @Input({ required: true }) veiculo!: Veiculo;
   @Output() fechar = new EventEmitter<void>();
@@ -35,6 +37,9 @@ export class NfeVeiculoComponent implements OnInit {
   enviando = false;
 
   mostrarFormulario = false;
+  /** De onde veio o preenchimento automatico (texto para a tela), ou null. */
+  origemDados: string | null = null;
+  buscandoCep = false;
   form: NfeEmissao = this.formVazio('SAIDA');
   buscaMunicipio = '';
   municipios: NfeMunicipio[] = [];
@@ -77,7 +82,59 @@ export class NfeVeiculoComponent implements OnInit {
     this.form = this.formVazio(tipo);
     this.municipios = [];
     this.buscaMunicipio = '';
+    this.origemDados = null;
     this.mostrarFormulario = true;
+
+    // Traz o que o sistema ja sabe (nota anterior, venda registrada, Renave).
+    this.nfe.sugestao(this.veiculo.veiId, tipo).subscribe({
+      next: s => {
+        if (!s.origem) return;
+        const vazio = this.formVazio(tipo);
+        const d = s.dados;
+        const e = d.endereco || vazio.endereco;
+        this.form = {
+          ...vazio,
+          documento: d.documento || '',
+          nome: d.nome || '',
+          inscricaoEstadual: d.inscricaoEstadual || null,
+          email: d.email || null,
+          telefone: d.telefone || null,
+          valor: d.valor || vazio.valor,
+          ncm: d.ncm || null,
+          meioPagamento: d.meioPagamento || vazio.meioPagamento,
+          informacoesComplementares: d.informacoesComplementares || null,
+          endereco: {
+            logradouro: e.logradouro || '', numero: e.numero || '', complemento: e.complemento || '',
+            bairro: e.bairro || '', cep: e.cep || '', codigoMunicipio: e.codigoMunicipio || 0,
+            municipio: e.municipio || '', uf: e.uf || vazio.endereco.uf
+          }
+        };
+        // Cidade sem codigo IBGE: deixa o nome na busca para a loja so confirmar.
+        if (!this.form.endereco.codigoMunicipio && this.form.endereco.municipio) {
+          this.buscaMunicipio = this.form.endereco.municipio;
+          this.buscarMunicipios();
+        }
+        this.origemDados = ORIGEM_SUGESTAO[s.origem] || null;
+      },
+      error: () => {}
+    });
+  }
+
+  /** Preenche rua, bairro, UF e municipio pelo CEP. */
+  buscarCep(): void {
+    const e = this.form.endereco;
+    if ((e.cep || '').replace(/\D/g, '').length !== 8) return;
+    this.buscandoCep = true;
+    this.cep.buscar(e.cep).subscribe(r => {
+      this.buscandoCep = false;
+      if (!r) { this.toast.warning('CEP não encontrado.'); return; }
+      e.cep = r.cep;
+      if (r.logradouro) e.logradouro = r.logradouro;
+      if (r.bairro) e.bairro = r.bairro;
+      e.uf = r.uf || e.uf;
+      e.codigoMunicipio = r.codigoMunicipio;
+      e.municipio = r.cidade;
+    });
   }
 
   buscarMunicipios(): void {

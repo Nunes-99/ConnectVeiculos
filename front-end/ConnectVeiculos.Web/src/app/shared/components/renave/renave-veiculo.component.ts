@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Veiculo } from '../../../core/models';
 import { ToastService } from '../../../core/services/toast.service';
+import { CepService, mesmaCidade } from '../../../core/services/cep.service';
+import { NfeService, ORIGEM_SUGESTAO } from '../../../core/services/nfe.service';
 import {
   RenaveAptidao, RenaveConfig, RenaveMunicipio, RenaveService, RenaveSituacao, TipoCrv, erroRenave
 } from '../../../core/services/renave.service';
@@ -24,6 +26,8 @@ interface Etapa { titulo: string; feita: boolean; detalhe?: string | null; }
 export class RenaveVeiculoComponent implements OnInit {
   private renave = inject(RenaveService);
   private toast = inject(ToastService);
+  private nfe = inject(NfeService);
+  private cep = inject(CepService);
 
   @Input({ required: true }) veiculo!: Veiculo;
   @Output() fechar = new EventEmitter<void>();
@@ -57,6 +61,9 @@ export class RenaveVeiculoComponent implements OnInit {
   buscaMunicipio = '';
   municipios: RenaveMunicipio[] = [];
   municipio: RenaveMunicipio | null = null;
+  /** De onde veio o preenchimento automatico do formulario atual, ou null. */
+  origemDados: string | null = null;
+  private preenchido: string | null = null;
 
   readonly ufs = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR',
     'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SP', 'SC', 'SE', 'TO'];
@@ -81,6 +88,75 @@ export class RenaveVeiculoComponent implements OnInit {
     this.situacao = s;
     this.chaveNota = '';
     this.situacaoChange.emit(s);
+    this.preencher();
+  }
+
+  /**
+   * Entrada e saida pedem o mesmo vendedor/comprador da NF-e: traz o que o
+   * sistema ja sabe (nota emitida, venda registrada) para a loja so conferir.
+   */
+  private preencher(): void {
+    const passo = this.passo;
+    if ((passo !== 'entrada' && passo !== 'saida') || this.preenchido === passo) return;
+    this.preenchido = passo;
+    this.origemDados = null;
+    this.nfe.sugestao(this.veiculo.veiId, passo === 'entrada' ? 'ENTRADA' : 'SAIDA').subscribe({
+      next: s => {
+        // O que vem do proprio Renave ja esta nele; so serve o que veio de fora.
+        if (!s.origem || s.origem === 'renave') return;
+        const d = s.dados;
+        if (passo === 'entrada') {
+          this.entrada.documentoVendedor = this.entrada.documentoVendedor || d.documento || '';
+          this.entrada.emailVendedor = this.entrada.emailVendedor || d.email || '';
+          if (s.origem === 'nota' && d.valor) this.entrada.valorCompra = d.valor;
+        } else {
+          const e = d.endereco;
+          const sd = this.saida;
+          sd.documentoComprador = sd.documentoComprador || d.documento || '';
+          sd.nomeComprador = sd.nomeComprador || d.nome || '';
+          sd.emailComprador = sd.emailComprador || d.email || '';
+          if (d.valor) sd.valorVenda = d.valor;
+          if (e) {
+            sd.cep = e.cep || sd.cep;
+            sd.logradouro = e.logradouro || sd.logradouro;
+            sd.numero = e.numero || sd.numero;
+            sd.complemento = e.complemento || sd.complemento;
+            sd.bairro = e.bairro || sd.bairro;
+            sd.uf = e.uf || sd.uf;
+            if (e.municipio) this.acharMunicipio(e.municipio);
+          }
+        }
+        this.origemDados = ORIGEM_SUGESTAO[s.origem] || null;
+      },
+      error: () => {}
+    });
+  }
+
+  /** Escolhe o municipio do Renave pelo nome; sem acerto exato, deixa a lista para a loja. */
+  private acharMunicipio(nome: string): void {
+    this.municipio = null;
+    this.buscaMunicipio = nome;
+    this.renave.municipios(this.saida.uf, nome).subscribe({
+      next: m => {
+        this.municipios = m;
+        this.municipio = m.find(x => mesmaCidade(x.nome, nome)) || (m.length === 1 ? m[0] : null);
+      },
+      error: () => {}
+    });
+  }
+
+  /** Preenche rua, bairro, UF e municipio do comprador pelo CEP. */
+  buscarCep(): void {
+    const sd = this.saida;
+    if ((sd.cep || '').replace(/\D/g, '').length !== 8) return;
+    this.cep.buscar(sd.cep).subscribe(r => {
+      if (!r) { this.toast.warning('CEP não encontrado.'); return; }
+      sd.cep = r.cep;
+      if (r.logradouro) sd.logradouro = r.logradouro;
+      if (r.bairro) sd.bairro = r.bairro;
+      sd.uf = r.uf || sd.uf;
+      if (r.cidade) this.acharMunicipio(r.cidade);
+    });
   }
 
   get emTestes(): boolean {

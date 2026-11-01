@@ -2,6 +2,7 @@ import { Component, EventEmitter, OnInit, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ToastService } from '../../../core/services/toast.service';
+import { CepService } from '../../../core/services/cep.service';
 import { NfeConfig, NfeMunicipio, NfeService, erroApi } from '../../../core/services/nfe.service';
 import { CertificadoA1Component } from './certificado-a1.component';
 
@@ -20,6 +21,7 @@ import { CertificadoA1Component } from './certificado-a1.component';
 export class NfeConfigComponent implements OnInit {
   private nfe = inject(NfeService);
   private toast = inject(ToastService);
+  private cep = inject(CepService);
 
   @Output() prontoChange = new EventEmitter<boolean>();
 
@@ -65,6 +67,22 @@ export class NfeConfigComponent implements OnInit {
     this.config.municipio = m.nome;
     this.municipios = [];
     this.buscaMunicipio = '';
+  }
+
+  /** Preenche rua, bairro, UF e municipio da loja pelo CEP. */
+  buscarCep(): void {
+    const c = this.config;
+    if (!c || (c.cep || '').replace(/\D/g, '').length !== 8) return;
+    this.cep.buscar(c.cep).subscribe(r => {
+      if (!r) { this.toast.warning('CEP não encontrado.'); return; }
+      c.cep = r.cep;
+      if (r.logradouro) c.logradouro = r.logradouro;
+      if (r.bairro) c.bairro = r.bairro;
+      c.uf = r.uf || c.uf;
+      c.codigoMunicipio = r.codigoMunicipio || null;
+      c.municipio = r.cidade;
+      this.buscaMunicipio = '';
+    });
   }
 
   salvar(): void {

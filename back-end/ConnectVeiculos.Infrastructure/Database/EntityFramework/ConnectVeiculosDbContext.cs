@@ -435,6 +435,9 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
                 entity.Property(e => e.RnvChaveNfSaida).HasMaxLength(44);
                 entity.Property(e => e.RnvCompradorDocumento).HasMaxLength(14);
                 entity.Property(e => e.RnvCompradorNome).HasMaxLength(200);
+                entity.Property(e => e.RnvCompradorEmail).HasMaxLength(200);
+                entity.Property(e => e.RnvVendedorDocumento).HasMaxLength(14);
+                entity.Property(e => e.RnvVendedorEmail).HasMaxLength(200);
                 entity.Property(e => e.RnvNumeroAtpv).HasMaxLength(30);
                 entity.Property(e => e.RnvUltimoErro).HasMaxLength(1000);
                 entity.Ignore(e => e.EmEstoque);

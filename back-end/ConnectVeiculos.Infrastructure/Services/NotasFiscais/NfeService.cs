@@ -4,6 +4,8 @@ using System.Text.Json;
 using ConnectVeiculos.Core.Entities.NotasFiscais;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Configuracoes;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.NotasFiscais;
+using ConnectVeiculos.Core.Interfaces.Database.Repositories.Renave;
+using ConnectVeiculos.Core.Interfaces.Database.Repositories.Vendas;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Services;
 using ConnectVeiculos.Core.Interfaces.Tenancy;
@@ -33,6 +35,8 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
         private readonly IConfiguracaoSistemaRepository _config;
         private readonly INotaFiscalRepository _notas;
         private readonly IVeiculoRepository _veiculos;
+        private readonly IVendaRepository _vendas;
+        private readonly IVeiculoRenaveRepository _registrosRenave;
         private readonly ICertificadoDigitalService _certificado;
         private readonly INfeSefaz _sefaz;
         private readonly IRenaveService _renave;
@@ -41,12 +45,15 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
         private readonly ILogger<NfeService> _logger;
 
         public NfeService(IConfiguracaoSistemaRepository config, INotaFiscalRepository notas, IVeiculoRepository veiculos,
+            IVendaRepository vendas, IVeiculoRenaveRepository registrosRenave,
             ICertificadoDigitalService certificado, INfeSefaz sefaz, IRenaveService renave, ITenantContext tenant,
             HttpClient http, ILogger<NfeService> logger)
         {
             _config = config;
             _notas = notas;
             _veiculos = veiculos;
+            _vendas = vendas;
+            _registrosRenave = registrosRenave;
             _certificado = certificado;
             _sefaz = sefaz;
             _renave = renave;
@@ -169,6 +176,163 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
 
         public async Task<IReadOnlyList<NfeResumo>> ListarDoVeiculoAsync(int veiculoId, CancellationToken ct = default)
             => (await _notas.GetByVeiculoAsync(veiculoId)).OrderByDescending(n => n.NfId).Select(Resumo).ToList();
+
+        /// <summary>
+        /// Preenche a nota com o que o sistema ja sabe, nesta ordem: a ultima nota
+        /// do mesmo tipo do veiculo (rejeitada ou cancelada), a venda registrada
+        /// (so na venda) e o Renave (vendedor na compra, comprador na venda).
+        /// </summary>
+        public async Task<NfeSugestao> SugerirAsync(int veiculoId, string tipo, CancellationToken ct = default)
+        {
+            tipo = Tipo(tipo);
+            var veiculo = await _veiculos.GetByIdAsync(veiculoId) ?? throw new NfeException("Veículo não encontrado.");
+            var cfg = await ObterConfigAsync(ct);
+            var dados = new NfeEmissaoInput
+            {
+                Tipo = tipo,
+                Endereco = new NfeEndereco { Uf = cfg.Uf },
+                Valor = tipo == NotaFiscal.Saida ? veiculo.VeiPreco : veiculo.VeiPrecoCompra,
+                MeioPagamento = tipo == NotaFiscal.Saida ? "17" : "90"
+            };
+
+            var anterior = (await _notas.GetByVeiculoAsync(veiculoId))
+                .Where(n => n.NfTipo == tipo && n.NfDadosJson != null)
+                .OrderByDescending(n => n.NfId)
+                .FirstOrDefault();
+            if (anterior != null)
+            {
+                try
+                {
+                    var salvo = JsonSerializer.Deserialize<NfeEmissaoInput>(anterior.NfDadosJson!, Json);
+                    if (salvo != null)
+                    {
+                        salvo.Tipo = tipo;
+                        salvo.Endereco ??= new NfeEndereco { Uf = cfg.Uf };
+                        return new NfeSugestao { Dados = salvo, Origem = "nota" };
+                    }
+                }
+                catch (JsonException) { /* segue para as outras fontes */ }
+            }
+
+            if (tipo == NotaFiscal.Saida)
+            {
+                var venda = (await _vendas.GetByVeiculoIdAsync(veiculoId))
+                    .Where(v => v.VenStatus != "E")
+                    .OrderByDescending(v => v.VenDtVenda)
+                    .FirstOrDefault();
+                if (venda != null)
+                {
+                    dados.Documento = NfeVeiculoBuilder.SoDigitos(venda.VenCompradorCpf);
+                    dados.Nome = venda.VenCompradorNome?.Trim() ?? "";
+                    dados.Email = Vazio(venda.VenCompradorEmail);
+                    dados.Telefone = Vazio(venda.VenCompradorTelefone);
+                    if (venda.VenValor > 0) dados.Valor = venda.VenValor;
+                    dados.MeioPagamento = MeioPagamentoDaVenda(venda.VenFormaPagamento);
+                    dados.Endereco = LerEnderecoDaVenda(venda.VenCompradorEndereco, cfg.Uf);
+                    await CompletarMunicipioAsync(dados.Endereco, ct);
+                    return new NfeSugestao { Dados = dados, Origem = "venda" };
+                }
+            }
+
+            var renave = await _registrosRenave.GetByVeiculoAsync(veiculoId);
+            if (tipo == NotaFiscal.Entrada && renave?.RnvVendedorDocumento != null)
+            {
+                dados.Documento = renave.RnvVendedorDocumento;
+                dados.Email = renave.RnvVendedorEmail;
+                if (renave.RnvValorCompra > 0) dados.Valor = renave.RnvValorCompra.Value;
+                return new NfeSugestao { Dados = dados, Origem = "renave" };
+            }
+            if (tipo == NotaFiscal.Saida && renave?.RnvCompradorDocumento != null)
+            {
+                dados.Documento = renave.RnvCompradorDocumento;
+                dados.Nome = renave.RnvCompradorNome ?? "";
+                dados.Email = renave.RnvCompradorEmail;
+                if (renave.RnvValorVenda > 0) dados.Valor = renave.RnvValorVenda.Value;
+                return new NfeSugestao { Dados = dados, Origem = "renave" };
+            }
+
+            return new NfeSugestao { Dados = dados };
+        }
+
+        /// <summary>Forma de pagamento da venda (tela de vendas) para o codigo tPag da NF-e.</summary>
+        public static string MeioPagamentoDaVenda(string? forma) => (forma ?? "").ToUpperInvariant() switch
+        {
+            "PIX" => "17",
+            "DINHEIRO" => "01",
+            "CARTAO_CREDITO" => "03",
+            "CARTAO_DEBITO" => "04",
+            _ => "99"
+        };
+
+        /// <summary>
+        /// A tela de vendas grava o endereco como "rua, numero, bairro, cidade, UF, CEP",
+        /// pulando as partes vazias. Le de tras para frente: CEP, UF e cidade
+        /// sao reconheciveis; o resto e rua, numero e bairro.
+        /// </summary>
+        public static NfeEndereco LerEnderecoDaVenda(string? texto, string? ufPadrao)
+        {
+            var e = new NfeEndereco { Uf = ufPadrao };
+            var partes = (texto ?? "").Split(',').Select(p => p.Trim()).Where(p => p.Length > 0).ToList();
+            if (partes.Count == 0) return e;
+
+            if (System.Text.RegularExpressions.Regex.IsMatch(partes[^1], @"^\d{5}-?\d{3}$"))
+            {
+                e.Cep = NfeVeiculoBuilder.SoDigitos(partes[^1]);
+                partes.RemoveAt(partes.Count - 1);
+            }
+            if (partes.Count > 0 && partes[^1].Length == 2 && EhUf(partes[^1]))
+            {
+                e.Uf = partes[^1].ToUpperInvariant();
+                partes.RemoveAt(partes.Count - 1);
+            }
+            if (partes.Count > 1)
+            {
+                e.Municipio = partes[^1];
+                partes.RemoveAt(partes.Count - 1);
+            }
+            if (partes.Count == 0) return e;
+
+            e.Logradouro = partes[0];
+            var resto = partes.Skip(1).ToList();
+            if (resto.Count >= 2)
+            {
+                e.Numero = resto[0];
+                e.Bairro = string.Join(", ", resto.Skip(1));
+            }
+            else if (resto.Count == 1)
+            {
+                var r = resto[0];
+                if (char.IsDigit(r[0]) || r.StartsWith("S/N", StringComparison.OrdinalIgnoreCase)) e.Numero = r;
+                else e.Bairro = r;
+            }
+            return e;
+        }
+
+        private static bool EhUf(string uf)
+        {
+            try { NfeVeiculoBuilder.Uf(uf); return true; }
+            catch (NfeException) { return false; }
+        }
+
+        /// <summary>Acha o codigo IBGE pelo nome da cidade; sem acerto exato, deixa para a tela.</summary>
+        private async Task CompletarMunicipioAsync(NfeEndereco e, CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(e.Municipio) || string.IsNullOrWhiteSpace(e.Uf) || !EhUf(e.Uf)) return;
+            try
+            {
+                var alvo = NfeVeiculoBuilder.SemAcento(e.Municipio).ToUpperInvariant();
+                var achado = (await BuscarMunicipiosAsync(e.Uf, e.Municipio, ct))
+                    .FirstOrDefault(m => NfeVeiculoBuilder.SemAcento(m.Nome).ToUpperInvariant() == alvo);
+                if (achado != null)
+                {
+                    e.CodigoMunicipio = achado.Codigo;
+                    e.Municipio = achado.Nome;
+                }
+            }
+            catch (NfeException) { /* IBGE fora: a loja escolhe na tela */ }
+        }
+
+        private static string? Vazio(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
         public async Task<NfeResumo> EmitirAsync(int veiculoId, NfeEmissaoInput input, CancellationToken ct = default)
         {
