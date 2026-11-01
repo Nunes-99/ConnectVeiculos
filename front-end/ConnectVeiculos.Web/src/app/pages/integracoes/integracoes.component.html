@@ -392,6 +392,31 @@
     </div>
   </div>
 
+  <!-- NF-e de veiculos (direto na Sefaz) -->
+  <div class="integracao-card">
+    <div class="card-header">
+      <div class="platform-info">
+        <span class="platform-icon nfe-icon">
+          <span class="material-icons">receipt_long</span>
+        </span>
+        <div>
+          <h3>NF-e</h3>
+          <p>Nota fiscal de compra e de venda dos veículos</p>
+        </div>
+      </div>
+      <span class="status-badge" [class.connected]="nfePronta" [class.disconnected]="!nfePronta">
+        {{ nfePronta ? 'Configurado' : 'Não configurado' }}
+      </span>
+    </div>
+    <div class="card-body">
+      <app-nfe-config (prontoChange)="nfePronta = $event"></app-nfe-config>
+    </div>
+    <div class="card-footer">
+      <span class="material-icons">info</span>
+      <small>Custo: nenhum. A nota vai direto para a Sefaz, assinada com o certificado da loja.</small>
+    </div>
+  </div>
+
   <!-- Modal config SMTP -->
   @if (showSmtpConfigModal) {
     <div class="modal-overlay">

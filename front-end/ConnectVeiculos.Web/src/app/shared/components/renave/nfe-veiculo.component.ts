@@ -1,0 +1,157 @@
+import { Component, EventEmitter, Input, OnInit, Output, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Veiculo } from '../../../core/models';
+import { ToastService } from '../../../core/services/toast.service';
+import {
+  MEIOS_PAGAMENTO_NFE, NfeConfig, NfeEmissao, NfeMunicipio, NfeResumo, NfeService, baixarArquivo, erroApi
+} from '../../../core/services/nfe.service';
+
+/**
+ * Notas fiscais de um veiculo: lista (com DANFE, XML, reenvio e cancelamento)
+ * e o formulario para emitir a NF-e de compra ou a de venda.
+ */
+@Component({
+  selector: 'app-nfe-veiculo',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './nfe-veiculo.component.html',
+  styleUrl: './renave.scss'
+})
+export class NfeVeiculoComponent implements OnInit {
+  private nfe = inject(NfeService);
+  private toast = inject(ToastService);
+
+  @Input({ required: true }) veiculo!: Veiculo;
+  @Output() fechar = new EventEmitter<void>();
+
+  readonly meios = MEIOS_PAGAMENTO_NFE;
+  readonly ufs = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR',
+    'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SP', 'SC', 'SE', 'TO'];
+
+  config: NfeConfig | null = null;
+  notas: NfeResumo[] = [];
+  carregando = true;
+  enviando = false;
+
+  mostrarFormulario = false;
+  form: NfeEmissao = this.formVazio('SAIDA');
+  buscaMunicipio = '';
+  municipios: NfeMunicipio[] = [];
+
+  cancelando: NfeResumo | null = null;
+  justificativa = '';
+
+  ngOnInit(): void {
+    this.nfe.obterConfig().subscribe({
+      next: c => { this.config = c; this.form.endereco.uf = c.uf || 'SP'; },
+      error: () => {}
+    });
+    this.recarregar();
+  }
+
+  private formVazio(tipo: 'ENTRADA' | 'SAIDA'): NfeEmissao {
+    return {
+      tipo,
+      documento: '', nome: '', inscricaoEstadual: null, email: null, telefone: null,
+      endereco: { logradouro: '', numero: '', complemento: '', bairro: '', cep: '', codigoMunicipio: 0, municipio: '', uf: this.config?.uf || 'SP' },
+      valor: tipo === 'SAIDA' ? (this.veiculo?.veiPreco || 0) : (this.veiculo?.veiPrecoCompra || 0),
+      ncm: null,
+      meioPagamento: tipo === 'SAIDA' ? '17' : '90',
+      informacoesComplementares: null
+    };
+  }
+
+  recarregar(): void {
+    this.nfe.doVeiculo(this.veiculo.veiId).subscribe({
+      next: n => { this.notas = n; this.carregando = false; },
+      error: async err => { this.carregando = false; this.toast.error(await erroApi(err, 'Não foi possível carregar as notas.')); }
+    });
+  }
+
+  tem(tipo: 'ENTRADA' | 'SAIDA'): boolean {
+    return this.notas.some(n => n.tipo === tipo && n.status === 'AUTORIZADA');
+  }
+
+  novaNota(tipo: 'ENTRADA' | 'SAIDA'): void {
+    this.form = this.formVazio(tipo);
+    this.municipios = [];
+    this.buscaMunicipio = '';
+    this.mostrarFormulario = true;
+  }
+
+  buscarMunicipios(): void {
+    const nome = this.buscaMunicipio.trim();
+    if (nome.length < 3) return;
+    this.nfe.municipios(this.form.endereco.uf, nome).subscribe({
+      next: m => { this.municipios = m; if (m.length === 1) this.escolherMunicipio(m[0]); },
+      error: async err => this.toast.error(await erroApi(err, 'Não foi possível buscar o município.'))
+    });
+  }
+
+  escolherMunicipio(m: NfeMunicipio | undefined): void {
+    if (!m) return;
+    this.form.endereco.codigoMunicipio = m.codigo;
+    this.form.endereco.municipio = m.nome;
+    this.municipios = [];
+    this.buscaMunicipio = '';
+  }
+
+  emitir(): void {
+    if (!this.form.endereco.codigoMunicipio) { this.toast.error('Escolha o município.'); return; }
+    this.enviando = true;
+    this.nfe.emitir(this.veiculo.veiId, this.form).subscribe({
+      next: n => {
+        this.enviando = false;
+        this.mostrarFormulario = false;
+        this.toast.success(`NF-e nº ${n.numero} autorizada.`);
+        if (n.motivo?.includes('Renave')) this.toast.error(n.motivo);
+        this.recarregar();
+      },
+      error: async err => {
+        this.enviando = false;
+        this.toast.error(await erroApi(err, 'Não foi possível emitir a nota.'));
+        this.recarregar();
+      }
+    });
+  }
+
+  reenviar(n: NfeResumo): void {
+    this.enviando = true;
+    this.nfe.reenviar(n.id, null).subscribe({
+      next: r => { this.enviando = false; this.toast.success(`NF-e nº ${r.numero} autorizada.`); this.recarregar(); },
+      error: async err => { this.enviando = false; this.toast.error(await erroApi(err, 'A nota não foi autorizada.')); this.recarregar(); }
+    });
+  }
+
+  confirmarCancelamento(): void {
+    if (!this.cancelando) return;
+    this.enviando = true;
+    this.nfe.cancelar(this.cancelando.id, this.justificativa).subscribe({
+      next: () => {
+        this.enviando = false; this.cancelando = null; this.justificativa = '';
+        this.toast.success('NF-e cancelada.');
+        this.recarregar();
+      },
+      error: async err => { this.enviando = false; this.toast.error(await erroApi(err, 'Não foi possível cancelar.')); }
+    });
+  }
+
+  baixarDanfe(n: NfeResumo): void {
+    this.nfe.danfe(n.id).subscribe({
+      next: b => baixarArquivo(b, `DANFE-${n.numero}.pdf`),
+      error: async err => this.toast.error(await erroApi(err, 'Não foi possível gerar o DANFE.'))
+    });
+  }
+
+  baixarXml(n: NfeResumo): void {
+    this.nfe.xml(n.id).subscribe({
+      next: b => baixarArquivo(b, `${n.chave}-procNFe.xml`),
+      error: async err => this.toast.error(await erroApi(err, 'Não foi possível baixar o XML.'))
+    });
+  }
+
+  rotuloStatus(s: string): string {
+    return ({ PENDENTE: 'Pendente', AUTORIZADA: 'Autorizada', REJEITADA: 'Rejeitada', CANCELADA: 'Cancelada' } as Record<string, string>)[s] || s;
+  }
+}

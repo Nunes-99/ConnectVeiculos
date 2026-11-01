@@ -1,0 +1,142 @@
+<div class="modal-overlay" (click)="fechar.emit()">
+  <div class="modal modal-lg" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2><span class="material-icons">receipt_long</span> Notas fiscais · {{ veiculo.veiPlaca }}</h2>
+      <button class="btn-close" (click)="fechar.emit()"><span class="material-icons">close</span></button>
+    </div>
+
+    <div class="modal-body">
+      <p class="rnv-veiculo">{{ veiculo.veiMarca }} {{ veiculo.veiModelo }} {{ veiculo.veiAno }}</p>
+
+      @if (config && !config.pronto) {
+        <div class="rnv-alerta">
+          <span class="material-icons">settings</span>
+          <div><strong>Configure a NF-e em Integrações.</strong> <small>Falta: {{ config.pendencias.join(' · ') }}</small></div>
+        </div>
+      }
+      @if (config?.ambiente !== 'producao') {
+        <div class="rnv-aviso-teste"><span class="material-icons">science</span> Ambiente de testes da Sefaz: as notas não têm valor fiscal.</div>
+      }
+
+      @if (carregando) {
+        <p>Carregando...</p>
+      } @else {
+        @if (notas.length) {
+          <table class="nfe-tabela">
+            <thead><tr><th>Tipo</th><th>Nº</th><th>Situação</th><th>Valor</th><th></th></tr></thead>
+            <tbody>
+              @for (n of notas; track n.id) {
+                <tr>
+                  <td>{{ n.tipo === 'ENTRADA' ? 'Compra' : 'Venda' }}</td>
+                  <td>{{ n.numero }}</td>
+                  <td>
+                    <span class="nfe-status" [attr.data-status]="n.status">{{ rotuloStatus(n.status) }}</span>
+                    @if (n.status === 'REJEITADA' || n.status === 'PENDENTE') { <small class="nfe-motivo">{{ n.motivo }}</small> }
+                  </td>
+                  <td>{{ n.valor | currency:'BRL' }}</td>
+                  <td class="nfe-acoes">
+                    @if (n.status === 'AUTORIZADA' || n.status === 'CANCELADA') {
+                      <button class="btn-icon" title="DANFE (PDF)" (click)="baixarDanfe(n)"><span class="material-icons">picture_as_pdf</span></button>
+                      <button class="btn-icon" title="XML" (click)="baixarXml(n)"><span class="material-icons">code</span></button>
+                    }
+                    @if (n.podeReenviar) {
+                      <button class="btn-icon" title="Enviar de novo" (click)="reenviar(n)" [disabled]="enviando"><span class="material-icons">send</span></button>
+                    }
+                    @if (n.podeCancelar) {
+                      <button class="btn-icon delete" title="Cancelar nota" (click)="cancelando = n; justificativa = ''"><span class="material-icons">block</span></button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else {
+          <p class="rnv-dica">Nenhuma nota emitida para este veículo.</p>
+        }
+
+        @if (cancelando) {
+          <div class="rnv-erro-box">
+            <span class="material-icons">block</span>
+            <div>
+              <strong>Cancelar a NF-e nº {{ cancelando.numero }}?</strong>
+              <small>Só dentro de 24 horas da autorização. Explique o motivo (mínimo 15 letras).</small>
+              <input type="text" [(ngModel)]="justificativa" maxlength="255" placeholder="Ex.: Venda desfeita a pedido do cliente" />
+              <div class="rnv-acoes">
+                <button class="btn-primary" (click)="confirmarCancelamento()" [disabled]="enviando || justificativa.trim().length < 15">Cancelar nota</button>
+                <button class="btn-secondary" (click)="cancelando = null">Voltar</button>
+              </div>
+            </div>
+          </div>
+        }
+
+        @if (!mostrarFormulario) {
+          <div class="rnv-acoes">
+            @if (!tem('ENTRADA')) {
+              <button class="btn-secondary" (click)="novaNota('ENTRADA')"><span class="material-icons">login</span> NF-e de compra</button>
+            }
+            @if (!tem('SAIDA')) {
+              <button class="btn-primary" (click)="novaNota('SAIDA')"><span class="material-icons">logout</span> NF-e de venda</button>
+            }
+          </div>
+        } @else {
+          <h4>{{ form.tipo === 'ENTRADA' ? 'NF-e de compra (vendedor)' : 'NF-e de venda (comprador)' }}</h4>
+          <div class="rnv-grid">
+            <div class="form-group"><label>CPF/CNPJ</label><input type="text" [(ngModel)]="form.documento" inputmode="numeric" /></div>
+            <div class="form-group"><label>Nome / razão social</label><input type="text" [(ngModel)]="form.nome" /></div>
+            <div class="form-group"><label>Inscrição estadual <small>(só se for contribuinte)</small></label><input type="text" [(ngModel)]="form.inscricaoEstadual" /></div>
+            <div class="form-group"><label>E-mail</label><input type="email" [(ngModel)]="form.email" /></div>
+            <div class="form-group"><label>Telefone</label><input type="text" [(ngModel)]="form.telefone" inputmode="tel" /></div>
+            <div class="form-group"><label>Endereço</label><input type="text" [(ngModel)]="form.endereco.logradouro" /></div>
+            <div class="form-group"><label>Número</label><input type="text" [(ngModel)]="form.endereco.numero" /></div>
+            <div class="form-group"><label>Complemento</label><input type="text" [(ngModel)]="form.endereco.complemento" /></div>
+            <div class="form-group"><label>Bairro</label><input type="text" [(ngModel)]="form.endereco.bairro" /></div>
+            <div class="form-group"><label>CEP</label><input type="text" [(ngModel)]="form.endereco.cep" inputmode="numeric" /></div>
+            <div class="form-group">
+              <label>UF</label>
+              <select [(ngModel)]="form.endereco.uf" (ngModelChange)="form.endereco.codigoMunicipio = 0; form.endereco.municipio = ''">
+                @for (uf of ufs; track uf) { <option [value]="uf">{{ uf }}</option> }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Município</label>
+              @if (form.endereco.codigoMunicipio) {
+                <div class="rnv-municipio">{{ form.endereco.municipio }}
+                  <button class="rnv-link" (click)="form.endereco.codigoMunicipio = 0">trocar</button>
+                </div>
+              } @else {
+                <input type="text" [(ngModel)]="buscaMunicipio" (keyup.enter)="buscarMunicipios()" (blur)="buscarMunicipios()" placeholder="Digite e tecle Enter" />
+                @if (municipios.length > 1) {
+                  <select (change)="escolherMunicipio(municipios[$any($event.target).selectedIndex - 1])">
+                    <option>Escolha...</option>
+                    @for (m of municipios; track m.codigo) { <option>{{ m.nome }}</option> }
+                  </select>
+                }
+              }
+            </div>
+            <div class="form-group"><label>Valor (R$)</label><input type="number" [(ngModel)]="form.valor" min="0" step="0.01" /></div>
+            <div class="form-group">
+              <label>Pagamento</label>
+              <select [(ngModel)]="form.meioPagamento">
+                @for (m of meios; track m.codigo) { <option [value]="m.codigo">{{ m.nome }}</option> }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>NCM <small>(vazio = padrão {{ config?.ncmPadrao }})</small></label>
+              <input type="text" [(ngModel)]="form.ncm" inputmode="numeric" maxlength="8" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Informações complementares</label>
+            <input type="text" [(ngModel)]="form.informacoesComplementares" />
+          </div>
+          <div class="rnv-acoes">
+            <button class="btn-primary" (click)="emitir()" [disabled]="enviando">
+              <span class="material-icons">send</span> {{ enviando ? 'Enviando à Sefaz...' : 'Emitir NF-e' }}
+            </button>
+            <button class="btn-secondary" (click)="mostrarFormulario = false" [disabled]="enviando">Voltar</button>
+          </div>
+        }
+      }
+    </div>
+  </div>
+</div>

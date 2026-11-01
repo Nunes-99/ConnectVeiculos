@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ToastService } from '../../../core/services/toast.service';
 import { RenaveConexao, RenaveConfig, RenaveService, RenaveVeiculoTeste, erroRenave } from '../../../core/services/renave.service';
+import { CertificadoA1Component } from './certificado-a1.component';
 
 /**
  * Corpo do cartao "Renave" em Integracoes: ambiente, operador responsavel,
@@ -12,7 +13,7 @@ import { RenaveConexao, RenaveConfig, RenaveService, RenaveVeiculoTeste, erroRen
 @Component({
   selector: 'app-renave-config',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CertificadoA1Component],
   templateUrl: './renave-config.component.html',
   styleUrl: './renave.scss'
 })
@@ -27,9 +28,6 @@ export class RenaveConfigComponent implements OnInit {
   mostrarAvancado = false;
   salvando = false;
 
-  arquivo: File | null = null;
-  senhaCertificado = '';
-  enviandoCertificado = false;
 
   testando = false;
   conexao: RenaveConexao | null = null;
@@ -65,10 +63,6 @@ export class RenaveConfigComponent implements OnInit {
     return this.form.ambiente === 'producao';
   }
 
-  get certificadoVencido(): boolean {
-    return !!this.config?.certificadoValidade && new Date(this.config.certificadoValidade) <= new Date();
-  }
-
   salvar(): void {
     this.salvando = true;
     this.renave.salvarConfig({
@@ -80,32 +74,6 @@ export class RenaveConfigComponent implements OnInit {
     }).subscribe({
       next: c => { this.aplicar(c); this.salvando = false; this.conexao = null; this.toast.success('Configuração do Renave salva.'); },
       error: err => { this.salvando = false; this.toast.error(erroRenave(err)); }
-    });
-  }
-
-  escolherArquivo(event: Event): void {
-    this.arquivo = (event.target as HTMLInputElement).files?.[0] ?? null;
-  }
-
-  enviarCertificado(): void {
-    if (!this.arquivo) return;
-    this.enviandoCertificado = true;
-    this.renave.enviarCertificado(this.arquivo, this.senhaCertificado).subscribe({
-      next: c => {
-        this.aplicar(c);
-        this.enviandoCertificado = false;
-        this.arquivo = null;
-        this.senhaCertificado = '';
-        this.toast.success('Certificado guardado.');
-      },
-      error: err => { this.enviandoCertificado = false; this.toast.error(erroRenave(err)); }
-    });
-  }
-
-  removerCertificado(): void {
-    this.renave.removerCertificado().subscribe({
-      next: c => { this.aplicar(c); this.toast.success('Certificado removido.'); },
-      error: err => this.toast.error(erroRenave(err))
     });
   }
 

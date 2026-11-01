@@ -122,3 +122,31 @@ h4 { margin: 1rem 0 0.5rem; font-size: 0.95rem; color: var(--text-primary); }
   padding: 0.5rem 0;
   .rnv-link { margin: 0; }
 }
+
+// ---------------- NF-e ----------------
+
+.nfe-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+  th { text-align: left; color: var(--text-secondary); font-weight: 500; padding: 0.35rem; border-bottom: 1px solid var(--border-primary, #eee); }
+  td { padding: 0.35rem; border-bottom: 1px solid var(--border-primary, #eee); vertical-align: top; }
+}
+
+.nfe-acoes { white-space: nowrap; text-align: right; }
+
+.nfe-motivo { display: block; color: var(--status-error, #c62828); font-size: 0.75rem; margin-top: 0.2rem; }
+
+.nfe-status {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: var(--status-warning-bg, #fff8e1);
+  color: var(--status-warning, #8d6e00);
+  &[data-status='AUTORIZADA'] { background: var(--status-success-bg, #e8f5e9); color: var(--status-success, #2e7d32); }
+  &[data-status='REJEITADA'], &[data-status='CANCELADA'] { background: var(--status-error-bg, #ffebee); color: var(--status-error, #c62828); }
+}
+
+.rnv-erro-box input { width: 100%; margin-top: 0.35rem; }

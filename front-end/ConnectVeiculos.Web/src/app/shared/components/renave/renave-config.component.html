@@ -49,36 +49,9 @@
     </button>
   </div>
 
-  <div class="rnv-bloco">
-    <h4><span class="material-icons">verified_user</span> Certificado digital A1 (e-CNPJ)</h4>
-    @if (config.certificadoCadastrado) {
-      <div class="rnv-cert" [class.rnv-erro]="certificadoVencido">
-        <span class="material-icons">{{ certificadoVencido ? 'error' : 'check_circle' }}</span>
-        <div>
-          <strong>{{ config.certificadoTitular || 'Certificado guardado' }}</strong>
-          <small>
-            {{ certificadoVencido ? 'Venceu em' : 'Válido até' }}
-            {{ config.certificadoValidade | date:'dd/MM/yyyy' }} · guardado criptografado
-          </small>
-        </div>
-        <button class="btn-mini-rnv" (click)="removerCertificado()" title="Remover certificado">
-          <span class="material-icons">delete</span>
-        </button>
-      </div>
-    } @else {
-      <small class="rnv-dica">
-        @if (emProducao) { Obrigatório em produção: é com ele que o Renave reconhece a loja. }
-        @else { Não precisa em testes: o Serpro usa uma loja fictícia. }
-      </small>
-    }
-    <div class="rnv-cert-envio">
-      <input type="file" accept=".pfx,.p12" (change)="escolherArquivo($event)" />
-      <input type="password" [(ngModel)]="senhaCertificado" placeholder="Senha do certificado" autocomplete="new-password" />
-      <button class="btn-secondary" (click)="enviarCertificado()" [disabled]="!arquivo || enviandoCertificado">
-        {{ enviandoCertificado ? 'Enviando...' : (config.certificadoCadastrado ? 'Trocar' : 'Guardar') }}
-      </button>
-    </div>
-  </div>
+  <app-certificado-a1 (alterado)="carregar()"
+    [dica]="emProducao ? 'Obrigatório em produção: é com ele que o Renave reconhece a loja.' : 'Não precisa em testes: o Serpro usa uma loja fictícia.'">
+  </app-certificado-a1>
 
   <div class="rnv-acoes">
     <button class="btn-secondary" (click)="testar()" [disabled]="testando">

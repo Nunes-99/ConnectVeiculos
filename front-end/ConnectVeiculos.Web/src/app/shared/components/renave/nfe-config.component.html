@@ -1,0 +1,128 @@
+<p class="rnv-texto">
+  Emite a <strong>NF-e de compra</strong> (quando a loja compra de pessoa física) e a <strong>NF-e de venda</strong> de cada veículo,
+  direto na Sefaz, com o certificado da loja. Sem custo por nota.
+</p>
+
+@if (config) {
+  @if (config.pendencias.length) {
+    <div class="rnv-alerta">
+      <span class="material-icons">checklist</span>
+      <div><strong>Falta para emitir:</strong> <small>{{ config.pendencias.join(' · ') }}</small></div>
+    </div>
+  }
+
+  <div class="rnv-grid">
+    <div class="form-group">
+      <label>Ambiente</label>
+      <select [(ngModel)]="config.ambiente">
+        <option value="homologacao">Testes (homologação da Sefaz)</option>
+        <option value="producao">Produção (nota com valor fiscal)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Regime tributário</label>
+      <select [(ngModel)]="config.crt">
+        <option [ngValue]="1">Simples Nacional</option>
+        <option [ngValue]="4">MEI</option>
+        <option [ngValue]="2">Simples (excesso de sublimite)</option>
+        <option [ngValue]="3">Regime normal (Lucro Presumido/Real)</option>
+      </select>
+    </div>
+    <div class="form-group"><label>CNPJ</label><input type="text" [(ngModel)]="config.cnpj" inputmode="numeric" /></div>
+    <div class="form-group"><label>Inscrição estadual</label><input type="text" [(ngModel)]="config.inscricaoEstadual" /></div>
+    <div class="form-group"><label>Razão social</label><input type="text" [(ngModel)]="config.razaoSocial" /></div>
+    <div class="form-group"><label>Nome fantasia</label><input type="text" [(ngModel)]="config.nomeFantasia" /></div>
+    <div class="form-group"><label>Endereço</label><input type="text" [(ngModel)]="config.logradouro" /></div>
+    <div class="form-group"><label>Número</label><input type="text" [(ngModel)]="config.numero" /></div>
+    <div class="form-group"><label>Complemento</label><input type="text" [(ngModel)]="config.complemento" /></div>
+    <div class="form-group"><label>Bairro</label><input type="text" [(ngModel)]="config.bairro" /></div>
+    <div class="form-group"><label>CEP</label><input type="text" [(ngModel)]="config.cep" inputmode="numeric" /></div>
+    <div class="form-group"><label>Telefone</label><input type="text" [(ngModel)]="config.telefone" inputmode="tel" /></div>
+    <div class="form-group">
+      <label>UF</label>
+      <select [(ngModel)]="config.uf">
+        @for (uf of ufs; track uf) { <option [value]="uf">{{ uf }}</option> }
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Município</label>
+      @if (config.codigoMunicipio && !buscaMunicipio) {
+        <div class="rnv-municipio">{{ config.municipio }} ({{ config.codigoMunicipio }})
+          <button class="rnv-link" (click)="config.codigoMunicipio = null">trocar</button>
+        </div>
+      } @else {
+        <input type="text" [(ngModel)]="buscaMunicipio" (keyup.enter)="buscarMunicipios()" (blur)="buscarMunicipios()" placeholder="Digite e tecle Enter" />
+        @if (municipios.length > 1) {
+          <select (change)="escolherMunicipio(municipios[$any($event.target).selectedIndex - 1])">
+            <option>Escolha...</option>
+            @for (m of municipios; track m.codigo) { <option>{{ m.nome }}</option> }
+          </select>
+        }
+      }
+    </div>
+    <div class="form-group"><label>Série</label><input type="number" [(ngModel)]="config.serie" min="0" max="999" /></div>
+    <div class="form-group">
+      <label>Próximo número</label>
+      <input type="number" [(ngModel)]="config.proximoNumero" min="1" />
+      <small class="rnv-dica">Se a loja já emite notas em outro sistema, continue a numeração de lá (ou use outra série).</small>
+    </div>
+  </div>
+
+  <button type="button" class="rnv-link" (click)="mostrarRegras = !mostrarRegras">
+    <span class="material-icons">{{ mostrarRegras ? 'expand_less' : 'expand_more' }}</span>
+    Regras fiscais (confirme com o contador)
+  </button>
+  @if (mostrarRegras) {
+    <div class="rnv-alerta">
+      <span class="material-icons">info</span>
+      Os valores abaixo são só um ponto de partida. CFOP, {{ simples ? 'CSOSN' : 'CST' }}, alíquota e redução de base de veículo usado
+      dependem do regime e do estado: peça ao contador da loja.
+    </div>
+    <div class="form-group">
+      <label>NCM padrão do veículo</label>
+      <input type="text" [(ngModel)]="config.ncmPadrao" inputmode="numeric" maxlength="8" />
+      <small class="rnv-dica">Varia com a cilindrada (ex.: 8703.22, 8703.23...). Dá para trocar em cada nota.</small>
+    </div>
+    @for (op of [{ t: 'Compra (NF-e de entrada)', r: config.compra }, { t: 'Venda (NF-e de saída)', r: config.venda }]; track op.t) {
+      <h4>{{ op.t }}</h4>
+      <div class="rnv-grid">
+        <div class="form-group"><label>Natureza da operação</label><input type="text" [(ngModel)]="op.r.naturezaOperacao" /></div>
+        <div class="form-group"><label>CFOP no estado</label><input type="text" [(ngModel)]="op.r.cfopInterno" maxlength="4" /></div>
+        <div class="form-group"><label>CFOP para outro estado</label><input type="text" [(ngModel)]="op.r.cfopInterestadual" maxlength="4" /></div>
+        <div class="form-group">
+          <label>{{ simples ? 'CSOSN' : 'CST' }} do ICMS</label>
+          <input type="text" [(ngModel)]="op.r.cstIcms" maxlength="3" />
+        </div>
+        <div class="form-group"><label>Alíquota ICMS (%)</label><input type="number" [(ngModel)]="op.r.aliquotaIcms" min="0" step="0.01" /></div>
+        <div class="form-group"><label>Redução da base (%)</label><input type="number" [(ngModel)]="op.r.reducaoBaseIcms" min="0" max="100" step="0.01" /></div>
+        <div class="form-group"><label>CST do PIS</label><input type="text" [(ngModel)]="op.r.cstPis" maxlength="2" /></div>
+        <div class="form-group"><label>CST da COFINS</label><input type="text" [(ngModel)]="op.r.cstCofins" maxlength="2" /></div>
+      </div>
+    }
+    <div class="form-group">
+      <label>Informações complementares fixas</label>
+      <input type="text" [(ngModel)]="config.informacoesComplementares" placeholder="Ex.: Empresa optante pelo Simples Nacional" />
+    </div>
+    <h4>Responsável técnico (se a Sefaz exigir)</h4>
+    <div class="rnv-grid">
+      <div class="form-group"><label>CNPJ</label><input type="text" [(ngModel)]="config.respTecCnpj" inputmode="numeric" /></div>
+      <div class="form-group"><label>Contato</label><input type="text" [(ngModel)]="config.respTecContato" /></div>
+      <div class="form-group"><label>E-mail</label><input type="email" [(ngModel)]="config.respTecEmail" /></div>
+      <div class="form-group"><label>Telefone</label><input type="text" [(ngModel)]="config.respTecTelefone" /></div>
+    </div>
+  }
+
+  <div class="rnv-acoes">
+    <button class="btn-primary" (click)="salvar()" [disabled]="salvando">
+      <span class="material-icons">save</span> {{ salvando ? 'Salvando...' : 'Salvar' }}
+    </button>
+    <button class="btn-secondary" (click)="consultarSefaz()" [disabled]="consultando">
+      <span class="material-icons">wifi_tethering</span> {{ consultando ? 'Consultando...' : 'Consultar Sefaz' }}
+    </button>
+  </div>
+  @if (statusSefaz) {
+    <div class="rnv-ok"><span class="material-icons">check_circle</span> Sefaz respondeu: {{ statusSefaz }}</div>
+  }
+
+  <app-certificado-a1 (alterado)="carregar()" dica="Obrigatório para emitir: é com ele que a nota é assinada."></app-certificado-a1>
+}

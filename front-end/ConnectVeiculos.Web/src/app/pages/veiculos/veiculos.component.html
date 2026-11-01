@@ -145,6 +145,9 @@
                   <button class="btn-icon" (click)="renaveVeiculo = veiculo" title="Renave (entrada e saída do estoque)" [disabled]="!veiculo.veiPlaca">
                     <span class="material-icons">assignment_turned_in</span>
                   </button>
+                  <button class="btn-icon" (click)="nfeVeiculo = veiculo" title="Notas fiscais (NF-e)">
+                    <span class="material-icons">receipt_long</span>
+                  </button>
                 }
                 <button class="btn-icon" (click)="openModal(veiculo)" title="Editar">
                   <span class="material-icons">edit</span>
@@ -720,6 +723,10 @@
       </div>
     </div>
   </div>
+}
+
+@if (nfeVeiculo) {
+  <app-nfe-veiculo [veiculo]="nfeVeiculo" (fechar)="nfeVeiculo = null"></app-nfe-veiculo>
 }
 
 @if (renaveVeiculo) {

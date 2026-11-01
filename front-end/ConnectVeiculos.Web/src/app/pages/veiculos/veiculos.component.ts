@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { VeiculoService, LojaService, CategoriaService, ImagemService, VeiculoImagem, ToastService, FipeService, FipeMarca, FipeModelo, AuthService } from '../../core/services';
 import { RenaveVeiculoComponent } from '../../shared/components/renave/renave-veiculo.component';
+import { NfeVeiculoComponent } from '../../shared/components/renave/nfe-veiculo.component';
 import { IntegracaoService, MetaFeatureFlags } from '../../core/services/integracao.service';
 import { CompartilharInstagramService } from '../../core/services/compartilhar-instagram.service';
 import { Veiculo, Loja, Categoria } from '../../core/models';
@@ -15,7 +16,7 @@ import * as XLSX from 'xlsx';
 @Component({
   selector: 'app-veiculos',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaskDirective, CurrencyMaskDirective, PaginationComponent, ConfirmModalComponent, ScannerDocumentoComponent, SalvandoDirective, RenaveVeiculoComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaskDirective, CurrencyMaskDirective, PaginationComponent, ConfirmModalComponent, ScannerDocumentoComponent, SalvandoDirective, RenaveVeiculoComponent, NfeVeiculoComponent],
   templateUrl: './veiculos.component.html',
   styleUrl: './veiculos.component.scss'
 })
@@ -165,6 +166,7 @@ export class VeiculosComponent implements OnInit {
 
   // Renave: entrada/saida no estoque eletronico tem efeito legal, so Admin e Gerente.
   renaveVeiculo: Veiculo | null = null;
+  nfeVeiculo: Veiculo | null = null;
   get podeRenave(): boolean { return this.auth.isGerente(); }
   detranLink: DetranLink = { uf: '', nome: '', url: '' };
 
