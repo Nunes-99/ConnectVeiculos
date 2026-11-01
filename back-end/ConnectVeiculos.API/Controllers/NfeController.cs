@@ -79,6 +79,20 @@ namespace ConnectVeiculos.API.Controllers
             }
         }
 
+        [HttpGet("{notaId:int}/danfe")]
+        public async Task<IActionResult> Danfe(int notaId, CancellationToken ct)
+        {
+            try
+            {
+                var (pdf, nome) = await _nfe.ObterDanfeAsync(notaId, ct);
+                return File(pdf, "application/pdf", nome);
+            }
+            catch (NfeException ex)
+            {
+                return UnprocessableEntity(new { error = ex.Message });
+            }
+        }
+
         private async Task<IActionResult> Executar<T>(Func<Task<T>> acao)
         {
             try

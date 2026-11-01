@@ -293,6 +293,14 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
             return (nota.NfXml, $"{nota.NfChave}-procNFe.xml");
         }
 
+        public async Task<(byte[] Pdf, string NomeArquivo)> ObterDanfeAsync(int notaId, CancellationToken ct = default)
+        {
+            var nota = await _notas.GetByIdAsync(notaId) ?? throw new NfeException("Nota não encontrada.");
+            if (string.IsNullOrEmpty(nota.NfXml)) throw new NfeException("O DANFE só existe para nota autorizada.");
+            var pdf = DanfeGerador.Gerar(nota.NfXml, cancelada: nota.NfStatus == NotaFiscal.StatusCancelada);
+            return (pdf, $"DANFE-{nota.NfNumero}.pdf");
+        }
+
         // ================================================================
         // Auxiliares
         // ================================================================

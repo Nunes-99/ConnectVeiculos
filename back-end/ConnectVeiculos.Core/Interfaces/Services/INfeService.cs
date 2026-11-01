@@ -19,5 +19,6 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         Task<NfeResumo> ReenviarAsync(int notaId, NfeEmissaoInput? correcao, CancellationToken ct = default);
         Task<NfeResumo> CancelarAsync(int notaId, string justificativa, CancellationToken ct = default);
         Task<(string Xml, string NomeArquivo)> ObterXmlAsync(int notaId, CancellationToken ct = default);
+        Task<(byte[] Pdf, string NomeArquivo)> ObterDanfeAsync(int notaId, CancellationToken ct = default);
     }
 }
