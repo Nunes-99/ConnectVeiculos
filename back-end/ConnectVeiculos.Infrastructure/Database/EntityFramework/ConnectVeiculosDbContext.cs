@@ -66,6 +66,7 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
         public DbSet<VeiculoDocumento> VeiculosDocumentos { get; set; }
         public DbSet<PushSubscription> PushSubscriptions { get; set; }
         public DbSet<IntegracaoMercadoLivre> IntegracoesMercadoLivre { get; set; }
+        public DbSet<Core.Entities.Renave.VeiculoRenave> VeiculosRenave { get; set; }
         public DbSet<IntegracaoLog> IntegracoesLogs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -420,6 +421,22 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
                 entity.Property(e => e.IntSellerId).HasMaxLength(50);
                 entity.Property(e => e.IntMlNickname).HasMaxLength(100);
                 entity.Property(e => e.IntMlEmail).HasMaxLength(200);
+            });
+
+            modelBuilder.Entity<Core.Entities.Renave.VeiculoRenave>(entity =>
+            {
+                entity.ToTable("VeiculoRenave");
+                entity.HasKey(e => e.RnvId);
+                entity.Property(e => e.RnvId).ValueGeneratedOnAdd();
+                entity.HasIndex(e => e.R_VeiId).IsUnique();
+                entity.Property(e => e.RnvEstado).HasMaxLength(30);
+                entity.Property(e => e.RnvChaveNfEntrada).HasMaxLength(44);
+                entity.Property(e => e.RnvChaveNfSaida).HasMaxLength(44);
+                entity.Property(e => e.RnvCompradorDocumento).HasMaxLength(14);
+                entity.Property(e => e.RnvCompradorNome).HasMaxLength(200);
+                entity.Property(e => e.RnvNumeroAtpv).HasMaxLength(30);
+                entity.Property(e => e.RnvUltimoErro).HasMaxLength(1000);
+                entity.Ignore(e => e.EmEstoque);
             });
 
             modelBuilder.Entity<IntegracaoLog>(entity =>

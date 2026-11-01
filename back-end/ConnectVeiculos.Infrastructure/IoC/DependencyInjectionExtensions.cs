@@ -286,6 +286,7 @@ namespace ConnectVeiculos.Infrastructure.IoC
 
              // Repositories - Integracoes (Fase 3 + 4)
              services.AddTransient<Core.Interfaces.Database.Repositories.Integracoes.IIntegracaoMercadoLivreRepository, Database.EntityFramework.Repositories.IntegracaoMercadoLivreRepository>();
+             services.AddTransient<Core.Interfaces.Database.Repositories.Renave.IVeiculoRenaveRepository, Database.EntityFramework.Repositories.VeiculoRenaveRepository>();
              services.AddTransient<Core.Interfaces.Database.Repositories.Integracoes.IIntegracaoLogRepository, Database.EntityFramework.Repositories.IntegracaoLogRepository>();
 
              // Repositories - Tenants/Planos (billing camada 1)
@@ -343,6 +344,12 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.Configure<Services.Seo.SearchConsoleSettings>(configuration.GetSection("SearchConsoleSettings"));
             services.AddHttpClient<Core.Interfaces.Services.ISearchConsoleService, Services.Seo.SearchConsoleService>()
                 .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(15));
+
+            // Renave (estoque eletronico, Serpro): TLS mutuo com o certificado da
+            // loja, por isso o transporte cria o handler HTTP a cada chamada.
+            services.Configure<Services.Renave.RenaveSettings>(configuration.GetSection("RenaveSettings"));
+            services.AddSingleton<Services.Renave.IRenaveTransporte, Services.Renave.RenaveTransporte>();
+            services.AddScoped<Core.Interfaces.Services.IRenaveService, Services.Renave.RenaveService>();
 
             // Assinatura mensal dos planos (Mercado Pago, conta da plataforma)
             services.Configure<Services.Pagamentos.MercadoPagoSettings>(configuration.GetSection("MercadoPagoSettings"));
@@ -520,6 +527,25 @@ namespace ConnectVeiculos.Infrastructure.IoC
                       IntAutenticadaEm TEXT,
                       IntCriadaEm TEXT NOT NULL,
                       IntAtualizadaEm TEXT");
+
+                // Renave: andamento de cada veiculo no estoque eletronico (Serpro)
+                CreateTableIfNotExists(connection, "VeiculoRenave",
+                    @"RnvId INTEGER PRIMARY KEY AUTOINCREMENT,
+                      R_VeiId INTEGER NOT NULL UNIQUE,
+                      RnvIdEstoque INTEGER,
+                      RnvEstado TEXT,
+                      RnvDtEntrada TEXT,
+                      RnvValorCompra TEXT,
+                      RnvDtAssinaturaVendedor TEXT,
+                      RnvChaveNfEntrada TEXT,
+                      RnvDtSaida TEXT,
+                      RnvValorVenda TEXT,
+                      RnvCompradorDocumento TEXT,
+                      RnvCompradorNome TEXT,
+                      RnvChaveNfSaida TEXT,
+                      RnvNumeroAtpv TEXT,
+                      RnvUltimoErro TEXT,
+                      RnvAtualizadoEm TEXT NOT NULL");
 
                 CreateTableIfNotExists(connection, "IntegracaoLog",
                     @"IlgId INTEGER PRIMARY KEY AUTOINCREMENT,
