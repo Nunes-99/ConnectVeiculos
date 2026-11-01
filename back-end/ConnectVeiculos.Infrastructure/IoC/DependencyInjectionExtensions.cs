@@ -189,6 +189,7 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.AddTransient<IQrCodeService, QrCodeService>();
             services.AddTransient<IImagemService, ImagemService>();
             services.AddTransient<IFinanciamentoService, FinanciamentoService>();
+            services.AddTransient<IFichaFinanciamentoService, FichaFinanciamentoService>();
             services.AddHttpClient<IFipeService, FipeService>();
             services.AddHttpClient<IWebhookService, WebhookService>();
 
@@ -288,6 +289,7 @@ namespace ConnectVeiculos.Infrastructure.IoC
              services.AddTransient<Core.Interfaces.Database.Repositories.Integracoes.IIntegracaoMercadoLivreRepository, Database.EntityFramework.Repositories.IntegracaoMercadoLivreRepository>();
              services.AddTransient<Core.Interfaces.Database.Repositories.Renave.IVeiculoRenaveRepository, Database.EntityFramework.Repositories.VeiculoRenaveRepository>();
              services.AddTransient<Core.Interfaces.Database.Repositories.NotasFiscais.INotaFiscalRepository, Database.EntityFramework.Repositories.NotaFiscalRepository>();
+             services.AddTransient<Core.Interfaces.Database.Repositories.Financiamentos.IFinanciamentoLojaRepository, Database.EntityFramework.Repositories.FinanciamentoLojaRepository>();
              services.AddTransient<Core.Interfaces.Database.Repositories.Integracoes.IIntegracaoLogRepository, Database.EntityFramework.Repositories.IntegracaoLogRepository>();
 
              // Repositories - Tenants/Planos (billing camada 1)
@@ -586,6 +588,42 @@ namespace ConnectVeiculos.Infrastructure.IoC
                       NfProtocoloCancelamento TEXT,
                       NfXmlCancelamento TEXT,
                       UNIQUE (NfAmbiente, NfSerie, NfNumero)");
+
+                // Ficha unica de financiamento: bancos da loja (tabelas de taxa) e fichas dos clientes
+                CreateTableIfNotExists(connection, "BancoFinanciamentoLoja",
+                    @"BflId INTEGER PRIMARY KEY AUTOINCREMENT,
+                      BflNome TEXT NOT NULL,
+                      BflPortalUrl TEXT,
+                      BflAtivo INTEGER NOT NULL DEFAULT 1,
+                      BflTarifaCadastro TEXT NOT NULL DEFAULT '0',
+                      BflRegistroContrato TEXT NOT NULL DEFAULT '0',
+                      BflTarifasFinanciadas INTEGER NOT NULL DEFAULT 1,
+                      BflFaixasJson TEXT NOT NULL DEFAULT '[]',
+                      BflObservacao TEXT,
+                      BflAtualizadoEm TEXT NOT NULL");
+
+                CreateTableIfNotExists(connection, "FichaFinanciamento",
+                    @"FifId INTEGER PRIMARY KEY AUTOINCREMENT,
+                      R_VeiId INTEGER,
+                      R_UsuId INTEGER NOT NULL,
+                      FifNome TEXT NOT NULL,
+                      FifCpf TEXT NOT NULL,
+                      FifTelefone TEXT NOT NULL,
+                      FifEmail TEXT NOT NULL,
+                      FifValorVeiculo TEXT NOT NULL,
+                      FifEntrada TEXT NOT NULL,
+                      FifAnoVeiculo INTEGER NOT NULL,
+                      FifStatus TEXT NOT NULL,
+                      FifConsentimentoEm TEXT NOT NULL,
+                      FifPropostasJson TEXT NOT NULL DEFAULT '[]',
+                      FifObservacao TEXT,
+                      FifCriadoEm TEXT NOT NULL,
+                      FifAtualizadoEm TEXT NOT NULL");
+                using (var idxFicha = connection.CreateCommand())
+                {
+                    idxFicha.CommandText = "CREATE INDEX IF NOT EXISTS IX_FichaFinanciamento_R_UsuId ON FichaFinanciamento(R_UsuId)";
+                    idxFicha.ExecuteNonQuery();
+                }
 
                 CreateTableIfNotExists(connection, "IntegracaoLog",
                     @"IlgId INTEGER PRIMARY KEY AUTOINCREMENT,

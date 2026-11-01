@@ -1,145 +1,302 @@
-<div class="page-header">
-  <h1><span class="material-icons">account_balance</span> Financiamento - Consulta Real</h1>
-  <p>Simule e envie propostas de financiamento para bancos parceiros.</p>
-</div>
-
-<div class="financiamento-layout">
-  <!-- Formulario -->
-  <div class="form-card">
-    <h3>Dados da Simulação</h3>
-
-    <div class="form-group">
-      <label class="required">Veículo</label>
-      <select [(ngModel)]="veiculoSelecionadoId" (ngModelChange)="onVeiculoChange()">
-        <option [ngValue]="null">Selecione um veículo</option>
-        @for (v of veiculos; track v.veiId) {
-          <option [ngValue]="v.veiId">{{ v.veiMarca }} {{ v.veiModelo }} {{ v.veiAno }} - {{ formatarMoeda(v.veiPreco) }}</option>
-        }
-      </select>
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1><span class="material-icons">account_balance</span> Financiamento</h1>
+      <p>Ficha única do cliente e estimativa de parcelas em todos os bancos da loja.</p>
     </div>
-
-    @if (veiculoSelecionado) {
-      <div class="veiculo-info">
-        <div class="info-item">
-          <small>Valor do Veículo</small>
-          <strong>{{ formatarMoeda(veiculoSelecionado.veiPreco) }}</strong>
-        </div>
-        <div class="info-item">
-          <small>Ano</small>
-          <strong>{{ veiculoSelecionado.veiAno }}</strong>
-        </div>
-        <div class="info-item">
-          <small>KM</small>
-          <strong>{{ veiculoSelecionado.veiKm | number:'1.0-0' }} km</strong>
-        </div>
-      </div>
+    @if (aba === 'fichas') {
+      <button class="btn-primary" (click)="novaFicha()"><span class="material-icons">add</span> Nova ficha</button>
+    } @else {
+      <button class="btn-primary" (click)="novoBanco()"><span class="material-icons">add</span> Novo banco</button>
     }
-
-    <div class="form-group">
-      <label class="required">CPF do Cliente</label>
-      <input type="text" [(ngModel)]="cpfCliente" appMask="cpf" placeholder="000.000.000-00" maxlength="14" />
-    </div>
-
-    <div class="form-group">
-      <label class="required">Renda Mensal</label>
-      <input type="text" [(ngModel)]="rendaMensal" appCurrencyMask placeholder="R$ 0,00" />
-    </div>
-
-    <div class="form-group">
-      <label>Valor de Entrada</label>
-      <input type="text" [(ngModel)]="valorEntrada" appCurrencyMask placeholder="R$ 0,00" />
-    </div>
-
-    <div class="form-group">
-      <label>Parcelas</label>
-      <div class="parcelas-options">
-        @for (p of opcoesParc; track p) {
-          <button [class.active]="parcelas === p" (click)="parcelas = p">{{ p }}x</button>
-        }
-      </div>
-    </div>
-
-    <div class="form-group">
-      <label>Banco</label>
-      <select [(ngModel)]="bancoSelecionado">
-        <option value="TODOS">Todos os bancos</option>
-        @for (banco of bancos; track banco.codigoBanco) {
-          <option [value]="banco.codigoBanco" [disabled]="!banco.configurado">
-            {{ banco.nomeBanco }}{{ banco.configurado ? '' : ' (não configurado)' }}
-          </option>
-        }
-      </select>
-      @if (bancos.length > 0 && !bancos.some(b => b.configurado)) {
-        <small class="banco-aviso">
-          <span class="material-icons">info</span>
-          Nenhum banco configurado. Configure as credenciais em Integrações para ativar.
-        </small>
-      }
-    </div>
-
-    <button class="btn-simular" (click)="simular()" [disabled]="loading || !veiculoSelecionado">
-      <span class="material-icons">{{ loading ? 'hourglass_empty' : 'search' }}</span>
-      {{ loading ? 'Consultando bancos...' : 'Simular Financiamento' }}
-    </button>
   </div>
 
-  <!-- Resultados -->
-  <div class="resultados-area">
-    @if (!simulado && !loading) {
-      <div class="empty-state">
-        <span class="material-icons">account_balance</span>
-        <p>Preencha os dados e clique em <strong>Simular</strong> para consultar os bancos.</p>
+  @if (gestao) {
+    <div class="abas">
+      <button [class.ativa]="aba === 'fichas'" (click)="aba = 'fichas'"><span class="material-icons">assignment_ind</span> Fichas</button>
+      <button [class.ativa]="aba === 'bancos'" (click)="aba = 'bancos'"><span class="material-icons">account_balance</span> Bancos da loja</button>
+    </div>
+  }
+
+  @if (aba === 'fichas') {
+    @if (!bancosAtivos.length && !carregando) {
+      <div class="aviso">
+        <span class="material-icons">info</span>
+        <div>
+          <strong>Nenhum banco cadastrado.</strong>
+          @if (gestao) {
+            Cadastre em <a (click)="aba = 'bancos'">Bancos da loja</a> os bancos em que a loja é credenciada, com a tabela de taxas que cada banco manda.
+          } @else {
+            Peça ao gerente para cadastrar os bancos da loja e as tabelas de taxa.
+          }
+        </div>
       </div>
     }
 
-    @if (loading) {
-      <div class="loading-state">
-        <div class="spinner"></div>
-        <p>Consultando bancos parceiros...</p>
+    <div class="filtro">
+      <span class="material-icons">search</span>
+      <input type="text" [(ngModel)]="busca" placeholder="Buscar por nome, CPF ou veículo" />
+    </div>
+
+    @if (carregando) {
+      <div class="loading">Carregando...</div>
+    } @else {
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr><th>Data</th><th>Cliente</th><th>Veículo</th><th>Entrada</th><th>Bancos</th><th>Situação</th><th></th></tr>
+          </thead>
+          <tbody>
+            @for (f of fichasFiltradas; track f.id) {
+              <tr>
+                <td data-label="Data">{{ f.criadoEm | date:'dd/MM/yyyy' }}</td>
+                <td data-label="Cliente"><strong>{{ f.nome }}</strong><br /><span class="text-muted">{{ cpf(f.cpf) }}</span></td>
+                <td data-label="Veículo">{{ f.veiculo || ('Ano ' + f.anoVeiculo) }}<br /><span class="text-muted">{{ moeda(f.valorVeiculo) }}</span></td>
+                <td data-label="Entrada">{{ moeda(f.entrada) }}</td>
+                <td data-label="Bancos">
+                  @for (p of f.propostas; track p.bancoId) {
+                    <span class="chip" [attr.data-status]="p.status">{{ p.banco }}: {{ rotuloProposta[p.status] }}</span>
+                  } @empty { <span class="text-muted">Nenhuma proposta</span> }
+                </td>
+                <td data-label="Situação"><span class="chip" [attr.data-status]="f.status">{{ rotuloFicha[f.status] }}</span></td>
+                <td class="actions">
+                  <button class="btn-icon-text" (click)="abrirFicha(f)"><span class="material-icons">open_in_new</span><span>Abrir</span></button>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="7" class="empty">Nenhuma ficha ainda. Clique em <strong>Nova ficha</strong>.</td></tr>
+            }
+          </tbody>
+        </table>
       </div>
     }
+  }
 
-    @if (simulado && resultados.length > 0) {
-      <h3>Propostas Recebidas</h3>
-      <div class="resultados-grid">
-        @for (r of resultados; track r.codigoBanco) {
-          <div class="resultado-card" [class.aprovado]="r.aprovado" [class.recusado]="!r.aprovado">
-            <div class="resultado-header">
-              <strong>{{ r.banco }}</strong>
-              <span class="status-chip" [class.approved]="r.aprovado">
-                {{ r.aprovado ? 'Pré-aprovado' : 'Não aprovado' }}
-              </span>
-            </div>
-            @if (r.aprovado) {
-              <div class="resultado-body">
-                <div class="resultado-destaque">
-                  <small>Parcela</small>
-                  <span class="valor-parcela">{{ formatarMoeda(r.valorParcela) }}</span>
-                  <small>{{ r.parcelas }}x</small>
+  @if (aba === 'bancos' && gestao) {
+    <p class="dica">
+      Cadastre só os bancos em que a loja é credenciada. As taxas vêm da tabela que o próprio banco manda para a loja
+      (normalmente por prazo, ano do veículo e entrada mínima). Com elas o sistema estima as parcelas na hora; a aprovação continua no portal do banco.
+    </p>
+    <div class="bancos-grid">
+      @for (b of bancos; track b.id) {
+        <div class="banco-card" [class.inativo]="!b.ativo">
+          <div class="banco-topo">
+            <strong>{{ b.nome }}</strong>
+            @if (!b.ativo) { <span class="chip">Desativado</span> }
+          </div>
+          <small>{{ resumoFaixas(b) }}</small>
+          <small>Tarifas: {{ moeda(b.tarifaCadastro + b.registroContrato) }} {{ b.tarifasFinanciadas ? '(financiadas)' : '(à vista)' }}</small>
+          <div class="banco-acoes">
+            @if (b.portalUrl) { <a [href]="b.portalUrl" target="_blank" rel="noopener noreferrer" class="btn-icon" title="Abrir portal"><span class="material-icons">open_in_new</span></a> }
+            <button class="btn-icon" title="Editar" (click)="editarBanco(b)"><span class="material-icons">edit</span></button>
+            <button class="btn-icon delete" title="Remover" (click)="removerBanco(b)"><span class="material-icons">delete</span></button>
+          </div>
+        </div>
+      } @empty {
+        <div class="empty">Nenhum banco cadastrado.</div>
+      }
+    </div>
+  }
+</div>
+
+<!-- ================= Ficha ================= -->
+@if (fichaAberta) {
+  <div class="modal-overlay" (click)="fecharFicha()">
+    <div class="modal modal-lg ficha" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>{{ ficha ? ficha.nome : 'Nova ficha de financiamento' }}</h2>
+        <button class="btn-close" (click)="fecharFicha()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body">
+        <h3>Cliente</h3>
+        <div class="grade">
+          <div class="form-group"><label class="required">Nome completo</label><input type="text" [(ngModel)]="form.nome" maxlength="150" /></div>
+          <div class="form-group"><label class="required">CPF</label><input type="text" [(ngModel)]="form.cpf" appMask="cpf" maxlength="14" inputmode="numeric" /></div>
+          <div class="form-group"><label class="required">Telefone</label><input type="text" [(ngModel)]="form.telefone" appMask="celular" maxlength="15" inputmode="tel" /></div>
+          <div class="form-group"><label class="required">E-mail</label><input type="email" [(ngModel)]="form.email" maxlength="150" /></div>
+        </div>
+
+        <h3>Veículo e entrada</h3>
+        <div class="grade">
+          <div class="form-group largo">
+            <label>Veículo do estoque</label>
+            <select [(ngModel)]="form.veiculoId" (ngModelChange)="escolherVeiculo()">
+              <option [ngValue]="null">Outro / informar valor</option>
+              @for (v of veiculos; track v.veiId) {
+                <option [ngValue]="v.veiId">{{ v.veiMarca }} {{ v.veiModelo }} {{ v.veiAno }} · {{ moeda(v.veiPreco) }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group"><label class="required">Valor do veículo</label><input type="text" [(ngModel)]="form.valorVeiculo" appCurrencyMask (change)="estimativa = null" /></div>
+          <div class="form-group"><label class="required">Ano (modelo)</label><input type="number" [(ngModel)]="form.anoVeiculo" min="1950" max="2100" (change)="estimativa = null" /></div>
+          <div class="form-group"><label>Entrada</label><input type="text" [(ngModel)]="form.entrada" appCurrencyMask (change)="estimativa = null" /></div>
+        </div>
+        <div class="form-group"><label>Observação</label><input type="text" [(ngModel)]="form.observacao" maxlength="1000" /></div>
+
+        @if (!ficha) {
+          <label class="consentimento">
+            <input type="checkbox" [(ngModel)]="form.consentimento" />
+            <span>O cliente <strong>autorizou</strong> a loja a enviar os dados dele aos bancos e consultar o crédito para o financiamento.</span>
+          </label>
+        }
+
+        <div class="acoes">
+          <button class="btn-primary" (click)="salvarFicha()" [disabled]="salvando"><span class="material-icons">save</span> {{ ficha ? 'Salvar' : 'Criar ficha' }}</button>
+          <button class="btn-secondary" (click)="simular()" [disabled]="estimando || !bancosAtivos.length">
+            <span class="material-icons">calculate</span> {{ estimando ? 'Calculando...' : 'Simular em todos os bancos' }}
+          </button>
+          <button class="btn-secondary" (click)="copiarDados()"><span class="material-icons">content_copy</span> Copiar dados</button>
+          @if (ficha) {
+            <select class="status" [ngModel]="ficha.status" (ngModelChange)="alterarStatus($event)">
+              @for (s of statusFichas; track s) { <option [value]="s">{{ rotuloFicha[s] }}</option> }
+            </select>
+          }
+        </div>
+
+        @if (estimativa) {
+          <h3>Estimativa nos bancos <small>(pelas tabelas de taxa da loja · com IOF e tarifas)</small></h3>
+          <div class="estimativa">
+            @for (b of estimativa; track b.bancoId; let primeiro = $first) {
+              <div class="est-banco" [class.sem]="!b.prazos.length">
+                <div class="est-topo">
+                  <strong>{{ b.banco }}</strong>
+                  @if (primeiro && b.prazos.length) { <span class="chip" data-status="APROVADA">Menor custo</span> }
+                  @if (b.portalUrl) {
+                    <a [href]="b.portalUrl" target="_blank" rel="noopener noreferrer" class="link"><span class="material-icons">open_in_new</span> Portal</a>
+                  }
+                  @if (ficha) { <button class="link" (click)="anotarBanco(b.bancoId)"><span class="material-icons">edit_note</span> Anotar retorno</button> }
                 </div>
-                <div class="resultado-detalhes">
-                  <div><small>Taxa mensal</small><span>{{ formatarTaxa(r.taxaMensal) }}</span></div>
-                  <div><small>Taxa anual</small><span>{{ r.taxaAnual?.toFixed(2) }}% a.a.</span></div>
-                  <div><small>CET anual</small><span>{{ r.cetAnual?.toFixed(2) }}%</span></div>
-                  <div><small>Valor financiado</small><span>{{ formatarMoeda(r.valorFinanciado) }}</span></div>
-                  <div><small>Valor total</small><span>{{ formatarMoeda(r.valorTotal) }}</span></div>
-                </div>
-              </div>
-            } @else {
-              <div class="resultado-body recusado-msg">
-                <p>{{ r.mensagem }}</p>
+                @if (b.motivo) {
+                  <small class="motivo">{{ b.motivo }}</small>
+                } @else {
+                  <table class="est-tabela">
+                    <thead><tr><th>Prazo</th><th>Parcela</th><th>Taxa</th><th>CET</th><th>Total</th></tr></thead>
+                    <tbody>
+                      @for (p of b.prazos; track p.meses) {
+                        <tr [class.melhor]="p.valorParcela === melhorParcela(p.meses)" (click)="ficha && anotarBanco(b.bancoId, p.meses)">
+                          <td>{{ p.meses }}x</td>
+                          <td><strong>{{ moeda(p.valorParcela) }}</strong></td>
+                          <td>{{ p.taxaMensal | number:'1.2-2' }}% a.m.</td>
+                          <td>{{ p.cetMensal | number:'1.2-2' }}% a.m.</td>
+                          <td>{{ moeda(p.totalPago) }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                }
               </div>
             }
           </div>
+          <p class="dica">É estimativa: o banco confirma taxa e parcela na aprovação. A parcela em verde é a menor daquele prazo.</p>
+        }
+
+        @if (ficha) {
+          <h3>Retorno dos bancos</h3>
+          @if (ficha.propostas.length) {
+            <table class="est-tabela">
+              <thead><tr><th>Banco</th><th>Situação</th><th>Prazo</th><th>Parcela</th><th>Taxa</th><th>Entrada exigida</th><th></th></tr></thead>
+              <tbody>
+                @for (p of ficha.propostas; track p.bancoId) {
+                  <tr>
+                    <td><strong>{{ p.banco }}</strong>@if (p.observacao) { <br /><small class="text-muted">{{ p.observacao }}</small> }</td>
+                    <td><span class="chip" [attr.data-status]="p.status">{{ rotuloProposta[p.status] }}</span></td>
+                    <td>{{ p.meses ? p.meses + 'x' : '—' }}</td>
+                    <td>{{ p.valorParcela ? moeda(p.valorParcela) : '—' }}</td>
+                    <td>{{ p.taxaMensal ? (p.taxaMensal | number:'1.2-2') + '%' : '—' }}</td>
+                    <td>{{ p.entradaExigida ? moeda(p.entradaExigida) : '—' }}</td>
+                    <td class="nowrap">
+                      <button class="btn-icon" title="Editar" (click)="anotarBanco(p.bancoId)"><span class="material-icons">edit</span></button>
+                      <button class="btn-icon delete" title="Remover" (click)="removerProposta(p)"><span class="material-icons">delete</span></button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          } @else {
+            <p class="dica">Mande a ficha pelo portal de cada banco e anote aqui o que ele respondeu.</p>
+          }
+
+          <div class="anotar" id="anotar-proposta">
+            <div class="grade">
+              <div class="form-group">
+                <label>Banco</label>
+                <select [(ngModel)]="proposta.bancoId">
+                  <option [ngValue]="0">Escolha...</option>
+                  @for (b of bancos; track b.id) { <option [ngValue]="b.id">{{ b.nome }}</option> }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Situação</label>
+                <select [(ngModel)]="proposta.status">
+                  @for (s of statusPropostas; track s) { <option [value]="s">{{ rotuloProposta[s] }}</option> }
+                </select>
+              </div>
+              <div class="form-group"><label>Prazo (meses)</label><input type="number" [(ngModel)]="proposta.meses" min="1" max="72" /></div>
+              <div class="form-group"><label>Parcela</label><input type="text" [(ngModel)]="proposta.valorParcela" appCurrencyMask /></div>
+              <div class="form-group"><label>Taxa (% a.m.)</label><input type="number" [(ngModel)]="proposta.taxaMensal" min="0" max="15" step="0.01" /></div>
+              <div class="form-group"><label>Entrada exigida</label><input type="text" [(ngModel)]="proposta.entradaExigida" appCurrencyMask /></div>
+            </div>
+            <div class="form-group"><label>Observação</label><input type="text" [(ngModel)]="proposta.observacao" maxlength="500" placeholder="Ex.: aprovado com comprovante de renda" /></div>
+            <button class="btn-primary" (click)="registrarProposta()" [disabled]="salvando"><span class="material-icons">done</span> Anotar retorno</button>
+          </div>
         }
       </div>
-    }
-
-    @if (simulado && resultados.length === 0) {
-      <div class="empty-state">
-        <span class="material-icons">sentiment_dissatisfied</span>
-        <p>Nenhum banco retornou proposta para esta simulação.</p>
-      </div>
-    }
+    </div>
   </div>
-</div>
+}
+
+<!-- ================= Banco ================= -->
+@if (banco) {
+  <div class="modal-overlay" (click)="banco = null">
+    <div class="modal modal-lg" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>{{ banco.id ? banco.nome : 'Novo banco' }}</h2>
+        <button class="btn-close" (click)="banco = null"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body">
+        <div class="grade">
+          <div class="form-group"><label class="required">Nome</label><input type="text" [(ngModel)]="banco.nome" maxlength="80" placeholder="Ex.: Santander" /></div>
+          <div class="form-group largo"><label>Portal do lojista</label><input type="url" [(ngModel)]="banco.portalUrl" placeholder="https://..." /></div>
+          <div class="form-group"><label>Tarifa de cadastro</label><input type="text" [(ngModel)]="banco.tarifaCadastro" appCurrencyMask /></div>
+          <div class="form-group"><label>Registro do contrato</label><input type="text" [(ngModel)]="banco.registroContrato" appCurrencyMask /></div>
+        </div>
+        <label class="consentimento"><input type="checkbox" [(ngModel)]="banco.tarifasFinanciadas" /> <span>Tarifas entram no financiamento</span></label>
+        <label class="consentimento"><input type="checkbox" [(ngModel)]="banco.ativo" /> <span>Banco ativo (aparece na simulação)</span></label>
+
+        <h3>Tabela de taxas <small>(% ao mês; deixe vazio o prazo que o banco não faz)</small></h3>
+        <div class="faixas">
+          <table class="est-tabela">
+            <thead>
+              <tr>
+                <th>Ano de</th><th>Ano até</th><th>Entrada mín. %</th>
+                @for (p of prazos; track p) { <th>{{ p }}x</th> }
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (f of faixas; track $index; let i = $index) {
+                <tr>
+                  <td><input type="number" [(ngModel)]="f.anoDe" placeholder="—" min="1950" max="2100" /></td>
+                  <td><input type="number" [(ngModel)]="f.anoAte" placeholder="—" min="1950" max="2100" /></td>
+                  <td><input type="number" [(ngModel)]="f.entradaMinimaPct" min="0" max="99" /></td>
+                  @for (p of prazos; track p) {
+                    <td><input type="number" [(ngModel)]="f.taxas[p]" min="0" max="15" step="0.01" placeholder="—" /></td>
+                  }
+                  <td><button class="btn-icon delete" title="Remover faixa" (click)="removerFaixa(i)"><span class="material-icons">delete</span></button></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <button class="link" (click)="adicionarFaixa()"><span class="material-icons">add</span> Adicionar faixa (outro ano ou outra entrada mínima)</button>
+        <p class="dica">Ano vazio = sem limite. Com mais de uma faixa para o mesmo ano, vale a de maior entrada mínima que o cliente atingir.</p>
+
+        <div class="form-group"><label>Observação</label><input type="text" [(ngModel)]="banco.observacao" maxlength="1000" /></div>
+        <div class="acoes">
+          <button class="btn-primary" (click)="salvarBanco()" [disabled]="salvando"><span class="material-icons">save</span> Salvar banco</button>
+          <button class="btn-secondary" (click)="banco = null">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+}

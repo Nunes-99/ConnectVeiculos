@@ -109,11 +109,10 @@ export const routes: Routes = [
         path: 'vendas',
         loadComponent: () => import('./pages/vendas/vendas.component').then(m => m.VendasComponent)
       },
-      // TODO: ativar quando tiver parceria com bancos (BV, Pan, etc)
-      // {
-      //   path: 'financiamentos',
-      //   loadComponent: () => import('./pages/financiamentos/financiamentos.component').then(m => m.FinanciamentosComponent)
-      // },
+      {
+        path: 'financiamentos',
+        loadComponent: () => import('./pages/financiamentos/financiamentos.component').then(m => m.FinanciamentosComponent)
+      },
       {
         path: 'relatorios',
         loadComponent: () => import('./pages/relatorios/relatorios.component').then(m => m.RelatoriosComponent),

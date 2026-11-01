@@ -68,6 +68,8 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
         public DbSet<IntegracaoMercadoLivre> IntegracoesMercadoLivre { get; set; }
         public DbSet<Core.Entities.Renave.VeiculoRenave> VeiculosRenave { get; set; }
         public DbSet<Core.Entities.NotasFiscais.NotaFiscal> NotasFiscais { get; set; }
+        public DbSet<Core.Entities.Financiamentos.BancoFinanciamentoLoja> BancosFinanciamentoLoja { get; set; }
+        public DbSet<Core.Entities.Financiamentos.FichaFinanciamento> FichasFinanciamento { get; set; }
         public DbSet<IntegracaoLog> IntegracoesLogs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -422,6 +424,30 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
                 entity.Property(e => e.IntSellerId).HasMaxLength(50);
                 entity.Property(e => e.IntMlNickname).HasMaxLength(100);
                 entity.Property(e => e.IntMlEmail).HasMaxLength(200);
+            });
+
+            modelBuilder.Entity<Core.Entities.Financiamentos.BancoFinanciamentoLoja>(entity =>
+            {
+                entity.ToTable("BancoFinanciamentoLoja");
+                entity.HasKey(e => e.BflId);
+                entity.Property(e => e.BflId).ValueGeneratedOnAdd();
+                entity.Property(e => e.BflNome).HasMaxLength(80).IsRequired();
+                entity.Property(e => e.BflPortalUrl).HasMaxLength(500);
+                entity.Property(e => e.BflObservacao).HasMaxLength(1000);
+            });
+
+            modelBuilder.Entity<Core.Entities.Financiamentos.FichaFinanciamento>(entity =>
+            {
+                entity.ToTable("FichaFinanciamento");
+                entity.HasKey(e => e.FifId);
+                entity.Property(e => e.FifId).ValueGeneratedOnAdd();
+                entity.HasIndex(e => e.R_UsuId);
+                entity.Property(e => e.FifNome).HasMaxLength(150).IsRequired();
+                entity.Property(e => e.FifCpf).HasMaxLength(11).IsRequired();
+                entity.Property(e => e.FifTelefone).HasMaxLength(11).IsRequired();
+                entity.Property(e => e.FifEmail).HasMaxLength(150).IsRequired();
+                entity.Property(e => e.FifStatus).HasMaxLength(20).IsRequired();
+                entity.Property(e => e.FifObservacao).HasMaxLength(1000);
             });
 
             modelBuilder.Entity<Core.Entities.Renave.VeiculoRenave>(entity =>
