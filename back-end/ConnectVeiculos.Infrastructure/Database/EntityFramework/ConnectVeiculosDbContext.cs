@@ -67,6 +67,7 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
         public DbSet<PushSubscription> PushSubscriptions { get; set; }
         public DbSet<IntegracaoMercadoLivre> IntegracoesMercadoLivre { get; set; }
         public DbSet<Core.Entities.Renave.VeiculoRenave> VeiculosRenave { get; set; }
+        public DbSet<Core.Entities.NotasFiscais.NotaFiscal> NotasFiscais { get; set; }
         public DbSet<IntegracaoLog> IntegracoesLogs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -437,6 +438,24 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
                 entity.Property(e => e.RnvNumeroAtpv).HasMaxLength(30);
                 entity.Property(e => e.RnvUltimoErro).HasMaxLength(1000);
                 entity.Ignore(e => e.EmEstoque);
+            });
+
+            modelBuilder.Entity<Core.Entities.NotasFiscais.NotaFiscal>(entity =>
+            {
+                entity.ToTable("NotaFiscal");
+                entity.HasKey(e => e.NfId);
+                entity.Property(e => e.NfId).ValueGeneratedOnAdd();
+                entity.HasIndex(e => e.R_VeiId);
+                entity.HasIndex(e => new { e.NfAmbiente, e.NfSerie, e.NfNumero }).IsUnique();
+                entity.Property(e => e.NfTipo).HasMaxLength(10);
+                entity.Property(e => e.NfAmbiente).HasMaxLength(15);
+                entity.Property(e => e.NfChave).HasMaxLength(44);
+                entity.Property(e => e.NfStatus).HasMaxLength(15);
+                entity.Property(e => e.NfMotivo).HasMaxLength(1000);
+                entity.Property(e => e.NfProtocolo).HasMaxLength(20);
+                entity.Property(e => e.NfDestDocumento).HasMaxLength(14);
+                entity.Property(e => e.NfDestNome).HasMaxLength(200);
+                entity.Ignore(e => e.PodeReenviar);
             });
 
             modelBuilder.Entity<IntegracaoLog>(entity =>

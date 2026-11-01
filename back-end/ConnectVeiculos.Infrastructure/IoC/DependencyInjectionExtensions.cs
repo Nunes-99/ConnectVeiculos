@@ -287,6 +287,7 @@ namespace ConnectVeiculos.Infrastructure.IoC
              // Repositories - Integracoes (Fase 3 + 4)
              services.AddTransient<Core.Interfaces.Database.Repositories.Integracoes.IIntegracaoMercadoLivreRepository, Database.EntityFramework.Repositories.IntegracaoMercadoLivreRepository>();
              services.AddTransient<Core.Interfaces.Database.Repositories.Renave.IVeiculoRenaveRepository, Database.EntityFramework.Repositories.VeiculoRenaveRepository>();
+             services.AddTransient<Core.Interfaces.Database.Repositories.NotasFiscais.INotaFiscalRepository, Database.EntityFramework.Repositories.NotaFiscalRepository>();
              services.AddTransient<Core.Interfaces.Database.Repositories.Integracoes.IIntegracaoLogRepository, Database.EntityFramework.Repositories.IntegracaoLogRepository>();
 
              // Repositories - Tenants/Planos (billing camada 1)
@@ -352,6 +353,12 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.AddScoped<Core.Interfaces.Services.IRenaveService, Services.Renave.RenaveService>();
             // Certificado A1 da loja: um so, usado pelo Renave e pela NF-e.
             services.AddScoped<Core.Interfaces.Services.ICertificadoDigitalService, Services.Certificados.CertificadoDigitalService>();
+
+            // NF-e de veiculos direto na Sefaz (biblioteca Unimake.DFe, MIT). O
+            // HttpClient tipado so busca a lista de municipios do IBGE.
+            services.AddSingleton<Services.NotasFiscais.INfeSefaz, Services.NotasFiscais.NfeSefazUnimake>();
+            services.AddHttpClient<Core.Interfaces.Services.INfeService, Services.NotasFiscais.NfeService>()
+                .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(15));
 
             // Assinatura mensal dos planos (Mercado Pago, conta da plataforma)
             services.Configure<Services.Pagamentos.MercadoPagoSettings>(configuration.GetSection("MercadoPagoSettings"));
@@ -548,6 +555,31 @@ namespace ConnectVeiculos.Infrastructure.IoC
                       RnvNumeroAtpv TEXT,
                       RnvUltimoErro TEXT,
                       RnvAtualizadoEm TEXT NOT NULL");
+
+                // NF-e de veiculos emitida pelo sistema (entrada na compra, saida na venda)
+                CreateTableIfNotExists(connection, "NotaFiscal",
+                    @"NfId INTEGER PRIMARY KEY AUTOINCREMENT,
+                      R_VeiId INTEGER NOT NULL,
+                      NfTipo TEXT NOT NULL,
+                      NfAmbiente TEXT NOT NULL,
+                      NfSerie INTEGER NOT NULL,
+                      NfNumero INTEGER NOT NULL,
+                      NfChave TEXT,
+                      NfStatus TEXT NOT NULL,
+                      NfCStat INTEGER,
+                      NfMotivo TEXT,
+                      NfProtocolo TEXT,
+                      NfDtEmissao TEXT NOT NULL,
+                      NfDtAutorizacao TEXT,
+                      NfValor TEXT NOT NULL,
+                      NfDestDocumento TEXT,
+                      NfDestNome TEXT,
+                      NfDadosJson TEXT,
+                      NfXml TEXT,
+                      NfDtCancelamento TEXT,
+                      NfProtocoloCancelamento TEXT,
+                      NfXmlCancelamento TEXT,
+                      UNIQUE (NfAmbiente, NfSerie, NfNumero)");
 
                 CreateTableIfNotExists(connection, "IntegracaoLog",
                     @"IlgId INTEGER PRIMARY KEY AUTOINCREMENT,
