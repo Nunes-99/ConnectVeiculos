@@ -247,24 +247,20 @@
             </div>
           </div>
           <div class="form-row">
-            <div class="form-group">
-              <label>Cor Primária</label>
+            <!-- Cor secundaria saiu da tela em 01/11/2026: nada no catalogo a usava.
+                 O campo segue no formulario (valor atual preservado ao salvar). -->
+            <div class="form-group" style="grid-column: 1/-1;">
+              <label>Cor de destaque</label>
               <div class="color-picker-wrapper">
                 <input type="color" formControlName="lojCorPrimaria" />
                 <input type="text" formControlName="lojCorPrimaria" placeholder="#1a237e" />
               </div>
-            </div>
-            <div class="form-group">
-              <label>Cor Secundária</label>
-              <div class="color-picker-wrapper">
-                <input type="color" formControlName="lojCorSecundaria" />
-                <input type="text" formControlName="lojCorSecundaria" placeholder="#25d366" />
-              </div>
+              <small class="check-help">Preços, botões, faixa de horário, ícones e etiquetas do catálogo, e a arte dos Stories.</small>
             </div>
           </div>
           <div class="form-row">
             <div class="form-group" style="grid-column: 1/-1;">
-              <div class="color-preview" [style.background]="'linear-gradient(135deg, ' + form.get('lojCorPrimaria')?.value + ' 0%, ' + form.get('lojCorSecundaria')?.value + ' 100%)'">
+              <div class="color-preview" [style.background]="form.get('lojCorPrimaria')?.value">
               </div>
               @if (editMode) {
                 <button type="button" class="btn-preview-catalogo" (click)="abrirPreview()">
