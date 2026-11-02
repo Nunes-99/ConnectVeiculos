@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ToastService } from '../../../core/services/toast.service';
 import { CepService } from '../../../core/services/cep.service';
-import { NfeConfig, NfeMunicipio, NfeService, erroApi } from '../../../core/services/nfe.service';
+import { NfeConfig, NfeInutilizacao, NfeMunicipio, NfeService, baixarArquivo, erroApi } from '../../../core/services/nfe.service';
 import { CertificadoA1Component } from './certificado-a1.component';
 
 /**
@@ -82,6 +82,41 @@ export class NfeConfigComponent implements OnInit {
       c.codigoMunicipio = r.codigoMunicipio || null;
       c.municipio = r.cidade;
       this.buscaMunicipio = '';
+    });
+  }
+
+  // ---------- inutilizacao de numeracao ----------
+  mostrarInutilizacao = false;
+  inutilizacoes: NfeInutilizacao[] = [];
+  inut = { serie: 1, numeroInicial: 0, numeroFinal: 0, justificativa: '' };
+  inutilizando = false;
+
+  abrirInutilizacao(): void {
+    this.mostrarInutilizacao = !this.mostrarInutilizacao;
+    if (!this.mostrarInutilizacao) return;
+    this.inut.serie = this.config?.serie ?? 1;
+    this.nfe.inutilizacoes().subscribe({ next: l => this.inutilizacoes = l, error: () => {} });
+  }
+
+  inutilizar(): void {
+    const d = this.inut;
+    if (!d.numeroInicial || !d.numeroFinal) { this.toast.warning('Informe a faixa de números.'); return; }
+    this.inutilizando = true;
+    this.nfe.inutilizar({ ...d, numeroFinal: Math.max(d.numeroFinal, d.numeroInicial) }).subscribe({
+      next: i => {
+        this.inutilizando = false;
+        this.inutilizacoes = [i, ...this.inutilizacoes];
+        this.inut = { serie: d.serie, numeroInicial: 0, numeroFinal: 0, justificativa: '' };
+        this.toast.success(`Números ${i.numeroInicial} a ${i.numeroFinal} inutilizados (protocolo ${i.protocolo}).`);
+      },
+      error: async err => { this.inutilizando = false; this.toast.error(await erroApi(err, 'Não foi possível inutilizar.')); }
+    });
+  }
+
+  baixarInutilizacao(i: NfeInutilizacao): void {
+    this.nfe.xmlInutilizacao(i.id).subscribe({
+      next: b => baixarArquivo(b, `inutilizacao-serie${i.serie}-${i.numeroInicial}-${i.numeroFinal}.xml`),
+      error: async err => this.toast.error(await erroApi(err, 'Não foi possível baixar o XML.'))
     });
   }
 

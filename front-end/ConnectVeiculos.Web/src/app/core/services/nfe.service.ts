@@ -91,7 +91,7 @@ export interface NfeResumo {
   serie: number;
   numero: number;
   chave: string | null;
-  status: 'PENDENTE' | 'AUTORIZADA' | 'REJEITADA' | 'CANCELADA';
+  status: 'PENDENTE' | 'AUTORIZADA' | 'REJEITADA' | 'CANCELADA' | 'INUTILIZADA';
   cStat: number | null;
   motivo: string | null;
   protocolo: string | null;
@@ -102,6 +102,21 @@ export interface NfeResumo {
   dataCancelamento: string | null;
   podeReenviar: boolean;
   podeCancelar: boolean;
+  cartaCorrecaoSequencia: number;
+  cartaCorrecaoTexto: string | null;
+  cartaCorrecaoData: string | null;
+  podeCorrigir: boolean;
+}
+
+export interface NfeInutilizacao {
+  id: number;
+  ambiente: string;
+  serie: number;
+  numeroInicial: number;
+  numeroFinal: number;
+  justificativa: string;
+  protocolo: string | null;
+  data: string;
 }
 
 export interface NfeMunicipio { codigo: number; nome: string; uf: string; }
@@ -172,6 +187,26 @@ export class NfeService {
 
   danfe(notaId: number): Observable<Blob> {
     return this.http.get(`${this.url}/${notaId}/danfe`, { responseType: 'blob' });
+  }
+
+  corrigir(notaId: number, correcao: string): Observable<NfeResumo> {
+    return this.http.post<NfeResumo>(`${this.url}/${notaId}/carta-correcao`, { correcao });
+  }
+
+  xmlCartaCorrecao(notaId: number): Observable<Blob> {
+    return this.http.get(`${this.url}/${notaId}/carta-correcao/xml`, { responseType: 'blob' });
+  }
+
+  inutilizacoes(): Observable<NfeInutilizacao[]> {
+    return this.http.get<NfeInutilizacao[]>(`${this.url}/inutilizacoes`);
+  }
+
+  inutilizar(dados: { serie: number; numeroInicial: number; numeroFinal: number; justificativa: string }): Observable<NfeInutilizacao> {
+    return this.http.post<NfeInutilizacao>(`${this.url}/inutilizacoes`, dados);
+  }
+
+  xmlInutilizacao(id: number): Observable<Blob> {
+    return this.http.get(`${this.url}/inutilizacoes/${id}/xml`, { responseType: 'blob' });
   }
 
   xml(notaId: number): Observable<Blob> {

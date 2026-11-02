@@ -47,6 +47,9 @@ export class NfeVeiculoComponent implements OnInit {
   cancelando: NfeResumo | null = null;
   justificativa = '';
 
+  corrigindo: NfeResumo | null = null;
+  correcao = '';
+
   ngOnInit(): void {
     this.nfe.obterConfig().subscribe({
       next: c => { this.config = c; this.form.endereco.uf = c.uf || 'SP'; },
@@ -194,6 +197,33 @@ export class NfeVeiculoComponent implements OnInit {
     });
   }
 
+  abrirCorrecao(n: NfeResumo): void {
+    this.cancelando = null;
+    this.corrigindo = n;
+    // Cada carta substitui a anterior: comeca pelo texto que ja vale.
+    this.correcao = n.cartaCorrecaoTexto || '';
+  }
+
+  confirmarCorrecao(): void {
+    if (!this.corrigindo) return;
+    this.enviando = true;
+    this.nfe.corrigir(this.corrigindo.id, this.correcao).subscribe({
+      next: r => {
+        this.enviando = false; this.corrigindo = null; this.correcao = '';
+        this.toast.success(`Carta de correção nº ${r.cartaCorrecaoSequencia} registrada.`);
+        this.recarregar();
+      },
+      error: async err => { this.enviando = false; this.toast.error(await erroApi(err, 'Não foi possível registrar a carta de correção.')); }
+    });
+  }
+
+  baixarCartaCorrecao(n: NfeResumo): void {
+    this.nfe.xmlCartaCorrecao(n.id).subscribe({
+      next: b => baixarArquivo(b, `${n.chave}-cce-${n.cartaCorrecaoSequencia}.xml`),
+      error: async err => this.toast.error(await erroApi(err, 'Não foi possível baixar a carta de correção.'))
+    });
+  }
+
   baixarDanfe(n: NfeResumo): void {
     this.nfe.danfe(n.id).subscribe({
       next: b => baixarArquivo(b, `DANFE-${n.numero}.pdf`),
@@ -209,6 +239,6 @@ export class NfeVeiculoComponent implements OnInit {
   }
 
   rotuloStatus(s: string): string {
-    return ({ PENDENTE: 'Pendente', AUTORIZADA: 'Autorizada', REJEITADA: 'Rejeitada', CANCELADA: 'Cancelada' } as Record<string, string>)[s] || s;
+    return ({ PENDENTE: 'Pendente', AUTORIZADA: 'Autorizada', REJEITADA: 'Rejeitada', CANCELADA: 'Cancelada', INUTILIZADA: 'Inutilizada' } as Record<string, string>)[s] || s;
   }
 }

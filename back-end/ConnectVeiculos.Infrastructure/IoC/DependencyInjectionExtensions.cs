@@ -592,7 +592,29 @@ namespace ConnectVeiculos.Infrastructure.IoC
                       NfDtCancelamento TEXT,
                       NfProtocoloCancelamento TEXT,
                       NfXmlCancelamento TEXT,
+                      NfCceSequencia INTEGER NOT NULL DEFAULT 0,
+                      NfCceTexto TEXT,
+                      NfCceProtocolo TEXT,
+                      NfCceData TEXT,
+                      NfCceXml TEXT,
                       UNIQUE (NfAmbiente, NfSerie, NfNumero)");
+                AddColumnIfNotExists(connection, "NotaFiscal", "NfCceSequencia", "INTEGER NOT NULL DEFAULT 0");
+                AddColumnIfNotExists(connection, "NotaFiscal", "NfCceTexto", "TEXT");
+                AddColumnIfNotExists(connection, "NotaFiscal", "NfCceProtocolo", "TEXT");
+                AddColumnIfNotExists(connection, "NotaFiscal", "NfCceData", "TEXT");
+                AddColumnIfNotExists(connection, "NotaFiscal", "NfCceXml", "TEXT");
+
+                // Numeracao inutilizada na Sefaz (numeros que nao podem mais virar nota)
+                CreateTableIfNotExists(connection, "NotaFiscalInutilizacao",
+                    @"NfiId INTEGER PRIMARY KEY AUTOINCREMENT,
+                      NfiAmbiente TEXT NOT NULL,
+                      NfiSerie INTEGER NOT NULL,
+                      NfiNumeroInicial INTEGER NOT NULL,
+                      NfiNumeroFinal INTEGER NOT NULL,
+                      NfiJustificativa TEXT NOT NULL,
+                      NfiProtocolo TEXT,
+                      NfiData TEXT NOT NULL,
+                      NfiXml TEXT");
 
                 // Ficha unica de financiamento: bancos da loja (tabelas de taxa) e fichas dos clientes
                 CreateTableIfNotExists(connection, "BancoFinanciamentoLoja",

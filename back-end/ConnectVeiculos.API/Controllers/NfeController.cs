@@ -69,6 +69,43 @@ namespace ConnectVeiculos.API.Controllers
         public Task<IActionResult> Cancelar(int notaId, [FromBody] CancelamentoInput input, CancellationToken ct)
             => Executar(() => _nfe.CancelarAsync(notaId, input.Justificativa, ct));
 
+        public class CorrecaoInput
+        {
+            public string Correcao { get; set; } = string.Empty;
+        }
+
+        [HttpPost("{notaId:int}/carta-correcao")]
+        public Task<IActionResult> CartaCorrecao(int notaId, [FromBody] CorrecaoInput input, CancellationToken ct)
+            => Executar(() => _nfe.CorrigirAsync(notaId, input.Correcao, ct));
+
+        [HttpGet("{notaId:int}/carta-correcao/xml")]
+        public Task<IActionResult> XmlCartaCorrecao(int notaId, CancellationToken ct)
+            => Arquivo(() => _nfe.ObterXmlCartaCorrecaoAsync(notaId, ct));
+
+        [HttpGet("inutilizacoes")]
+        public async Task<IActionResult> Inutilizacoes(CancellationToken ct) => Ok(await _nfe.ListarInutilizacoesAsync(ct));
+
+        [HttpPost("inutilizacoes")]
+        public Task<IActionResult> Inutilizar([FromBody] NfeInutilizacaoInput input, CancellationToken ct)
+            => Executar(() => _nfe.InutilizarAsync(input, ct));
+
+        [HttpGet("inutilizacoes/{id:int}/xml")]
+        public Task<IActionResult> XmlInutilizacao(int id, CancellationToken ct)
+            => Arquivo(() => _nfe.ObterXmlInutilizacaoAsync(id, ct));
+
+        private async Task<IActionResult> Arquivo(Func<Task<(string Xml, string NomeArquivo)>> obter)
+        {
+            try
+            {
+                var (xml, nome) = await obter();
+                return File(Encoding.UTF8.GetBytes(xml), "application/xml", nome);
+            }
+            catch (NfeException ex)
+            {
+                return UnprocessableEntity(new { error = ex.Message });
+            }
+        }
+
         [HttpGet("{notaId:int}/xml")]
         public async Task<IActionResult> Xml(int notaId, CancellationToken ct)
         {

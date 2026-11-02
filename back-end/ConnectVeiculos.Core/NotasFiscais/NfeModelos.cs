@@ -139,6 +139,32 @@ namespace ConnectVeiculos.Core.NotasFiscais
         public DateTime? DataCancelamento { get; set; }
         public bool PodeReenviar { get; set; }
         public bool PodeCancelar { get; set; }
+
+        /// <summary>Carta de correcao em vigor (a ultima registrada), se houver.</summary>
+        public int CartaCorrecaoSequencia { get; set; }
+        public string? CartaCorrecaoTexto { get; set; }
+        public DateTime? CartaCorrecaoData { get; set; }
+        public bool PodeCorrigir { get; set; }
+    }
+
+    public class NfeInutilizacaoInput
+    {
+        public int Serie { get; set; }
+        public int NumeroInicial { get; set; }
+        public int NumeroFinal { get; set; }
+        public string Justificativa { get; set; } = string.Empty;
+    }
+
+    public class NfeInutilizacaoInfo
+    {
+        public int Id { get; set; }
+        public string Ambiente { get; set; } = string.Empty;
+        public int Serie { get; set; }
+        public int NumeroInicial { get; set; }
+        public int NumeroFinal { get; set; }
+        public string Justificativa { get; set; } = string.Empty;
+        public string? Protocolo { get; set; }
+        public DateTime Data { get; set; }
     }
 
     public class NfeMunicipio

@@ -36,7 +36,20 @@ namespace ConnectVeiculos.Tests.NotasFiscais
             public readonly List<NotaFiscal> Itens = new();
             public Task<NotaFiscal?> GetByIdAsync(int id) => Task.FromResult(Itens.FirstOrDefault(n => n.NfId == id));
             public Task<IReadOnlyList<NotaFiscal>> GetByVeiculoAsync(int v) => Task.FromResult<IReadOnlyList<NotaFiscal>>(Itens.Where(n => n.R_VeiId == v).ToList());
-            public Task<bool> NumeroEmUsoAsync(string a, int s, int n) => Task.FromResult(Itens.Any(x => x.NfAmbiente == a && x.NfSerie == s && x.NfNumero == n));
+            public readonly List<NotaFiscalInutilizacao> Inutilizacoes = new();
+            public Task<bool> NumeroEmUsoAsync(string a, int s, int n) => Task.FromResult(
+                Itens.Any(x => x.NfAmbiente == a && x.NfSerie == s && x.NfNumero == n)
+                || Inutilizacoes.Any(i => i.NfiAmbiente == a && i.NfiSerie == s && i.Contem(n)));
+            public Task<IReadOnlyList<NotaFiscal>> GetNoIntervaloAsync(string a, int s, int ini, int fim)
+                => Task.FromResult<IReadOnlyList<NotaFiscal>>(Itens.Where(x => x.NfAmbiente == a && x.NfSerie == s && x.NfNumero >= ini && x.NfNumero <= fim).ToList());
+            public Task<IReadOnlyList<NotaFiscalInutilizacao>> ListarInutilizacoesAsync() => Task.FromResult<IReadOnlyList<NotaFiscalInutilizacao>>(Inutilizacoes.ToList());
+            public Task<NotaFiscalInutilizacao?> ObterInutilizacaoAsync(int id) => Task.FromResult(Inutilizacoes.FirstOrDefault(i => i.NfiId == id));
+            public Task SalvarInutilizacaoAsync(NotaFiscalInutilizacao i)
+            {
+                typeof(NotaFiscalInutilizacao).GetProperty(nameof(NotaFiscalInutilizacao.NfiId))!.SetValue(i, Inutilizacoes.Count + 1);
+                Inutilizacoes.Add(i);
+                return Task.CompletedTask;
+            }
             public Task SalvarAsync(NotaFiscal nota)
             {
                 if (nota.NfId == 0)
@@ -65,6 +78,22 @@ namespace ConnectVeiculos.Tests.NotasFiscais
 
             public NfeStatusSefaz Status(UFBrasil uf, bool homologacao, X509Certificate2 certificado)
                 => new() { CStat = 107, Motivo = "Servico em Operacao" };
+
+            public readonly List<(int Sequencia, string Texto)> Correcoes = new();
+            public NfeRetornoEvento? RespostaCorrecao;
+            public NfeRetornoEvento CartaCorrecao(string chave, int sequencia, string correcao, string cnpj, UFBrasil uf, bool homologacao, X509Certificate2 certificado)
+            {
+                Correcoes.Add((sequencia, correcao));
+                return RespostaCorrecao ?? new() { Registrado = true, CStat = 135, Protocolo = "13526000000" + sequencia, Xml = "<procEventoNFe/>" };
+            }
+
+            public readonly List<(int Serie, int Ini, int Fim)> Inutilizadas = new();
+            public NfeRetornoEvento? RespostaInutilizacao;
+            public NfeRetornoEvento Inutilizar(int serie, int inicial, int final, string justificativa, string cnpj, UFBrasil uf, bool homologacao, X509Certificate2 certificado)
+            {
+                Inutilizadas.Add((serie, inicial, final));
+                return RespostaInutilizacao ?? new() { Registrado = true, CStat = 102, Protocolo = "135260000009", Xml = "<procInutNFe/>" };
+            }
         }
 
         private static NfeRetornoAutorizacao Autorizada() => new()
@@ -217,6 +246,127 @@ namespace ConnectVeiculos.Tests.NotasFiscais
             e.Municipio.Should().Be(cidade);
             e.Uf.Should().Be(uf);
             e.Cep.Should().Be(cep);
+        }
+
+        // ---------------- Carta de correcao ----------------
+
+        [Fact]
+        public async Task Carta_De_Correcao_Numera_Em_Sequencia_E_Fica_A_Ultima()
+        {
+            await ConfigurarAsync();
+            var nota = await _service.EmitirAsync(42, NfeVeiculoBuilderTests.Venda());
+            nota.PodeCorrigir.Should().BeTrue();
+
+            await _service.CorrigirAsync(nota.Id, "Cor do veiculo: onde se le Prata leia-se Cinza.");
+            var r = await _service.CorrigirAsync(nota.Id, "  Cor do veículo:   Cinza. Complemento do endereço: casa 2.  ");
+
+            _sefaz.Correcoes.Select(c => c.Sequencia).Should().Equal(1, 2);
+            _sefaz.Correcoes[1].Texto.Should().Be("Cor do veiculo: Cinza. Complemento do endereco: casa 2.");
+            r.CartaCorrecaoSequencia.Should().Be(2);
+            r.CartaCorrecaoTexto.Should().StartWith("Cor do veiculo: Cinza");
+            (await _service.ObterXmlCartaCorrecaoAsync(nota.Id)).NomeArquivo.Should().EndWith("-cce-2.xml");
+        }
+
+        [Fact]
+        public async Task Carta_De_Correcao_Recusa_Texto_Curto_Nota_Cancelada_E_Passou_De_20()
+        {
+            await ConfigurarAsync();
+            var nota = await _service.EmitirAsync(42, NfeVeiculoBuilderTests.Venda());
+
+            await FluentActions.Awaiting(() => _service.CorrigirAsync(nota.Id, "curto"))
+                .Should().ThrowAsync<NfeException>().WithMessage("*15 e 1000*");
+
+            var entidade = _notas.Itens.Single(n => n.NfId == nota.Id);
+            entidade.RegistrarCartaCorrecao(20, "x", "p", null, "<x/>");
+            await FluentActions.Awaiting(() => _service.CorrigirAsync(nota.Id, "Texto de correcao suficiente."))
+                .Should().ThrowAsync<NfeException>().WithMessage("*20*");
+
+            await _service.CancelarAsync(nota.Id, "Venda desfeita a pedido do cliente");
+            await FluentActions.Awaiting(() => _service.CorrigirAsync(nota.Id, "Texto de correcao suficiente."))
+                .Should().ThrowAsync<NfeException>().WithMessage("*autorizada*");
+            _sefaz.Correcoes.Should().BeEmpty();
+        }
+
+        [Fact]
+        public async Task Carta_Recusada_Pela_Sefaz_Nao_Muda_A_Nota()
+        {
+            await ConfigurarAsync();
+            var nota = await _service.EmitirAsync(42, NfeVeiculoBuilderTests.Venda());
+            _sefaz.RespostaCorrecao = new NfeRetornoEvento { Registrado = false, CStat = 573, Motivo = "Duplicidade de evento" };
+
+            await FluentActions.Awaiting(() => _service.CorrigirAsync(nota.Id, "Texto de correcao suficiente."))
+                .Should().ThrowAsync<NfeException>().WithMessage("*573*Duplicidade*");
+            _notas.Itens.Single().NfCceSequencia.Should().Be(0);
+        }
+
+        // ---------------- Inutilizacao ----------------
+
+        [Fact]
+        public async Task Inutilizar_Marca_A_Rejeitada_E_A_Numeracao_Pula_A_Faixa()
+        {
+            await ConfigurarAsync(proximoNumero: 10);
+            _sefaz.Respostas.Enqueue(new NfeRetornoAutorizacao { Autorizada = false, CStat = 539, Motivo = "Duplicidade" });
+            await FluentActions.Awaiting(() => _service.EmitirAsync(42, NfeVeiculoBuilderTests.Venda())).Should().ThrowAsync<NfeException>();
+            var rejeitada = _notas.Itens.Single();
+            rejeitada.NfNumero.Should().Be(10);
+
+            var r = await _service.InutilizarAsync(new NfeInutilizacaoInput
+            {
+                Serie = rejeitada.NfSerie, NumeroInicial = 10, NumeroFinal = 12, Justificativa = "Numeração pulada por falha no envio"
+            });
+
+            r.Protocolo.Should().Be("135260000009");
+            _sefaz.Inutilizadas.Should().ContainSingle().Which.Should().Be((rejeitada.NfSerie, 10, 12));
+            rejeitada.NfStatus.Should().Be(NotaFiscal.StatusInutilizada);
+            rejeitada.PodeReenviar.Should().BeFalse();
+            (await _service.ListarInutilizacoesAsync()).Should().ContainSingle();
+
+            // A proxima nota (outro veiculo) nao pode cair em 11 nem 12.
+            (await _notas.NumeroEmUsoAsync("homologacao", rejeitada.NfSerie, 12)).Should().BeTrue();
+            (await _notas.NumeroEmUsoAsync("homologacao", rejeitada.NfSerie, 13)).Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task Inutilizar_Recusa_Nota_Autorizada_Na_Faixa_E_Faixa_Repetida()
+        {
+            await ConfigurarAsync(proximoNumero: 10);
+            var nota = await _service.EmitirAsync(42, NfeVeiculoBuilderTests.Venda());
+            var serie = _notas.Itens.Single().NfSerie;
+
+            await FluentActions.Awaiting(() => _service.InutilizarAsync(new NfeInutilizacaoInput
+            {
+                Serie = serie, NumeroInicial = 9, NumeroFinal = 11, Justificativa = "Numeração pulada por falha no envio"
+            })).Should().ThrowAsync<NfeException>().WithMessage("*10*autorizada*cancela*");
+
+            await _service.InutilizarAsync(new NfeInutilizacaoInput { Serie = serie, NumeroInicial = 20, NumeroFinal = 25, Justificativa = "Numeração pulada por falha no envio" });
+            await FluentActions.Awaiting(() => _service.InutilizarAsync(new NfeInutilizacaoInput
+            {
+                Serie = serie, NumeroInicial = 25, NumeroFinal = 30, Justificativa = "Numeração pulada por falha no envio"
+            })).Should().ThrowAsync<NfeException>().WithMessage("*já foi inutilizada*20 a 25*");
+
+            await FluentActions.Awaiting(() => _service.InutilizarAsync(new NfeInutilizacaoInput
+            {
+                Serie = serie, NumeroInicial = 40, NumeroFinal = 40, Justificativa = "curta"
+            })).Should().ThrowAsync<NfeException>().WithMessage("*15 e 255*");
+            _sefaz.Inutilizadas.Should().ContainSingle();
+        }
+
+        [Fact]
+        public void Xml_Da_Carta_De_Correcao_E_Da_Inutilizacao_Passam_No_Schema()
+        {
+            using var cert = NfeVeiculoBuilderTests.CertificadoDeTeste();
+            var config = new Unimake.Business.DFe.Servicos.Configuracao
+            {
+                TipoDFe = Unimake.Business.DFe.Servicos.TipoDFe.NFe, CertificadoDigital = cert
+            };
+            var chave = "35261111222333000181550010000000101234567890";
+
+            FluentActions.Invoking(() => new Unimake.Business.DFe.Servicos.NFe.RecepcaoEvento(
+                NfeSefazUnimake.MontarCartaCorrecao(chave, 1, "Cor do veiculo: onde se le Prata leia-se Cinza.", "11222333000181", UFBrasil.SP, true), config))
+                .Should().NotThrow();
+            FluentActions.Invoking(() => new Unimake.Business.DFe.Servicos.NFe.Inutilizacao(
+                NfeSefazUnimake.MontarInutilizacao(1, 10, 12, "Numeracao pulada por falha no envio", "11222333000181", UFBrasil.SP, true), config))
+                .Should().NotThrow();
         }
 
         [Fact]

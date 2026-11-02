@@ -31,7 +31,12 @@
                   <td>{{ n.numero }}</td>
                   <td>
                     <span class="nfe-status" [attr.data-status]="n.status">{{ rotuloStatus(n.status) }}</span>
-                    @if (n.status === 'REJEITADA' || n.status === 'PENDENTE') { <small class="nfe-motivo">{{ n.motivo }}</small> }
+                    @if (n.status === 'REJEITADA' || n.status === 'PENDENTE' || n.status === 'INUTILIZADA') { <small class="nfe-motivo">{{ n.motivo }}</small> }
+                    @if (n.cartaCorrecaoSequencia) {
+                      <small class="nfe-cce">CC-e nº {{ n.cartaCorrecaoSequencia }}: {{ n.cartaCorrecaoTexto }}
+                        <button class="rnv-link" (click)="baixarCartaCorrecao(n)">XML</button>
+                      </small>
+                    }
                   </td>
                   <td>{{ n.valor | currency:'BRL' }}</td>
                   <td class="nfe-acoes">
@@ -42,8 +47,11 @@
                     @if (n.podeReenviar) {
                       <button class="btn-icon" title="Enviar de novo" (click)="reenviar(n)" [disabled]="enviando"><span class="material-icons">send</span></button>
                     }
+                    @if (n.podeCorrigir) {
+                      <button class="btn-icon" title="Carta de correção" (click)="abrirCorrecao(n)"><span class="material-icons">edit_note</span></button>
+                    }
                     @if (n.podeCancelar) {
-                      <button class="btn-icon delete" title="Cancelar nota" (click)="cancelando = n; justificativa = ''"><span class="material-icons">block</span></button>
+                      <button class="btn-icon delete" title="Cancelar nota" (click)="cancelando = n; corrigindo = null; justificativa = ''"><span class="material-icons">block</span></button>
                     }
                   </td>
                 </tr>
@@ -64,6 +72,28 @@
               <div class="rnv-acoes">
                 <button class="btn-primary" (click)="confirmarCancelamento()" [disabled]="enviando || justificativa.trim().length < 15">Cancelar nota</button>
                 <button class="btn-secondary" (click)="cancelando = null">Voltar</button>
+              </div>
+            </div>
+          </div>
+        }
+
+        @if (corrigindo) {
+          <div class="rnv-alerta">
+            <span class="material-icons">edit_note</span>
+            <div>
+              <strong>Carta de correção da NF-e nº {{ corrigindo.numero }}</strong>
+              <small>
+                Serve para corrigir dados como cor, placa, chassi, complemento do endereço ou informações adicionais.
+                <strong>Não</strong> corrige valores, impostos, quantidade, data de emissão nem troca quem vende ou compra
+                (para isso, cancele e emita de novo). Cada carta substitui a anterior: escreva <strong>todas</strong> as correções.
+              </small>
+              <textarea [(ngModel)]="correcao" rows="4" maxlength="1000" placeholder="Ex.: Cor do veículo: onde se lê Prata, leia-se Cinza."></textarea>
+              <small>{{ correcao.trim().length }}/1000 (mínimo 15)</small>
+              <div class="rnv-acoes">
+                <button class="btn-primary" (click)="confirmarCorrecao()" [disabled]="enviando || correcao.trim().length < 15">
+                  {{ enviando ? 'Enviando à Sefaz...' : 'Registrar carta de correção' }}
+                </button>
+                <button class="btn-secondary" (click)="corrigindo = null">Voltar</button>
               </div>
             </div>
           </div>

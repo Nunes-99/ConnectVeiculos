@@ -127,5 +127,46 @@
     <div class="rnv-ok"><span class="material-icons">check_circle</span> Sefaz respondeu: {{ statusSefaz }}</div>
   }
 
+  <button type="button" class="rnv-link" (click)="abrirInutilizacao()">
+    <span class="material-icons">{{ mostrarInutilizacao ? 'expand_less' : 'expand_more' }}</span>
+    Inutilizar numeração
+  </button>
+  @if (mostrarInutilizacao) {
+    <p class="rnv-dica">
+      Use quando um número da série ficou sem nota autorizada (nota rejeitada que não vai ser reenviada, número pulado).
+      Nota autorizada não se inutiliza: ela se cancela. Depois de inutilizados, os números não podem mais ser usados.
+    </p>
+    <div class="nfe-inut">
+      <div class="form-group"><label>Série</label><input type="number" [(ngModel)]="inut.serie" min="0" max="999" /></div>
+      <div class="form-group"><label>Do número</label><input type="number" [(ngModel)]="inut.numeroInicial" min="1" /></div>
+      <div class="form-group"><label>Até o número</label><input type="number" [(ngModel)]="inut.numeroFinal" min="1" /></div>
+    </div>
+    <div class="form-group">
+      <label>Justificativa (mínimo 15 letras)</label>
+      <input type="text" [(ngModel)]="inut.justificativa" maxlength="255" placeholder="Ex.: Nota rejeitada que não será reenviada" />
+    </div>
+    <div class="rnv-acoes">
+      <button class="btn-secondary" (click)="inutilizar()" [disabled]="inutilizando || inut.justificativa.trim().length < 15">
+        <span class="material-icons">block</span> {{ inutilizando ? 'Enviando à Sefaz...' : 'Inutilizar na Sefaz' }}
+      </button>
+    </div>
+    @if (inutilizacoes.length) {
+      <table class="nfe-tabela">
+        <thead><tr><th>Série</th><th>Números</th><th>Data</th><th>Protocolo</th><th></th></tr></thead>
+        <tbody>
+          @for (i of inutilizacoes; track i.id) {
+            <tr>
+              <td>{{ i.serie }}</td>
+              <td>{{ i.numeroInicial }}{{ i.numeroFinal !== i.numeroInicial ? ' a ' + i.numeroFinal : '' }}<br /><small class="rnv-dica">{{ i.justificativa }}</small></td>
+              <td>{{ i.data | date:'dd/MM/yyyy' }}</td>
+              <td>{{ i.protocolo }}@if (i.ambiente !== 'producao') { <br /><small class="rnv-dica">testes</small> }</td>
+              <td class="nfe-acoes"><button class="btn-icon" title="XML" (click)="baixarInutilizacao(i)"><span class="material-icons">code</span></button></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  }
+
   <app-certificado-a1 (alterado)="carregar()" dica="Obrigatório para emitir: é com ele que a nota é assinada."></app-certificado-a1>
 }

@@ -450,6 +450,150 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
             return Resumo(nota);
         }
 
+        // ================================================================
+        // Carta de correcao (CC-e)
+        // ================================================================
+
+        /// <summary>
+        /// Corrige dado da nota autorizada que nao mexe em valores, impostos, data
+        /// nem em quem vende/compra. Cada carta substitui a anterior, entao o
+        /// texto precisa trazer todas as correcoes. Ate 20 por nota.
+        /// </summary>
+        public async Task<NfeResumo> CorrigirAsync(int notaId, string correcao, CancellationToken ct = default)
+        {
+            var nota = await _notas.GetByIdAsync(notaId) ?? throw new NfeException("Nota não encontrada.");
+            if (nota.NfStatus != NotaFiscal.StatusAutorizada || nota.NfChave == null)
+                throw new NfeException("Só dá para corrigir nota autorizada (e não cancelada).");
+            var texto = string.Join(' ', NfeVeiculoBuilder.SemAcento(correcao ?? "").Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+            if (texto.Length is < 15 or > 1000)
+                throw new NfeException("A correção precisa ter entre 15 e 1000 caracteres.");
+            var sequencia = nota.NfCceSequencia + 1;
+            if (sequencia > NotaFiscal.MaximoCartasCorrecao)
+                throw new NfeException($"Esta nota já tem {NotaFiscal.MaximoCartasCorrecao} cartas de correção, o limite da Sefaz.");
+
+            var cfg = await ObterConfigAsync(ct);
+            using var cert = await CertificadoObrigatorioAsync(ct);
+            NfeRetornoEvento ret;
+            try
+            {
+                ret = _sefaz.CartaCorrecao(nota.NfChave, sequencia, texto, NfeVeiculoBuilder.SoDigitos(cfg.Cnpj),
+                    NfeVeiculoBuilder.Uf(cfg.Uf), nota.NfAmbiente != "producao", cert);
+            }
+            catch (Exception ex) when (ex is not NfeException)
+            {
+                _logger.LogWarning(ex, "NF-e {Chave}: falha na carta de correcao", nota.NfChave);
+                throw new NfeException("Não foi possível falar com a Sefaz para a carta de correção. Tente de novo em alguns minutos.");
+            }
+
+            if (!ret.Registrado)
+                throw new NfeException($"A Sefaz recusou a carta de correção ({ret.CStat}): {ret.Motivo}");
+
+            nota.RegistrarCartaCorrecao(sequencia, texto, ret.Protocolo ?? "", ret.Data, ret.Xml ?? "");
+            await _notas.SalvarAsync(nota);
+            _logger.LogInformation("NF-e {Chave}: carta de correcao {Seq} registrada", nota.NfChave, sequencia);
+            return Resumo(nota);
+        }
+
+        public async Task<(string Xml, string NomeArquivo)> ObterXmlCartaCorrecaoAsync(int notaId, CancellationToken ct = default)
+        {
+            var nota = await _notas.GetByIdAsync(notaId) ?? throw new NfeException("Nota não encontrada.");
+            if (string.IsNullOrEmpty(nota.NfCceXml)) throw new NfeException("Esta nota não tem carta de correção.");
+            return (nota.NfCceXml, $"{nota.NfChave}-cce-{nota.NfCceSequencia}.xml");
+        }
+
+        // ================================================================
+        // Inutilizacao de numeracao
+        // ================================================================
+
+        public async Task<IReadOnlyList<NfeInutilizacaoInfo>> ListarInutilizacoesAsync(CancellationToken ct = default)
+            => (await _notas.ListarInutilizacoesAsync()).Select(Info).ToList();
+
+        /// <summary>
+        /// Avisa a Sefaz que uma faixa de numeros da serie nao vai ser usada (nota
+        /// rejeitada que nao sera reenviada, numero pulado). Nao serve para nota
+        /// autorizada (essa se cancela) nem pendente (pode ter sido autorizada).
+        /// </summary>
+        public async Task<NfeInutilizacaoInfo> InutilizarAsync(NfeInutilizacaoInput input, CancellationToken ct = default)
+        {
+            var cfg = await ObterConfigAsync(ct);
+            if (!cfg.Pronto)
+                throw new NfeException("Complete a configuração da NF-e em Integrações: " + string.Join(", ", cfg.Pendencias) + ".");
+            if (input.Serie is < 0 or > 999) throw new NfeException("Série deve ficar entre 0 e 999.");
+            if (input.NumeroInicial < 1 || input.NumeroFinal < input.NumeroInicial || input.NumeroFinal > 999_999_999)
+                throw new NfeException("Faixa de números inválida.");
+            if (input.NumeroFinal - input.NumeroInicial >= 1000)
+                throw new NfeException("Inutilize no máximo 1000 números por vez.");
+            var justificativa = NfeVeiculoBuilder.SemAcento((input.Justificativa ?? "").Trim());
+            if (justificativa.Length is < 15 or > 255)
+                throw new NfeException("A justificativa precisa ter entre 15 e 255 caracteres.");
+
+            var ambiente = cfg.Ambiente;
+            var notas = await _notas.GetNoIntervaloAsync(ambiente, input.Serie, input.NumeroInicial, input.NumeroFinal);
+            var bloqueadas = notas.Where(n => n.NfStatus != NotaFiscal.StatusRejeitada).OrderBy(n => n.NfNumero).ToList();
+            if (bloqueadas.Count > 0)
+            {
+                var n = bloqueadas[0];
+                throw new NfeException(n.NfStatus switch
+                {
+                    NotaFiscal.StatusAutorizada or NotaFiscal.StatusCancelada =>
+                        $"O número {n.NfNumero} já é de uma nota autorizada: nota autorizada se cancela, não se inutiliza.",
+                    NotaFiscal.StatusPendente =>
+                        $"A nota nº {n.NfNumero} está pendente (pode ter sido autorizada). Reenvie-a antes de inutilizar.",
+                    _ => $"O número {n.NfNumero} já foi inutilizado."
+                });
+            }
+            var jaInutilizada = (await _notas.ListarInutilizacoesAsync()).FirstOrDefault(i => i.NfiAmbiente == ambiente
+                && i.NfiSerie == input.Serie && i.NfiNumeroInicial <= input.NumeroFinal && i.NfiNumeroFinal >= input.NumeroInicial);
+            if (jaInutilizada != null)
+                throw new NfeException($"Parte desta faixa já foi inutilizada ({jaInutilizada.NfiNumeroInicial} a {jaInutilizada.NfiNumeroFinal}).");
+
+            using var cert = await CertificadoObrigatorioAsync(ct);
+            NfeRetornoEvento ret;
+            try
+            {
+                ret = _sefaz.Inutilizar(input.Serie, input.NumeroInicial, input.NumeroFinal, justificativa,
+                    NfeVeiculoBuilder.SoDigitos(cfg.Cnpj), NfeVeiculoBuilder.Uf(cfg.Uf), ambiente != "producao", cert);
+            }
+            catch (Exception ex) when (ex is not NfeException)
+            {
+                _logger.LogWarning(ex, "NF-e: falha ao inutilizar {Ini}-{Fim} da serie {Serie}", input.NumeroInicial, input.NumeroFinal, input.Serie);
+                throw new NfeException("Não foi possível falar com a Sefaz para inutilizar. Tente de novo em alguns minutos.");
+            }
+            if (!ret.Registrado)
+                throw new NfeException($"A Sefaz recusou a inutilização ({ret.CStat}): {ret.Motivo}");
+
+            var inut = new NotaFiscalInutilizacao(ambiente, input.Serie, input.NumeroInicial, input.NumeroFinal, justificativa,
+                ret.Protocolo, ret.Data ?? DateTime.UtcNow, ret.Xml);
+            await _notas.SalvarInutilizacaoAsync(inut);
+            foreach (var rejeitada in notas)
+            {
+                rejeitada.Inutilizar($"Número inutilizado na Sefaz (protocolo {ret.Protocolo}).");
+                await _notas.SalvarAsync(rejeitada);
+            }
+            _logger.LogInformation("NF-e: numeros {Ini}-{Fim} da serie {Serie} inutilizados (protocolo {Protocolo})",
+                input.NumeroInicial, input.NumeroFinal, input.Serie, ret.Protocolo);
+            return Info(inut);
+        }
+
+        public async Task<(string Xml, string NomeArquivo)> ObterXmlInutilizacaoAsync(int id, CancellationToken ct = default)
+        {
+            var inut = await _notas.ObterInutilizacaoAsync(id) ?? throw new NfeException("Inutilização não encontrada.");
+            if (string.IsNullOrEmpty(inut.NfiXml)) throw new NfeException("Esta inutilização não tem XML.");
+            return (inut.NfiXml, $"inutilizacao-serie{inut.NfiSerie}-{inut.NfiNumeroInicial}-{inut.NfiNumeroFinal}.xml");
+        }
+
+        private static NfeInutilizacaoInfo Info(NotaFiscalInutilizacao i) => new()
+        {
+            Id = i.NfiId,
+            Ambiente = i.NfiAmbiente,
+            Serie = i.NfiSerie,
+            NumeroInicial = i.NfiNumeroInicial,
+            NumeroFinal = i.NfiNumeroFinal,
+            Justificativa = i.NfiJustificativa,
+            Protocolo = i.NfiProtocolo,
+            Data = i.NfiData
+        };
+
         public async Task<(string Xml, string NomeArquivo)> ObterXmlAsync(int notaId, CancellationToken ct = default)
         {
             var nota = await _notas.GetByIdAsync(notaId) ?? throw new NfeException("Nota não encontrada.");
@@ -574,7 +718,11 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
             DataCancelamento = n.NfDtCancelamento,
             PodeReenviar = n.PodeReenviar,
             PodeCancelar = n.NfStatus == NotaFiscal.StatusAutorizada
-                && DateTime.UtcNow - (n.NfDtAutorizacao ?? n.NfDtEmissao) <= PrazoCancelamento
+                && DateTime.UtcNow - (n.NfDtAutorizacao ?? n.NfDtEmissao) <= PrazoCancelamento,
+            CartaCorrecaoSequencia = n.NfCceSequencia,
+            CartaCorrecaoTexto = n.NfCceTexto,
+            CartaCorrecaoData = n.NfCceData,
+            PodeCorrigir = n.NfStatus == NotaFiscal.StatusAutorizada && n.NfCceSequencia < NotaFiscal.MaximoCartasCorrecao
         };
     }
 

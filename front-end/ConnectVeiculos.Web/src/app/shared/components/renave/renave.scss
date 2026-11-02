@@ -147,6 +147,13 @@ h4 { margin: 1rem 0 0.5rem; font-size: 0.95rem; color: var(--text-primary); }
   color: var(--status-warning, #8d6e00);
   &[data-status='AUTORIZADA'] { background: var(--status-success-bg, #e8f5e9); color: var(--status-success, #2e7d32); }
   &[data-status='REJEITADA'], &[data-status='CANCELADA'] { background: var(--status-error-bg, #ffebee); color: var(--status-error, #c62828); }
+  &[data-status='INUTILIZADA'] { background: var(--bg-secondary, #f0f0f0); color: var(--text-secondary); }
 }
+
+.nfe-cce { display: block; color: var(--text-secondary); font-size: 0.75rem; margin-top: 0.2rem; .rnv-link { margin: 0 0 0 0.25rem; font-size: 0.75rem; } }
+
+.rnv-alerta textarea { width: 100%; margin-top: 0.35rem; font: inherit; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border-primary, #ccc); }
+
+.nfe-inut { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0 0.75rem; }
 
 .rnv-erro-box input { width: 100%; margin-top: 0.35rem; }

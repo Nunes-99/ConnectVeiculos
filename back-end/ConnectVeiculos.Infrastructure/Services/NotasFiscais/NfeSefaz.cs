@@ -36,6 +36,10 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
         NfeRetornoEvento Cancelar(string chave, string protocolo, string justificativa, string cnpj,
             UFBrasil uf, bool homologacao, X509Certificate2 certificado);
         NfeStatusSefaz Status(UFBrasil uf, bool homologacao, X509Certificate2 certificado);
+        NfeRetornoEvento CartaCorrecao(string chave, int sequencia, string correcao, string cnpj,
+            UFBrasil uf, bool homologacao, X509Certificate2 certificado);
+        NfeRetornoEvento Inutilizar(int serie, int inicial, int final, string justificativa, string cnpj,
+            UFBrasil uf, bool homologacao, X509Certificate2 certificado);
     }
 
     public class NfeSefazUnimake : INfeSefaz
@@ -94,43 +98,26 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
 
         public NfeRetornoEvento Cancelar(string chave, string protocolo, string justificativa, string cnpj,
             UFBrasil uf, bool homologacao, X509Certificate2 certificado)
-        {
-            var envio = new EnvEvento
-            {
-                Versao = "1.00",
-                IdLote = DateTime.UtcNow.ToString("yyMMddHHmmssfff"),
-                Evento = new List<Evento>
-                {
-                    new Evento
-                    {
-                        Versao = "1.00",
-                        InfEvento = new InfEvento(new DetEventoCanc
-                        {
-                            NProt = protocolo,
-                            Versao = "1.00",
-                            XJust = justificativa
-                        })
-                        {
-                            COrgao = uf,
-                            ChNFe = chave,
-                            CNPJ = cnpj,
-                            DhEvento = DateTime.Now,
-                            TpEvento = TipoEventoNFe.Cancelamento,
-                            NSeqEvento = 1,
-                            VerEvento = "1.00",
-                            TpAmb = homologacao ? TipoAmbiente.Homologacao : TipoAmbiente.Producao
-                        }
-                    }
-                }
-            };
+            => EnviarEvento(new DetEventoCanc { NProt = protocolo, Versao = "1.00", XJust = justificativa },
+                TipoEventoNFe.Cancelamento, 1, chave, cnpj, uf, homologacao, certificado, "ao cancelamento");
 
+        /// <summary>CC-e (evento 110110). O texto de condicao de uso a biblioteca preenche.</summary>
+        public NfeRetornoEvento CartaCorrecao(string chave, int sequencia, string correcao, string cnpj,
+            UFBrasil uf, bool homologacao, X509Certificate2 certificado)
+            => EnviarEvento(new DetEventoCCE { Versao = "1.00", XCorrecao = correcao },
+                TipoEventoNFe.CartaCorrecao, sequencia, chave, cnpj, uf, homologacao, certificado, "à carta de correção");
+
+        private static NfeRetornoEvento EnviarEvento(EventoDetalhe detalhe, TipoEventoNFe tipo, int sequencia, string chave,
+            string cnpj, UFBrasil uf, bool homologacao, X509Certificate2 certificado, string oQue)
+        {
+            var envio = MontarEvento(detalhe, tipo, sequencia, chave, cnpj, uf, homologacao);
             var config = new Configuracao { TipoDFe = TipoDFe.NFe, CertificadoDigital = certificado };
             var evento = new RecepcaoEvento(envio, config);
             evento.Executar();
 
             var ret = evento.Result?.RetEvento?.FirstOrDefault()?.InfEvento;
             if (ret == null)
-                return new NfeRetornoEvento { CStat = evento.Result?.CStat, Motivo = evento.Result?.XMotivo ?? "A Sefaz não respondeu ao cancelamento." };
+                return new NfeRetornoEvento { CStat = evento.Result?.CStat, Motivo = evento.Result?.XMotivo ?? $"A Sefaz não respondeu {oQue}." };
 
             var ok = EventosOk.Contains(ret.CStat);
             return new NfeRetornoEvento
@@ -141,6 +128,83 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
                 Protocolo = ret.NProt,
                 Data = ret.DhRegEvento.UtcDateTime,
                 Xml = ok && evento.ProcEventoNFeResult.Count > 0 ? evento.ProcEventoNFeResult[0].GerarXML().OuterXml : null
+            };
+        }
+
+        /// <summary>Monta o lote do evento (separado para os testes validarem contra o XSD sem rede).</summary>
+        public static EnvEvento MontarCartaCorrecao(string chave, int sequencia, string correcao, string cnpj, UFBrasil uf, bool homologacao)
+            => MontarEvento(new DetEventoCCE { Versao = "1.00", XCorrecao = correcao }, TipoEventoNFe.CartaCorrecao,
+                sequencia, chave, cnpj, uf, homologacao);
+
+        private static EnvEvento MontarEvento(EventoDetalhe detalhe, TipoEventoNFe tipo, int sequencia, string chave,
+            string cnpj, UFBrasil uf, bool homologacao)
+        {
+            return new EnvEvento
+            {
+                Versao = "1.00",
+                IdLote = DateTime.UtcNow.ToString("yyMMddHHmmssfff"),
+                Evento = new List<Evento>
+                {
+                    new Evento
+                    {
+                        Versao = "1.00",
+                        InfEvento = new InfEvento(detalhe)
+                        {
+                            COrgao = uf,
+                            ChNFe = chave,
+                            CNPJ = cnpj,
+                            DhEvento = DateTime.Now,
+                            TpEvento = tipo,
+                            NSeqEvento = sequencia,
+                            VerEvento = "1.00",
+                            TpAmb = homologacao ? TipoAmbiente.Homologacao : TipoAmbiente.Producao
+                        }
+                    }
+                }
+            };
+        }
+
+        /// <summary>Inutilizacao de numeracao: 102 = homologada.</summary>
+        public NfeRetornoEvento Inutilizar(int serie, int inicial, int final, string justificativa, string cnpj,
+            UFBrasil uf, bool homologacao, X509Certificate2 certificado)
+        {
+            var inut = MontarInutilizacao(serie, inicial, final, justificativa, cnpj, uf, homologacao);
+            var config = new Configuracao { TipoDFe = TipoDFe.NFe, CertificadoDigital = certificado };
+            var servico = new Inutilizacao(inut, config);
+            servico.Executar();
+
+            var ret = servico.Result?.InfInut;
+            if (ret == null) return new NfeRetornoEvento { Motivo = "A Sefaz não respondeu à inutilização." };
+            var ok = ret.CStat == 102;
+            return new NfeRetornoEvento
+            {
+                Registrado = ok,
+                CStat = ret.CStat,
+                Motivo = ret.XMotivo,
+                Protocolo = ret.NProt,
+                Data = ret.DhRecbto.UtcDateTime,
+                Xml = ok ? servico.ProcInutNFeResult?.GerarXML().OuterXml : null
+            };
+        }
+
+        public static InutNFe MontarInutilizacao(int serie, int inicial, int final, string justificativa, string cnpj,
+            UFBrasil uf, bool homologacao)
+        {
+            return new InutNFe
+            {
+                Versao = "4.00",
+                InfInut = new InutNFeInfInut
+                {
+                    Ano = DateTime.Now.ToString("yy"),
+                    CNPJ = cnpj,
+                    CUF = uf,
+                    Mod = ModeloDFe.NFe,
+                    Serie = serie,
+                    NNFIni = inicial,
+                    NNFFin = final,
+                    XJust = justificativa,
+                    TpAmb = homologacao ? TipoAmbiente.Homologacao : TipoAmbiente.Producao
+                }
             };
         }
 

@@ -68,6 +68,7 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
         public DbSet<IntegracaoMercadoLivre> IntegracoesMercadoLivre { get; set; }
         public DbSet<Core.Entities.Renave.VeiculoRenave> VeiculosRenave { get; set; }
         public DbSet<Core.Entities.NotasFiscais.NotaFiscal> NotasFiscais { get; set; }
+        public DbSet<Core.Entities.NotasFiscais.NotaFiscalInutilizacao> NotasFiscaisInutilizacoes { get; set; }
         public DbSet<Core.Entities.Financiamentos.BancoFinanciamentoLoja> BancosFinanciamentoLoja { get; set; }
         public DbSet<Core.Entities.Financiamentos.FichaFinanciamento> FichasFinanciamento { get; set; }
         public DbSet<IntegracaoLog> IntegracoesLogs { get; set; }
@@ -485,6 +486,18 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
                 entity.Property(e => e.NfDestDocumento).HasMaxLength(14);
                 entity.Property(e => e.NfDestNome).HasMaxLength(200);
                 entity.Ignore(e => e.PodeReenviar);
+                entity.Property(e => e.NfCceTexto).HasMaxLength(1000);
+                entity.Property(e => e.NfCceProtocolo).HasMaxLength(20);
+            });
+
+            modelBuilder.Entity<Core.Entities.NotasFiscais.NotaFiscalInutilizacao>(entity =>
+            {
+                entity.ToTable("NotaFiscalInutilizacao");
+                entity.HasKey(e => e.NfiId);
+                entity.Property(e => e.NfiId).ValueGeneratedOnAdd();
+                entity.Property(e => e.NfiAmbiente).HasMaxLength(15);
+                entity.Property(e => e.NfiJustificativa).HasMaxLength(255);
+                entity.Property(e => e.NfiProtocolo).HasMaxLength(20);
             });
 
             modelBuilder.Entity<IntegracaoLog>(entity =>

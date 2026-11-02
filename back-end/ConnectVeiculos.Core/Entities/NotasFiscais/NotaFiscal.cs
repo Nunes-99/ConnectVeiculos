@@ -16,6 +16,12 @@ namespace ConnectVeiculos.Core.Entities.NotasFiscais
         public const string StatusRejeitada = "REJEITADA";
         public const string StatusCancelada = "CANCELADA";
 
+        /// <summary>Nota rejeitada cujo numero foi inutilizado na Sefaz: nao pode mais ser reenviada.</summary>
+        public const string StatusInutilizada = "INUTILIZADA";
+
+        /// <summary>A Sefaz aceita ate 20 cartas de correcao por nota.</summary>
+        public const int MaximoCartasCorrecao = 20;
+
         public int NfId { get; private set; }
         public int R_VeiId { get; private set; }
         public string NfTipo { get; private set; } = Saida;
@@ -42,6 +48,13 @@ namespace ConnectVeiculos.Core.Entities.NotasFiscais
         public DateTime? NfDtCancelamento { get; private set; }
         public string? NfProtocoloCancelamento { get; private set; }
         public string? NfXmlCancelamento { get; private set; }
+
+        // Carta de correcao: cada nova substitui a anterior (precisa trazer todas as correcoes).
+        public int NfCceSequencia { get; private set; }
+        public string? NfCceTexto { get; private set; }
+        public string? NfCceProtocolo { get; private set; }
+        public DateTime? NfCceData { get; private set; }
+        public string? NfCceXml { get; private set; }
 
         public NotaFiscal() { }
 
@@ -82,6 +95,21 @@ namespace ConnectVeiculos.Core.Entities.NotasFiscais
         {
             NfStatus = StatusRejeitada;
             NfCStat = cStat;
+            NfMotivo = motivo.Length > 1000 ? motivo[..1000] : motivo;
+        }
+
+        public void RegistrarCartaCorrecao(int sequencia, string texto, string protocolo, DateTime? data, string xmlEvento)
+        {
+            NfCceSequencia = sequencia;
+            NfCceTexto = texto;
+            NfCceProtocolo = protocolo;
+            NfCceData = data ?? DateTime.UtcNow;
+            NfCceXml = xmlEvento;
+        }
+
+        public void Inutilizar(string motivo)
+        {
+            NfStatus = StatusInutilizada;
             NfMotivo = motivo.Length > 1000 ? motivo[..1000] : motivo;
         }
 
