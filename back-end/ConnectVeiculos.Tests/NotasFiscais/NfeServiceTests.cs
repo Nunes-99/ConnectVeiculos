@@ -352,6 +352,25 @@ namespace ConnectVeiculos.Tests.NotasFiscais
         }
 
         [Fact]
+        public async Task Inutilizacao_Recusada_Pela_Sefaz_Nao_Muda_Nada()
+        {
+            await ConfigurarAsync(proximoNumero: 10);
+            _sefaz.Respostas.Enqueue(new NfeRetornoAutorizacao { Autorizada = false, CStat = 539, Motivo = "Duplicidade" });
+            await FluentActions.Awaiting(() => _service.EmitirAsync(42, NfeVeiculoBuilderTests.Venda())).Should().ThrowAsync<NfeException>();
+            var rejeitada = _notas.Itens.Single();
+            _sefaz.RespostaInutilizacao = new NfeRetornoEvento { Registrado = false, CStat = 241, Motivo = "Um numero da faixa ja foi utilizado" };
+
+            await FluentActions.Awaiting(() => _service.InutilizarAsync(new NfeInutilizacaoInput
+            {
+                Serie = rejeitada.NfSerie, NumeroInicial = 10, NumeroFinal = 10, Justificativa = "Numeração pulada por falha no envio"
+            })).Should().ThrowAsync<NfeException>().WithMessage("*241*");
+
+            rejeitada.NfStatus.Should().Be(NotaFiscal.StatusRejeitada);
+            rejeitada.PodeReenviar.Should().BeTrue();
+            _notas.Inutilizacoes.Should().BeEmpty();
+        }
+
+        [Fact]
         public void Xml_Da_Carta_De_Correcao_E_Da_Inutilizacao_Passam_No_Schema()
         {
             using var cert = NfeVeiculoBuilderTests.CertificadoDeTeste();
