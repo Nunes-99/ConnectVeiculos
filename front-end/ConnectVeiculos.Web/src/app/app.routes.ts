@@ -142,6 +142,13 @@ export const routes: Routes = [
         canActivate: [roleGuard],
         data: { roles: ['Administrador', 'Gerente'] }
       },
+      {
+        // Volta do login da Credere (redirect_uri cadastrada na Credere).
+        path: 'integracoes/credere',
+        loadComponent: () => import('./pages/integracoes/credere-retorno.component').then(m => m.CredereRetornoComponent),
+        canActivate: [roleGuard],
+        data: { roles: ['Administrador', 'Gerente'] }
+      },
        {
          path: 'plano',
          loadComponent: () => import('./pages/plano/plano.component').then(m => m.PlanoComponent),

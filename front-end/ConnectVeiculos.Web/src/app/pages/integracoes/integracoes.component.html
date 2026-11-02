@@ -417,6 +417,31 @@
     </div>
   </div>
 
+  <!-- Credere: financiamento multibanco (a loja assina a Credere e conecta aqui) -->
+  <div class="integracao-card">
+    <div class="card-header">
+      <div class="platform-info">
+        <span class="platform-icon nfe-icon">
+          <span class="material-icons">account_balance</span>
+        </span>
+        <div>
+          <h3>Credere</h3>
+          <p>Financiamento em vários bancos com pré-aprovação</p>
+        </div>
+      </div>
+      <span class="status-badge" [class.connected]="credereConectada" [class.disconnected]="!credereConectada">
+        {{ credereConectada ? 'Conectado' : 'Não conectado' }}
+      </span>
+    </div>
+    <div class="card-body">
+      <app-credere-config (conectadoChange)="credereConectada = $event"></app-credere-config>
+    </div>
+    <div class="card-footer">
+      <span class="material-icons">info</span>
+      <small>A assinatura da Credere é da loja. As simulações vão aos bancos em que a loja já é credenciada.</small>
+    </div>
+  </div>
+
   <!-- Modal config SMTP -->
   @if (showSmtpConfigModal) {
     <div class="modal-overlay">

@@ -36,6 +36,9 @@ namespace ConnectVeiculos.Core.Entities.Financiamentos
         /// <summary>Retorno de cada banco (JSON de PropostaBanco).</summary>
         public string FifPropostasJson { get; private set; } = "[]";
         public string? FifObservacao { get; private set; }
+
+        /// <summary>Dados extras para a Credere e a ultima simulacao (JSON de CredereFichaDados).</summary>
+        public string? FifCredereJson { get; private set; }
         public DateTime FifCriadoEm { get; private set; }
         public DateTime FifAtualizadoEm { get; private set; }
 
@@ -71,6 +74,12 @@ namespace ConnectVeiculos.Core.Entities.Financiamentos
         public void AtualizarPropostas(string propostasJson)
         {
             FifPropostasJson = propostasJson;
+            Tocar();
+        }
+
+        public void AtualizarCredere(string json)
+        {
+            FifCredereJson = json;
             Tocar();
         }
 

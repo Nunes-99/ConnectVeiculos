@@ -117,3 +117,25 @@
 .anotar {
   border: 1px dashed var(--border-primary, #ccc); border-radius: 10px; padding: 0.75rem; margin-top: 0.75rem;
 }
+
+// ---------------- Credere ----------------
+
+.credere {
+  border: 1px solid var(--border-primary, #e0e0e0); border-radius: 10px; padding: 0.75rem;
+}
+
+.busca-modelo {
+  display: flex; gap: 0.5rem; margin-bottom: 0.35rem;
+  input { flex: 1; }
+  button { white-space: nowrap; }
+}
+
+.modelo-escolhido { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0; font-size: 0.9rem; }
+
+.form-group.exigido label { color: var(--status-warning, #8d6e00); font-weight: 600; }
+
+.prazos {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin: 0.25rem 0 0.5rem; font-size: 0.88rem;
+  label { display: inline-flex; align-items: center; gap: 0.25rem; cursor: pointer; }
+  input { width: auto; }
+}

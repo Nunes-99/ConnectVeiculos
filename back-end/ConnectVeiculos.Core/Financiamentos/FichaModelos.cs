@@ -130,5 +130,6 @@ namespace ConnectVeiculos.Core.Financiamentos
         public DateTime CriadoEm { get; set; }
         public DateTime AtualizadoEm { get; set; }
         public List<PropostaBanco> Propostas { get; set; } = new();
+        public CredereFichaDados? Credere { get; set; }
     }
 }

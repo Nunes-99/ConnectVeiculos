@@ -90,6 +90,25 @@ export interface Ficha {
   criadoEm: string;
   atualizadoEm: string;
   propostas: PropostaBanco[];
+  credere: CredereFichaDados | null;
+}
+
+/** Dados extras da ficha para a Credere e a ultima simulacao feita la. */
+export interface CredereFichaDados {
+  nascimento: string | null;
+  possuiCnh: boolean | null;
+  genero: string | null;
+  rendaMensal: number | null;
+  cep: string | null;
+  ocupacao: string | null;
+  modeloId: number | null;
+  modeloNome: string | null;
+  anoFabricacao: number | null;
+  ufLicenciamento: string | null;
+  cidadeLicenciamento: string | null;
+  prazos: number[];
+  ultimaSimulacao: string | null;
+  ultimaSimulacaoEm: string | null;
 }
 
 export const ROTULO_PROPOSTA: Record<StatusProposta, string> = {

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService, ToastService, VeiculoService } from '../../core/services';
@@ -8,6 +8,14 @@ import {
   BancoLoja, EstimativaBanco, FaixaTaxaBanco, Ficha, FichaFinanciamentoService, FichaInput, PropostaBanco,
   ROTULO_FICHA, ROTULO_PROPOSTA, StatusFicha, StatusProposta, erroFinanciamento
 } from '../../core/services/ficha-financiamento.service';
+import {
+  CAMPOS_CREDERE, CredereCampoExigido, CredereCondicao, CredereModeloVeiculo, CredereService, CredereSimulacao,
+  CredereSimulacaoInput, CredereStatus, OCUPACOES_CREDERE, erroCredere
+} from '../../core/services/credere.service';
+
+/** Consulta o resultado a cada 5 s (o que a Credere sugere) por ate 3 min. */
+const INTERVALO_CREDERE = 5000;
+const TENTATIVAS_CREDERE = 36;
 
 /** Prazos que aparecem na tabela de taxas de cada banco. */
 const PRAZOS = [12, 18, 24, 36, 48, 60];
@@ -33,8 +41,9 @@ interface FaixaEdicao {
   templateUrl: './financiamentos.component.html',
   styleUrl: './financiamentos.component.scss'
 })
-export class FinanciamentosComponent implements OnInit {
+export class FinanciamentosComponent implements OnInit, OnDestroy {
   private api = inject(FichaFinanciamentoService);
+  private credereApi = inject(CredereService);
   private veiculoService = inject(VeiculoService);
   private toast = inject(ToastService);
   private auth = inject(AuthService);
@@ -67,8 +76,31 @@ export class FinanciamentosComponent implements OnInit {
   banco: BancoLoja | null = null;
   faixas: FaixaEdicao[] = [];
 
+  // ---------- Credere ----------
+  readonly ocupacoes = OCUPACOES_CREDERE;
+  readonly nomesCampos = CAMPOS_CREDERE;
+  credere: CredereStatus | null = null;
+  cr: CredereSimulacaoInput = this.credereVazio();
+  crPrazos: Record<number, boolean> = { 12: false, 18: false, 24: true, 36: true, 48: true, 60: true };
+  buscaModelo = '';
+  modelos: CredereModeloVeiculo[] = [];
+  buscandoModelo = false;
+  camposExigidos: CredereCampoExigido[] = [];
+  simulacao: CredereSimulacao | null = null;
+  simulandoCredere = false;
+  private consulta: ReturnType<typeof setInterval> | null = null;
+
+  get credereAtiva(): boolean {
+    return !!this.credere?.conectado && !!this.credere.lojaId;
+  }
+
+  ngOnDestroy(): void {
+    this.pararConsulta();
+  }
+
   ngOnInit(): void {
     this.carregar();
+    this.credereApi.status().subscribe({ next: s => this.credere = s, error: () => {} });
     this.veiculoService.getAll().subscribe({
       next: v => this.veiculos = v.filter(x => x.veiSts === 'D').sort((a, b) => a.veiMarca.localeCompare(b.veiMarca)),
       error: () => {}
@@ -133,11 +165,187 @@ export class FinanciamentosComponent implements OnInit {
     this.proposta = this.propostaVazia();
     this.fichaAberta = true;
     if (this.bancosAtivos.length) this.simular();
+    this.prepararCredere(f);
   }
 
   fecharFicha(): void {
+    this.pararConsulta();
     this.fichaAberta = false;
     this.ficha = null;
+  }
+
+  // ================================================================
+  // Credere (condicoes reais dos bancos)
+  // ================================================================
+
+  private credereVazio(): CredereSimulacaoInput {
+    return {
+      nascimento: null, possuiCnh: null, genero: null, rendaMensal: null, cep: null, ocupacao: null,
+      modeloId: 0, modeloNome: null, anoFabricacao: new Date().getFullYear(), anoModelo: new Date().getFullYear(),
+      ufLicenciamento: '', cidadeLicenciamento: '', prazos: []
+    };
+  }
+
+  /** Preenche a simulacao com o que a ficha ja guardou e a cidade da loja. */
+  private prepararCredere(f: Ficha): void {
+    this.pararConsulta();
+    this.simulacao = null;
+    this.modelos = [];
+    this.camposExigidos = [];
+    if (!this.credereAtiva) return;
+
+    const d = f.credere;
+    const loja = this.credere?.lojas.find(l => l.id === this.credere?.lojaId);
+    this.cr = {
+      ...this.credereVazio(),
+      nascimento: d?.nascimento ? d.nascimento.substring(0, 10) : null,
+      possuiCnh: d?.possuiCnh ?? null,
+      genero: d?.genero ?? null,
+      rendaMensal: d?.rendaMensal ?? null,
+      cep: d?.cep ?? null,
+      ocupacao: d?.ocupacao ?? null,
+      modeloId: d?.modeloId ?? 0,
+      modeloNome: d?.modeloNome ?? null,
+      anoModelo: f.anoVeiculo,
+      anoFabricacao: d?.anoFabricacao ?? f.anoVeiculo,
+      ufLicenciamento: d?.ufLicenciamento ?? loja?.uf ?? '',
+      cidadeLicenciamento: d?.cidadeLicenciamento ?? loja?.cidade ?? ''
+    };
+    if (d?.prazos?.length) {
+      Object.keys(this.crPrazos).forEach(k => this.crPrazos[+k] = d.prazos.includes(+k));
+    }
+    const v = this.veiculos.find(x => x.veiId === f.veiculoId);
+    this.buscaModelo = v ? `${v.veiMarca} ${v.veiModelo}` : '';
+
+    this.credereApi.campos(f.id).subscribe({ next: c => this.camposExigidos = c, error: () => {} });
+    if (d?.ultimaSimulacao) this.consultarCredere(false);
+  }
+
+  /** Quantos bancos da loja exigem o campo (0 = nenhum). */
+  exigidoPor(campo: string): number {
+    return this.camposExigidos.find(c => c.campo === campo)?.bancos.length ?? 0;
+  }
+
+  buscarModelos(): void {
+    if (this.buscaModelo.trim().length < 2) return;
+    this.buscandoModelo = true;
+    this.credereApi.modelos(this.buscaModelo.trim(), this.cr.anoModelo).subscribe({
+      next: m => { this.modelos = m; this.buscandoModelo = false; if (!m.length) this.toast.warning('Nenhuma versão encontrada. Tente só marca e modelo.'); },
+      error: err => { this.buscandoModelo = false; this.toast.error(erroCredere(err, 'Não foi possível buscar o modelo.')); }
+    });
+  }
+
+  escolherModelo(id: number): void {
+    const m = this.modelos.find(x => x.id === Number(id));
+    this.cr.modeloId = m?.id ?? 0;
+    this.cr.modeloNome = m ? `${m.marca} ${m.nome} ${m.versao || ''}`.trim() : null;
+  }
+
+  simularCredere(): void {
+    if (!this.ficha) { this.toast.warning('Salve a ficha antes.'); return; }
+    if (!this.cr.modeloId) { this.toast.warning('Escolha a versão do veículo na lista da Credere.'); return; }
+    const dados: CredereSimulacaoInput = {
+      ...this.cr,
+      nascimento: this.cr.nascimento || null,
+      rendaMensal: this.cr.rendaMensal || null,
+      prazos: Object.keys(this.crPrazos).map(Number).filter(p => this.crPrazos[p])
+    };
+    this.simulandoCredere = true;
+    this.simulacao = null;
+    this.credereApi.simular(this.ficha.id, dados).subscribe({
+      next: s => {
+        this.simulacao = s;
+        if (this.ficha) {
+          this.ficha.credere = { ...(this.ficha.credere || {} as any), ultimaSimulacao: s.uuid };
+        }
+        if (s.concluida) this.simulandoCredere = false; else this.consultarCredere(true);
+      },
+      error: err => { this.simulandoCredere = false; this.toast.error(erroCredere(err, 'Não foi possível simular na Credere.')); }
+    });
+  }
+
+  /** Os bancos respondem aos poucos: busca o resultado ate todos terminarem. */
+  private consultarCredere(repetir: boolean): void {
+    if (!this.ficha) return;
+    const fichaId = this.ficha.id;
+    let tentativas = 0;
+    const buscar = () => this.credereApi.simulacao(fichaId).subscribe({
+      next: s => {
+        if (this.ficha?.id !== fichaId) return;
+        this.simulacao = s;
+        if (s.concluida || ++tentativas >= TENTATIVAS_CREDERE) {
+          this.pararConsulta();
+          this.simulandoCredere = false;
+          if (!s.concluida) this.toast.warning('Alguns bancos ainda não responderam. Clique em Atualizar daqui a pouco.');
+        }
+      },
+      error: err => { this.pararConsulta(); this.simulandoCredere = false; this.toast.error(erroCredere(err, 'Não foi possível buscar o resultado.')); }
+    });
+    this.pararConsulta();
+    if (repetir) {
+      this.simulandoCredere = true;
+      this.consulta = setInterval(buscar, INTERVALO_CREDERE);
+    } else {
+      buscar();
+    }
+  }
+
+  atualizarCredere(): void {
+    this.consultarCredere(false);
+  }
+
+  private pararConsulta(): void {
+    if (this.consulta) { clearInterval(this.consulta); this.consulta = null; }
+  }
+
+  /** Condicoes agrupadas por banco, na ordem que a API mandou (melhores primeiro). */
+  get gruposCredere(): { banco: string; condicoes: CredereCondicao[] }[] {
+    const grupos: { banco: string; condicoes: CredereCondicao[] }[] = [];
+    for (const c of this.simulacao?.condicoes || []) {
+      const g = grupos.find(x => x.banco === c.banco);
+      if (g) g.condicoes.push(c); else grupos.push({ banco: c.banco, condicoes: [c] });
+    }
+    return grupos;
+  }
+
+  get pendentesCredere(): number {
+    return (this.simulacao?.condicoes || []).filter(c => c.processando).length;
+  }
+
+  rotuloCondicao(c: CredereCondicao): { texto: string; tipo: string } {
+    if (c.processando) return { texto: 'Aguardando o banco', tipo: 'ENVIADA' };
+    if (!c.disponivel) return { texto: 'Indisponível', tipo: 'RECUSADA' };
+    if (c.aprovado) return { texto: 'Aprovado', tipo: 'APROVADA' };
+    switch (c.preAprovacao) {
+      case 3: return { texto: 'Pré-aprovado', tipo: 'APROVADA' };
+      case 2: return { texto: 'Chance de aprovação', tipo: 'EM_ANALISE' };
+      case 1: return { texto: 'CPF com restrição', tipo: 'RECUSADA' };
+      default: return { texto: 'Sem pré-análise', tipo: 'ENVIADA' };
+    }
+  }
+
+  rotuloSugestao(c: CredereCondicao): string | null {
+    if (c.sugestao === 'bank_minimum_down_payment') return 'Entrada mínima do banco';
+    if (c.sugestao === 'bank_suggested_down_payment') return 'Entrada sugerida pelo banco';
+    return null;
+  }
+
+  /** Leva a condicao para "Anotar retorno", se o banco estiver cadastrado na loja. */
+  anotarCredere(c: CredereCondicao): void {
+    const nome = c.banco.toLowerCase();
+    const banco = this.bancos.find(b => b.nome.toLowerCase().includes(nome) || nome.includes(b.nome.toLowerCase()));
+    this.proposta = {
+      ...this.propostaVazia(),
+      bancoId: banco?.id ?? 0,
+      status: c.aprovado ? 'APROVADA' : 'ENVIADA',
+      meses: c.prazo,
+      taxaMensal: c.taxaMensal,
+      valorParcela: c.parcela,
+      entradaExigida: c.entrada,
+      observacao: `Credere: ${this.rotuloCondicao(c).texto}`
+    };
+    if (!banco) this.toast.warning(`Cadastre o ${c.banco} em Bancos da loja para anotar o retorno.`);
+    setTimeout(() => document.getElementById('anotar-proposta')?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
   }
 
   escolherVeiculo(): void {
@@ -155,12 +363,14 @@ export class FinanciamentosComponent implements OnInit {
       return;
     }
     this.salvando = true;
+    const nova = !this.ficha;
     const dados = { ...this.form, veiculoId: this.form.veiculoId ? Number(this.form.veiculoId) : null };
     const req = this.ficha ? this.api.atualizar(this.ficha.id, dados) : this.api.criar(dados);
     req.subscribe({
       next: f => {
         this.salvando = false;
         this.ficha = f;
+        if (nova) this.prepararCredere(f);
         this.toast.success('Ficha salva.');
         this.atualizarNaLista(f);
         if (!this.estimativa && this.bancosAtivos.length) this.simular();

@@ -190,6 +190,129 @@
           <p class="dica">É estimativa: o banco confirma taxa e parcela na aprovação. A parcela em verde é a menor daquele prazo.</p>
         }
 
+        @if (ficha && credereAtiva) {
+          <h3>Simular na Credere <small>(condições reais dos bancos da loja, com pré-aprovação)</small></h3>
+          <div class="credere">
+            <div class="grade">
+              <div class="form-group largo">
+                <label class="required">Versão do veículo na Credere</label>
+                @if (cr.modeloId && !modelos.length) {
+                  <div class="modelo-escolhido">{{ cr.modeloNome || ('Modelo ' + cr.modeloId) }}
+                    <button class="link" (click)="cr.modeloId = 0; buscarModelos()">trocar</button>
+                  </div>
+                } @else {
+                  <div class="busca-modelo">
+                    <input type="text" [(ngModel)]="buscaModelo" (keyup.enter)="buscarModelos()" placeholder="Marca e modelo (ex.: Toyota Corolla)" />
+                    <button class="btn-secondary" (click)="buscarModelos()" [disabled]="buscandoModelo">{{ buscandoModelo ? 'Buscando...' : 'Buscar' }}</button>
+                  </div>
+                  @if (modelos.length) {
+                    <select [ngModel]="cr.modeloId" (ngModelChange)="escolherModelo($event)">
+                      <option [ngValue]="0">Escolha a versão...</option>
+                      @for (m of modelos; track m.id) {
+                        <option [ngValue]="m.id">{{ m.marca }} {{ m.nome }} {{ m.versao }} ({{ m.anoInicio }}–{{ m.anoFim }})</option>
+                      }
+                    </select>
+                  }
+                }
+              </div>
+              <div class="form-group"><label class="required">Ano fabricação</label><input type="number" [(ngModel)]="cr.anoFabricacao" min="1950" max="2100" /></div>
+              <div class="form-group"><label class="required">Ano modelo</label><input type="number" [(ngModel)]="cr.anoModelo" min="1950" max="2100" /></div>
+              <div class="form-group"><label class="required">UF de licenciamento</label><input type="text" [(ngModel)]="cr.ufLicenciamento" maxlength="2" /></div>
+              <div class="form-group"><label class="required">Cidade de licenciamento</label><input type="text" [(ngModel)]="cr.cidadeLicenciamento" maxlength="100" /></div>
+            </div>
+
+            <p class="dica">Alguns bancos pedem mais dados do cliente. Em destaque, os que os bancos desta loja exigem.</p>
+            <div class="grade">
+              <div class="form-group" [class.exigido]="exigidoPor('birthdate')">
+                <label>Data de nascimento @if (exigidoPor('birthdate')) { <small>· {{ exigidoPor('birthdate') }} banco(s)</small> }</label>
+                <input type="date" [(ngModel)]="cr.nascimento" />
+              </div>
+              <div class="form-group" [class.exigido]="exigidoPor('has_cnh')">
+                <label>Possui CNH? @if (exigidoPor('has_cnh')) { <small>· {{ exigidoPor('has_cnh') }} banco(s)</small> }</label>
+                <select [(ngModel)]="cr.possuiCnh">
+                  <option [ngValue]="null">—</option><option [ngValue]="true">Sim</option><option [ngValue]="false">Não</option>
+                </select>
+              </div>
+              <div class="form-group" [class.exigido]="exigidoPor('retrieve_gender')">
+                <label>Gênero @if (exigidoPor('retrieve_gender')) { <small>· {{ exigidoPor('retrieve_gender') }} banco(s)</small> }</label>
+                <select [(ngModel)]="cr.genero">
+                  <option [ngValue]="null">—</option><option value="F">Feminino</option><option value="M">Masculino</option>
+                </select>
+              </div>
+              <div class="form-group" [class.exigido]="exigidoPor('monthly_income')">
+                <label>Renda mensal @if (exigidoPor('monthly_income')) { <small>· {{ exigidoPor('monthly_income') }} banco(s)</small> }</label>
+                <input type="text" [(ngModel)]="cr.rendaMensal" appCurrencyMask />
+              </div>
+              <div class="form-group" [class.exigido]="exigidoPor('retrieve_occupation')">
+                <label>Ocupação @if (exigidoPor('retrieve_occupation')) { <small>· {{ exigidoPor('retrieve_occupation') }} banco(s)</small> }</label>
+                <select [(ngModel)]="cr.ocupacao">
+                  <option [ngValue]="null">—</option>
+                  @for (o of ocupacoes; track o.codigo) { <option [value]="o.codigo">{{ o.nome }}</option> }
+                </select>
+              </div>
+              <div class="form-group" [class.exigido]="exigidoPor('address.zip_code')">
+                <label>CEP @if (exigidoPor('address.zip_code')) { <small>· {{ exigidoPor('address.zip_code') }} banco(s)</small> }</label>
+                <input type="text" [(ngModel)]="cr.cep" appMask="cep" maxlength="9" inputmode="numeric" />
+              </div>
+            </div>
+
+            <div class="prazos">
+              <span>Prazos:</span>
+              @for (p of prazos; track p) {
+                <label><input type="checkbox" [(ngModel)]="crPrazos[p]" /> {{ p }}x</label>
+              }
+            </div>
+
+            <div class="acoes">
+              <button class="btn-primary" (click)="simularCredere()" [disabled]="simulandoCredere">
+                <span class="material-icons">send</span> {{ simulandoCredere ? 'Aguardando os bancos...' : 'Simular na Credere' }}
+              </button>
+              @if (simulacao && !simulandoCredere) {
+                <button class="btn-secondary" (click)="atualizarCredere()"><span class="material-icons">refresh</span> Atualizar</button>
+              }
+              @if (simulandoCredere && pendentesCredere) { <small class="text-muted">{{ pendentesCredere }} condição(ões) ainda no banco...</small> }
+            </div>
+
+            @if (simulacao) {
+              <div class="estimativa">
+                @for (g of gruposCredere; track g.banco) {
+                  <div class="est-banco">
+                    <div class="est-topo"><strong>{{ g.banco }}</strong></div>
+                    <table class="est-tabela">
+                      <thead><tr><th>Prazo</th><th>Entrada</th><th>Parcela</th><th>Taxa</th><th>Situação</th><th></th></tr></thead>
+                      <tbody>
+                        @for (c of g.condicoes; track c.id) {
+                          <tr>
+                            <td>{{ c.prazo }}x</td>
+                            <td>{{ moeda(c.entrada) }}@if (rotuloSugestao(c)) { <br /><small class="text-muted">{{ rotuloSugestao(c) }}</small> }</td>
+                            <td>
+                              @if (c.parcela) { <strong>{{ moeda(c.parcela) }}</strong> } @else { — }
+                              @if (c.subsidioFabrica) { <br /><small class="text-muted">Subsídio de fábrica</small> }
+                            </td>
+                            <td>@if (c.taxaMensal) { {{ c.taxaMensal | number:'1.2-2' }}% } @else { — }</td>
+                            <td>
+                              <span class="chip" [attr.data-status]="rotuloCondicao(c).tipo">{{ rotuloCondicao(c).texto }}</span>
+                              @if (c.motivo) { <br /><small class="motivo">{{ c.motivo }}</small> }
+                            </td>
+                            <td>
+                              @if (c.disponivel) {
+                                <button class="btn-icon" title="Anotar como retorno" (click)="anotarCredere(c)"><span class="material-icons">edit_note</span></button>
+                              }
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                } @empty {
+                  <p class="dica">Nenhum banco respondeu ainda.</p>
+                }
+              </div>
+              <p class="dica">Pré-aprovação é a análise prévia do banco. A aprovação final sai na proposta.</p>
+            }
+          </div>
+        }
+
         @if (ficha) {
           <h3>Retorno dos bancos</h3>
           @if (ficha.propostas.length) {

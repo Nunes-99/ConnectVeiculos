@@ -308,8 +308,16 @@ namespace ConnectVeiculos.Infrastructure.Services.Financiamento
             ConsentimentoEm = f.FifConsentimentoEm,
             CriadoEm = f.FifCriadoEm,
             AtualizadoEm = f.FifAtualizadoEm,
-            Propostas = Propostas(f)
+            Propostas = Propostas(f),
+            Credere = DadosCredere(f)
         };
+
+        public static CredereFichaDados? DadosCredere(FichaFinanciamento f)
+        {
+            if (string.IsNullOrWhiteSpace(f.FifCredereJson)) return null;
+            try { return JsonSerializer.Deserialize<CredereFichaDados>(f.FifCredereJson, Json); }
+            catch (JsonException) { return null; }
+        }
 
         private static string SoDigitos(string? s) => new((s ?? "").Where(char.IsDigit).ToArray());
 

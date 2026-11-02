@@ -399,6 +399,11 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.AddHttpClient<Core.Interfaces.Services.IGoogleMerchantService, Services.Google.GoogleMerchantService>()
                 .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(30));
 
+            // Services - Credere (financiamento multibanco; a loja conecta a conta dela)
+            services.Configure<Services.Credere.CredereSettings>(configuration.GetSection("CredereSettings"));
+            services.AddHttpClient<Core.Interfaces.Services.ICredereService, Services.Credere.CredereService>()
+                .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(30));
+
             // Services - Financiamento Bancos
             services.Configure<Services.Financiamento.BvFinanciamentoSettings>(configuration.GetSection("BvFinanciamentoSettings"));
             services.Configure<Services.Financiamento.PanFinanciamentoSettings>(configuration.GetSection("PanFinanciamentoSettings"));
@@ -617,8 +622,10 @@ namespace ConnectVeiculos.Infrastructure.IoC
                       FifConsentimentoEm TEXT NOT NULL,
                       FifPropostasJson TEXT NOT NULL DEFAULT '[]',
                       FifObservacao TEXT,
+                      FifCredereJson TEXT,
                       FifCriadoEm TEXT NOT NULL,
                       FifAtualizadoEm TEXT NOT NULL");
+                AddColumnIfNotExists(connection, "FichaFinanciamento", "FifCredereJson", "TEXT");
                 using (var idxFicha = connection.CreateCommand())
                 {
                     idxFicha.CommandText = "CREATE INDEX IF NOT EXISTS IX_FichaFinanciamento_R_UsuId ON FichaFinanciamento(R_UsuId)";
