@@ -68,25 +68,7 @@ import { CredereService, CredereStatus, erroCredere } from '../../../core/servic
       </div>
     }
   `,
-  styles: [`
-    .cr-texto { color: var(--text-secondary); font-size: 0.85rem; margin: 0 0 0.75rem; }
-    .cr-ok, .cr-aviso, .cr-erro {
-      display: flex; gap: 0.5rem; align-items: flex-start; padding: 0.6rem 0.75rem; border-radius: 8px; margin-bottom: 0.75rem; font-size: 0.85rem;
-      div { display: flex; flex-direction: column; gap: 0.15rem; }
-      small { opacity: 0.85; }
-    }
-    .cr-ok { background: var(--status-success-bg, #e8f5e9); color: var(--status-success, #2e7d32); }
-    .cr-aviso { background: var(--status-warning-bg, #fff8e1); color: var(--status-warning, #8d6e00); }
-    .cr-erro { background: var(--status-error-bg, #ffebee); color: var(--status-error, #c62828); }
-    h4 { margin: 0.75rem 0 0.5rem; font-size: 0.9rem; color: var(--text-primary); }
-    .cr-banco {
-      display: inline-block; margin: 0 0.35rem 0.35rem 0; padding: 0.15rem 0.55rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600;
-      background: var(--status-warning-bg, #fff8e1); color: var(--status-warning, #8d6e00);
-      &[data-status='okay'] { background: var(--status-success-bg, #e8f5e9); color: var(--status-success, #2e7d32); }
-      &[data-status='unauthorized'], &[data-status='inativo'] { background: var(--status-error-bg, #ffebee); color: var(--status-error, #c62828); }
-    }
-    .cr-acoes { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
-  `]
+  styleUrl: './credere-config.component.scss'
 })
 export class CredereConfigComponent implements OnInit {
   private credere = inject(CredereService);

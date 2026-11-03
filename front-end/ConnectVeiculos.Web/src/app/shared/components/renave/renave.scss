@@ -1,5 +1,8 @@
 // Estilos do Renave (cartao em Integracoes e janela do veiculo).
 // Cores pelas variaveis do tema, para funcionar no claro e no escuro.
+// Modal, botoes e campos vem do estilo compartilhado: o encapsulamento do
+// Angular nao deixa o da pagina chegar aos componentes.
+@import '../../../../styles/shared';
 
 .rnv-texto, .rnv-dica, .rnv-veiculo {
   color: var(--text-secondary);
