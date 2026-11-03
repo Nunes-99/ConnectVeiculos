@@ -1,5 +1,6 @@
-// Janela da Webmotors no veiculo. O modal (overlay, cabecalho, corpo) vem do
-// estilo compartilhado; aqui so o conteudo. Cores pelas variaveis do tema.
+// Cartao em Integracoes e janela da Webmotors no veiculo. Modal, botoes e
+// campos vem do estilo compartilhado (o encapsulamento do Angular nao deixa
+// o da pagina chegar aqui); este arquivo so tem o conteudo.
 @import '../../../../styles/shared';
 
 .wm-texto, .wm-dica {
@@ -7,6 +8,10 @@
   font-size: 0.85rem;
   margin: 0 0 0.75rem;
 }
+
+.form-group .wm-dica { display: block; margin: 0.35rem 0 0; font-size: 0.8rem; }
+
+.wm-ico { font-size: 16px; vertical-align: middle; }
 
 .wm-grid {
   display: grid;

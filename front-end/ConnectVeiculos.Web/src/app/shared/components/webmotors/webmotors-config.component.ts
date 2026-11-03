@@ -71,20 +71,7 @@ import { WebmotorsService, WebmotorsStatus, erroWebmotors } from '../../../core/
       <small class="wm-dica">Para anunciar, use o botão <span class="material-icons wm-ico">directions_car</span> na lista de veículos.</small>
     }
   `,
-  styles: [`
-    .wm-texto { color: var(--text-secondary); font-size: 0.85rem; margin: 0 0 0.75rem; }
-    .wm-dica { display: block; color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.35rem; }
-    .wm-ico { font-size: 16px; vertical-align: middle; }
-    .wm-ok, .wm-aviso, .wm-erro {
-      display: flex; gap: 0.5rem; align-items: flex-start; padding: 0.6rem 0.75rem; border-radius: 8px; margin-bottom: 0.75rem; font-size: 0.85rem;
-      div { display: flex; flex-direction: column; gap: 0.15rem; }
-      small { opacity: 0.85; }
-    }
-    .wm-ok { background: var(--status-success-bg, #e8f5e9); color: var(--status-success, #2e7d32); }
-    .wm-aviso { background: var(--status-warning-bg, #fff8e1); color: var(--status-warning, #8d6e00); }
-    .wm-erro { background: var(--status-error-bg, #ffebee); color: var(--status-error, #c62828); }
-    .wm-acoes { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
-  `]
+  styleUrl: './webmotors.scss'
 })
 export class WebmotorsConfigComponent implements OnInit {
   private webmotors = inject(WebmotorsService);
