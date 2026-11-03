@@ -62,6 +62,7 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
         public DbSet<Favorito> Favoritos { get; set; }
         public DbSet<Negociacao> Negociacoes { get; set; }
         public DbSet<VeiculoPublicacao> VeiculoPublicacoes { get; set; }
+        public DbSet<VeiculoWebmotors> VeiculosWebmotors { get; set; }
         public DbSet<ConfiguracaoSistema> Configuracoes { get; set; }
         public DbSet<VeiculoDocumento> VeiculosDocumentos { get; set; }
         public DbSet<PushSubscription> PushSubscriptions { get; set; }
@@ -268,6 +269,16 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
                 entity.Property(e => e.PubExternoId).HasMaxLength(200);
                 entity.Property(e => e.PubStatus).HasMaxLength(20);
                 entity.Property(e => e.PubUrl).HasMaxLength(500);
+            });
+
+            modelBuilder.Entity<VeiculoWebmotors>(entity =>
+            {
+                entity.ToTable("VeiculoWebmotors");
+                entity.HasKey(e => e.VwmId);
+                entity.Property(e => e.VwmId).ValueGeneratedOnAdd();
+                entity.HasIndex(e => e.R_VeiId).IsUnique();
+                entity.Ignore(e => e.EstaPublicado);
+                entity.Ignore(e => e.Pausado);
             });
 
             // Venda

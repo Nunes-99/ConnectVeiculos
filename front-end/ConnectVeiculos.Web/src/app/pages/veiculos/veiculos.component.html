@@ -141,6 +141,11 @@
                 <button class="btn-icon" (click)="abrirConsultaDetran(veiculo)" title="Consultar débitos no Detran" [disabled]="!veiculo.veiPlaca">
                   <span class="material-icons">gavel</span>
                 </button>
+                @if (podeWebmotors) {
+                  <button class="btn-icon" (click)="webmotorsVeiculo = veiculo" title="Anunciar na Webmotors">
+                    <span class="material-icons">directions_car</span>
+                  </button>
+                }
                 <button class="btn-icon" (click)="openModal(veiculo)" title="Editar">
                   <span class="material-icons">edit</span>
                 </button>
@@ -715,6 +720,10 @@
       </div>
     </div>
   </div>
+}
+
+@if (webmotorsVeiculo) {
+  <app-webmotors-veiculo [veiculo]="webmotorsVeiculo" (fechar)="webmotorsVeiculo = null"></app-webmotors-veiculo>
 }
 
 <!-- Modal: Consultar Detran -->

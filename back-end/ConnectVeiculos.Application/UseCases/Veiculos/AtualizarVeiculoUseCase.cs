@@ -238,6 +238,17 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                 {
                     _logger.LogError(ex, "Erro na integracao externa para veiculo {VeiculoId}", inputModel.VeiId);
                 }
+
+                // Webmotors: altera o anuncio (preco, km, fotos) ou o devolve ao
+                // voltar a disponivel. A saida de disponivel ja passa pelo
+                // MarcarVeiculoIndisponivelAsync acima. Segundo plano: SOAP lento.
+                if (inputModel.VeiSts == "D")
+                {
+                    var idWebmotors = inputModel.VeiId;
+                    _backgroundRunner.Enqueue<IWebmotorsService>(
+                        s => s.SincronizarVeiculoAsync(idWebmotors),
+                        $"atualizar anuncio da Webmotors do veiculo {idWebmotors}");
+                }
             }
             catch
             {

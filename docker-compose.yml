@@ -37,6 +37,10 @@ services:
       - ML_APP_ID=${ML_APP_ID:-}
       - ML_CLIENT_SECRET=${ML_CLIENT_SECRET:-}
       - ML_REDIRECT_URI=${ML_REDIRECT_URI:-https://connectveiculos.dev.br/api/integracoes/mercadolivre/callback}
+      # Webmotors: homologacao ate a Webmotors liberar a producao (chamado PTS-1524).
+      # Producao: WEBMOTORS_BASE_URL=https://integracao.webmotors.com.br no .env.
+      - WebmotorsSettings__BaseUrl=${WEBMOTORS_BASE_URL:-https://hportal.webmotors.com.br/IntegracaoRevendedor}
+      - WebmotorsSettings__Token=${WEBMOTORS_TOKEN:-}
       - WHATSAPP_ACCESS_TOKEN=${WHATSAPP_ACCESS_TOKEN:-}
       - WHATSAPP_PHONE_ID=${WHATSAPP_PHONE_ID:-}
       - WHATSAPP_VERIFY_TOKEN=${WHATSAPP_VERIFY_TOKEN:-}

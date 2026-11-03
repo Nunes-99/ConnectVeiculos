@@ -5,13 +5,14 @@ import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } 
 import { IntegracaoService, DominioProprioInfo, MercadoLivreContaInfo, MercadoLivreSincronizacaoResult, WhatsAppConfigInfo, EmailConfigInfo, FacebookConfigInfo, GoogleMerchantConfigInfo, TestIntegracaoResult, MetaConnectionInfo, MetaPageOption, FacebookPagePostConfigInfo, InstagramPostConfigInfo, MetaFeatureFlags, StoryConfigInfo, StoryConfigInput } from '../../core/services/integracao.service';
 import { AuthService, LojaService, ToastService } from '../../core/services';
 import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal.component';
+import { WebmotorsConfigComponent } from '../../shared/components/webmotors/webmotors-config.component';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-integracoes',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, ConfirmModalComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, ConfirmModalComponent, WebmotorsConfigComponent],
   templateUrl: './integracoes.component.html',
   styleUrl: './integracoes.component.scss'
 })
@@ -93,6 +94,7 @@ Te esperamos na {{6}}. Até breve!`;
   }
 
   mlConectado = false;
+  wmConectado = false;
   // Quanto falta pro token do ML vencer. Ver MercadoLivreStatus.
   mlMinutosRestantes: number | null = null;
   mlExpirando = false;

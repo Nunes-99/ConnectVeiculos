@@ -115,6 +115,29 @@
     </div>
   </div>
 
+  <!-- Webmotors (estoque da loja; usuario de integracao fornecido pela Webmotors) -->
+  <div class="integracao-card">
+    <div class="card-header">
+      <div class="platform-info">
+        <span class="platform-icon wm-icon">WM</span>
+        <div>
+          <h3>Webmotors</h3>
+          <p>Anúncios no estoque da loja</p>
+        </div>
+      </div>
+      <span class="status-badge" [class.connected]="wmConectado" [class.disconnected]="!wmConectado">
+        {{ wmConectado ? 'Conectado' : 'Desconectado' }}
+      </span>
+    </div>
+    <div class="card-body">
+      <app-webmotors-config (conectadoChange)="wmConectado = $event"></app-webmotors-config>
+    </div>
+    <div class="card-footer">
+      <span class="material-icons">info</span>
+      <small>Custo: o plano da loja na Webmotors. A integração não cobra nada a mais.</small>
+    </div>
+  </div>
+
   <!-- WhatsApp Business -->
   @if (true) {
   <div class="integracao-card">

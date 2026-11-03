@@ -29,6 +29,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Publicacoes
         private readonly IInstagramPostService _instagramPostService;
         private readonly IGoogleMerchantService _googleService;
         private readonly IStoryService _storyService;
+        private readonly IWebmotorsService _webmotorsService;
         private readonly ILogger<PublicacaoAutomaticaService> _logger;
 
         private readonly int _tentativas;
@@ -45,10 +46,11 @@ namespace ConnectVeiculos.Infrastructure.Services.Publicacoes
             IInstagramPostService instagramPostService,
             IGoogleMerchantService googleService,
             IStoryService storyService,
+            IWebmotorsService webmotorsService,
             ILogger<PublicacaoAutomaticaService> logger)
             : this(veiculoRepository, imagemRepository, publicacaoRepository, mercadoLivreService,
                    facebookCatalogService, facebookPagePostService, instagramPostService,
-                   googleService, storyService, logger,
+                   googleService, storyService, webmotorsService, logger,
                    TentativasPadrao, IntervaloPadraoMs, LeiturasEstaveisPadrao)
         {
         }
@@ -64,6 +66,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Publicacoes
             IInstagramPostService instagramPostService,
             IGoogleMerchantService googleService,
             IStoryService storyService,
+            IWebmotorsService webmotorsService,
             ILogger<PublicacaoAutomaticaService> logger,
             int tentativas,
             int intervaloMs,
@@ -78,6 +81,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Publicacoes
             _instagramPostService = instagramPostService;
             _googleService = googleService;
             _storyService = storyService;
+            _webmotorsService = webmotorsService;
             _logger = logger;
             _tentativas = tentativas;
             _intervaloMs = intervaloMs;
@@ -152,6 +156,10 @@ namespace ConnectVeiculos.Infrastructure.Services.Publicacoes
             try { await _googleService.RemoverVeiculoAsync(veiculoId); }
             catch (Exception ex) { _logger.LogError(ex, "Erro ao remover veiculo {VeiculoId} do Google", veiculoId); }
 
+            // Webmotors: exclui o anuncio (motivo "vendi na loja" se for venda).
+            try { await _webmotorsService.SincronizarVeiculoAsync(veiculoId); }
+            catch (Exception ex) { _logger.LogError(ex, "Erro ao excluir veiculo {VeiculoId} da Webmotors", veiculoId); }
+
             // Post da Page: reescreve a legenda com o selo em vez de apagar —
             // apagar levaria junto os comentarios e o alcance ja conquistados.
             try
@@ -218,6 +226,10 @@ namespace ConnectVeiculos.Infrastructure.Services.Publicacoes
             await PublicarMercadoLivreAsync(veiculoId);
             await PublicarFacebookCatalogoAsync(veiculoId);
             await PublicarGoogleAsync(veiculoId);
+
+            // Webmotors: so volta se ja tinha sido anunciado (os codigos ficaram salvos).
+            try { await _webmotorsService.SincronizarVeiculoAsync(veiculoId); }
+            catch (Exception ex) { _logger.LogError(ex, "Erro ao reanunciar veiculo {VeiculoId} na Webmotors", veiculoId); }
 
             // Facebook Page: o post continua la, so carimbado. Tirar o carimbo e
             // melhor que publicar de novo — mantem curtidas, comentarios e alcance.

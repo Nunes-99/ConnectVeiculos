@@ -287,6 +287,7 @@ namespace ConnectVeiculos.Infrastructure.IoC
              // Repositories - Integracoes (Fase 3 + 4)
              services.AddTransient<Core.Interfaces.Database.Repositories.Integracoes.IIntegracaoMercadoLivreRepository, Database.EntityFramework.Repositories.IntegracaoMercadoLivreRepository>();
              services.AddTransient<Core.Interfaces.Database.Repositories.Integracoes.IIntegracaoLogRepository, Database.EntityFramework.Repositories.IntegracaoLogRepository>();
+             services.AddTransient<Core.Interfaces.Database.Repositories.Integracoes.IVeiculoWebmotorsRepository, Database.EntityFramework.Repositories.VeiculoWebmotorsRepository>();
 
              // Repositories - Tenants/Planos (billing camada 1)
              services.AddTransient<Core.Interfaces.Database.Repositories.Tenants.IPlanoRepository, Database.EntityFramework.Repositories.PlanoRepository>();
@@ -326,6 +327,11 @@ namespace ConnectVeiculos.Infrastructure.IoC
             // ITenantContext scoped da request, que aponta pro tenant padrao.
             services.AddSingleton<Core.Interfaces.Services.IMercadoLivreWebhookRouter,
                                   Services.MercadoLivre.MercadoLivreWebhookRouter>();
+
+            // Webmotors: SOAP com IP liberado pela Webmotors; BaseUrl define homologacao x producao.
+            services.Configure<Services.Webmotors.WebmotorsSettings>(configuration.GetSection("WebmotorsSettings"));
+            services.AddHttpClient<Core.Interfaces.Services.IWebmotorsService, Services.Webmotors.WebmotorsService>()
+                .ConfigureHttpClient(client => client.Timeout = TimeSpan.FromSeconds(60));
 
             services.AddTransient<Core.Interfaces.Services.IFeedService, Services.Feed.FeedService>();
 
@@ -520,6 +526,19 @@ namespace ConnectVeiculos.Infrastructure.IoC
                       IntAutenticadaEm TEXT,
                       IntCriadaEm TEXT NOT NULL,
                       IntAtualizadaEm TEXT");
+
+                CreateTableIfNotExists(connection, "VeiculoWebmotors",
+                    @"VwmId INTEGER PRIMARY KEY AUTOINCREMENT,
+                      R_VeiId INTEGER NOT NULL UNIQUE,
+                      VwmCodigoAnuncio INTEGER,
+                      VwmStatus TEXT,
+                      VwmDadosJson TEXT,
+                      VwmFotosJson TEXT,
+                      VwmFotosAssinatura TEXT,
+                      VwmErro TEXT,
+                      VwmPublicadoEm TEXT,
+                      VwmAtualizadoEm TEXT,
+                      VwmRemovidoEm TEXT");
 
                 CreateTableIfNotExists(connection, "IntegracaoLog",
                     @"IlgId INTEGER PRIMARY KEY AUTOINCREMENT,
