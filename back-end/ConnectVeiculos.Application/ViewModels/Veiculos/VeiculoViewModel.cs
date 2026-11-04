@@ -21,6 +21,10 @@ namespace ConnectVeiculos.Application.ViewModels.Veiculos
         public string PublicacaoFacebookUrl { get; set; }
         public DateTime? PublicacaoInstagramEm { get; set; }
         public DateTime? PublicacaoFacebookEm { get; set; }
+        public string PublicacaoMercadoLivreUrl { get; set; }
+        public DateTime? PublicacaoMercadoLivreEm { get; set; }
+        /// <summary>Anuncio criado no ML mas invisivel ate a loja pagar a taxa.</summary>
+        public bool MercadoLivreAguardandoPagamento { get; set; }
         /// <summary>Quando o ultimo story do veiculo some (UTC); nulo se nao ha story no ar.</summary>
         public DateTime? StoryNoArAte { get; set; }
         public string VeiCor { get; set; }

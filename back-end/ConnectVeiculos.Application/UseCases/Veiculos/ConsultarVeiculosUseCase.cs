@@ -2,6 +2,7 @@ using System.Globalization;
 using ConnectVeiculos.Application.Interfaces.Veiculos;
 using ConnectVeiculos.Application.ViewModels.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Database.Operations.Veiculos;
+using ConnectVeiculos.Core.Entities.Publicacoes;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Publicacoes;
 
 namespace ConnectVeiculos.Application.UseCases.Veiculos
@@ -82,6 +83,14 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                 {
                     veiculo.PublicacaoFacebookUrl = fb.PubUrl;
                     veiculo.PublicacaoFacebookEm = fb.PubDtPublicacao;
+                }
+
+                var ml = doVeiculo.FirstOrDefault(p => p.PubPlataforma == "MercadoLivre");
+                if (ml != null)
+                {
+                    veiculo.PublicacaoMercadoLivreUrl = ml.PubUrl;
+                    veiculo.PublicacaoMercadoLivreEm = ml.PubDtPublicacao;
+                    veiculo.MercadoLivreAguardandoPagamento = ml.PubStatus == VeiculoPublicacao.StatusAguardandoPagamento;
                 }
 
                 // Story some sozinho 24h depois de publicado; o icone fica

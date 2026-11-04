@@ -99,6 +99,22 @@
                 <span class="badge" [class.active]="veiculo.veiSts === 'D'" [class.inactive]="veiculo.veiSts === 'V'">
                   {{ getStatusLabel(veiculo.veiSts) }}
                 </span>
+                <!-- Onde o carro esta no ar: cada selo abre o post/anuncio. -->
+                @if (veiculo.publicacaoInstagramUrl || veiculo.publicacaoFacebookUrl || veiculo.publicacaoMercadoLivreUrl || veiculo.mercadoLivreAguardandoPagamento) {
+                  <div class="redes-no-ar">
+                    @if (veiculo.publicacaoInstagramUrl) {
+                      <a class="rede ig" [href]="veiculo.publicacaoInstagramUrl" target="_blank" rel="noopener" [title]="tituloInstagram(veiculo)">IG</a>
+                    }
+                    @if (veiculo.publicacaoFacebookUrl) {
+                      <a class="rede fb" [href]="veiculo.publicacaoFacebookUrl" target="_blank" rel="noopener" [title]="tituloFacebook(veiculo)">FB</a>
+                    }
+                    @if (veiculo.mercadoLivreAguardandoPagamento) {
+                      <span class="rede ml pendente" [title]="tituloMercadoLivre(veiculo)">ML</span>
+                    } @else if (veiculo.publicacaoMercadoLivreUrl) {
+                      <a class="rede ml" [href]="veiculo.publicacaoMercadoLivreUrl" target="_blank" rel="noopener" [title]="tituloMercadoLivre(veiculo)">ML</a>
+                    }
+                  </div>
+                }
               </td>
               <td class="actions" data-label="Ações">
                 <!-- So editar fica a mostra; o resto esta no menu dos tres pontos. -->
