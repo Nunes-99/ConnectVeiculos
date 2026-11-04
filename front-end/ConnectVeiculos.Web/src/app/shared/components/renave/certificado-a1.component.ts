@@ -16,10 +16,10 @@ import { CertificadoInfo, NfeService, erroApi } from '../../../core/services/nfe
         <div class="rnv-cert" [class.rnv-erro]="!info!.valido">
           <span class="material-icons">{{ info!.valido ? 'check_circle' : 'error' }}</span>
           <div>
-            <strong>{{ info!.titular || 'Certificado guardado' }}</strong>
+            <strong>{{ info!.titular || 'Certificado salvo' }}</strong>
             <small>
               {{ info!.valido ? 'Válido até' : 'Venceu em' }} {{ info!.validade | date:'dd/MM/yyyy' }}
-              @if (info!.cnpj) { · CNPJ {{ info!.cnpj }} } · guardado criptografado
+              @if (info!.cnpj) { · CNPJ {{ info!.cnpj }} } · salvo criptografado
             </small>
           </div>
           <button class="btn-mini-rnv" (click)="remover()" title="Remover certificado"><span class="material-icons">delete</span></button>
@@ -42,7 +42,7 @@ import { CertificadoInfo, NfeService, erroApi } from '../../../core/services/nfe
         </div>
         <button class="btn-secondary" (click)="enviar()" [disabled]="!arquivo || enviando">
           <span class="material-icons">{{ info?.cadastrado ? 'sync' : 'save' }}</span>
-          {{ enviando ? 'Enviando...' : (info?.cadastrado ? 'Trocar' : 'Guardar') }}
+          {{ enviando ? 'Enviando...' : (info?.cadastrado ? 'Trocar' : 'Salvar') }}
         </button>
       </div>
       <small class="rnv-dica">É o mesmo certificado para o Renave e para a NF-e.</small>
@@ -77,9 +77,9 @@ export class CertificadoA1Component implements OnInit {
       next: i => {
         this.info = i; this.enviando = false; this.arquivo = null; this.senha = '';
         this.alterado.emit(i);
-        this.toast.success('Certificado guardado.');
+        this.toast.success('Certificado salvo.');
       },
-      error: async err => { this.enviando = false; this.toast.error(await erroApi(err, 'Não foi possível guardar o certificado.')); }
+      error: async err => { this.enviando = false; this.toast.error(await erroApi(err, 'Não foi possível salvar o certificado.')); }
     });
   }
 

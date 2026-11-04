@@ -56,7 +56,7 @@
       <div class="rnv-cert" [class.rnv-erro]="!certificadoValido">
         <span class="material-icons">{{ certificadoValido ? 'check_circle' : 'error' }}</span>
         <div>
-          <strong>{{ config.certificadoTitular || 'Certificado guardado' }}</strong>
+          <strong>{{ config.certificadoTitular || 'Certificado salvo' }}</strong>
           <small>{{ certificadoValido ? 'Válido até' : 'Venceu em' }} {{ config.certificadoValidade | date:'dd/MM/yyyy' }}</small>
         </div>
       </div>
