@@ -28,19 +28,19 @@
     }
 
     <div class="filtros">
-      <div class="campo busca">
+      <div class="campo busca form-group">
         <label>Buscar</label>
         <input type="text" [(ngModel)]="filtro.busca" (keyup.enter)="buscar()" placeholder="Número, cliente, placa ou veículo" />
       </div>
-      <div class="campo">
+      <div class="campo form-group">
         <label>De</label>
         <input type="date" [(ngModel)]="filtro.de" (change)="buscar()" />
       </div>
-      <div class="campo">
+      <div class="campo form-group">
         <label>Até</label>
         <input type="date" [(ngModel)]="filtro.ate" (change)="buscar()" />
       </div>
-      <div class="campo">
+      <div class="campo form-group">
         <label>Tipo</label>
         <select [(ngModel)]="filtro.tipo" (ngModelChange)="buscar()">
           <option value="">Compra e venda</option>
@@ -48,7 +48,7 @@
           <option value="SAIDA">Venda (saída)</option>
         </select>
       </div>
-      <div class="campo">
+      <div class="campo form-group">
         <label>Situação</label>
         <select [(ngModel)]="filtro.status" (ngModelChange)="buscar()">
           <option value="">Todas</option>

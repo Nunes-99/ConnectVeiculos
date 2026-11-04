@@ -33,10 +33,10 @@
 .filtros {
   display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end; margin-bottom: 1rem;
   .campo {
-    display: flex; flex-direction: column; gap: 0.25rem; min-width: 140px;
-    label { font-size: 0.8rem; color: var(--text-secondary); }
+    min-width: 150px; margin-bottom: 0;
+    label { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px; }
     &.busca { flex: 1; min-width: 220px; }
-    &.botoes { flex-direction: row; gap: 0.35rem; min-width: 0; }
+    &.botoes { display: flex; gap: 0.35rem; min-width: 0; button { height: 44px; } }
   }
 }
 
