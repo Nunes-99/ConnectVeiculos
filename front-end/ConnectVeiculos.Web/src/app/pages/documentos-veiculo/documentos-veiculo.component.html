@@ -56,8 +56,9 @@
                     [class.status-pendente]="d.docStatus === 'PENDENTE'"
                     [class.status-andamento]="d.docStatus === 'EM_ANDAMENTO'"
                     [class.status-concluido]="d.docStatus === 'CONCLUIDO'">
+              <!-- [selected] na opcao: o [value] do select chega antes das opcoes e ficava sempre "Pendente". -->
               @for (s of statusOptions; track s.codigo) {
-                <option [value]="s.codigo">{{ s.label }}</option>
+                <option [value]="s.codigo" [selected]="s.codigo === d.docStatus">{{ s.label }}</option>
               }
             </select>
           </td>
