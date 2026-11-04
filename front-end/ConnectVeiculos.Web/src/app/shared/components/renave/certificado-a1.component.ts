@@ -28,9 +28,20 @@ import { CertificadoInfo, NfeService, erroApi } from '../../../core/services/nfe
         <small class="rnv-dica">{{ dica }}</small>
       }
       <div class="rnv-cert-envio">
-        <input type="file" accept=".pfx,.p12" (change)="escolher($event)" />
-        <input type="password" [(ngModel)]="senha" placeholder="Senha do certificado" autocomplete="new-password" />
+        <div class="form-group">
+          <label>{{ info?.cadastrado ? 'Trocar pelo arquivo' : 'Arquivo do certificado' }} (.pfx)</label>
+          <label class="rnv-arquivo" [class.escolhido]="arquivo">
+            <input type="file" accept=".pfx,.p12" (change)="escolher($event)" />
+            <span class="material-icons">{{ arquivo ? 'task' : 'upload_file' }}</span>
+            <span class="rnv-arquivo-nome">{{ arquivo?.name || 'Escolher arquivo...' }}</span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label>Senha do certificado</label>
+          <input type="password" [(ngModel)]="senha" autocomplete="new-password" />
+        </div>
         <button class="btn-secondary" (click)="enviar()" [disabled]="!arquivo || enviando">
+          <span class="material-icons">{{ info?.cadastrado ? 'sync' : 'save' }}</span>
           {{ enviando ? 'Enviando...' : (info?.cadastrado ? 'Trocar' : 'Guardar') }}
         </button>
       </div>
