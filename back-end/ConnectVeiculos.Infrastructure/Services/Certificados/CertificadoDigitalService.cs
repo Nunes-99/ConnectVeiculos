@@ -91,7 +91,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Certificados
             }
             catch (CryptographicException)
             {
-                throw new CertificadoDigitalException("O certificado A1 guardado não abre mais. Envie o certificado de novo.");
+                throw new CertificadoDigitalException("O certificado A1 salvo não abre mais. Envie o certificado de novo.");
             }
         }
 
