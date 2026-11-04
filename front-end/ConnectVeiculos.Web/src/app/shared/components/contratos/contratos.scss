@@ -1,0 +1,129 @@
+// Janela de contratos do veiculo. Modal, botoes e campos vem do estilo
+// compartilhado (o encapsulamento do Angular nao deixa o da pagina chegar aqui).
+@import '../../../../styles/shared';
+
+.ctr-veiculo, .ctr-dica {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin: 0 0 0.75rem;
+}
+small.ctr-dica { display: block; margin: 0.35rem 0 0; }
+
+h4 { margin: 1rem 0 0.5rem; font-size: 0.95rem; color: var(--text-primary); }
+
+.ctr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0 1rem;
+  .largo { grid-column: span 2; }
+  @media (max-width: 600px) { .largo { grid-column: auto; } }
+  label small { color: var(--text-secondary); font-weight: 400; }
+}
+
+.ctr-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+.ctr-rodape { border-top: 1px solid var(--border-primary, #eee); padding-top: 0.75rem; }
+
+.ctr-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: left;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary, #e0e0e0);
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  color: var(--text-primary);
+  > div { flex: 1; display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+  small { color: var(--text-secondary); font-size: 0.78rem; }
+  .material-icons { color: var(--primary, #1a237e); }
+  &:hover { border-color: var(--brand-primary, #1a237e); }
+}
+
+.ctr-chip {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: var(--status-warning-bg, #fff8e1);
+  color: var(--status-warning, #8d6e00);
+  &[data-status='ASSINADO'] { background: var(--status-success-bg, #e8f5e9); color: var(--status-success, #2e7d32); }
+  &[data-status='CANCELADO'] { background: var(--bg-tertiary, #f0f0f0); color: var(--text-secondary); }
+}
+
+.ctr-ok, .ctr-aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+}
+.ctr-ok { background: var(--status-success-bg, #e8f5e9); color: var(--status-success, #2e7d32); }
+.ctr-aviso { background: var(--status-warning-bg, #fff8e1); color: var(--status-warning, #8d6e00); }
+
+.ctr-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  > div { display: flex; flex-direction: column; gap: 0.15rem; }
+  small { color: var(--text-secondary); font-size: 0.8rem; }
+}
+
+.ctr-sig {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border-primary, #e0e0e0);
+  border-radius: 10px;
+  margin-bottom: 0.6rem;
+  > .material-icons { color: var(--status-warning, #8d6e00); }
+  &.assinou > .material-icons { color: var(--status-success, #2e7d32); }
+  .ctr-sig-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.2rem; }
+  small { color: var(--text-secondary); font-size: 0.8rem; }
+  .ctr-acoes { margin: 0.5rem 0 0; }
+}
+
+.ctr-link {
+  margin-top: 0.5rem;
+  input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border-secondary);
+    border-radius: 8px;
+    font-size: 0.8rem;
+    background: var(--bg-tertiary, #f7f7f7);
+    color: var(--text-primary);
+    box-sizing: border-box;
+  }
+}
+
+.ctr-coleta {
+  border: 1px dashed var(--border-secondary);
+  border-radius: 10px;
+  padding: 0.75rem;
+  margin: 0.75rem 0;
+  h4 { margin-top: 0; }
+}
+
+.ctr-aceite {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  input { margin-top: 0.2rem; width: auto; }
+}

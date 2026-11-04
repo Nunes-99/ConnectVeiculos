@@ -189,8 +189,10 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.AddTransient<IQrCodeService, QrCodeService>();
             services.AddTransient<IImagemService, ImagemService>();
             services.AddTransient<IFinanciamentoService, FinanciamentoService>();
+            services.AddTransient<IFichaFinanciamentoService, FichaFinanciamentoService>();
             services.AddHttpClient<IFipeService, FipeService>();
             services.AddHttpClient<IWebhookService, WebhookService>();
+            services.AddScoped<Core.Interfaces.Services.IContratoService, Services.Contratos.ContratoService>();
 
             // SignalR Hub Services
             // NotificacaoHubService agora eh Scoped — depende de ITenantContext (Scoped).
@@ -286,6 +288,9 @@ namespace ConnectVeiculos.Infrastructure.IoC
 
              // Repositories - Integracoes (Fase 3 + 4)
              services.AddTransient<Core.Interfaces.Database.Repositories.Integracoes.IIntegracaoMercadoLivreRepository, Database.EntityFramework.Repositories.IntegracaoMercadoLivreRepository>();
+             services.AddTransient<Core.Interfaces.Database.Repositories.Renave.IVeiculoRenaveRepository, Database.EntityFramework.Repositories.VeiculoRenaveRepository>();
+             services.AddTransient<Core.Interfaces.Database.Repositories.NotasFiscais.INotaFiscalRepository, Database.EntityFramework.Repositories.NotaFiscalRepository>();
+             services.AddTransient<Core.Interfaces.Database.Repositories.Financiamentos.IFinanciamentoLojaRepository, Database.EntityFramework.Repositories.FinanciamentoLojaRepository>();
              services.AddTransient<Core.Interfaces.Database.Repositories.Integracoes.IIntegracaoLogRepository, Database.EntityFramework.Repositories.IntegracaoLogRepository>();
 
              // Repositories - Tenants/Planos (billing camada 1)
@@ -344,6 +349,20 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.AddHttpClient<Core.Interfaces.Services.ISearchConsoleService, Services.Seo.SearchConsoleService>()
                 .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(15));
 
+            // Renave (estoque eletronico, Serpro): TLS mutuo com o certificado da
+            // loja, por isso o transporte cria o handler HTTP a cada chamada.
+            services.Configure<Services.Renave.RenaveSettings>(configuration.GetSection("RenaveSettings"));
+            services.AddSingleton<Services.Renave.IRenaveTransporte, Services.Renave.RenaveTransporte>();
+            services.AddScoped<Core.Interfaces.Services.IRenaveService, Services.Renave.RenaveService>();
+            // Certificado A1 da loja: um so, usado pelo Renave e pela NF-e.
+            services.AddScoped<Core.Interfaces.Services.ICertificadoDigitalService, Services.Certificados.CertificadoDigitalService>();
+
+            // NF-e de veiculos direto na Sefaz (biblioteca Unimake.DFe, MIT). O
+            // HttpClient tipado so busca a lista de municipios do IBGE.
+            services.AddSingleton<Services.NotasFiscais.INfeSefaz, Services.NotasFiscais.NfeSefazUnimake>();
+            services.AddHttpClient<Core.Interfaces.Services.INfeService, Services.NotasFiscais.NfeService>()
+                .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(15));
+
             // Assinatura mensal dos planos (Mercado Pago, conta da plataforma)
             services.Configure<Services.Pagamentos.MercadoPagoSettings>(configuration.GetSection("MercadoPagoSettings"));
             services.AddHttpClient<Core.Interfaces.Services.IAssinaturaService, Services.Pagamentos.MercadoPagoAssinaturaService>()
@@ -379,6 +398,11 @@ namespace ConnectVeiculos.Infrastructure.IoC
             // Services - Google Merchant (push instantaneo)
             services.Configure<Services.Google.GoogleMerchantSettings>(configuration.GetSection("GoogleMerchantSettings"));
             services.AddHttpClient<Core.Interfaces.Services.IGoogleMerchantService, Services.Google.GoogleMerchantService>()
+                .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(30));
+
+            // Services - Credere (financiamento multibanco; a loja conecta a conta dela)
+            services.Configure<Services.Credere.CredereSettings>(configuration.GetSection("CredereSettings"));
+            services.AddHttpClient<Core.Interfaces.Services.ICredereService, Services.Credere.CredereService>()
                 .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(30));
 
             // Services - Financiamento Bancos
@@ -521,6 +545,117 @@ namespace ConnectVeiculos.Infrastructure.IoC
                       IntCriadaEm TEXT NOT NULL,
                       IntAtualizadaEm TEXT");
 
+                // Renave: andamento de cada veiculo no estoque eletronico (Serpro)
+                CreateTableIfNotExists(connection, "VeiculoRenave",
+                    @"RnvId INTEGER PRIMARY KEY AUTOINCREMENT,
+                      R_VeiId INTEGER NOT NULL UNIQUE,
+                      RnvIdEstoque INTEGER,
+                      RnvEstado TEXT,
+                      RnvDtEntrada TEXT,
+                      RnvValorCompra TEXT,
+                      RnvDtAssinaturaVendedor TEXT,
+                      RnvChaveNfEntrada TEXT,
+                      RnvVendedorDocumento TEXT,
+                      RnvVendedorEmail TEXT,
+                      RnvDtSaida TEXT,
+                      RnvValorVenda TEXT,
+                      RnvCompradorDocumento TEXT,
+                      RnvCompradorNome TEXT,
+                      RnvCompradorEmail TEXT,
+                      RnvChaveNfSaida TEXT,
+                      RnvNumeroAtpv TEXT,
+                      RnvUltimoErro TEXT,
+                      RnvAtualizadoEm TEXT NOT NULL");
+                AddColumnIfNotExists(connection, "VeiculoRenave", "RnvVendedorDocumento", "TEXT");
+                AddColumnIfNotExists(connection, "VeiculoRenave", "RnvVendedorEmail", "TEXT");
+                AddColumnIfNotExists(connection, "VeiculoRenave", "RnvCompradorEmail", "TEXT");
+
+                // NF-e de veiculos emitida pelo sistema (entrada na compra, saida na venda)
+                CreateTableIfNotExists(connection, "NotaFiscal",
+                    @"NfId INTEGER PRIMARY KEY AUTOINCREMENT,
+                      R_VeiId INTEGER NOT NULL,
+                      NfTipo TEXT NOT NULL,
+                      NfAmbiente TEXT NOT NULL,
+                      NfSerie INTEGER NOT NULL,
+                      NfNumero INTEGER NOT NULL,
+                      NfChave TEXT,
+                      NfStatus TEXT NOT NULL,
+                      NfCStat INTEGER,
+                      NfMotivo TEXT,
+                      NfProtocolo TEXT,
+                      NfDtEmissao TEXT NOT NULL,
+                      NfDtAutorizacao TEXT,
+                      NfValor TEXT NOT NULL,
+                      NfDestDocumento TEXT,
+                      NfDestNome TEXT,
+                      NfDadosJson TEXT,
+                      NfXml TEXT,
+                      NfDtCancelamento TEXT,
+                      NfProtocoloCancelamento TEXT,
+                      NfXmlCancelamento TEXT,
+                      NfCceSequencia INTEGER NOT NULL DEFAULT 0,
+                      NfCceTexto TEXT,
+                      NfCceProtocolo TEXT,
+                      NfCceData TEXT,
+                      NfCceXml TEXT,
+                      UNIQUE (NfAmbiente, NfSerie, NfNumero)");
+                AddColumnIfNotExists(connection, "NotaFiscal", "NfCceSequencia", "INTEGER NOT NULL DEFAULT 0");
+                AddColumnIfNotExists(connection, "NotaFiscal", "NfCceTexto", "TEXT");
+                AddColumnIfNotExists(connection, "NotaFiscal", "NfCceProtocolo", "TEXT");
+                AddColumnIfNotExists(connection, "NotaFiscal", "NfCceData", "TEXT");
+                AddColumnIfNotExists(connection, "NotaFiscal", "NfCceXml", "TEXT");
+                AddColumnIfNotExists(connection, "NotaFiscal", "NfXmlAssinado", "TEXT");
+
+                // Numeracao inutilizada na Sefaz (numeros que nao podem mais virar nota)
+                CreateTableIfNotExists(connection, "NotaFiscalInutilizacao",
+                    @"NfiId INTEGER PRIMARY KEY AUTOINCREMENT,
+                      NfiAmbiente TEXT NOT NULL,
+                      NfiSerie INTEGER NOT NULL,
+                      NfiNumeroInicial INTEGER NOT NULL,
+                      NfiNumeroFinal INTEGER NOT NULL,
+                      NfiJustificativa TEXT NOT NULL,
+                      NfiProtocolo TEXT,
+                      NfiData TEXT NOT NULL,
+                      NfiXml TEXT");
+
+                // Ficha unica de financiamento: bancos da loja (tabelas de taxa) e fichas dos clientes
+                CreateTableIfNotExists(connection, "BancoFinanciamentoLoja",
+                    @"BflId INTEGER PRIMARY KEY AUTOINCREMENT,
+                      BflNome TEXT NOT NULL,
+                      BflPortalUrl TEXT,
+                      BflAtivo INTEGER NOT NULL DEFAULT 1,
+                      BflTarifaCadastro TEXT NOT NULL DEFAULT '0',
+                      BflRegistroContrato TEXT NOT NULL DEFAULT '0',
+                      BflTarifasFinanciadas INTEGER NOT NULL DEFAULT 1,
+                      BflFaixasJson TEXT NOT NULL DEFAULT '[]',
+                      BflObservacao TEXT,
+                      BflAtualizadoEm TEXT NOT NULL");
+
+                CreateTableIfNotExists(connection, "FichaFinanciamento",
+                    @"FifId INTEGER PRIMARY KEY AUTOINCREMENT,
+                      R_VeiId INTEGER,
+                      R_UsuId INTEGER NOT NULL,
+                      FifNome TEXT NOT NULL,
+                      FifCpf TEXT NOT NULL,
+                      FifTelefone TEXT NOT NULL,
+                      FifEmail TEXT NOT NULL,
+                      FifValorVeiculo TEXT NOT NULL,
+                      FifEntrada TEXT NOT NULL,
+                      FifAnoVeiculo INTEGER NOT NULL,
+                      FifStatus TEXT NOT NULL,
+                      FifConsentimentoEm TEXT NOT NULL,
+                      FifPropostasJson TEXT NOT NULL DEFAULT '[]',
+                      FifObservacao TEXT,
+                      FifCredereJson TEXT,
+                      FifCriadoEm TEXT NOT NULL,
+                      FifAtualizadoEm TEXT NOT NULL");
+                AddColumnIfNotExists(connection, "FichaFinanciamento", "FifCredereJson", "TEXT");
+                using (var idxFicha = connection.CreateCommand())
+                {
+                    idxFicha.CommandText = "CREATE INDEX IF NOT EXISTS IX_FichaFinanciamento_R_UsuId ON FichaFinanciamento(R_UsuId)";
+                    idxFicha.ExecuteNonQuery();
+                }
+
                 CreateTableIfNotExists(connection, "IntegracaoLog",
                     @"IlgId INTEGER PRIMARY KEY AUTOINCREMENT,
                       IlgNivel INTEGER NOT NULL DEFAULT 0,
@@ -573,6 +708,60 @@ namespace ConnectVeiculos.Infrastructure.IoC
                       PubUrl TEXT,
                       PubDtPublicacao TEXT,
                       PubDtRemocao TEXT");
+
+                // Contratos e assinatura eletronica
+                CreateTableIfNotExists(connection, "ModeloContrato",
+                    @"MdcId INTEGER PRIMARY KEY AUTOINCREMENT,
+                      MdcNome TEXT NOT NULL,
+                      MdcDescricao TEXT,
+                      MdcTipo TEXT NOT NULL,
+                      MdcConteudo TEXT NOT NULL,
+                      MdcAtivo INTEGER NOT NULL DEFAULT 1,
+                      MdcPadrao INTEGER NOT NULL DEFAULT 0,
+                      MdcDtCriacao TEXT NOT NULL,
+                      MdcDtAtualizacao TEXT NOT NULL");
+                CreateTableIfNotExists(connection, "Contrato",
+                    @"CtrId INTEGER PRIMARY KEY AUTOINCREMENT,
+                      R_VeiId INTEGER NOT NULL,
+                      R_MdcId INTEGER,
+                      R_UsuId INTEGER,
+                      CtrTipo TEXT NOT NULL,
+                      CtrTitulo TEXT NOT NULL,
+                      CtrConteudo TEXT NOT NULL,
+                      CtrHash TEXT NOT NULL,
+                      CtrStatus TEXT NOT NULL,
+                      CtrDtCriacao TEXT NOT NULL,
+                      CtrDtConclusao TEXT,
+                      CtrDtCancelamento TEXT");
+                CreateTableIfNotExists(connection, "ContratoSignatario",
+                    @"CsgId INTEGER PRIMARY KEY AUTOINCREMENT,
+                      R_CtrId INTEGER NOT NULL REFERENCES Contrato(CtrId) ON DELETE CASCADE,
+                      CsgPapel TEXT NOT NULL,
+                      CsgNome TEXT NOT NULL,
+                      CsgDocumento TEXT,
+                      CsgEmail TEXT,
+                      CsgTelefone TEXT,
+                      CsgTokenHash TEXT UNIQUE,
+                      CsgTokenProtegido TEXT,
+                      CsgCodigoHash TEXT,
+                      CsgCodigoExpira TEXT,
+                      CsgTentativas INTEGER NOT NULL DEFAULT 0,
+                      CsgStatus TEXT NOT NULL,
+                      CsgMetodo TEXT,
+                      CsgNomeAssinado TEXT,
+                      CsgDocumentoAssinado TEXT,
+                      CsgImagem TEXT,
+                      CsgIp TEXT,
+                      CsgNavegador TEXT,
+                      R_UsuIdConferente INTEGER,
+                      CsgConferente TEXT,
+                      CsgDtVisualizacao TEXT,
+                      CsgDtAssinatura TEXT");
+                using (var idxCtr = connection.CreateCommand())
+                {
+                    idxCtr.CommandText = "CREATE INDEX IF NOT EXISTS IX_Contrato_R_VeiId ON Contrato(R_VeiId)";
+                    idxCtr.ExecuteNonQuery();
+                }
 
                 // Tabela de documentos do veiculo (CRLV, laudo, transferencia, etc)
                 CreateTableIfNotExists(connection, "VeiculoDocumento",
