@@ -45,6 +45,12 @@ namespace ConnectVeiculos.Core.Entities.NotasFiscais
         /// <summary>XML autorizado (nfeProc) - o documento fiscal que a loja guarda por 5 anos.</summary>
         public string? NfXml { get; private set; }
 
+        /// <summary>
+        /// A NF-e assinada do ultimo envio. Se a Sefaz autorizar e a resposta
+        /// se perder, e com ela e o protocolo da consulta que se monta o nfeProc.
+        /// </summary>
+        public string? NfXmlAssinado { get; private set; }
+
         public DateTime? NfDtCancelamento { get; private set; }
         public string? NfProtocoloCancelamento { get; private set; }
         public string? NfXmlCancelamento { get; private set; }
@@ -79,6 +85,16 @@ namespace ConnectVeiculos.Core.Entities.NotasFiscais
             NfDadosJson = dadosJson;
             NfDtEmissao = dataEmissao;
             NfStatus = StatusPendente;
+        }
+
+        public void GuardarXmlAssinado(string xml) => NfXmlAssinado = xml;
+
+        /// <summary>Sem resposta (ou lote em processamento): pode ter sido autorizada.</summary>
+        public void FicarPendente(int? cStat, string motivo)
+        {
+            NfStatus = StatusPendente;
+            NfCStat = cStat;
+            NfMotivo = motivo.Length > 1000 ? motivo[..1000] : motivo;
         }
 
         public void Autorizar(int cStat, string motivo, string protocolo, DateTime? dataAutorizacao, string xmlProc)

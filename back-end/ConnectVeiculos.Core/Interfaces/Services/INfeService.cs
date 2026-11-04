@@ -19,6 +19,7 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         Task<NfeSugestao> SugerirAsync(int veiculoId, string tipo, CancellationToken ct = default);
         Task<NfeResumo> EmitirAsync(int veiculoId, NfeEmissaoInput input, CancellationToken ct = default);
         Task<NfeResumo> ReenviarAsync(int notaId, NfeEmissaoInput? correcao, CancellationToken ct = default);
+        Task<NfeResumo> ConsultarAsync(int notaId, CancellationToken ct = default);
         Task<NfeResumo> CancelarAsync(int notaId, string justificativa, CancellationToken ct = default);
         Task<(string Xml, string NomeArquivo)> ObterXmlAsync(int notaId, CancellationToken ct = default);
         Task<NfeResumo> CorrigirAsync(int notaId, string correcao, CancellationToken ct = default);

@@ -603,6 +603,7 @@ namespace ConnectVeiculos.Infrastructure.IoC
                 AddColumnIfNotExists(connection, "NotaFiscal", "NfCceProtocolo", "TEXT");
                 AddColumnIfNotExists(connection, "NotaFiscal", "NfCceData", "TEXT");
                 AddColumnIfNotExists(connection, "NotaFiscal", "NfCceXml", "TEXT");
+                AddColumnIfNotExists(connection, "NotaFiscal", "NfXmlAssinado", "TEXT");
 
                 // Numeracao inutilizada na Sefaz (numeros que nao podem mais virar nota)
                 CreateTableIfNotExists(connection, "NotaFiscalInutilizacao",

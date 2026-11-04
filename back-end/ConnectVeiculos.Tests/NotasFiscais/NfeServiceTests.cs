@@ -69,16 +69,39 @@ namespace ConnectVeiculos.Tests.NotasFiscais
             }
         }
 
+        /// <summary>
+        /// Sefaz falsa. Antes de "enviar" ela assina e valida a nota contra o
+        /// schema oficial (como a real faz), entao toda nota dos testes passa no XSD.
+        /// </summary>
         private sealed class SefazFalsa : INfeSefaz
         {
             public readonly Queue<NfeRetornoAutorizacao> Respostas = new();
             public readonly List<EnviNFe> Enviadas = new();
             public NfeRetornoEvento Cancelamento = new() { Registrado = true, CStat = 135, Protocolo = "135260000000001", Xml = "<procEventoNFe/>" };
+            /// <summary>Falha de rede no proximo envio (a nota sai, a resposta nao volta).</summary>
+            public Exception? FalhaNoEnvio;
+            public readonly Queue<Func<string, NfeRetornoConsulta>> Consultas = new();
+            public readonly List<string> Consultadas = new();
+            public int Assinadas;
 
-            public NfeRetornoAutorizacao Autorizar(EnviNFe xml, X509Certificate2 certificado)
+            public NfeRetornoAutorizacao Autorizar(EnviNFe xml, X509Certificate2 certificado, Action<string> assinada)
             {
+                var config = new Configuracao { TipoDFe = TipoDFe.NFe, TipoEmissao = TipoEmissao.Normal, CertificadoDigital = certificado };
+                Unimake.Business.DFe.Servicos.NFe.Autorizacao autorizacao;
+                try { autorizacao = new Unimake.Business.DFe.Servicos.NFe.Autorizacao(xml, config); }
+                catch (Exception ex) { throw new NfeException("A nota não passou na validação: " + ex.Message); }
+                assinada(autorizacao.ConteudoXMLAssinado.GetElementsByTagName("NFe")[0]!.OuterXml);
+                Assinadas++;
+
                 Enviadas.Add(xml);
+                if (FalhaNoEnvio is { } falha) { FalhaNoEnvio = null; throw falha; }
                 return Respostas.Count > 0 ? Respostas.Dequeue() : Autorizada();
+            }
+
+            public NfeRetornoConsulta Consultar(string chave, bool homologacao, X509Certificate2 certificado)
+            {
+                Consultadas.Add(chave);
+                return Consultas.Count > 0 ? Consultas.Dequeue()(chave) : new NfeRetornoConsulta { CStat = 217, NaoExiste = true, Motivo = "NF-e nao consta na base" };
             }
 
             public NfeRetornoEvento Cancelar(string chave, string protocolo, string justificativa, string cnpj, UFBrasil uf, bool homologacao, X509Certificate2 certificado)
@@ -103,6 +126,14 @@ namespace ConnectVeiculos.Tests.NotasFiscais
                 return RespostaInutilizacao ?? new() { Registrado = true, CStat = 102, Protocolo = "135260000009", Xml = "<procInutNFe/>" };
             }
         }
+
+        /// <summary>Consulta que acha a nota autorizada, com o protNFe que a Sefaz devolve.</summary>
+        private static Func<string, NfeRetornoConsulta> ConsultaAutorizada(string protocolo = "135260000000777")
+            => chave => new NfeRetornoConsulta
+            {
+                CStat = 100, Motivo = "Autorizado o uso da NF-e", Autorizada = true, Protocolo = protocolo, DataAutorizacao = DateTime.UtcNow,
+                ProtocoloXml = $"<protNFe xmlns=\"http://www.portalfiscal.inf.br/nfe\" versao=\"4.00\"><infProt><tpAmb>2</tpAmb><chNFe>{chave}</chNFe><nProt>{protocolo}</nProt><cStat>100</cStat></infProt></protNFe>"
+            };
 
         private static NfeRetornoAutorizacao Autorizada() => new()
         {
@@ -404,7 +435,7 @@ namespace ConnectVeiculos.Tests.NotasFiscais
         }
 
         [Fact]
-        public void Xml_Da_Carta_De_Correcao_E_Da_Inutilizacao_Passam_No_Schema()
+        public void Xml_Do_Cancelamento_Da_Carta_De_Correcao_E_Da_Inutilizacao_Passam_No_Schema()
         {
             using var cert = NfeVeiculoBuilderTests.CertificadoDeTeste();
             var config = new Unimake.Business.DFe.Servicos.Configuracao
@@ -415,6 +446,9 @@ namespace ConnectVeiculos.Tests.NotasFiscais
 
             FluentActions.Invoking(() => new Unimake.Business.DFe.Servicos.NFe.RecepcaoEvento(
                 NfeSefazUnimake.MontarCartaCorrecao(chave, 1, "Cor do veiculo: onde se le Prata leia-se Cinza.", "11222333000181", UFBrasil.SP, true), config))
+                .Should().NotThrow();
+            FluentActions.Invoking(() => new Unimake.Business.DFe.Servicos.NFe.RecepcaoEvento(
+                NfeSefazUnimake.MontarCancelamento(chave, "135260000000123", "Venda desfeita a pedido do cliente", "11222333000181", UFBrasil.SP, true), config))
                 .Should().NotThrow();
             FluentActions.Invoking(() => new Unimake.Business.DFe.Servicos.NFe.Inutilizacao(
                 NfeSefazUnimake.MontarInutilizacao(1, 10, 12, "Numeracao pulada por falha no envio", "11222333000181", UFBrasil.SP, true), config))
@@ -466,6 +500,167 @@ namespace ConnectVeiculos.Tests.NotasFiscais
             nota.Numero.Should().Be(5);
             _notas.Itens.Should().ContainSingle();
             (await _service.ObterConfigAsync()).ProximoNumero.Should().Be(6);
+        }
+
+        [Fact]
+        public async Task Sem_Resposta_Fica_Pendente_E_A_Consulta_Recupera_Sem_Emitir_De_Novo()
+        {
+            await ConfigurarAsync(proximoNumero: 20);
+            _sefaz.FalhaNoEnvio = new HttpRequestException("timeout");
+
+            var envio = () => _service.EmitirAsync(42, NfeVeiculoBuilderTests.Venda());
+            await envio.Should().ThrowAsync<NfeException>().WithMessage("*pendente*");
+            var nota = _notas.Itens.Single();
+            nota.NfStatus.Should().Be(NotaFiscal.StatusPendente);
+            nota.NfXmlAssinado.Should().Contain("<Signature");
+
+            // A Sefaz tinha autorizado: o reenvio so consulta e guarda o protocolo.
+            _sefaz.Consultas.Enqueue(ConsultaAutorizada());
+            var r = await _service.EmitirAsync(42, NfeVeiculoBuilderTests.Venda());
+
+            r.Status.Should().Be(NotaFiscal.StatusAutorizada);
+            r.Numero.Should().Be(20);
+            r.Protocolo.Should().Be("135260000000777");
+            _sefaz.Enviadas.Should().HaveCount(1, "nao manda a mesma nota duas vezes");
+            _sefaz.Consultadas.Should().Equal(nota.NfChave);
+            nota.NfXml.Should().StartWith("<nfeProc").And.Contain("<Signature").And.Contain("<protNFe");
+            (await _service.ObterXmlAsync(nota.NfId)).Xml.Should().Be(nota.NfXml);
+        }
+
+        [Fact]
+        public async Task Pendente_Que_Nao_Chegou_A_Sefaz_E_Reenviada_Com_O_Mesmo_Numero()
+        {
+            await ConfigurarAsync(proximoNumero: 30);
+            _sefaz.FalhaNoEnvio = new HttpRequestException("sem rede");
+            await _service.Invoking(s => s.EmitirAsync(42, NfeVeiculoBuilderTests.Venda())).Should().ThrowAsync<NfeException>();
+
+            // Consulta padrao da falsa: 217 (nao consta). Reenvia.
+            var r = await _service.ReenviarAsync(_notas.Itens.Single().NfId, null);
+
+            r.Status.Should().Be(NotaFiscal.StatusAutorizada);
+            r.Numero.Should().Be(30);
+            _sefaz.Enviadas.Should().HaveCount(2);
+            _sefaz.Consultadas.Should().HaveCount(1);
+            (await _service.ObterConfigAsync()).ProximoNumero.Should().Be(31);
+        }
+
+        [Fact]
+        public async Task Lote_Em_Processamento_Fica_Pendente_Ate_Consultar()
+        {
+            await ConfigurarAsync();
+            _sefaz.Respostas.Enqueue(new NfeRetornoAutorizacao { CStat = 105, Motivo = "Lote em processamento", Pendente = true });
+
+            await _service.Invoking(s => s.EmitirAsync(42, NfeVeiculoBuilderTests.Venda()))
+                .Should().ThrowAsync<NfeException>().WithMessage("*ainda não respondeu*");
+            var nota = _notas.Itens.Single();
+            nota.NfStatus.Should().Be(NotaFiscal.StatusPendente);
+
+            _sefaz.Consultas.Enqueue(ConsultaAutorizada("135260000000888"));
+            var r = await _service.ConsultarAsync(nota.NfId);
+            r.Status.Should().Be(NotaFiscal.StatusAutorizada);
+            r.Protocolo.Should().Be("135260000000888");
+        }
+
+        [Fact]
+        public async Task Duplicidade_204_Busca_A_Nota_Ja_Autorizada()
+        {
+            await ConfigurarAsync();
+            _sefaz.Respostas.Enqueue(new NfeRetornoAutorizacao { CStat = 204, Motivo = "Rejeicao: Duplicidade de NF-e" });
+            _sefaz.Consultas.Enqueue(ConsultaAutorizada());
+
+            var r = await _service.EmitirAsync(42, NfeVeiculoBuilderTests.Venda());
+
+            r.Status.Should().Be(NotaFiscal.StatusAutorizada);
+            _notas.Itens.Single().NfXml.Should().Contain("<protNFe");
+        }
+
+        [Fact]
+        public async Task Consulta_Sem_Rede_Ou_Nota_Cancelada_Nao_Reenvia()
+        {
+            await ConfigurarAsync();
+            _sefaz.FalhaNoEnvio = new HttpRequestException("timeout");
+            await _service.Invoking(s => s.EmitirAsync(42, NfeVeiculoBuilderTests.Venda())).Should().ThrowAsync<NfeException>();
+            var id = _notas.Itens.Single().NfId;
+
+            _sefaz.Consultas.Enqueue(_ => throw new HttpRequestException("sem rede"));
+            await _service.Invoking(s => s.ReenviarAsync(id, null)).Should().ThrowAsync<NfeException>().WithMessage("*continua pendente*");
+
+            _sefaz.Consultas.Enqueue(_ => new NfeRetornoConsulta { CStat = 101, Cancelada = true, Motivo = "Cancelamento de NF-e homologado" });
+            await _service.Invoking(s => s.ReenviarAsync(id, null)).Should().ThrowAsync<NfeException>().WithMessage("*cancelada na Sefaz*");
+
+            _sefaz.Enviadas.Should().HaveCount(1, "nunca reenvia sem saber a situacao");
+            _notas.Itens.Single().NfStatus.Should().Be(NotaFiscal.StatusPendente);
+        }
+
+        [Fact]
+        public async Task Dado_Invalido_Nao_Vai_Para_A_Sefaz_Nem_Gasta_Numero()
+        {
+            await ConfigurarAsync(proximoNumero: 9);
+            var dados = NfeVeiculoBuilderTests.Venda();
+            dados.Ncm = "1234567X";
+            await _service.Invoking(s => s.EmitirAsync(42, dados)).Should().ThrowAsync<NfeException>().WithMessage("*NCM*");
+
+            var semCpf = NfeVeiculoBuilderTests.Venda();
+            semCpf.Documento = "123.456.789-00";
+            await _service.Invoking(s => s.EmitirAsync(42, semCpf)).Should().ThrowAsync<NfeException>().WithMessage("*CPF*");
+
+            _sefaz.Enviadas.Should().BeEmpty();
+            _notas.Itens.Should().BeEmpty();
+            (await _service.ObterConfigAsync()).ProximoNumero.Should().Be(9);
+        }
+
+        [Fact]
+        public async Task Cancelamento_Recusado_Ou_Fora_Do_Prazo_Mantem_A_Nota_Autorizada()
+        {
+            await ConfigurarAsync();
+            var nota = await _service.EmitirAsync(42, NfeVeiculoBuilderTests.Venda());
+
+            _sefaz.Cancelamento = new NfeRetornoEvento { Registrado = false, CStat = 501, Motivo = "Rejeicao: Prazo de cancelamento superior ao previsto" };
+            await _service.Invoking(s => s.CancelarAsync(nota.Id, "Venda desfeita a pedido do cliente"))
+                .Should().ThrowAsync<NfeException>().WithMessage("*501*");
+            _notas.Itens.Single().NfStatus.Should().Be(NotaFiscal.StatusAutorizada);
+
+            // Passadas 24 h o sistema nem tenta: orienta falar com o contador.
+            typeof(NotaFiscal).GetProperty(nameof(NotaFiscal.NfDtAutorizacao))!.SetValue(_notas.Itens.Single(), DateTime.UtcNow.AddHours(-25));
+            await _service.Invoking(s => s.CancelarAsync(nota.Id, "Venda desfeita a pedido do cliente"))
+                .Should().ThrowAsync<NfeException>().WithMessage("*24 horas*");
+        }
+
+        [Fact]
+        public async Task So_Cancela_Nota_Autorizada()
+        {
+            await ConfigurarAsync();
+            _sefaz.Respostas.Enqueue(new NfeRetornoAutorizacao { CStat = 225, Motivo = "Rejeicao: Falha no Schema XML" });
+            await _service.Invoking(s => s.EmitirAsync(42, NfeVeiculoBuilderTests.Venda())).Should().ThrowAsync<NfeException>();
+
+            await _service.Invoking(s => s.CancelarAsync(_notas.Itens.Single().NfId, "Nota rejeitada nao se cancela"))
+                .Should().ThrowAsync<NfeException>().WithMessage("*autorizada*");
+        }
+
+        [Fact]
+        public async Task Fluxo_Completo_Compra_Venda_Correcao_Cancelamento_E_Nova_Venda()
+        {
+            await ConfigurarAsync(proximoNumero: 1);
+            var compra = NfeVeiculoBuilderTests.Venda();
+            compra.Tipo = "ENTRADA";
+            compra.MeioPagamento = "90";
+
+            var nCompra = await _service.EmitirAsync(42, compra);
+            var nVenda = await _service.EmitirAsync(42, NfeVeiculoBuilderTests.Venda());
+            nCompra.Numero.Should().Be(1);
+            nVenda.Numero.Should().Be(2);
+
+            var cce = await _service.CorrigirAsync(nVenda.Id, "Corrige o complemento do endereco do destinatario para apto 12");
+            cce.CartaCorrecaoSequencia.Should().Be(1);
+
+            var cancelada = await _service.CancelarAsync(nVenda.Id, "Venda desfeita a pedido do cliente");
+            cancelada.Status.Should().Be(NotaFiscal.StatusCancelada);
+
+            // Cancelada a venda, da para emitir outra venda (numero novo).
+            var nova = await _service.EmitirAsync(42, NfeVeiculoBuilderTests.Venda());
+            nova.Status.Should().Be(NotaFiscal.StatusAutorizada);
+            nova.Numero.Should().Be(3);
+            _sefaz.Assinadas.Should().Be(3);
         }
 
         [Fact]

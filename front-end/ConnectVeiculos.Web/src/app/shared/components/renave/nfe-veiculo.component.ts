@@ -184,6 +184,19 @@ export class NfeVeiculoComponent implements OnInit {
     });
   }
 
+  consultar(n: NfeResumo): void {
+    this.enviando = true;
+    this.nfe.consultar(n.id).subscribe({
+      next: r => {
+        this.enviando = false;
+        if (r.status === 'AUTORIZADA') this.toast.success(`A Sefaz já tinha autorizado a NF-e nº ${r.numero}. XML e DANFE prontos.`);
+        else this.toast.info('A nota não chegou à Sefaz. Use "Enviar de novo".');
+        this.recarregar();
+      },
+      error: async err => { this.enviando = false; this.toast.error(await erroApi(err, 'Não foi possível consultar a Sefaz.')); this.recarregar(); }
+    });
+  }
+
   confirmarCancelamento(): void {
     if (!this.cancelando) return;
     this.enviando = true;

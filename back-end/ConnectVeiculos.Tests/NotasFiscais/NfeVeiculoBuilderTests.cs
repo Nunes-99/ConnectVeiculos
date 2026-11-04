@@ -99,6 +99,40 @@ namespace ConnectVeiculos.Tests.NotasFiscais
             xml.NFe[0].InfNFeField.Chave.Should().HaveLength(44).And.StartWith("35");
         }
 
+        /// <summary>Variacoes reais de cliente, endereco, regime e valor: todas no schema oficial.</summary>
+        [Theory]
+        [InlineData("SAIDA", 1, "PF", "SP", "Joao D'Avila & Cia", "10", 95000.50)]
+        [InlineData("SAIDA", 1, "PJ", "SP", "Auto Pecas São José Ltda", "", 120000)]
+        [InlineData("SAIDA", 3, "PF", "MG", "María Conceição Ñandú", "S/N", 45999.99)]
+        [InlineData("SAIDA", 4, "PF", "SP", "Cliente Do Mei", "1500", 30000)]
+        [InlineData("ENTRADA", 1, "PF", "SP", "Vendedor Pessoa Fisica", "22", 50000)]
+        [InlineData("ENTRADA", 3, "PJ", "PR", "Locadora Exemplo S.A.", "1", 70000)]
+        public void Variacoes_Passam_No_Schema(string tipo, int crt, string pessoa, string uf, string nome, string numero, double valor)
+        {
+            var cfg = Config(crt == 4 ? 1 : crt);
+            cfg.Crt = crt;
+            var dados = Venda();
+            dados.Tipo = tipo;
+            dados.Nome = nome;
+            dados.Valor = (decimal)valor;
+            dados.Endereco.Numero = numero;
+            dados.Endereco.Complemento = "Apto 12 - Bloco B";
+            if (tipo == "ENTRADA") dados.MeioPagamento = "90";
+            if (pessoa == "PJ")
+            {
+                dados.Documento = "11.444.777/0001-61";
+                dados.InscricaoEstadual = uf == "SP" ? "110042490114" : "1234567850";
+            }
+            if (uf == "MG") { dados.Endereco.Uf = "MG"; dados.Endereco.CodigoMunicipio = 3106200; dados.Endereco.Municipio = "Belo Horizonte"; }
+            if (uf == "PR") { dados.Endereco.Uf = "PR"; dados.Endereco.CodigoMunicipio = 4106902; dados.Endereco.Municipio = "Curitiba"; }
+
+            var xml = NfeVeiculoBuilder.Montar(cfg, dados, Carro(), 1, 321, 87654321, DateTime.Now, homologacao: true);
+            var assinado = Assinar(xml).ConteudoXMLAssinado.OuterXml;
+
+            assinado.Should().Contain("<Signature");
+            xml.NFe[0].InfNFeField.Det[0].Prod.CFOP.Should().StartWith(uf == "SP" ? (tipo == "SAIDA" ? "5" : "1") : (tipo == "SAIDA" ? "6" : "2"));
+        }
+
         [Fact]
         public void Nota_Fora_Do_Schema_E_Recusada_Antes_De_Ir_Para_A_Sefaz()
         {

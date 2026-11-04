@@ -199,6 +199,11 @@ export class NfeService {
     return this.http.post<NfeResumo>(`${this.url}/${notaId}/reenviar`, dados);
   }
 
+  /** Confere na Sefaz uma nota pendente (sem resposta). */
+  consultar(notaId: number): Observable<NfeResumo> {
+    return this.http.post<NfeResumo>(`${this.url}/${notaId}/consultar`, {});
+  }
+
   cancelar(notaId: number, justificativa: string): Observable<NfeResumo> {
     return this.http.post<NfeResumo>(`${this.url}/${notaId}/cancelar`, { justificativa });
   }

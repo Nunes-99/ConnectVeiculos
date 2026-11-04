@@ -385,7 +385,63 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
             var cfg = await ObterConfigAsync(ct);
             if (!cfg.Pronto)
                 throw new NfeException("Complete a configuração da NF-e em Notas fiscais → Configuração: " + string.Join(", ", cfg.Pendencias) + ".");
+
+            // Nota que ja foi a Sefaz sem resposta final (ou que voltou como duplicada):
+            // antes de mandar de novo, pergunta se ela ja foi autorizada.
+            if (PrecisaConsultar(nota))
+            {
+                var resolvida = await ResolverPelaConsultaAsync(nota, ct);
+                if (resolvida != null) return resolvida;
+            }
             return await EnviarAsync(nota, dados, cfg, ct);
+        }
+
+        /// <summary>204 = duplicidade de NF-e (a mesma chave ja foi autorizada).</summary>
+        private static bool PrecisaConsultar(NotaFiscal n)
+            => n.NfChave != null && (n.NfStatus == NotaFiscal.StatusPendente || n.NfCStat == 204);
+
+        /// <summary>
+        /// Consulta a nota na Sefaz (botao "Consultar na Sefaz" e antes de reenviar).
+        /// Autorizada la: guarda o protocolo e o XML, sem emitir outra.
+        /// </summary>
+        public async Task<NfeResumo> ConsultarAsync(int notaId, CancellationToken ct = default)
+        {
+            var nota = await _notas.GetByIdAsync(notaId) ?? throw new NfeException("Nota não encontrada.");
+            if (nota.NfChave == null) throw new NfeException("Esta nota ainda não foi enviada à Sefaz.");
+            return await ResolverPelaConsultaAsync(nota, ct) ?? Resumo(nota);
+        }
+
+        /// <summary>Devolve o resumo se a consulta resolveu a nota; nulo se ela nao existe la (pode reenviar).</summary>
+        private async Task<NfeResumo?> ResolverPelaConsultaAsync(NotaFiscal nota, CancellationToken ct)
+        {
+            using var cert = await CertificadoObrigatorioAsync(ct);
+            NfeRetornoConsulta r;
+            try
+            {
+                r = _sefaz.Consultar(nota.NfChave!, nota.NfAmbiente != "producao", cert);
+            }
+            catch (Exception ex) when (ex is not NfeException)
+            {
+                _logger.LogWarning(ex, "NF-e {Chave}: falha ao consultar na Sefaz", nota.NfChave);
+                throw new NfeException("Não foi possível consultar a nota na Sefaz agora. Ela continua pendente: tente de novo em alguns minutos.");
+            }
+
+            if (r.Autorizada && r.ProtocoloXml != null)
+            {
+                if (nota.NfXmlAssinado == null)
+                    throw new NfeException($"A Sefaz já autorizou esta nota (protocolo {r.Protocolo}), mas o XML assinado não ficou guardado. Fale com o suporte antes de emitir outra.");
+                nota.Autorizar(r.CStat ?? 100, r.Motivo, r.Protocolo ?? "", r.DataAutorizacao,
+                    NfeSefazUnimake.MontarProc(nota.NfXmlAssinado, r.ProtocoloXml));
+                await _notas.SalvarAsync(nota);
+                _logger.LogInformation("NF-e {Chave} estava autorizada na Sefaz (consulta)", nota.NfChave);
+                var resumo = Resumo(nota);
+                resumo.Motivo = await InformarRenaveAsync(nota, ct) ?? resumo.Motivo;
+                return resumo;
+            }
+            if (r.Cancelada)
+                throw new NfeException($"Esta nota consta como cancelada na Sefaz ({r.CStat}: {r.Motivo}). Fale com o contador antes de emitir outra.");
+            if (r.NaoExiste) return null;
+            throw new NfeException($"A Sefaz respondeu à consulta ({r.CStat}): {r.Motivo}. A nota continua pendente.");
         }
 
         private async Task<NfeResumo> EnviarAsync(NotaFiscal nota, NfeEmissaoInput dados, NfeConfigInfo cfg, CancellationToken ct)
@@ -403,9 +459,10 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
 
             using var cert = await CertificadoObrigatorioAsync(ct);
             NfeRetornoAutorizacao ret;
+            string? assinada = null;
             try
             {
-                ret = _sefaz.Autorizar(xml, cert);
+                ret = _sefaz.Autorizar(xml, cert, x => assinada = x);
             }
             catch (NfeException ex)
             {
@@ -416,8 +473,20 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
             catch (Exception ex)
             {
                 // Sem resposta da Sefaz a nota fica PENDENTE: pode ter sido autorizada.
+                // Guarda a NF-e assinada para, na consulta, montar o XML autorizado.
+                if (assinada != null) nota.GuardarXmlAssinado(assinada);
+                nota.FicarPendente(null, "Sem resposta da Sefaz.");
+                await _notas.SalvarAsync(nota);
                 _logger.LogWarning(ex, "NF-e {Chave}: falha de comunicacao com a Sefaz", chave);
-                throw new NfeException("Não foi possível falar com a Sefaz. A nota ficou pendente: tente reenviar em alguns minutos.");
+                throw new NfeException("Não foi possível falar com a Sefaz. A nota ficou pendente: tente reenviar em alguns minutos (o sistema confere antes se ela já foi autorizada).");
+            }
+            if (assinada != null) nota.GuardarXmlAssinado(assinada);
+
+            if (ret.Pendente)
+            {
+                nota.FicarPendente(ret.CStat, $"{ret.CStat} - {ret.Motivo}");
+                await _notas.SalvarAsync(nota);
+                throw new NfeException($"A Sefaz recebeu a nota mas ainda não respondeu ({ret.CStat}: {ret.Motivo}). Use \"Consultar na Sefaz\" em alguns minutos.");
             }
 
             if (ret.Autorizada && ret.XmlProc != null)
@@ -433,6 +502,9 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
             nota.Rejeitar(ret.CStat, $"{ret.CStat} - {ret.Motivo}");
             await _notas.SalvarAsync(nota);
             _logger.LogWarning("NF-e {Chave} rejeitada: {CStat} {Motivo}", chave, ret.CStat, ret.Motivo);
+
+            // Duplicidade: a mesma nota ja tinha sido autorizada (a resposta anterior se perdeu).
+            if (ret.CStat == 204 && await ResolverPelaConsultaAsync(nota, ct) is { } jaAutorizada) return jaAutorizada;
             throw new NfeException($"A Sefaz rejeitou a nota ({ret.CStat}): {ret.Motivo}");
         }
 

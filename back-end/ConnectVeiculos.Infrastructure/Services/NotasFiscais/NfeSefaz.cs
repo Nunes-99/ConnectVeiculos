@@ -14,6 +14,23 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
         public string? Protocolo { get; set; }
         public DateTime? DataAutorizacao { get; set; }
         public string? XmlProc { get; set; }
+        /// <summary>A Sefaz recebeu mas nao deu a resposta final (lote em processamento).</summary>
+        public bool Pendente { get; set; }
+    }
+
+    /// <summary>Situacao de uma NF-e na Sefaz, pela chave.</summary>
+    public class NfeRetornoConsulta
+    {
+        public int? CStat { get; set; }
+        public string Motivo { get; set; } = string.Empty;
+        public bool Autorizada { get; set; }
+        public bool Cancelada { get; set; }
+        /// <summary>A Sefaz nao conhece a chave (217): a nota nunca chegou.</summary>
+        public bool NaoExiste { get; set; }
+        public string? Protocolo { get; set; }
+        public DateTime? DataAutorizacao { get; set; }
+        /// <summary>O protNFe da consulta, para montar o nfeProc.</summary>
+        public string? ProtocoloXml { get; set; }
     }
 
     public class NfeRetornoEvento
@@ -32,7 +49,12 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
     /// </summary>
     public interface INfeSefaz
     {
-        NfeRetornoAutorizacao Autorizar(EnviNFe xml, X509Certificate2 certificado);
+        /// <summary>
+        /// Assina, valida e envia. <paramref name="assinada"/> recebe a NF-e
+        /// assinada antes do envio, para nao se perder se a conexao cair.
+        /// </summary>
+        NfeRetornoAutorizacao Autorizar(EnviNFe xml, X509Certificate2 certificado, Action<string> assinada);
+        NfeRetornoConsulta Consultar(string chave, bool homologacao, X509Certificate2 certificado);
         NfeRetornoEvento Cancelar(string chave, string protocolo, string justificativa, string cnpj,
             UFBrasil uf, bool homologacao, X509Certificate2 certificado);
         NfeStatusSefaz Status(UFBrasil uf, bool homologacao, X509Certificate2 certificado);
@@ -49,7 +71,12 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
         // 135 evento registrado, 155 cancelamento fora de prazo homologado.
         private static readonly int[] EventosOk = { 135, 136, 155 };
 
-        public NfeRetornoAutorizacao Autorizar(EnviNFe xml, X509Certificate2 certificado)
+        // 100 autorizada, 150 fora de prazo; 101/151 cancelada; 217 nao consta na base.
+        private static readonly int[] Canceladas = { 101, 151, 155 };
+        // 103 lote recebido, 105 lote em processamento: ainda sem resposta final.
+        private static readonly int[] EmProcessamento = { 103, 105 };
+
+        public NfeRetornoAutorizacao Autorizar(EnviNFe xml, X509Certificate2 certificado, Action<string> assinada)
         {
             var config = new Configuracao
             {
@@ -69,6 +96,9 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
                 throw new NfeException("A nota não passou na validação: " + ex.Message);
             }
 
+            var nfe = autorizacao.ConteudoXMLAssinado?.GetElementsByTagName("NFe");
+            if (nfe is { Count: > 0 }) assinada(nfe[0]!.OuterXml);
+
             autorizacao.Executar();
             var lote = autorizacao.Result;
             var prot = lote?.ProtNFe?.InfProt;
@@ -77,7 +107,8 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
                 return new NfeRetornoAutorizacao
                 {
                     CStat = lote?.CStat,
-                    Motivo = lote?.XMotivo ?? "A Sefaz não devolveu o protocolo da nota."
+                    Motivo = lote?.XMotivo ?? "A Sefaz não devolveu o protocolo da nota.",
+                    Pendente = lote == null || EmProcessamento.Contains(lote.CStat)
                 };
             }
 
@@ -96,10 +127,55 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
             };
         }
 
+        public NfeRetornoConsulta Consultar(string chave, bool homologacao, X509Certificate2 certificado)
+        {
+            var config = new Configuracao { TipoDFe = TipoDFe.NFe, CertificadoDigital = certificado };
+            var consulta = new ConsultaProtocolo(new ConsSitNFe
+            {
+                Versao = "4.00",
+                TpAmb = homologacao ? TipoAmbiente.Homologacao : TipoAmbiente.Producao,
+                ChNFe = chave
+            }, config);
+            consulta.Executar();
+
+            var r = consulta.Result;
+            var inf = r?.ProtNFe?.InfProt;
+            var cStat = inf?.CStat ?? r?.CStat;
+            return new NfeRetornoConsulta
+            {
+                CStat = cStat,
+                Motivo = inf?.XMotivo ?? r?.XMotivo ?? "A Sefaz não respondeu à consulta.",
+                Autorizada = cStat.HasValue && Autorizacoes.Contains(cStat.Value) && !(r?.CStat is { } c && Canceladas.Contains(c)),
+                Cancelada = r?.CStat is { } cc && Canceladas.Contains(cc),
+                NaoExiste = r?.CStat == 217,
+                Protocolo = inf?.NProt,
+                DataAutorizacao = inf?.DhRecbto.UtcDateTime,
+                ProtocoloXml = r?.ProtNFe == null ? null
+                    : Unimake.Business.DFe.Utility.XMLUtility.Serializar(r.ProtNFe).OuterXml
+            };
+        }
+
+        /// <summary>nfeProc (NF-e assinada + protocolo), o XML que a loja guarda.</summary>
+        public static string MontarProc(string nfeAssinada, string protocoloXml)
+        {
+            var nfe = System.Xml.Linq.XElement.Parse(nfeAssinada);
+            var prot = System.Xml.Linq.XElement.Parse(protocoloXml);
+            System.Xml.Linq.XNamespace ns = "http://www.portalfiscal.inf.br/nfe";
+            return new System.Xml.Linq.XElement(ns + "nfeProc", new System.Xml.Linq.XAttribute("versao", "4.00"), nfe, prot)
+                .ToString(System.Xml.Linq.SaveOptions.DisableFormatting);
+        }
+
         public NfeRetornoEvento Cancelar(string chave, string protocolo, string justificativa, string cnpj,
             UFBrasil uf, bool homologacao, X509Certificate2 certificado)
-            => EnviarEvento(new DetEventoCanc { NProt = protocolo, Versao = "1.00", XJust = justificativa },
+            => EnviarEvento(DetalheCancelamento(protocolo, justificativa),
                 TipoEventoNFe.Cancelamento, 1, chave, cnpj, uf, homologacao, certificado, "ao cancelamento");
+
+        private static DetEventoCanc DetalheCancelamento(string protocolo, string justificativa)
+            => new() { NProt = protocolo, Versao = "1.00", XJust = justificativa };
+
+        /// <summary>Lote do cancelamento (para os testes validarem contra o XSD sem rede).</summary>
+        public static EnvEvento MontarCancelamento(string chave, string protocolo, string justificativa, string cnpj, UFBrasil uf, bool homologacao)
+            => MontarEvento(DetalheCancelamento(protocolo, justificativa), TipoEventoNFe.Cancelamento, 1, chave, cnpj, uf, homologacao);
 
         /// <summary>CC-e (evento 110110). O texto de condicao de uso a biblioteca preenche.</summary>
         public NfeRetornoEvento CartaCorrecao(string chave, int sequencia, string correcao, string cnpj,

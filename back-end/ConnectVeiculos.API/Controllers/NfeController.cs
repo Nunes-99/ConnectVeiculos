@@ -65,6 +65,11 @@ namespace ConnectVeiculos.API.Controllers
         public Task<IActionResult> Reenviar(int notaId, [FromBody] NfeEmissaoInput? correcao, CancellationToken ct)
             => Executar(() => _nfe.ReenviarAsync(notaId, correcao, ct));
 
+        /// <summary>Confere na Sefaz uma nota pendente (sem resposta) antes de reenviar.</summary>
+        [HttpPost("{notaId:int}/consultar")]
+        public Task<IActionResult> Consultar(int notaId, CancellationToken ct)
+            => Executar(() => _nfe.ConsultarAsync(notaId, ct));
+
         public class CancelamentoInput
         {
             public string Justificativa { get; set; } = string.Empty;

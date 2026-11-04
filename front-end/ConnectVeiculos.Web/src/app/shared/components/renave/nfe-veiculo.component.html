@@ -44,8 +44,11 @@
                       <button class="btn-icon" title="DANFE (PDF)" (click)="baixarDanfe(n)"><span class="material-icons">picture_as_pdf</span></button>
                       <button class="btn-icon" title="XML" (click)="baixarXml(n)"><span class="material-icons">code</span></button>
                     }
+                    @if (n.status === 'PENDENTE' && n.chave) {
+                      <button class="btn-icon" title="Consultar na Sefaz (a nota pode já ter sido autorizada)" (click)="consultar(n)" [disabled]="enviando"><span class="material-icons">travel_explore</span></button>
+                    }
                     @if (n.podeReenviar) {
-                      <button class="btn-icon" title="Enviar de novo" (click)="reenviar(n)" [disabled]="enviando"><span class="material-icons">send</span></button>
+                      <button class="btn-icon" title="Enviar de novo (antes, o sistema confere se ela já foi autorizada)" (click)="reenviar(n)" [disabled]="enviando"><span class="material-icons">send</span></button>
                     }
                     @if (n.podeCorrigir) {
                       <button class="btn-icon" title="Carta de correção" (click)="abrirCorrecao(n)"><span class="material-icons">edit_note</span></button>
