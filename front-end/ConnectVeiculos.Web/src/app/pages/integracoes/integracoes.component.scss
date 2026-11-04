@@ -831,3 +831,131 @@
   font-size: 1rem;
   vertical-align: text-bottom;
 }
+
+// ---------- Catalogo (estilo loja de integracoes) ----------
+
+.catalogo-barra {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  .search-bar { margin-bottom: 0; }
+}
+
+.catalogo-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  button {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.4rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-secondary, #ddd);
+    background: var(--bg-primary, #fff);
+    color: var(--text-secondary, #555);
+    font-size: 0.85rem;
+    cursor: pointer;
+    &:hover { border-color: var(--primary, #1a237e); }
+    &.ativo { background: var(--primary, #1a237e); border-color: var(--primary, #1a237e); color: #fff; }
+  }
+  .contagem {
+    min-width: 18px; padding: 0 5px; border-radius: 999px;
+    background: rgba(0, 0, 0, 0.1); font-size: 0.72rem; font-weight: 600; text-align: center;
+  }
+  .ativo .contagem { background: rgba(255, 255, 255, 0.25); }
+}
+
+.catalogo-categoria {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary, #666);
+  margin: 1.25rem 0 0.6rem;
+}
+
+.catalogo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.catalogo-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  text-align: left;
+  padding: 1.1rem;
+  border-radius: 12px;
+  border: 1px solid var(--border, #e0e0e0);
+  background: var(--card-bg, #fff);
+  color: var(--text-primary, #222);
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  &:hover { border-color: var(--primary, #1a237e); box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.08)); }
+
+  .catalogo-texto {
+    display: flex; flex-direction: column; gap: 0.25rem; flex: 1;
+    strong { font-size: 0.98rem; }
+    small { color: var(--text-secondary, #777); font-size: 0.82rem; line-height: 1.4; }
+  }
+  .catalogo-rodape { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+  .catalogo-acao {
+    display: inline-flex; align-items: center;
+    color: var(--primary, #1a237e); font-size: 0.85rem; font-weight: 600;
+    .material-icons { font-size: 18px; }
+  }
+}
+
+.catalogo-vazio { color: var(--text-secondary, #666); text-align: center; padding: 2rem 0; }
+
+// ---------- Painel lateral com a configuracao ----------
+
+.painel-fundo {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 890;
+}
+
+.painel-integracao {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(680px, 100%);
+  overflow-y: auto;
+  background: var(--bg-secondary, #f6f7f9);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.15);
+  z-index: 900;
+  padding: 0.75rem 1rem 2rem;
+  box-sizing: border-box;
+  // Sem transform: as janelas (modais) dentro do painel usam position: fixed.
+  visibility: hidden;
+  right: -700px;
+  transition: right 0.2s ease, visibility 0.2s;
+  &.aberto { visibility: visible; right: 0; }
+
+  .integracoes-grid { display: block; }
+  .integracao-card { border: none; box-shadow: none; }
+}
+
+.painel-fechar {
+  position: sticky;
+  top: 0;
+  float: right;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-bottom: 0.5rem;
+  border-radius: 50%;
+  border: 1px solid var(--border, #e0e0e0);
+  background: var(--bg-primary, #fff);
+  color: var(--text-primary, #333);
+  cursor: pointer;
+  &:hover { background: var(--bg-hover, #f0f0f0); }
+}
