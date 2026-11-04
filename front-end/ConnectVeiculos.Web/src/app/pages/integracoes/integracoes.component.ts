@@ -1,4 +1,7 @@
-import { Component, inject, OnInit, PLATFORM_ID } from '@angular/core';
+import { Component, HostListener, inject, OnInit, PLATFORM_ID } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { RenaveService } from '../../core/services/renave.service';
+import { CredereService } from '../../core/services/credere.service';
 import { isPlatformBrowser } from '@angular/common';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -10,6 +13,23 @@ import { ConfirmModalComponent } from '../../shared/components/confirm-modal/con
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
+/** Uma integracao no catalogo (estilo loja de integracoes, como no Bling). */
+interface ItemIntegracao {
+  id: string;
+  nome: string;
+  descricao: string;
+  categoria: string;
+  /** Classe de cor do icone (ml-icon, wa-icon...). */
+  icone: string;
+  sigla?: string;
+  material?: string;
+  /** Palavras extras para a busca. */
+  palavras?: string;
+  visivel: () => boolean;
+  status: () => { texto: string; classe: 'connected' | 'disconnected' | 'pending' };
+  conectada: () => boolean;
+}
+
 @Component({
   selector: 'app-integracoes',
   standalone: true,
@@ -18,6 +38,130 @@ import { environment } from '../../../environments/environment';
   styleUrl: './integracoes.component.scss'
 })
 export class IntegracoesComponent implements OnInit {
+  private route = inject(ActivatedRoute);
+  private renaveApi = inject(RenaveService);
+  private credereApi = inject(CredereService);
+  private router = inject(Router);
+
+  // ---------- Catalogo ----------
+  // A tela mostra as integracoes como cartoes por categoria; a configuracao de
+  // cada uma abre no painel lateral (o conteudo dos cartoes antigos).
+
+  readonly categoriasIntegracao = ['Portais e marketplaces', 'Documentos e financiamento', 'Redes sociais', 'Comunicação', 'Site e marketing'];
+
+  readonly catalogo: ItemIntegracao[] = [
+    {
+      id: 'mercadolivre', nome: 'Mercado Livre', descricao: 'Anuncia os veículos disponíveis e tira do ar quando vende.',
+      categoria: 'Portais e marketplaces', icone: 'ml-icon', sigla: 'ML', palavras: 'marketplace anuncio',
+      visivel: () => true,
+      status: () => this.mlConectado ? { texto: 'Conectado', classe: 'connected' } : { texto: 'Desconectado', classe: 'disconnected' },
+      conectada: () => this.mlConectado
+    },
+    {
+      id: 'renave', nome: 'Renave', descricao: 'Entrada e saída dos veículos no estoque eletrônico (Senatran).',
+      categoria: 'Documentos e financiamento', icone: 'renave-icon', material: 'assignment_turned_in', palavras: 'serpro senatran atpv estoque',
+      visivel: () => true,
+      status: () => this.renavePronto ? { texto: 'Configurado', classe: 'connected' } : { texto: 'Não configurado', classe: 'disconnected' },
+      conectada: () => this.renavePronto
+    },
+    {
+      id: 'credere', nome: 'Credere', descricao: 'Financiamento em vários bancos com pré-aprovação.',
+      categoria: 'Documentos e financiamento', icone: 'nfe-icon', material: 'account_balance', palavras: 'financiamento banco multibanco',
+      visivel: () => true,
+      status: () => this.credereConectada ? { texto: 'Conectado', classe: 'connected' } : { texto: 'Não conectado', classe: 'disconnected' },
+      conectada: () => this.credereConectada
+    },
+    {
+      id: 'meta', nome: 'Facebook + Instagram', descricao: 'Posta os veículos no feed da página e no Instagram, com stories.',
+      categoria: 'Redes sociais', icone: 'meta-icon', sigla: 'M', palavras: 'meta facebook instagram story',
+      visivel: () => this.metaFlags.instagramEnabled,
+      status: () => this.metaConnection.pageSelecionada ? { texto: 'Conectado', classe: 'connected' } : { texto: 'Desconectado', classe: 'disconnected' },
+      conectada: () => !!this.metaConnection.pageSelecionada
+    },
+    {
+      id: 'catalogo-feed', nome: 'Catálogo Facebook (feed)', descricao: 'Veículos no catálogo da Meta pelo feed XML.',
+      categoria: 'Redes sociais', icone: 'meta-icon', sigla: 'M', palavras: 'feed xml catalogo',
+      visivel: () => this.mostrarCatalogoFeed,
+      status: () => ({ texto: 'Disponível', classe: 'connected' }),
+      conectada: () => false
+    },
+    {
+      id: 'whatsapp', nome: 'WhatsApp Business', descricao: 'Recebe leads e envia mensagens automáticas.',
+      categoria: 'Comunicação', icone: 'wa-icon', material: 'chat', palavras: 'whatsapp mensagem lead',
+      visivel: () => true,
+      status: () => this.waConfig.configurado ? { texto: 'Configurado', classe: 'connected' } : { texto: 'Não configurado', classe: 'disconnected' },
+      conectada: () => this.waConfig.configurado
+    },
+    {
+      id: 'email', nome: 'E-mail (SMTP)', descricao: 'Avisos para clientes: preço caiu, veículo parecido, senha.',
+      categoria: 'Comunicação', icone: 'smtp-icon', material: 'mail', palavras: 'email smtp gmail',
+      visivel: () => true,
+      status: () => this.smtpConfig.configurado ? { texto: 'Configurado', classe: 'connected' } : { texto: 'Não configurado', classe: 'disconnected' },
+      conectada: () => this.smtpConfig.configurado
+    },
+    {
+      id: 'dominio', nome: 'Domínio próprio', descricao: 'O catálogo da loja no endereço dela.',
+      categoria: 'Site e marketing', icone: 'dominio-icon', material: 'language', palavras: 'dominio site endereco',
+      visivel: () => !!this.dominioInfo,
+      status: () => this.dominioInfo?.ativo ? { texto: 'Ativo', classe: 'connected' }
+        : this.dominioInfo?.dominio ? { texto: 'Ativando', classe: 'pending' } : { texto: 'Opcional', classe: 'disconnected' },
+      conectada: () => !!this.dominioInfo?.ativo
+    },
+    {
+      id: 'google', nome: 'Marketing no Google', descricao: 'Como anunciar os veículos no Google.',
+      categoria: 'Site e marketing', icone: 'google-icon', sigla: 'G', palavras: 'google anuncio merchant',
+      visivel: () => true,
+      status: () => ({ texto: 'Informativo', classe: 'disconnected' }),
+      conectada: () => false
+    }
+  ];
+
+  buscaIntegracao = '';
+  filtroIntegracao = 'todas';
+  integracaoAberta: string | null = null;
+
+  /** So as categorias que tem alguma integracao visivel nesta loja. */
+  get categoriasVisiveis(): string[] {
+    return this.categoriasIntegracao.filter(c => this.catalogo.some(i => i.categoria === c && i.visivel()));
+  }
+
+  get totalConectadas(): number {
+    return this.catalogo.filter(i => i.visivel() && i.conectada()).length;
+  }
+
+  get catalogoFiltrado(): { categoria: string; itens: ItemIntegracao[] }[] {
+    const busca = this.normalizar(this.buscaIntegracao);
+    const itens = this.catalogo.filter(i => i.visivel()
+      && (this.filtroIntegracao === 'todas'
+        || (this.filtroIntegracao === 'conectadas' ? i.conectada() : i.categoria === this.filtroIntegracao))
+      && (!busca || this.normalizar(`${i.nome} ${i.descricao} ${i.palavras || ''}`).includes(busca)));
+    return this.categoriasIntegracao
+      .map(categoria => ({ categoria, itens: itens.filter(i => i.categoria === categoria) }))
+      .filter(g => g.itens.length > 0);
+  }
+
+  abrirIntegracao(id: string): void {
+    this.integracaoAberta = id;
+    // Guarda no endereco para dar para voltar direto (e o botao voltar do celular fechar).
+    this.router.navigate([], { relativeTo: this.route, queryParams: { abrir: id }, queryParamsHandling: 'merge', replaceUrl: !!this.route.snapshot.queryParamMap.get('abrir') });
+  }
+
+  fecharIntegracao(): void {
+    if (!this.integracaoAberta) return;
+    this.integracaoAberta = null;
+    this.router.navigate([], { relativeTo: this.route, queryParams: { abrir: null }, queryParamsHandling: 'merge', replaceUrl: true });
+  }
+
+  @HostListener('document:keydown.escape')
+  fecharComEsc(): void {
+    // Com uma janela (modal) aberta por cima, o Esc e dela.
+    if (!document.querySelector('.painel-integracao .modal-overlay')) this.fecharIntegracao();
+  }
+
+  private normalizar(t: string): string {
+    return (t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  }
+
   // Card do catalogo via feed. Desligado ate o caminho ser testado de ponta a
   // ponta: o texto prometia Marketplace organico e Shop on Instagram gratuitos,
   // e nenhum dos dois vale pra veiculo. Ver o comentario no template.
@@ -230,6 +374,14 @@ Te esperamos na {{6}}. Até breve!`;
   };
 
   ngOnInit(): void {
+    // A situacao das integracoes que tem tela propria (componentes filhos) vem
+    // daqui, para o cartao do catalogo mostrar antes de abrir o painel.
+    this.renaveApi.obterConfig().subscribe({ next: c => this.renavePronto = c.pronto, error: () => {} });
+    this.credereApi.status().subscribe({ next: s => this.credereConectada = s.conectado, error: () => {} });
+    this.route.queryParamMap.subscribe(p => {
+      const abrir = p.get('abrir');
+      this.integracaoAberta = abrir && this.catalogo.some(i => i.id === abrir) ? abrir : null;
+    });
     if (isPlatformBrowser(this.platformId)) {
       // Lidos no client porque dependem do tenant slug do localStorage,
       // indisponivel durante SSR.
