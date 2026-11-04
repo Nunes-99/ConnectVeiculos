@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using ConnectVeiculos.Core.Financiamentos;
+using ConnectVeiculos.Core.Interfaces.Security;
 using ConnectVeiculos.Core.Interfaces.Services;
+using ConnectVeiculos.Core.Interfaces.Tenancy;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -44,6 +46,39 @@ namespace ConnectVeiculos.API.Controllers
         [Authorize(Roles = Gestao)]
         public Task<IActionResult> Conectar([FromBody] ConexaoInput input, CancellationToken ct)
             => Executar(() => _credere.ConectarAsync(input.Code, input.State, ct));
+
+        /// <summary>
+        /// Volta do login da Credere sem exigir sessao neste dominio: a loja pode
+        /// ter clicado em Conectar pelo dominio proprio (diamanteveiculossalto...)
+        /// e a redirect_uri cadastrada na Credere e' a do connectveiculos.dev.br.
+        /// O state (cifrado, 10 min) diz de qual loja e'; se a requisicao caiu em
+        /// outra, devolve o slug para o front repetir com ?tenant= (como o
+        /// callback do Mercado Livre).
+        /// </summary>
+        [HttpPost("retorno")]
+        [AllowAnonymous]
+        [EnableRateLimiting("public")]
+        public async Task<IActionResult> Retorno([FromBody] ConexaoInput input, [FromServices] IOAuthStateProtector state,
+            [FromServices] ITenantContext tenant, CancellationToken ct)
+        {
+            string slug;
+            try
+            {
+                slug = state.Decifrar(input.State).TenantSlug;
+            }
+            catch (OAuthStateException ex)
+            {
+                return UnprocessableEntity(new { error = ex.Message });
+            }
+            var atual = tenant.IsResolved ? tenant.TenantSlug : "default";
+            if (!string.Equals(slug, atual, StringComparison.OrdinalIgnoreCase))
+                return Ok(new { conectado = false, tenant = slug });
+            return await Executar(async () =>
+            {
+                await _credere.ConectarAsync(input.Code, input.State, ct);
+                return new { conectado = true, tenant = slug };
+            });
+        }
 
         public class LojaInput
         {

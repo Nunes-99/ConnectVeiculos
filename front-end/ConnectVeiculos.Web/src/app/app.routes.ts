@@ -69,6 +69,13 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/legal/exclusao-de-dados/exclusao-de-dados.component').then(m => m.ExclusaoDeDadosComponent)
   },
   {
+    // Volta do login da Credere (redirect_uri cadastrada na Credere). Fora do
+    // layout logado: quem conectou pelo dominio proprio da loja nao tem sessao
+    // no connectveiculos.dev.br, e o guard jogava o codigo fora.
+    path: 'integracoes/credere',
+    loadComponent: () => import('./pages/integracoes/credere-retorno.component').then(m => m.CredereRetornoComponent)
+  },
+  {
     // Link publico que o cliente abre para assinar um contrato (sem login).
     path: 'assinar/:tenantSlug/:token',
     loadComponent: () => import('./pages/assinar/assinar.component').then(m => m.AssinarComponent)
@@ -156,13 +163,6 @@ export const routes: Routes = [
       {
         path: 'integracoes',
         loadComponent: () => import('./pages/integracoes/integracoes.component').then(m => m.IntegracoesComponent),
-        canActivate: [roleGuard],
-        data: { roles: ['Administrador', 'Gerente'] }
-      },
-      {
-        // Volta do login da Credere (redirect_uri cadastrada na Credere).
-        path: 'integracoes/credere',
-        loadComponent: () => import('./pages/integracoes/credere-retorno.component').then(m => m.CredereRetornoComponent),
         canActivate: [roleGuard],
         data: { roles: ['Administrador', 'Gerente'] }
       },

@@ -174,7 +174,11 @@ namespace ConnectVeiculos.Infrastructure.Services.Credere
 
         public async Task<CredereStatus> StatusAsync(CancellationToken ct = default)
         {
-            var status = new CredereStatus { Configurado = _settings.Configurado };
+            var status = new CredereStatus
+            {
+                Configurado = _settings.Configurado,
+                SiteConexao = Uri.TryCreate(_settings.RedirectUri, UriKind.Absolute, out var retorno) ? retorno.GetLeftPart(UriPartial.Authority) : null
+            };
             var conta = await ContaAsync();
             if (conta == null || await TokenAsync() == null) return status;
 
