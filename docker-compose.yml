@@ -46,16 +46,8 @@ services:
       # OCR de CRLV via Google Gemini (tier gratuito 1500 req/dia).
       # Tambem pode ser configurado por tenant via UI em /integracoes.
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      # E-mail da plataforma: usado pelas lojas que nao cadastraram o SMTP
-      # proprio em Integracoes (o nome e o Reply-To saem com os dados da loja).
-      # Sem estas linhas o .env nao chegava ao container e nenhum e-mail saia.
-      - EMAIL_SMTP_SERVER=${EMAIL_SMTP_SERVER:-}
-      - EMAIL_SMTP_PORT=${EMAIL_SMTP_PORT:-587}
-      - EMAIL_USERNAME=${EMAIL_USERNAME:-}
-      - EMAIL_PASSWORD=${EMAIL_PASSWORD:-}
-      - EMAIL_SENDER_EMAIL=${EMAIL_SENDER_EMAIL:-}
-      - EMAIL_SENDER_NAME=${EMAIL_SENDER_NAME:-ConnectVeiculos}
-      - EMAIL_ENABLE_SSL=${EMAIL_ENABLE_SSL:-true}
+      # E-mail: nao ha remetente da plataforma. Cada loja cadastra o dela em
+      # Integracoes -> E-mail (decisao de 04/11/2026).
       # Multi-tenant
       - ADMIN_API_TOKEN=${ADMIN_API_TOKEN:-}
       - TENANTS_DATA_DIR=${TENANTS_DATA_DIR:-/app/data}

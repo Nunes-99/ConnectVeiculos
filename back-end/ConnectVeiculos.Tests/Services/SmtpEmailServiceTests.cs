@@ -14,9 +14,9 @@ using Xunit;
 namespace ConnectVeiculos.Tests.Services
 {
     /// <summary>
-    /// Quem envia o e-mail: o SMTP da loja (se ela cadastrou) ou o da
-    /// plataforma (.env), sempre como um bloco so. Um servidor SMTP falso
-    /// local guarda o que chegou para conferir remetente e Reply-To.
+    /// O e-mail sai sempre pela conta da loja (Integracoes -> E-mail); nao ha
+    /// remetente da plataforma. Um servidor SMTP falso local guarda o que
+    /// chegou para conferir o remetente.
     /// </summary>
     [Collection("VariaveisDeAmbienteEmail")]
     public class SmtpEmailServiceTests : IDisposable
@@ -91,7 +91,7 @@ namespace ConnectVeiculos.Tests.Services
             _smtp.Dispose();
         }
 
-        private SmtpEmailService Servico()
+        private SmtpEmailService Servico(EmailSettings? appsettings = null)
         {
             var loja = new Loja();
             typeof(Loja).GetProperty(nameof(Loja.LojId))!.SetValue(loja, 1);
@@ -99,62 +99,68 @@ namespace ConnectVeiculos.Tests.Services
             typeof(Loja).GetProperty(nameof(Loja.LojEmail))!.SetValue(loja, "contato@diamanteveiculos.com.br");
             var lojas = new Mock<ILojaRepository>();
             lojas.Setup(l => l.GetAllAsync()).ReturnsAsync(new[] { loja });
-            return new SmtpEmailService(Options.Create(new EmailSettings()), _config, lojas.Object, NullLogger<SmtpEmailService>.Instance);
+            return new SmtpEmailService(Options.Create(appsettings ?? new EmailSettings()), _config, lojas.Object, NullLogger<SmtpEmailService>.Instance);
         }
 
-        private void PlataformaNoEnv(int porta)
+        private void SmtpDaLoja(string? nome = null)
         {
-            Environment.SetEnvironmentVariable("EMAIL_SMTP_SERVER", "127.0.0.1");
-            Environment.SetEnvironmentVariable("EMAIL_SMTP_PORT", porta.ToString());
-            Environment.SetEnvironmentVariable("EMAIL_SENDER_EMAIL", "nao-responda@connectveiculos.dev.br");
-            Environment.SetEnvironmentVariable("EMAIL_ENABLE_SSL", "false");
+            _config.Valores["SMTP_SERVER"] = "127.0.0.1";
+            _config.Valores["SMTP_PORT"] = _smtp.Porta.ToString();
+            _config.Valores["SMTP_SENDER_EMAIL"] = "vendas@diamanteveiculos.com.br";
+            _config.Valores["SMTP_ENABLE_SSL"] = "false";
+            if (nome != null) _config.Valores["SMTP_SENDER_NAME"] = nome;
         }
 
         [Fact]
-        public async Task Sem_SMTP_da_loja_sai_pela_plataforma_com_o_nome_da_loja_e_resposta_para_ela()
+        public async Task Sai_pelo_email_da_loja_e_sem_nome_cadastrado_usa_o_nome_da_loja()
         {
-            PlataformaNoEnv(_smtp.Porta);
+            SmtpDaLoja();
 
             var ok = await Servico().SendEmailAsync("cliente@exemplo.com", "Preço caiu", "<p>oi</p>");
 
             ok.Should().BeTrue();
             var msg = _smtp.Mensagens.Single();
-            msg.Should().Contain("nao-responda@connectveiculos.dev.br");
-            // Cabecalho pode quebrar linha: (?s) deixa o .* atravessar.
-            msg.Should().MatchRegex("(?is)Reply-To:[^:]*contato@diamanteveiculos\\.com\\.br");
+            msg.Should().Contain("<vendas@diamanteveiculos.com.br>");
             // Nome da loja, codificado por causa do acento ("Diamante Veículos").
             msg.Should().Contain("From: =?utf-8?Q?Diamante_Ve=C3=ADculos?=");
         }
 
         [Fact]
-        public async Task SMTP_da_loja_ganha_do_env_e_nao_mistura_campos()
+        public async Task Nome_cadastrado_pela_loja_vale_e_nada_da_plataforma_se_mistura()
         {
-            // Plataforma apontando para uma porta morta: se algum campo dela
-            // vazasse para o envio da loja, o envio falharia.
-            PlataformaNoEnv(1);
+            // Variaveis antigas da plataforma no ambiente: tem que ser ignoradas.
+            Environment.SetEnvironmentVariable("EMAIL_SMTP_SERVER", "smtp.plataforma.invalid");
+            Environment.SetEnvironmentVariable("EMAIL_SENDER_EMAIL", "nao-responda@connectveiculos.dev.br");
             Environment.SetEnvironmentVariable("EMAIL_PASSWORD", "senha-da-plataforma");
-            _config.Valores["SMTP_SERVER"] = "127.0.0.1";
-            _config.Valores["SMTP_PORT"] = _smtp.Porta.ToString();
-            _config.Valores["SMTP_SENDER_EMAIL"] = "vendas@diamanteveiculos.com.br";
-            _config.Valores["SMTP_SENDER_NAME"] = "Diamante";
-            _config.Valores["SMTP_ENABLE_SSL"] = "false";
+            SmtpDaLoja("Diamante");
 
             var ok = await Servico().SendEmailAsync("cliente@exemplo.com", "Teste", "<p>oi</p>");
 
             ok.Should().BeTrue();
             var msg = _smtp.Mensagens.Single();
-            msg.Should().Contain("vendas@diamanteveiculos.com.br");
-            msg.Should().NotContain("nao-responda@connectveiculos.dev.br");
-            msg.Should().NotMatchRegex("(?i)Reply-To:", "o e-mail ja sai da propria loja");
+            msg.Should().Contain("From: \"Diamante\" <vendas@diamanteveiculos.com.br>");
+            msg.Should().NotContain("connectveiculos");
         }
 
         [Fact]
-        public async Task Sem_nada_configurado_nao_envia()
+        public async Task Sem_email_da_loja_nao_envia_mesmo_com_remetente_da_plataforma_configurado()
         {
-            var ok = await Servico().SendEmailAsync("cliente@exemplo.com", "Teste", "<p>oi</p>");
+            Environment.SetEnvironmentVariable("EMAIL_SMTP_SERVER", "127.0.0.1");
+            Environment.SetEnvironmentVariable("EMAIL_SMTP_PORT", _smtp.Porta.ToString());
+            Environment.SetEnvironmentVariable("EMAIL_SENDER_EMAIL", "nao-responda@connectveiculos.dev.br");
+            Environment.SetEnvironmentVariable("EMAIL_ENABLE_SSL", "false");
+            var appsettings = new EmailSettings
+            {
+                SmtpServer = "127.0.0.1", SmtpPort = _smtp.Porta, SenderEmail = "contato.connectveiculos@gmail.com", EnableSsl = false
+            };
+
+            var servico = Servico(appsettings);
+            var ok = await servico.SendEmailAsync("cliente@exemplo.com", "Teste", "<p>oi</p>");
+            var config = await servico.GetConfigAsync();
 
             ok.Should().BeFalse();
             _smtp.Mensagens.Should().BeEmpty();
+            config.Configurado.Should().BeFalse();
         }
     }
 
