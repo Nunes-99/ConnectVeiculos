@@ -408,7 +408,8 @@ namespace ConnectVeiculos.Infrastructure.Services.Credere
             {
                 try
                 {
-                    using var doc = await ChamarAsync(HttpMethod.Get, $"/users/proposals_filter_list?per_page=20&store_id={loja}", null, null, ct);
+                    // GET /users (Listar usuarios da doc; o antigo proposals_filter_list saiu dela).
+                    using var doc = await ChamarAsync(HttpMethod.Get, $"/users?per_page=20&active=true&store_id={loja}&q={Uri.EscapeDataString(email.Trim())}", null, null, ct);
                     var raiz = doc!.RootElement;
                     // A doc mostra ora { users: [...] }, ora { user: {...} }.
                     var usuarios = Lista(raiz, "users").ToList();
