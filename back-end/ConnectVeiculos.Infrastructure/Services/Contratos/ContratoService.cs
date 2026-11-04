@@ -246,6 +246,8 @@ namespace ConnectVeiculos.Infrastructure.Services.Contratos
         {
             var c = await ContratoAsync(id, ct);
             if (c.CtrStatus == Contrato.StatusCancelado) throw new ContratoException("O contrato já está cancelado.");
+            // Assinado por todos vale como esta; desfazer o negocio e' outro documento (distrato).
+            if (c.CtrStatus == Contrato.StatusAssinado) throw new ContratoException("O contrato já foi assinado por todos e não pode ser cancelado.");
             c.Cancelar();
             await _db.SaveChangesAsync(ct);
             return await ObterAsync(id, ct);
