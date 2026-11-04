@@ -191,6 +191,7 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.AddTransient<IFinanciamentoService, FinanciamentoService>();
             services.AddHttpClient<IFipeService, FipeService>();
             services.AddHttpClient<IWebhookService, WebhookService>();
+            services.AddScoped<Core.Interfaces.Services.IContratoService, Services.Contratos.ContratoService>();
 
             // SignalR Hub Services
             // NotificacaoHubService agora eh Scoped — depende de ITenantContext (Scoped).
@@ -573,6 +574,60 @@ namespace ConnectVeiculos.Infrastructure.IoC
                       PubUrl TEXT,
                       PubDtPublicacao TEXT,
                       PubDtRemocao TEXT");
+
+                // Contratos e assinatura eletronica
+                CreateTableIfNotExists(connection, "ModeloContrato",
+                    @"MdcId INTEGER PRIMARY KEY AUTOINCREMENT,
+                      MdcNome TEXT NOT NULL,
+                      MdcDescricao TEXT,
+                      MdcTipo TEXT NOT NULL,
+                      MdcConteudo TEXT NOT NULL,
+                      MdcAtivo INTEGER NOT NULL DEFAULT 1,
+                      MdcPadrao INTEGER NOT NULL DEFAULT 0,
+                      MdcDtCriacao TEXT NOT NULL,
+                      MdcDtAtualizacao TEXT NOT NULL");
+                CreateTableIfNotExists(connection, "Contrato",
+                    @"CtrId INTEGER PRIMARY KEY AUTOINCREMENT,
+                      R_VeiId INTEGER NOT NULL,
+                      R_MdcId INTEGER,
+                      R_UsuId INTEGER,
+                      CtrTipo TEXT NOT NULL,
+                      CtrTitulo TEXT NOT NULL,
+                      CtrConteudo TEXT NOT NULL,
+                      CtrHash TEXT NOT NULL,
+                      CtrStatus TEXT NOT NULL,
+                      CtrDtCriacao TEXT NOT NULL,
+                      CtrDtConclusao TEXT,
+                      CtrDtCancelamento TEXT");
+                CreateTableIfNotExists(connection, "ContratoSignatario",
+                    @"CsgId INTEGER PRIMARY KEY AUTOINCREMENT,
+                      R_CtrId INTEGER NOT NULL REFERENCES Contrato(CtrId) ON DELETE CASCADE,
+                      CsgPapel TEXT NOT NULL,
+                      CsgNome TEXT NOT NULL,
+                      CsgDocumento TEXT,
+                      CsgEmail TEXT,
+                      CsgTelefone TEXT,
+                      CsgTokenHash TEXT UNIQUE,
+                      CsgTokenProtegido TEXT,
+                      CsgCodigoHash TEXT,
+                      CsgCodigoExpira TEXT,
+                      CsgTentativas INTEGER NOT NULL DEFAULT 0,
+                      CsgStatus TEXT NOT NULL,
+                      CsgMetodo TEXT,
+                      CsgNomeAssinado TEXT,
+                      CsgDocumentoAssinado TEXT,
+                      CsgImagem TEXT,
+                      CsgIp TEXT,
+                      CsgNavegador TEXT,
+                      R_UsuIdConferente INTEGER,
+                      CsgConferente TEXT,
+                      CsgDtVisualizacao TEXT,
+                      CsgDtAssinatura TEXT");
+                using (var idxCtr = connection.CreateCommand())
+                {
+                    idxCtr.CommandText = "CREATE INDEX IF NOT EXISTS IX_Contrato_R_VeiId ON Contrato(R_VeiId)";
+                    idxCtr.ExecuteNonQuery();
+                }
 
                 // Tabela de documentos do veiculo (CRLV, laudo, transferencia, etc)
                 CreateTableIfNotExists(connection, "VeiculoDocumento",

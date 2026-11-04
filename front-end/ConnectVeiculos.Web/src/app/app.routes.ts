@@ -69,6 +69,11 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/legal/exclusao-de-dados/exclusao-de-dados.component').then(m => m.ExclusaoDeDadosComponent)
   },
   {
+    // Link publico que o cliente abre para assinar um contrato (sem login).
+    path: 'assinar/:tenantSlug/:token',
+    loadComponent: () => import('./pages/assinar/assinar.component').then(m => m.AssinarComponent)
+  },
+  {
     path: '',
     component: MainLayoutComponent,
     canActivate: [authGuard],
@@ -136,6 +141,12 @@ export const routes: Routes = [
       {
         path: 'documentos',
         loadComponent: () => import('./pages/documentos-veiculo/documentos-veiculo.component').then(m => m.DocumentosVeiculoComponent)
+      },
+      {
+        path: 'contratos',
+        loadComponent: () => import('./pages/contratos/contratos.component').then(m => m.ContratosComponent),
+        canActivate: [roleGuard],
+        data: { roles: ['Administrador', 'Gerente', 'Vendedor'] }
       },
       {
         path: 'integracoes',

@@ -1,0 +1,155 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1><span class="material-icons">draw</span> Contratos</h1>
+      <p>Documentos dos veículos com assinatura eletrônica. Para gerar um, use o botão <span class="material-icons ico-texto">draw</span> na lista de veículos.</p>
+    </div>
+  </div>
+
+  <div class="abas">
+    <button [class.ativa]="aba === 'documentos'" (click)="trocarAba('documentos')"><span class="material-icons">folder_open</span> Documentos</button>
+    <button [class.ativa]="aba === 'modelos'" (click)="trocarAba('modelos')"><span class="material-icons">description</span> Modelos</button>
+  </div>
+
+  @if (aba === 'documentos') {
+    <div class="filtros">
+      <div class="campo busca form-group">
+        <label>Buscar</label>
+        <input type="text" [(ngModel)]="busca" (keyup.enter)="buscar()" placeholder="Cliente, CPF, placa ou documento" />
+      </div>
+      <div class="campo form-group">
+        <label>Situação</label>
+        <select [(ngModel)]="status" (ngModelChange)="buscar()">
+          <option value="">Todas</option>
+          <option value="AGUARDANDO">Aguardando assinatura</option>
+          <option value="ASSINADO">Assinados</option>
+          <option value="CANCELADO">Cancelados</option>
+        </select>
+      </div>
+      <div class="campo botoes">
+        <button class="btn-secondary" (click)="buscar()"><span class="material-icons">search</span> Filtrar</button>
+      </div>
+    </div>
+
+    @if (carregando) {
+      <div class="loading">Carregando...</div>
+    } @else {
+      <div class="table-container">
+        <table>
+          <thead><tr><th>Nº</th><th>Documento</th><th>Veículo</th><th>Cliente</th><th>Gerado em</th><th>Situação</th><th></th></tr></thead>
+          <tbody>
+            @for (c of contratos; track c.id) {
+              <tr>
+                <td data-label="Nº">{{ c.id }}</td>
+                <td data-label="Documento"><strong>{{ c.titulo }}</strong></td>
+                <td data-label="Veículo">{{ c.veiculo || 'Veículo excluído' }}<br /><span class="text-muted">{{ c.placa }}</span></td>
+                <td data-label="Cliente">{{ cliente(c) }}</td>
+                <td data-label="Gerado em" class="nowrap">{{ c.criadoEm | date:'dd/MM/yyyy HH:mm' }}</td>
+                <td data-label="Situação">
+                  <span class="chip" [attr.data-status]="c.status">{{ rotuloStatus[c.status] }}</span>
+                  @if (c.status === 'AGUARDANDO') { <br /><span class="text-muted">{{ pendentes(c) }}</span> }
+                </td>
+                <td class="actions">
+                  <button class="btn-icon" (click)="abrir(c)" [disabled]="abrindo === c.id" title="Abrir"><span class="material-icons">open_in_new</span></button>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="7" class="empty">Nenhum documento ainda. Gere pelo botão <span class="material-icons ico-texto">draw</span> do veículo.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  @if (aba === 'modelos') {
+    @if (!edicao) {
+      <div class="modelos-topo">
+        <p class="dica">Modelos prontos para começar: revise o texto com o advogado ou o contador da loja.</p>
+        @if (gestao) { <button class="btn-primary" (click)="novoModelo()"><span class="material-icons">add</span> Novo modelo</button> }
+      </div>
+      <div class="modelos-grid">
+        @for (m of modelos; track m.id) {
+          <div class="modelo-card" [class.inativo]="!m.ativo">
+            <div class="modelo-topo">
+              <strong>{{ m.nome }}</strong>
+              <span class="chip">{{ nomeTipo(m.tipo) }}</span>
+            </div>
+            <small>{{ m.descricao }}</small>
+            @if (!m.ativo) { <small class="text-muted">Desativado</small> }
+            <div class="modelo-acoes">
+              @if (gestao) {
+                <button class="btn-icon" (click)="editar(m)" title="Editar"><span class="material-icons">edit</span></button>
+                <button class="btn-icon" (click)="novoModelo(m)" title="Duplicar"><span class="material-icons">content_copy</span></button>
+                @if (m.ativo) { <button class="btn-icon delete" (click)="excluir(m)" title="{{ m.padrao ? 'Desativar' : 'Excluir' }}"><span class="material-icons">delete</span></button> }
+              } @else {
+                <button class="btn-icon" (click)="editar(m)" title="Ver"><span class="material-icons">visibility</span></button>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="editor-card">
+        <div class="editor-campos">
+          <div class="form-group"><label>Nome do modelo</label><input type="text" [(ngModel)]="edicao.nome" [disabled]="!gestao" /></div>
+          <div class="form-group">
+            <label>Tipo</label>
+            <select [(ngModel)]="edicao.tipo" [disabled]="!gestao">
+              @for (t of tipos; track t.valor) { <option [value]="t.valor">{{ t.nome }}</option> }
+            </select>
+            <small class="dica">Define quem é o cliente: comprador na venda, vendedor na compra, consignante na consignação.</small>
+          </div>
+          <div class="form-group largo"><label>Descrição</label><input type="text" [(ngModel)]="edicao.descricao" [disabled]="!gestao" /></div>
+          @if (edicao.id) {
+            <label class="ativo"><input type="checkbox" [(ngModel)]="edicao.ativo" [disabled]="!gestao" /> Ativo (aparece na hora de gerar)</label>
+          }
+        </div>
+
+        <div class="editor">
+          <div class="editor-texto">
+            <label>Texto <small>("# " título · "## " seção · linha em branco separa parágrafos · **negrito**)</small></label>
+            <textarea #editor [(ngModel)]="edicao.conteudo" rows="22" spellcheck="true" [disabled]="!gestao"></textarea>
+          </div>
+          <aside class="variaveis">
+            <strong>Variáveis</strong>
+            <small>Clique para inserir onde está o cursor.</small>
+            @for (g of gruposVariaveis; track g.grupo) {
+              <span class="grupo">{{ g.grupo }}</span>
+              @for (v of g.itens; track v.chave) {
+                <button type="button" class="var" (click)="inserir(v)" [title]="v.descricao" [disabled]="!gestao">{{ v.chave === 'extra.nome_do_campo' ? '+ campo livre' : v.chave }}</button>
+              }
+            }
+          </aside>
+        </div>
+
+        <div class="previa-barra">
+          <div class="form-group">
+            <label>Prévia com os dados de</label>
+            <select [(ngModel)]="veiculoPrevia">
+              <option [ngValue]="null">Dados de exemplo</option>
+              @for (v of veiculos; track v.veiId) { <option [ngValue]="v.veiId">{{ v.veiMarca }} {{ v.veiModelo }} {{ v.veiAno }} · {{ v.veiPlaca }}</option> }
+            </select>
+          </div>
+          <button class="btn-secondary" (click)="verPrevia()"><span class="material-icons">visibility</span> Ver prévia</button>
+        </div>
+
+        <div class="acoes">
+          @if (gestao) { <button class="btn-primary" (click)="salvar()" [disabled]="salvando"><span class="material-icons">save</span> {{ salvando ? 'Salvando...' : 'Salvar' }}</button> }
+          <button class="btn-secondary" (click)="edicao = null">Voltar</button>
+        </div>
+
+        @if (previa) {
+          @if (previa.faltando.length) {
+            <p class="aviso">Sem valor nesta prévia: {{ previa.faltando.join(', ') }}. No documento de verdade, quem gera preenche.</p>
+          }
+          <app-contrato-texto [blocos]="previa.blocos"></app-contrato-texto>
+        }
+      </div>
+    }
+  }
+</div>
+
+@if (veiculoAberto) {
+  <app-contrato-veiculo [veiculo]="veiculoAberto" [contratoId]="contratoAberto" (fechar)="fecharVeiculo()"></app-contrato-veiculo>
+}

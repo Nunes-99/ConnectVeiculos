@@ -172,6 +172,7 @@ export class SidebarComponent implements AfterViewInit, OnDestroy {
         { label: 'Lojas', icon: 'store', route: '/lojas', roles: GESTAO },
         { label: 'Veículos', icon: 'directions_car', route: '/veiculos' },
         { label: 'Documentos', icon: 'description', route: '/documentos' },
+        { label: 'Contratos', icon: 'draw', route: '/contratos', roles: ['Administrador', 'Gerente', 'Vendedor'] },
         { label: 'Vendas', icon: 'point_of_sale', route: '/vendas' },
         // { label: 'Financiamento', icon: 'account_balance', route: '/financiamentos' }, // TODO: ativar quando tiver parceria com bancos (BV, Pan, etc)
       ]

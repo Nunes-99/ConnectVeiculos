@@ -27,6 +27,7 @@ using ConnectVeiculos.Core.Entities.Negociacoes;
 using ConnectVeiculos.Core.Entities.Publicacoes;
 using ConnectVeiculos.Core.Entities.PushSubscriptions;
 using ConnectVeiculos.Core.Entities.Integracoes;
+using ConnectVeiculos.Core.Entities.Contratos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using System.Globalization;
@@ -64,6 +65,9 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
         public DbSet<VeiculoPublicacao> VeiculoPublicacoes { get; set; }
         public DbSet<ConfiguracaoSistema> Configuracoes { get; set; }
         public DbSet<VeiculoDocumento> VeiculosDocumentos { get; set; }
+        public DbSet<ModeloContrato> ModelosContrato { get; set; }
+        public DbSet<Contrato> Contratos { get; set; }
+        public DbSet<ContratoSignatario> ContratosSignatarios { get; set; }
         public DbSet<PushSubscription> PushSubscriptions { get; set; }
         public DbSet<IntegracaoMercadoLivre> IntegracoesMercadoLivre { get; set; }
         public DbSet<IntegracaoLog> IntegracoesLogs { get; set; }
@@ -384,6 +388,35 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
 
             // Favorito
             modelBuilder.Entity<Favorito>(entity => { entity.ToTable("Favorito"); entity.HasKey(e => e.FavId); entity.Property(e => e.FavId).ValueGeneratedOnAdd(); entity.Property(e => e.FavEmail).HasMaxLength(255).IsRequired(); entity.Property(e => e.FavNome).HasMaxLength(200); entity.Property(e => e.FavTelefone).HasMaxLength(20); entity.HasIndex(e => new { e.FavEmail, e.R_VeiId }).IsUnique(); });
+
+            // Contratos e assinatura eletronica
+            modelBuilder.Entity<ModeloContrato>(entity =>
+            {
+                entity.ToTable("ModeloContrato");
+                entity.HasKey(e => e.MdcId);
+                entity.Property(e => e.MdcId).ValueGeneratedOnAdd();
+                entity.Property(e => e.MdcNome).HasMaxLength(150).IsRequired();
+                entity.Property(e => e.MdcTipo).HasMaxLength(20).IsRequired();
+                entity.Property(e => e.MdcConteudo).IsRequired();
+            });
+            modelBuilder.Entity<Contrato>(entity =>
+            {
+                entity.ToTable("Contrato");
+                entity.HasKey(e => e.CtrId);
+                entity.Property(e => e.CtrId).ValueGeneratedOnAdd();
+                entity.Property(e => e.CtrStatus).HasMaxLength(20).IsRequired();
+                entity.HasIndex(e => e.R_VeiId);
+                entity.Ignore(e => e.Aberto);
+                entity.HasMany(e => e.Signatarios).WithOne().HasForeignKey(s => s.R_CtrId).OnDelete(DeleteBehavior.Cascade);
+            });
+            modelBuilder.Entity<ContratoSignatario>(entity =>
+            {
+                entity.ToTable("ContratoSignatario");
+                entity.HasKey(e => e.CsgId);
+                entity.Property(e => e.CsgId).ValueGeneratedOnAdd();
+                entity.HasIndex(e => e.CsgTokenHash).IsUnique();
+                entity.Ignore(e => e.Assinou);
+            });
 
             // VeiculoDocumento
             modelBuilder.Entity<VeiculoDocumento>(entity =>

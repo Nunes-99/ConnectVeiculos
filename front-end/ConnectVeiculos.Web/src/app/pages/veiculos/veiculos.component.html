@@ -141,6 +141,9 @@
                 <button class="btn-icon" (click)="abrirConsultaDetran(veiculo)" title="Consultar débitos no Detran" [disabled]="!veiculo.veiPlaca">
                   <span class="material-icons">gavel</span>
                 </button>
+                <button class="btn-icon" (click)="contratoVeiculo = veiculo" title="Contratos e assinatura">
+                  <span class="material-icons">draw</span>
+                </button>
                 <button class="btn-icon" (click)="openModal(veiculo)" title="Editar">
                   <span class="material-icons">edit</span>
                 </button>
@@ -715,6 +718,10 @@
       </div>
     </div>
   </div>
+}
+
+@if (contratoVeiculo) {
+  <app-contrato-veiculo [veiculo]="contratoVeiculo" (fechar)="contratoVeiculo = null"></app-contrato-veiculo>
 }
 
 <!-- Modal: Consultar Detran -->

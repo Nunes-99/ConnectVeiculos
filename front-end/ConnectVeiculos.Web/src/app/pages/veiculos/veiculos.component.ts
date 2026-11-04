@@ -9,12 +9,13 @@ import { MaskDirective, CurrencyMaskDirective, SalvandoDirective } from '../../s
 import { PaginationComponent, ConfirmModalComponent } from '../../shared/components';
 import { ScannerDocumentoComponent, CrlvExtraido } from '../../shared/components/scanner-documento/scanner-documento.component';
 import { getDetranLink, DetranLink } from '../../shared/utils/detran-links.util';
+import { ContratoVeiculoComponent } from '../../shared/components/contratos/contrato-veiculo.component';
 import * as XLSX from 'xlsx';
 
 @Component({
   selector: 'app-veiculos',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaskDirective, CurrencyMaskDirective, PaginationComponent, ConfirmModalComponent, ScannerDocumentoComponent, SalvandoDirective],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaskDirective, CurrencyMaskDirective, PaginationComponent, ConfirmModalComponent, ScannerDocumentoComponent, SalvandoDirective, ContratoVeiculoComponent],
   templateUrl: './veiculos.component.html',
   styleUrl: './veiculos.component.scss'
 })
@@ -160,6 +161,9 @@ export class VeiculosComponent implements OnInit {
   // Consulta Detran
   showDetranModal = false;
   detranVeiculo: Veiculo | null = null;
+
+  // Contratos e assinatura eletronica do veiculo.
+  contratoVeiculo: Veiculo | null = null;
   detranLink: DetranLink = { uf: '', nome: '', url: '' };
 
   // Paginacao
