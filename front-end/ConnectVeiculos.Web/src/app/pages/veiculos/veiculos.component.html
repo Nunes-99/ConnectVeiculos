@@ -149,6 +149,9 @@
                     <span class="material-icons">receipt_long</span>
                   </button>
                 }
+                <button class="btn-icon" (click)="contratoVeiculo = veiculo" title="Contratos e assinatura">
+                  <span class="material-icons">draw</span>
+                </button>
                 <button class="btn-icon" (click)="openModal(veiculo)" title="Editar">
                   <span class="material-icons">edit</span>
                 </button>
@@ -731,6 +734,10 @@
 
 @if (renaveVeiculo) {
   <app-renave-veiculo [veiculo]="renaveVeiculo" (fechar)="renaveVeiculo = null"></app-renave-veiculo>
+}
+
+@if (contratoVeiculo) {
+  <app-contrato-veiculo [veiculo]="contratoVeiculo" (fechar)="contratoVeiculo = null"></app-contrato-veiculo>
 }
 
 <!-- Modal: Consultar Detran -->

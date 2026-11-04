@@ -11,12 +11,13 @@ import { MaskDirective, CurrencyMaskDirective, SalvandoDirective } from '../../s
 import { PaginationComponent, ConfirmModalComponent } from '../../shared/components';
 import { ScannerDocumentoComponent, CrlvExtraido } from '../../shared/components/scanner-documento/scanner-documento.component';
 import { getDetranLink, DetranLink } from '../../shared/utils/detran-links.util';
+import { ContratoVeiculoComponent } from '../../shared/components/contratos/contrato-veiculo.component';
 import * as XLSX from 'xlsx';
 
 @Component({
   selector: 'app-veiculos',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaskDirective, CurrencyMaskDirective, PaginationComponent, ConfirmModalComponent, ScannerDocumentoComponent, SalvandoDirective, RenaveVeiculoComponent, NfeVeiculoComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaskDirective, CurrencyMaskDirective, PaginationComponent, ConfirmModalComponent, ScannerDocumentoComponent, SalvandoDirective, RenaveVeiculoComponent, NfeVeiculoComponent, ContratoVeiculoComponent],
   templateUrl: './veiculos.component.html',
   styleUrl: './veiculos.component.scss'
 })
@@ -168,6 +169,9 @@ export class VeiculosComponent implements OnInit {
   renaveVeiculo: Veiculo | null = null;
   nfeVeiculo: Veiculo | null = null;
   get podeRenave(): boolean { return this.auth.isGerente(); }
+
+  // Contratos e assinatura eletronica do veiculo.
+  contratoVeiculo: Veiculo | null = null;
   detranLink: DetranLink = { uf: '', nome: '', url: '' };
 
   // Paginacao

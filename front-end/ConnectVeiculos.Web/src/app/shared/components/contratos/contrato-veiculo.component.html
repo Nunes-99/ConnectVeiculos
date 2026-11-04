@@ -1,0 +1,184 @@
+<div class="modal-overlay">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h2><span class="material-icons">draw</span> Contratos · {{ veiculo.veiPlaca || veiculo.veiModelo }}</h2>
+      <button class="btn-close" (click)="fechar.emit()" title="Fechar"><span class="material-icons">close</span></button>
+    </div>
+
+    <div class="modal-body">
+      <p class="ctr-veiculo">{{ titulo }}</p>
+
+      <!-- ===================== Lista ===================== -->
+      @if (tela === 'lista') {
+        @if (carregando) {
+          <p class="ctr-dica">Carregando...</p>
+        } @else {
+          @for (c of contratos; track c.id) {
+            <button class="ctr-item" (click)="abrir(c)">
+              <span class="material-icons">description</span>
+              <div>
+                <strong>{{ c.titulo }}</strong>
+                <small>Nº {{ c.id }} · {{ c.criadoEm | date:'dd/MM/yyyy HH:mm' }}
+                  @for (s of c.signatarios; track s.id) { · {{ s.papelRotulo }}: {{ s.status === 'ASSINADO' ? 'assinou' : 'pendente' }} }
+                </small>
+              </div>
+              <span class="ctr-chip" [attr.data-status]="c.status">{{ rotuloStatus[c.status] }}</span>
+            </button>
+          } @empty {
+            <p class="ctr-dica">Nenhum documento deste veículo ainda.</p>
+          }
+          <div class="ctr-acoes">
+            <button class="btn-primary" (click)="novo()"><span class="material-icons">add</span> Novo documento</button>
+          </div>
+        }
+      }
+
+      <!-- ===================== Novo ===================== -->
+      @if (tela === 'novo') {
+        <div class="form-group">
+          <label>Modelo</label>
+          <select [ngModel]="modeloId" (ngModelChange)="escolherModelo($event)">
+            <option [ngValue]="null">Escolha o documento...</option>
+            @for (m of modelos; track m.id) { <option [ngValue]="m.id">{{ m.nome }}</option> }
+          </select>
+        </div>
+
+        @if (sugestao) {
+          @if (sugestao.origem) {
+            <div class="ctr-ok"><span class="material-icons">auto_awesome</span>
+              <div>Dados do {{ sugestao.papelCliente.toLowerCase() }} preenchidos {{ sugestao.origem === 'venda' ? 'pela venda registrada' : 'pelo dono cadastrado no veículo' }}. Confira antes de gerar.</div>
+            </div>
+          }
+
+          <h4>{{ sugestao.papelCliente }}</h4>
+          <div class="ctr-grid">
+            <div class="form-group largo"><label>Nome completo</label><input type="text" [(ngModel)]="parte.nome" /></div>
+            <div class="form-group"><label>CPF/CNPJ</label><input type="text" [(ngModel)]="parte.documento" inputmode="numeric" /></div>
+            <div class="form-group"><label>Telefone (WhatsApp)</label><input type="tel" [(ngModel)]="parte.telefone" /></div>
+            <div class="form-group"><label>E-mail</label><input type="email" [(ngModel)]="parte.email" /><small class="ctr-dica">Recebe o código para assinar pelo link.</small></div>
+            <div class="form-group largo"><label>Endereço</label><input type="text" [(ngModel)]="parte.endereco" /></div>
+          </div>
+
+          <h4>Negócio</h4>
+          <div class="ctr-grid">
+            <div class="form-group"><label>Valor (R$)</label><input type="number" [(ngModel)]="valor" min="0" step="0.01" /></div>
+            <div class="form-group largo"><label>Forma de pagamento</label><input type="text" [(ngModel)]="formaPagamento" placeholder="Ex.: Pix à vista; entrada + financiamento" /></div>
+            @for (e of sugestao.extras; track e.chave) {
+              <div class="form-group"><label>{{ e.rotulo }}</label><input type="text" [(ngModel)]="extras[e.chave]" /></div>
+            }
+          </div>
+
+          <div class="ctr-acoes">
+            <button class="btn-secondary" (click)="verPrevia()" [disabled]="ocupado"><span class="material-icons">visibility</span> Ver prévia</button>
+            <button class="btn-primary" (click)="gerar()" [disabled]="ocupado || !parte.nome"><span class="material-icons">check</span> Gerar documento</button>
+            <button class="btn-secondary" (click)="tela = 'lista'">Voltar</button>
+          </div>
+
+          @if (preview) {
+            @if (preview.faltando.length) {
+              <div class="ctr-aviso"><span class="material-icons">edit_note</span>
+                <div><strong>Ficaram em branco:</strong> {{ preview.faltando.map(rotuloFaltando).join(', ') }}. Dá para gerar assim (fica uma linha para preencher), mas o ideal é completar acima.</div>
+              </div>
+            }
+            <app-contrato-texto [blocos]="preview.blocos"></app-contrato-texto>
+          }
+        } @else if (!modeloId) {
+          <p class="ctr-dica">Os modelos ficam em <strong>Contratos → Modelos</strong>, onde dá para editar o texto.</p>
+        }
+      }
+
+      <!-- ===================== Detalhe ===================== -->
+      @if (tela === 'detalhe' && contrato) {
+        <div class="ctr-cabecalho">
+          <div>
+            <strong>{{ contrato.titulo }}</strong>
+            <small>Nº {{ contrato.id }} · gerado em {{ contrato.criadoEm | date:'dd/MM/yyyy HH:mm' }}</small>
+          </div>
+          <span class="ctr-chip" [attr.data-status]="contrato.status">{{ rotuloStatus[contrato.status] }}</span>
+        </div>
+
+        @for (s of contrato.signatarios; track s.id) {
+          <div class="ctr-sig" [class.assinou]="s.status === 'ASSINADO'">
+            <span class="material-icons">{{ s.status === 'ASSINADO' ? 'verified' : 'schedule' }}</span>
+            <div class="ctr-sig-info">
+              <strong>{{ s.papelRotulo }}: {{ s.nome }}</strong>
+              <small>
+                @if (s.documento) { {{ s.documento }} · }
+                @if (s.status === 'ASSINADO') { assinou em {{ s.assinadoEm | date:'dd/MM/yyyy HH:mm' }} {{ rotuloMetodo(s.metodo) }} }
+                @else if (s.visualizadoEm) { abriu o link em {{ s.visualizadoEm | date:'dd/MM/yyyy HH:mm' }}, ainda não assinou }
+                @else { aguardando }
+              </small>
+
+              @if (contrato.status === 'AGUARDANDO' && s.status !== 'ASSINADO') {
+                @if (s.papel === 'CLIENTE') {
+                  @if (s.token) {
+                    <div class="ctr-link">
+                      <input type="text" [value]="link(s)" readonly (focus)="$any($event.target).select()" />
+                    </div>
+                  }
+                  <div class="ctr-acoes">
+                    <button class="btn-secondary" (click)="copiarLink(s)" [disabled]="!s.token"><span class="material-icons">content_copy</span> Copiar link</button>
+                    <button class="btn-secondary" (click)="whatsapp(s)" [disabled]="!s.token"><span class="material-icons">chat</span> WhatsApp</button>
+                    @if (s.email) {
+                      <button class="btn-secondary" (click)="enviarEmail()" [disabled]="ocupado"><span class="material-icons">mail</span> Enviar por e-mail</button>
+                    }
+                    <button class="btn-secondary" (click)="colher('cliente')"><span class="material-icons">touch_app</span> Assinar aqui na loja</button>
+                  </div>
+                  @if (!s.email) {
+                    <small class="ctr-dica">Sem e-mail, o cliente não recebe o código para assinar pelo link. Use "Assinar aqui na loja" ou gere o documento de novo com o e-mail.</small>
+                  }
+                } @else if (gestao) {
+                  <div class="ctr-acoes">
+                    <button class="btn-primary" (click)="colher('loja')"><span class="material-icons">draw</span> Assinar pela loja</button>
+                  </div>
+                } @else {
+                  <small class="ctr-dica">Quem assina pela loja é o gerente ou o administrador.</small>
+                }
+              }
+            </div>
+          </div>
+        }
+
+        @if (coleta) {
+          <div class="ctr-coleta">
+            <h4>{{ coleta === 'loja' ? 'Assinatura pela loja' : 'Assinatura do ' + (cliente?.papelRotulo || 'cliente').toLowerCase() + ' na loja' }}</h4>
+            <div class="ctr-grid">
+              <div class="form-group largo"><label>Nome completo</label><input type="text" [(ngModel)]="assinaNome" /></div>
+              @if (coleta === 'cliente') {
+                <div class="form-group"><label>CPF/CNPJ</label><input type="text" [(ngModel)]="assinaDocumento" inputmode="numeric" /></div>
+              }
+            </div>
+            <app-assinatura-pad (mudou)="assinaImagem = $event"></app-assinatura-pad>
+            @if (coleta === 'cliente') {
+              <label class="ctr-aceite">
+                <input type="checkbox" [(ngModel)]="assinaAceite" />
+                O cliente leu o documento e concorda com ele. Confiro que é a pessoa do documento.
+              </label>
+            }
+            <div class="ctr-acoes">
+              <button class="btn-primary" (click)="confirmarAssinatura()"
+                [disabled]="ocupado || !assinaImagem || !assinaNome || (coleta === 'cliente' && !assinaAceite)">
+                <span class="material-icons">check</span> Confirmar assinatura
+              </button>
+              <button class="btn-secondary" (click)="coleta = null">Cancelar</button>
+            </div>
+          </div>
+        }
+
+        <div class="ctr-acoes ctr-rodape">
+          <button class="btn-secondary" (click)="verTexto()"><span class="material-icons">article</span> {{ mostrarTexto ? 'Esconder texto' : 'Ver texto' }}</button>
+          <button class="btn-secondary" (click)="baixarPdf()"><span class="material-icons">picture_as_pdf</span> {{ contrato.status === 'ASSINADO' ? 'PDF assinado' : 'PDF' }}</button>
+          @if (gestao && contrato.status === 'AGUARDANDO') {
+            <button class="btn-secondary" (click)="cancelar()" [disabled]="ocupado"><span class="material-icons">block</span> Cancelar documento</button>
+          }
+          <button class="btn-secondary" (click)="voltar()"><span class="material-icons">arrow_back</span> Voltar</button>
+        </div>
+
+        @if (mostrarTexto && texto) {
+          <app-contrato-texto [blocos]="texto.blocos"></app-contrato-texto>
+          <small class="ctr-dica">SHA-256 do texto: {{ contrato.hash }}</small>
+        }
+      }
+    </div>
+  </div>
+</div>
