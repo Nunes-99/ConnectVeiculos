@@ -33,9 +33,11 @@
       </div>
     }
 
-    <div class="filtro">
-      <span class="material-icons">search</span>
-      <input type="text" [(ngModel)]="busca" placeholder="Buscar por nome, CPF ou veículo" />
+    <div class="search-bar">
+      <div class="search-input">
+        <span class="material-icons">search</span>
+        <input type="text" [(ngModel)]="busca" placeholder="Buscar por nome, CPF ou veículo" />
+      </div>
     </div>
 
     @if (carregando) {

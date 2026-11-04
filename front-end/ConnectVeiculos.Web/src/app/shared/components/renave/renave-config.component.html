@@ -49,9 +49,27 @@
     </button>
   </div>
 
-  <app-certificado-a1 (alterado)="carregar()"
-    [dica]="emProducao ? 'Obrigatório em produção: é com ele que o Renave reconhece a loja.' : 'Não precisa em testes: o Serpro usa uma loja fictícia.'">
-  </app-certificado-a1>
+  <!-- O certificado e o mesmo da NF-e; quem envia e troca e a tela Notas fiscais. -->
+  <div class="rnv-bloco">
+    <h4><span class="material-icons">verified_user</span> Certificado digital A1 (e-CNPJ)</h4>
+    @if (config.certificadoCadastrado) {
+      <div class="rnv-cert" [class.rnv-erro]="!certificadoValido">
+        <span class="material-icons">{{ certificadoValido ? 'check_circle' : 'error' }}</span>
+        <div>
+          <strong>{{ config.certificadoTitular || 'Certificado guardado' }}</strong>
+          <small>{{ certificadoValido ? 'Válido até' : 'Venceu em' }} {{ config.certificadoValidade | date:'dd/MM/yyyy' }}</small>
+        </div>
+      </div>
+    } @else {
+      <small class="rnv-dica">
+        {{ emProducao ? 'Obrigatório em produção: é com ele que o Renave reconhece a loja.' : 'Não precisa em testes: o Serpro usa uma loja fictícia.' }}
+      </small>
+    }
+    <small class="rnv-dica">
+      É o mesmo certificado da NF-e. Para enviar ou trocar, vá em
+      <a routerLink="/notas-fiscais" [queryParams]="{ aba: 'config' }">Notas fiscais → Configuração</a>.
+    </small>
+  </div>
 
   <div class="rnv-acoes">
     <button class="btn-secondary" (click)="testar()" [disabled]="testando">

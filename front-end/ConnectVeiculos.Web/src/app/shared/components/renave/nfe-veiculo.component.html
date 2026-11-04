@@ -11,7 +11,7 @@
       @if (config && !config.pronto) {
         <div class="rnv-alerta">
           <span class="material-icons">settings</span>
-          <div><strong>Configure a NF-e em Integrações.</strong> <small>Falta: {{ config.pendencias.join(' · ') }}</small></div>
+          <div><strong>Configure a NF-e em Notas fiscais → Configuração.</strong> <small>Falta: {{ config.pendencias.join(' · ') }}</small></div>
         </div>
       }
       @if (config?.ambiente !== 'producao') {

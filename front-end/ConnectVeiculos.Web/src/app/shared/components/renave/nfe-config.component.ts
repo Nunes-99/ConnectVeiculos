@@ -7,7 +7,7 @@ import { NfeConfig, NfeInutilizacao, NfeMunicipio, NfeService, baixarArquivo, er
 import { CertificadoA1Component } from './certificado-a1.component';
 
 /**
- * Corpo do cartao "NF-e" em Integracoes: dados da loja (emitente), numeracao
+ * Aba Configuracao da tela Notas fiscais: dados da loja (emitente), numeracao
  * e as regras fiscais da compra e da venda de veiculo. As regras vem com um
  * padrao, mas quem decide e' o contador da loja.
  */

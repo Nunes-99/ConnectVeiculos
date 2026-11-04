@@ -1,9 +1,9 @@
 import { Component, EventEmitter, OnInit, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../core/services/toast.service';
 import { RenaveConexao, RenaveConfig, RenaveService, RenaveVeiculoTeste, erroRenave } from '../../../core/services/renave.service';
-import { CertificadoA1Component } from './certificado-a1.component';
 
 /**
  * Corpo do cartao "Renave" em Integracoes: ambiente, operador responsavel,
@@ -13,7 +13,7 @@ import { CertificadoA1Component } from './certificado-a1.component';
 @Component({
   selector: 'app-renave-config',
   standalone: true,
-  imports: [CommonModule, FormsModule, CertificadoA1Component],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './renave-config.component.html',
   styleUrl: './renave.scss'
 })
@@ -57,6 +57,11 @@ export class RenaveConfigComponent implements OnInit {
     };
     this.mostrarAvancado = this.mostrarAvancado || !!c.cnpjEstabelecimento;
     this.prontoChange.emit(c.pronto);
+  }
+
+  get certificadoValido(): boolean {
+    const v = this.config?.certificadoValidade;
+    return !!v && new Date(v).getTime() > Date.now();
   }
 
   get emProducao(): boolean {

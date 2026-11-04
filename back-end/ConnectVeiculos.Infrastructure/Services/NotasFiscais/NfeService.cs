@@ -358,7 +358,7 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
         {
             var cfg = await ObterConfigAsync(ct);
             if (!cfg.Pronto)
-                throw new NfeException("Complete a configuração da NF-e em Integrações: " + string.Join(", ", cfg.Pendencias) + ".");
+                throw new NfeException("Complete a configuração da NF-e em Notas fiscais → Configuração: " + string.Join(", ", cfg.Pendencias) + ".");
             var tipo = Tipo(input.Tipo);
             Validar(input);
             _ = await _veiculos.GetByIdAsync(veiculoId) ?? throw new NfeException("Veículo não encontrado.");
@@ -384,7 +384,7 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
 
             var cfg = await ObterConfigAsync(ct);
             if (!cfg.Pronto)
-                throw new NfeException("Complete a configuração da NF-e em Integrações: " + string.Join(", ", cfg.Pendencias) + ".");
+                throw new NfeException("Complete a configuração da NF-e em Notas fiscais → Configuração: " + string.Join(", ", cfg.Pendencias) + ".");
             return await EnviarAsync(nota, dados, cfg, ct);
         }
 
@@ -537,7 +537,7 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
         {
             var cfg = await ObterConfigAsync(ct);
             if (!cfg.Pronto)
-                throw new NfeException("Complete a configuração da NF-e em Integrações: " + string.Join(", ", cfg.Pendencias) + ".");
+                throw new NfeException("Complete a configuração da NF-e em Notas fiscais → Configuração: " + string.Join(", ", cfg.Pendencias) + ".");
             if (input.Serie is < 0 or > 999) throw new NfeException("Série deve ficar entre 0 e 999.");
             if (input.NumeroInicial < 1 || input.NumeroFinal < input.NumeroInicial || input.NumeroFinal > 999_999_999)
                 throw new NfeException("Faixa de números inválida.");
@@ -671,7 +671,7 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
             try
             {
                 return await _certificado.CarregarAsync(ct)
-                    ?? throw new NfeException("Envie o certificado A1 da loja em Integrações.");
+                    ?? throw new NfeException("Envie o certificado A1 da loja em Notas fiscais → Configuração.");
             }
             catch (CertificadoDigitalException ex)
             {

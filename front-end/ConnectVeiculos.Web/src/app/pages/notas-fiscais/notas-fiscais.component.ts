@@ -1,4 +1,5 @@
 import { Component, OnInit, inject } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ToastService, VeiculoService } from '../../core/services';
@@ -26,6 +27,7 @@ export class NotasFiscaisComponent implements OnInit {
   private nfe = inject(NfeService);
   private veiculoService = inject(VeiculoService);
   private toast = inject(ToastService);
+  private route = inject(ActivatedRoute);
 
   readonly limite = LIMITE_LISTA;
 
@@ -39,6 +41,8 @@ export class NotasFiscaisComponent implements OnInit {
   abrindo: number | null = null;
 
   ngOnInit(): void {
+    // ?aba=config: vindo do Renave, que manda enviar o certificado aqui.
+    if (this.route.snapshot.queryParamMap.get('aba') === 'config') this.aba = 'config';
     this.carregarConfig();
     this.buscar();
   }

@@ -70,6 +70,7 @@ h4 { margin: 1rem 0 0.5rem; font-size: 0.95rem; color: var(--text-primary); }
   gap: 0 1rem;
   align-items: end;
   .form-group { margin-bottom: 0; }
+  .form-group input, .form-group label.rnv-arquivo { height: 44px; }
   > button { height: 44px; white-space: nowrap; }
   @media (max-width: 640px) {
     grid-template-columns: 1fr;
@@ -84,7 +85,8 @@ h4 { margin: 1rem 0 0.5rem; font-size: 0.95rem; color: var(--text-primary); }
   align-items: center;
   gap: 0.5rem;
   margin: 0;
-  padding: 11px 14px;
+  padding: 0 14px;
+  box-sizing: border-box;
   border: 1px dashed var(--border-secondary);
   border-radius: 8px;
   background: var(--bg-primary);

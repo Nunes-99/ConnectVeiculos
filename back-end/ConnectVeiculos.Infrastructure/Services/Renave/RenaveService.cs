@@ -461,9 +461,9 @@ namespace ConnectVeiculos.Infrastructure.Services.Renave
             if (config.Ambiente == RenaveAmbiente.Producao)
             {
                 if (!config.CertificadoCadastrado)
-                    throw new RenaveException("Envie o certificado A1 da loja em Integrações → Renave para operar em produção.");
+                    throw new RenaveException("Envie o certificado A1 da loja em Notas fiscais → Configuração para operar o Renave em produção.");
                 if (config.CertificadoValidade <= DateTime.UtcNow)
-                    throw new RenaveException("O certificado A1 da loja venceu. Envie o certificado novo em Integrações → Renave.");
+                    throw new RenaveException("O certificado A1 da loja venceu. Envie o certificado novo em Notas fiscais → Configuração.");
             }
 
             var baseUrl = (config.Ambiente == RenaveAmbiente.Producao ? _settings.UrlProducao : _settings.UrlHomologacao).TrimEnd('/');
