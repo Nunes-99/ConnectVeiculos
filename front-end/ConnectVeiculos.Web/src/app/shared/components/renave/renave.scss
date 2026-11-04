@@ -11,6 +11,7 @@
 }
 
 .rnv-dica { display: block; margin-top: 0.35rem; }
+.rnv-dica a { color: var(--primary, #1a237e); text-decoration: underline; cursor: pointer; }
 
 .rnv-grid {
   display: grid;
