@@ -655,12 +655,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     this.alertasEstoque = disponiveis
       .filter(v => {
-        if (!v.veiDtEntrada) return false;
-        const dtEntrada = new Date(v.veiDtEntrada);
-        return dtEntrada <= limiar30Dias;
+        const dtEntrada = this.dataEntrada(v);
+        return !!dtEntrada && dtEntrada <= limiar30Dias;
       })
       .map(v => {
-        const dtEntrada = new Date(v.veiDtEntrada);
+        const dtEntrada = this.dataEntrada(v)!;
         const diffMs = agora.getTime() - dtEntrada.getTime();
         const diasEmEstoque = Math.floor(diffMs / (1000 * 60 * 60 * 24));
         return {
@@ -679,6 +678,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     this.veiculosParados30Dias = this.alertasEstoque.length;
   }
 
+  // Veiculo sem data de entrada chega como 0001-01-01 (DateTime vazio do .NET):
+  // contar a partir dela dava "739868 dias" no tempo medio e no estoque parado.
+  private dataEntrada(v: Veiculo): Date | null {
+    if (!v.veiDtEntrada) return null;
+    const d = new Date(v.veiDtEntrada);
+    return isNaN(d.getTime()) || d.getFullYear() < 1900 ? null : d;
+  }
+
   private calcularTempoMedioVenda(veiculos: Veiculo[], vendas: Venda[]): void {
     const vendasConcluidas = vendas.filter(v => v.venStatus !== 'E'); // excluir estornos
     if (vendasConcluidas.length === 0) {
@@ -695,8 +702,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     vendasConcluidas.forEach(venda => {
       const veiculo = veiculoMap.get(venda.r_VeiId);
-      if (veiculo?.veiDtEntrada && venda.venDtVenda) {
-        const dtEntrada = new Date(veiculo.veiDtEntrada);
+      const dtEntrada = veiculo ? this.dataEntrada(veiculo) : null;
+      if (dtEntrada && venda.venDtVenda) {
         const dtVenda = new Date(venda.venDtVenda);
         const diffMs = dtVenda.getTime() - dtEntrada.getTime();
         const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));

@@ -8,6 +8,8 @@ export interface CredereBancoLoja { codigo: string; nome: string; ativo: boolean
 
 export interface CredereStatus {
   configurado: boolean;
+  /** Origem da volta da Credere (ex.: https://connectveiculos.dev.br). */
+  siteConexao: string | null;
   conectado: boolean;
   conta: string | null;
   usuario: string | null;
@@ -122,6 +124,12 @@ export class CredereService {
 
   conectar(code: string, state: string | null): Observable<CredereStatus> {
     return this.http.post<CredereStatus>(`${this.url}/conectar`, { code, state });
+  }
+
+  /** Volta do login da Credere; funciona sem sessao (a loja vem do state). */
+  retorno(code: string, state: string | null, tenant?: string): Observable<{ conectado: boolean; tenant: string }> {
+    const q = tenant ? `?tenant=${encodeURIComponent(tenant)}` : '';
+    return this.http.post<{ conectado: boolean; tenant: string }>(`${this.url}/retorno${q}`, { code, state });
   }
 
   escolherLoja(lojaId: number): Observable<CredereStatus> {

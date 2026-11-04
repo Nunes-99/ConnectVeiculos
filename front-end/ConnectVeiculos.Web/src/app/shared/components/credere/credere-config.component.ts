@@ -25,6 +25,16 @@ import { CredereService, CredereStatus, erroCredere } from '../../../core/servic
         <span class="material-icons">hourglass_top</span>
         <div>Integração em liberação com a Credere. Assim que as chaves do ConnectVeiculos forem cadastradas, o botão de conectar aparece aqui.</div>
       </div>
+    } @else if (!status.conectado && outroDominio) {
+      <!-- A Credere devolve sempre para o mesmo endereco; o cookie que protege a
+           conexao e' daquele dominio, entao ela precisa comecar la. -->
+      <div class="cr-aviso">
+        <span class="material-icons">info</span>
+        <div>Para conectar a Credere, entre pelo endereço <strong>{{ status.siteConexao }}</strong> (o mesmo usuário e senha) e clique em Conectar lá. Depois de conectada, ela funciona em qualquer endereço da loja.</div>
+      </div>
+      <a class="btn-primary" [href]="status.siteConexao + '/login'">
+        <span class="material-icons">open_in_new</span> Abrir {{ status.siteConexao }}
+      </a>
     } @else if (!status.conectado) {
       <button class="btn-primary" (click)="conectar()" [disabled]="ocupado">
         <span class="material-icons">link</span> Conectar conta da Credere
@@ -88,6 +98,10 @@ export class CredereConfigComponent implements OnInit {
       next: s => { this.status = s; this.conectadoChange.emit(s.conectado && !!s.lojaId); },
       error: err => this.toast.error(erroCredere(err, 'Não foi possível consultar a Credere.'))
     });
+  }
+
+  get outroDominio(): boolean {
+    return !!this.status?.siteConexao && typeof window !== 'undefined' && window.location.origin !== this.status.siteConexao;
   }
 
   conectar(): void {

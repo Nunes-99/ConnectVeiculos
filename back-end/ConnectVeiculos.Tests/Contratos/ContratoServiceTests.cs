@@ -286,6 +286,19 @@ namespace ConnectVeiculos.Tests.Contratos
         }
 
         [Fact]
+        public async Task Contrato_Assinado_Por_Todos_Nao_Pode_Ser_Cancelado()
+        {
+            var c = await GerarVendaAsync();
+            await _service.AssinarPresencialAsync(c.Id, new AssinaturaInput
+            { Nome = "Maria Souza", Documento = "529.982.247-25", Imagem = Rubrica, Aceite = true }, 7, "Vitor", new AssinaturaOrigem());
+            await _service.AssinarPelaLojaAsync(c.Id, new AssinaturaInput { Imagem = Rubrica }, 7, "Vitor", new AssinaturaOrigem());
+
+            await _service.Invoking(s => s.CancelarAsync(c.Id))
+                .Should().ThrowAsync<ContratoException>().WithMessage("*assinado por todos*");
+            _db.Contratos.AsNoTracking().Single().CtrStatus.Should().Be(Contrato.StatusAssinado);
+        }
+
+        [Fact]
         public async Task Envia_O_Link_Por_Email_Com_O_Endereco_Da_Loja()
         {
             var c = await GerarVendaAsync();

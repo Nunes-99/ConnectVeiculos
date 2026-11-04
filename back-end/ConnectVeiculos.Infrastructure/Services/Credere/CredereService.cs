@@ -174,7 +174,11 @@ namespace ConnectVeiculos.Infrastructure.Services.Credere
 
         public async Task<CredereStatus> StatusAsync(CancellationToken ct = default)
         {
-            var status = new CredereStatus { Configurado = _settings.Configurado };
+            var status = new CredereStatus
+            {
+                Configurado = _settings.Configurado,
+                SiteConexao = Uri.TryCreate(_settings.RedirectUri, UriKind.Absolute, out var retorno) ? retorno.GetLeftPart(UriPartial.Authority) : null
+            };
             var conta = await ContaAsync();
             if (conta == null || await TokenAsync() == null) return status;
 
@@ -404,7 +408,8 @@ namespace ConnectVeiculos.Infrastructure.Services.Credere
             {
                 try
                 {
-                    using var doc = await ChamarAsync(HttpMethod.Get, $"/users/proposals_filter_list?per_page=20&store_id={loja}", null, null, ct);
+                    // GET /users (Listar usuarios da doc; o antigo proposals_filter_list saiu dela).
+                    using var doc = await ChamarAsync(HttpMethod.Get, $"/users?per_page=20&active=true&store_id={loja}&q={Uri.EscapeDataString(email.Trim())}", null, null, ct);
                     var raiz = doc!.RootElement;
                     // A doc mostra ora { users: [...] }, ora { user: {...} }.
                     var usuarios = Lista(raiz, "users").ToList();

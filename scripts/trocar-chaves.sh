@@ -32,7 +32,7 @@ if [[ "$r" =~ ^[sS] ]]; then NOVAS[JWT_SECRET_KEY_CLIENTE]=$(openssl rand -base6
 read -r -p "Gerar novo ADMIN_API_TOKEN? [s/N] " r
 if [[ "$r" =~ ^[sS] ]]; then NOVAS[ADMIN_API_TOKEN]=$(openssl rand -hex 32 | tr -d '\r\n'); fi
 
-for k in META_APP_SECRET ML_CLIENT_SECRET GEMINI_API_KEY MERCADOPAGO_ACCESS_TOKEN MERCADOPAGO_WEBHOOK_SECRET CREDERE_CLIENT_ID CREDERE_CLIENT_SECRET; do
+for k in META_APP_SECRET ML_CLIENT_SECRET GEMINI_API_KEY MERCADOPAGO_ACCESS_TOKEN MERCADOPAGO_WEBHOOK_SECRET CREDERE_CLIENT_ID CREDERE_CLIENT_SECRET CREDERE_BASE_URL; do
   read -r -s -p "Novo $k (Enter vazio = manter o atual): " v; echo
   v=$(printf '%s' "$v" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
   # No PowerShell o botao direito ja cola; somado ao Ctrl+V a chave vinha dobrada.

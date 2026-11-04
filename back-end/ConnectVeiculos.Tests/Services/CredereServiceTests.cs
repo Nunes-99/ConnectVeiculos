@@ -168,7 +168,7 @@ namespace ConnectVeiculos.Tests.Services
             Conectado();
             var ficha = await FichaAsync();
             _api.Rotas["POST /banks_api/leads"] = () => Json(new { data = new { id = 1 } }, HttpStatusCode.Created);
-            _api.Rotas["GET /users/proposals_filter_list"] = () => Json(new { users = new[] { new { email = "MARIA.VENDEDORA@loja.com", cpf = "390.533.447-05" } } });
+            _api.Rotas["GET /users"] = () => Json(new { users = new[] { new { email = "MARIA.VENDEDORA@loja.com", cpf = "390.533.447-05" } } });
             _api.Rotas["POST /banks_api/simulations"] = () => Json(Simulacao(processando: true), HttpStatusCode.Created);
 
             var r = await Servico().SimularAsync(ficha.FifId, Entrada(), null, "maria.vendedora@loja.com");
@@ -214,7 +214,7 @@ namespace ConnectVeiculos.Tests.Services
             var ficha = await FichaAsync();
             _api.Rotas["GET /banks_api/leads/52998224725"] = () => Json(new { data = new { id = 9 } });
             _api.Rotas["PATCH /banks_api/leads/52998224725"] = () => Json(new { data = new { id = 9 } });
-            _api.Rotas["GET /users/proposals_filter_list"] = () => Json(new { user = new { email = "outro@loja.com", cpf = "000.000.000-00" } });
+            _api.Rotas["GET /users"] = () => Json(new { user = new { email = "outro@loja.com", cpf = "000.000.000-00" } });
             _api.Rotas["POST /banks_api/simulations"] = () => Json(Simulacao(false), HttpStatusCode.Created);
 
             await Servico().SimularAsync(ficha.FifId, Entrada(), null, "maria@loja.com");

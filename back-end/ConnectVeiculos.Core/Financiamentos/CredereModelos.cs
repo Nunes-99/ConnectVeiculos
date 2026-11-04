@@ -59,6 +59,13 @@ namespace ConnectVeiculos.Core.Financiamentos
     {
         /// <summary>O ConnectVeiculos tem as chaves de parceiro da Credere (client_id/secret).</summary>
         public bool Configurado { get; set; }
+
+        /// <summary>
+        /// Endereco (origem) da redirect_uri cadastrada na Credere. O state do OAuth
+        /// fica preso a um cookie desse dominio: conectar por outro (dominio proprio
+        /// da loja) sempre falharia na volta.
+        /// </summary>
+        public string? SiteConexao { get; set; }
         public bool Conectado { get; set; }
         public string? Conta { get; set; }
         public string? Usuario { get; set; }
