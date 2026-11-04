@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, HostListener, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { VeiculoService, LojaService, CategoriaService, ImagemService, VeiculoImagem, ToastService, FipeService, FipeMarca, FipeModelo } from '../../core/services';
@@ -635,6 +635,37 @@ export class VeiculosComponent implements OnInit {
     this.uploadingImage = false;
     this.uploadTotal = 0;
     this.uploadCurrent = 0;
+  }
+
+  // ---------- Menu de acoes (tres pontos) ----------
+
+  menuVeiculo: Veiculo | null = null;
+  menuPos: { top: number | null; bottom: number | null; left: number } = { top: null, bottom: null, left: 0 };
+
+  abrirMenu(veiculo: Veiculo, evento: MouseEvent): void {
+    evento.stopPropagation();
+    if (this.menuVeiculo?.veiId === veiculo.veiId) { this.fecharMenu(); return; }
+    const r = (evento.currentTarget as HTMLElement).getBoundingClientRect();
+    const largura = 260;
+    const left = Math.max(8, Math.min(r.right - largura, window.innerWidth - largura - 8));
+    // Na metade de baixo da tela o menu abre para cima.
+    this.menuPos = r.bottom > window.innerHeight * 0.55
+      ? { top: null, bottom: window.innerHeight - r.top + 4, left }
+      : { top: r.bottom + 4, bottom: null, left };
+    this.menuVeiculo = veiculo;
+  }
+
+  @HostListener('document:click')
+  @HostListener('document:keydown.escape')
+  @HostListener('window:resize')
+  fecharMenu(): void {
+    this.menuVeiculo = null;
+  }
+
+  // A tabela rola dentro da pagina; o menu fixo nao acompanharia.
+  @HostListener('window:scroll')
+  fecharMenuAoRolar(): void {
+    if (this.menuVeiculo) this.fecharMenu();
   }
 
   remove(id: number): void {
