@@ -101,6 +101,19 @@ namespace ConnectVeiculos.Infrastructure.Hubs
             _tenantContext = tenantContext;
         }
 
+        /// <summary>
+        /// Escopo novo com o MESMO tenant da requisicao. Sem isso o ITenantContext
+        /// do escopo novo fica sem tenant e os repositorios caem no banco padrao:
+        /// a notificacao ia para os usuarios de outra loja.
+        /// </summary>
+        private IServiceScope EscopoDoTenant()
+        {
+            var scope = _scopeFactory.CreateScope();
+            scope.ServiceProvider.GetRequiredService<ITenantContext>()
+                .Resolve(_tenantContext.TenantId, _tenantContext.TenantSlug, _tenantContext.DatabaseFile);
+            return scope;
+        }
+
         private string TenantPrefix() => _tenantContext.IsResolved
             ? _tenantContext.TenantId.ToString()
             : throw new InvalidOperationException("NotificacaoHubService chamado sem tenant resolvido — broadcast cross-tenant bloqueado.");
@@ -108,7 +121,7 @@ namespace ConnectVeiculos.Infrastructure.Hubs
         public async Task EnviarParaUsuarioAsync(int usuarioId, string tipo, object dados)
         {
             var tenantId = TenantPrefix();
-            using var scope = _scopeFactory.CreateScope();
+            using var scope = EscopoDoTenant();
             var notificacaoRepo = scope.ServiceProvider.GetRequiredService<INotificacaoRepository>();
 
             var (titulo, mensagem) = GerarTituloMensagem(tipo, dados);
@@ -129,7 +142,7 @@ namespace ConnectVeiculos.Infrastructure.Hubs
         public async Task EnviarParaTodosAsync(string tipo, object dados)
         {
             var tenantId = TenantPrefix();
-            using var scope = _scopeFactory.CreateScope();
+            using var scope = EscopoDoTenant();
             var notificacaoRepo = scope.ServiceProvider.GetRequiredService<INotificacaoRepository>();
             var usuarioRepo = scope.ServiceProvider.GetRequiredService<IUsuarioRepository>();
 
