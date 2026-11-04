@@ -39,7 +39,72 @@ export interface RenaveSituacao {
   numeroAtpv: string | null;
   ultimoErro: string | null;
   atualizadoEm: string | null;
+  /** Zero km: sem CRV, sem assinatura do vendedor, sem ATPVe e sem termos. */
+  zeroKm: boolean;
   proximoPasso: string;
+}
+
+export interface RenaveImportacaoItem {
+  idEstoque: number;
+  placa: string | null;
+  chassi: string | null;
+  estado: string | null;
+  zeroKm: boolean;
+  veiculoId: number | null;
+  acao: 'vinculado' | 'criado' | 'ja-vinculado' | 'ignorado';
+  mensagem: string | null;
+}
+
+export interface RenaveImportacao {
+  encontrados: number;
+  vinculados: number;
+  criados: number;
+  jaVinculados: number;
+  ignorados: number;
+  soUltimosTresMeses: boolean;
+  itens: RenaveImportacaoItem[];
+}
+
+export interface RenaveZeroKmPendente {
+  chassi: string;
+  dataHoraCadastro: string | null;
+  acabado: boolean;
+  veiculoId: number | null;
+  veiculoDescricao: string | null;
+}
+
+export interface RenaveEntradaZeroKm {
+  chassi: string;
+  veiculoId: number | null;
+  dataEntrada: string;
+  valorCompra: number;
+  quilometragemHodometro: number;
+  chaveNotaFiscal: string;
+}
+
+export type MotivoRejeicaoZeroKm = 'DESISTENCIA' | 'ERRO_OPERACIONAL_MONTADORA';
+
+export interface RenaveEntrega {
+  id: number;
+  chassi: string | null;
+  estado: 'PENDENTE' | 'REALIZADA' | 'CANCELADA' | null;
+  cnpjEntregador: string | null;
+  cnpjVendedor: string | null;
+  idAtpv: string | null;
+  dataRealizacao: string | null;
+  dataCancelamento: string | null;
+  motivoCancelamento: string | null;
+}
+
+export interface RenaveConsulta {
+  placa: string | null;
+  renavam: string | null;
+  chassi: string | null;
+  acabado: boolean;
+  dataPreCadastro: string | null;
+  restricoes: string[];
+  estoques: { id: number; estado: string | null; dataEntrada: string | null; dataSaida: string | null; motivoSaida: string | null }[];
+  veiculoId: number | null;
 }
 
 export interface RenaveAptidao {
@@ -82,6 +147,8 @@ export interface RenaveSaida {
   bairro: string | null;
   dataVenda: string;
   valorVenda: number;
+  /** NF-e de venda: obrigatoria no zero km (vai junto com a saida). */
+  chaveNotaFiscal?: string | null;
 }
 
 export interface RenaveMunicipio { id: number; nome: string; uf: string; }
@@ -166,8 +233,53 @@ export class RenaveService {
     return this.http.get(`${this.url}/veiculos/${veiculoId}/atpv`, { responseType: 'blob' });
   }
 
+  /** Termo de entrada ou de saida do estoque (PDF). */
+  termo(veiculoId: number, tipo: 'entrada' | 'saida'): Observable<Blob> {
+    return this.http.get(`${this.url}/veiculos/${veiculoId}/termo-${tipo}`, { responseType: 'blob' });
+  }
+
+  /** Traz o estoque que ja esta no Renave para o sistema (nao faz nova entrada). */
+  importarEstoque(): Observable<RenaveImportacao> {
+    return this.http.post<RenaveImportacao>(`${this.url}/importar-estoque`, {});
+  }
+
+  consultar(filtro: { placa?: string; chassi?: string; renavam?: string }): Observable<RenaveConsulta> {
+    const params: Record<string, string> = {};
+    for (const [k, v] of Object.entries(filtro)) if (v && v.trim()) params[k] = v.trim();
+    return this.http.get<RenaveConsulta>(`${this.url}/consulta`, { params });
+  }
+
+  zeroKmPendentes(): Observable<RenaveZeroKmPendente[]> {
+    return this.http.get<RenaveZeroKmPendente[]>(`${this.url}/zero-km/pendentes`);
+  }
+
+  entradaZeroKm(dados: RenaveEntradaZeroKm): Observable<RenaveSituacao> {
+    return this.http.post<RenaveSituacao>(`${this.url}/zero-km/entrada`, dados);
+  }
+
+  rejeitarZeroKm(chassi: string, motivo: MotivoRejeicaoZeroKm): Observable<{ ok: boolean }> {
+    return this.http.post<{ ok: boolean }>(`${this.url}/zero-km/rejeicao`, { chassi, motivo });
+  }
+
+  entregas(estado: string): Observable<RenaveEntrega[]> {
+    const params: Record<string, string> = estado ? { estado } : {};
+    return this.http.get<RenaveEntrega[]>(`${this.url}/entregas`, { params });
+  }
+
+  realizarEntrega(id: number): Observable<RenaveEntrega> {
+    return this.http.post<RenaveEntrega>(`${this.url}/entregas/${id}/realizar`, {});
+  }
+
+  cancelarEntrega(id: number): Observable<RenaveEntrega> {
+    return this.http.post<RenaveEntrega>(`${this.url}/entregas/${id}/cancelar`, {});
+  }
+
   criarVeiculoTeste(): Observable<RenaveVeiculoTeste> {
     return this.http.post<RenaveVeiculoTeste>(`${this.url}/teste/veiculo`, {});
+  }
+
+  criarZeroKmTeste(): Observable<{ chassi: string; acabado: boolean }> {
+    return this.http.post<{ chassi: string; acabado: boolean }>(`${this.url}/teste/zero-km`, {});
   }
 
   simularDetran(veiculoId: number): Observable<RenaveSituacao> {
@@ -178,4 +290,24 @@ export class RenaveService {
 /** Texto do erro devolvido pela API ({ error }) ou uma mensagem padrao. */
 export function erroRenave(err: any, padrao = 'Não foi possível concluir no Renave.'): string {
   return err?.error?.error || err?.error?.message || padrao;
+}
+
+/** Salva um PDF vindo da API; com responseType blob, o erro ({ error }) chega como Blob. */
+export function baixarPdfRenave(obs: Observable<Blob>, nome: string, aoFim: (erro: string | null) => void): void {
+  obs.subscribe({
+    next: blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = nome;
+      a.click();
+      URL.revokeObjectURL(url);
+      aoFim(null);
+    },
+    error: async err => {
+      let msg = 'Não foi possível baixar o PDF.';
+      try { msg = JSON.parse(await (err.error as Blob).text()).error || msg; } catch { /* mantem a padrao */ }
+      aoFim(msg);
+    }
+  });
 }

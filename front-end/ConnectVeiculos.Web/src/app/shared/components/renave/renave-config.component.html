@@ -105,4 +105,11 @@
       </ul>
     </div>
   }
+
+  <!-- Importar, zero km, entregas e consulta: so com a configuracao pronta (o Renave pede operador e, em producao, certificado). -->
+  @if (config.pronto) {
+    <app-renave-operacoes [emTestes]="config.ambiente !== 'producao'"></app-renave-operacoes>
+  } @else {
+    <p class="rnv-dica">Salve o operador e o e-mail da loja@if (emProducao) { e envie o certificado } para liberar importar estoque, zero km, entregas e consulta.</p>
+  }
 }

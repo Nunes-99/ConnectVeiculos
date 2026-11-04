@@ -38,6 +38,12 @@ namespace ConnectVeiculos.Core.Entities.Renave
         public string? RnvUltimoErro { get; private set; }
         public DateTime RnvAtualizadoEm { get; private set; }
 
+        /// <summary>
+        /// Zero km (vindo da montadora): entra pelo chassi, sem CRV, sem
+        /// assinatura de vendedor e sem ATPVe; a saida usa outra rota do Renave.
+        /// </summary>
+        public bool RnvZeroKm { get; private set; }
+
         public VeiculoRenave() { }
 
         public VeiculoRenave(int veiculoId)
@@ -48,9 +54,64 @@ namespace ConnectVeiculos.Core.Entities.Renave
 
         public bool EmEstoque => RnvIdEstoque.HasValue && RnvDtSaida == null;
 
+        /// <summary>
+        /// Carro que a loja vendeu e comprou de volta: o registro e' o mesmo
+        /// (um por veiculo), mas a entrada nova comeca do zero.
+        /// </summary>
+        private void NovoCiclo()
+        {
+            RnvZeroKm = false;
+            RnvDtAssinaturaVendedor = null;
+            RnvChaveNfEntrada = null;
+            RnvVendedorDocumento = null;
+            RnvVendedorEmail = null;
+            RnvDtSaida = null;
+            RnvValorVenda = null;
+            RnvCompradorDocumento = null;
+            RnvCompradorNome = null;
+            RnvCompradorEmail = null;
+            RnvChaveNfSaida = null;
+            RnvNumeroAtpv = null;
+        }
+
+        public void RegistrarEntradaZeroKm(long idEstoque, string estado, DateTime dataEntrada, decimal valorCompra, string? chaveNotaFiscal)
+        {
+            NovoCiclo();
+            RnvZeroKm = true;
+            RnvIdEstoque = idEstoque;
+            RnvEstado = estado;
+            RnvDtEntrada = dataEntrada;
+            RnvValorCompra = valorCompra;
+            RnvChaveNfEntrada = chaveNotaFiscal;
+            RnvUltimoErro = null;
+            Tocar();
+        }
+
+        /// <summary>
+        /// Estoque que ja existia no Renave (lancado por outro sistema): so grava
+        /// o vinculo, sem nova entrada. O que o Renave ja confirmou conta como
+        /// feito, para a tela nao pedir de novo assinatura ou nota de compra.
+        /// </summary>
+        public void RegistrarImportacao(long idEstoque, string estado, DateTime? dataEntrada, bool zeroKm,
+            string? chaveNfEntrada, string? documentoVendedor)
+        {
+            NovoCiclo();
+            RnvIdEstoque = idEstoque;
+            RnvEstado = estado;
+            RnvDtEntrada = dataEntrada;
+            RnvZeroKm = zeroKm;
+            RnvChaveNfEntrada = chaveNfEntrada;
+            RnvVendedorDocumento = documentoVendedor;
+            if (!zeroKm && estado is "TRANSFERIDO" or "CONFIRMADO")
+                RnvDtAssinaturaVendedor ??= dataEntrada ?? DateTime.UtcNow;
+            RnvUltimoErro = null;
+            Tocar();
+        }
+
         public void RegistrarEntrada(long idEstoque, string estado, DateTime dataCompra, decimal valorCompra,
             string? documentoVendedor = null, string? emailVendedor = null)
         {
+            NovoCiclo();
             RnvIdEstoque = idEstoque;
             RnvVendedorDocumento = documentoVendedor;
             RnvVendedorEmail = emailVendedor;
