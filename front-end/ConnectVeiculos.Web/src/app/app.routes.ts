@@ -109,11 +109,16 @@ export const routes: Routes = [
         path: 'vendas',
         loadComponent: () => import('./pages/vendas/vendas.component').then(m => m.VendasComponent)
       },
-      // TODO: ativar quando tiver parceria com bancos (BV, Pan, etc)
-      // {
-      //   path: 'financiamentos',
-      //   loadComponent: () => import('./pages/financiamentos/financiamentos.component').then(m => m.FinanciamentosComponent)
-      // },
+      {
+        path: 'financiamentos',
+        loadComponent: () => import('./pages/financiamentos/financiamentos.component').then(m => m.FinanciamentosComponent)
+      },
+      {
+        path: 'notas-fiscais',
+        loadComponent: () => import('./pages/notas-fiscais/notas-fiscais.component').then(m => m.NotasFiscaisComponent),
+        canActivate: [roleGuard],
+        data: { roles: ['Administrador', 'Gerente'] }
+      },
       {
         path: 'relatorios',
         loadComponent: () => import('./pages/relatorios/relatorios.component').then(m => m.RelatoriosComponent),
@@ -140,6 +145,13 @@ export const routes: Routes = [
       {
         path: 'integracoes',
         loadComponent: () => import('./pages/integracoes/integracoes.component').then(m => m.IntegracoesComponent),
+        canActivate: [roleGuard],
+        data: { roles: ['Administrador', 'Gerente'] }
+      },
+      {
+        // Volta do login da Credere (redirect_uri cadastrada na Credere).
+        path: 'integracoes/credere',
+        loadComponent: () => import('./pages/integracoes/credere-retorno.component').then(m => m.CredereRetornoComponent),
         canActivate: [roleGuard],
         data: { roles: ['Administrador', 'Gerente'] }
       },

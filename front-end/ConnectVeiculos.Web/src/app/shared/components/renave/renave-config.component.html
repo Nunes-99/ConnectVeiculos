@@ -1,0 +1,108 @@
+<p class="rnv-texto">
+  Registra a <strong>entrada</strong> dos carros que a loja compra e a <strong>saída</strong> dos que vende no
+  Renave (Senatran/Serpro), obrigatório para revendas. A saída gera o <strong>ATPVe</strong> do comprador.
+</p>
+
+@if (config) {
+  <div class="rnv-grid">
+    <div class="form-group">
+      <label>Ambiente</label>
+      <select [(ngModel)]="form.ambiente">
+        <option value="homologacao">Testes (homologação do Serpro)</option>
+        <option value="producao">Produção (vale de verdade)</option>
+      </select>
+      <small class="rnv-dica">
+        @if (emProducao) { Operações em produção têm efeito legal e são cobradas pelo Serpro. }
+        @else { Ambiente de testes gratuito, com veículos fictícios. Nada vale de verdade. }
+      </small>
+    </div>
+    <div class="form-group">
+      <label>E-mail da loja</label>
+      <input type="email" [(ngModel)]="form.emailLoja" placeholder="contato@loja.com.br" />
+    </div>
+    <div class="form-group">
+      <label>CPF do operador responsável</label>
+      <input type="text" [(ngModel)]="form.operadorCpf" inputmode="numeric" placeholder="000.000.000-00" />
+      <small class="rnv-dica">O Renave registra quem fez cada entrada e saída.</small>
+    </div>
+    <div class="form-group">
+      <label>Nome do operador</label>
+      <input type="text" [(ngModel)]="form.operadorNome" />
+    </div>
+  </div>
+
+  <button type="button" class="rnv-link" (click)="mostrarAvancado = !mostrarAvancado">
+    <span class="material-icons">{{ mostrarAvancado ? 'expand_less' : 'expand_more' }}</span>
+    Acesso por integradora (opcional)
+  </button>
+  @if (mostrarAvancado) {
+    <div class="form-group">
+      <label>CNPJ da loja para a integradora</label>
+      <input type="text" [(ngModel)]="form.cnpjEstabelecimento" inputmode="numeric" placeholder="Deixe vazio se o certificado for da própria loja" />
+      <small class="rnv-dica">Só preencha se o certificado abaixo for de uma integradora que opera em nome da loja.</small>
+    </div>
+  }
+
+  <div class="rnv-acoes">
+    <button class="btn-primary" (click)="salvar()" [disabled]="salvando">
+      <span class="material-icons">save</span> {{ salvando ? 'Salvando...' : 'Salvar' }}
+    </button>
+  </div>
+
+  <!-- O certificado e o mesmo da NF-e; quem envia e troca e a tela Notas fiscais. -->
+  <div class="rnv-bloco">
+    <h4><span class="material-icons">verified_user</span> Certificado digital A1 (e-CNPJ)</h4>
+    @if (config.certificadoCadastrado) {
+      <div class="rnv-cert" [class.rnv-erro]="!certificadoValido">
+        <span class="material-icons">{{ certificadoValido ? 'check_circle' : 'error' }}</span>
+        <div>
+          <strong>{{ config.certificadoTitular || 'Certificado salvo' }}</strong>
+          <small>{{ certificadoValido ? 'Válido até' : 'Venceu em' }} {{ config.certificadoValidade | date:'dd/MM/yyyy' }}</small>
+        </div>
+      </div>
+    } @else {
+      <small class="rnv-dica">
+        {{ emProducao ? 'Obrigatório em produção: é com ele que o Renave reconhece a loja.' : 'Não precisa em testes: o Serpro usa uma loja fictícia.' }}
+      </small>
+    }
+    <small class="rnv-dica">
+      É o mesmo certificado da NF-e. Para enviar ou trocar, vá em
+      <a routerLink="/notas-fiscais" [queryParams]="{ aba: 'config' }">Notas fiscais → Configuração</a>.
+    </small>
+  </div>
+
+  <div class="rnv-acoes">
+    <button class="btn-secondary" (click)="testar()" [disabled]="testando">
+      <span class="material-icons">wifi_tethering</span> {{ testando ? 'Testando...' : 'Testar conexão' }}
+    </button>
+    @if (!emProducao && config.ambiente === 'homologacao') {
+      <button class="btn-secondary" (click)="criarVeiculoTeste()" [disabled]="criandoTeste">
+        <span class="material-icons">science</span> {{ criandoTeste ? 'Criando...' : 'Criar veículo de teste' }}
+      </button>
+    }
+  </div>
+
+  @if (conexao) {
+    <div class="rnv-ok">
+      <span class="material-icons">check_circle</span>
+      <div>
+        <strong>Renave respondeu ({{ conexao.ambiente === 'producao' ? 'produção' : 'testes' }})</strong>
+        <small>Loja reconhecida: {{ conexao.nome }} · CNPJ {{ conexao.cnpj }}@if (conexao.integradora) { · via {{ conexao.integradora }} }</small>
+      </div>
+    </div>
+  }
+
+  @if (veiculoTeste) {
+    <div class="rnv-teste">
+      <strong>Veículo de teste criado no Serpro</strong>
+      <small>Cadastre um veículo no estoque com esta placa e Renavam e use os dados abaixo na entrada (CRV verde).</small>
+      <ul>
+        <li>Placa: <code>{{ veiculoTeste.placa }}</code> <button (click)="copiar(veiculoTeste.placa)">copiar</button></li>
+        <li>Renavam: <code>{{ veiculoTeste.renavam }}</code> <button (click)="copiar(veiculoTeste.renavam)">copiar</button></li>
+        <li>Nº do CRV: <code>{{ veiculoTeste.numeroCrv }}</code> <button (click)="copiar(veiculoTeste.numeroCrv)">copiar</button></li>
+        <li>Código de segurança: <code>{{ veiculoTeste.codigoSegurancaCrv }}</code> <button (click)="copiar(veiculoTeste.codigoSegurancaCrv)">copiar</button></li>
+        <li>CPF do vendedor: <code>{{ veiculoTeste.documentoProprietario }}</code> <button (click)="copiar(veiculoTeste.documentoProprietario)">copiar</button></li>
+      </ul>
+    </div>
+  }
+}

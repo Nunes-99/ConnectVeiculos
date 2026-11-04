@@ -37,6 +37,13 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework.Repositories
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<Venda>> GetByVeiculoIdAsync(int veiculoId)
+        {
+            return await _context.Vendas
+                .Where(v => v.R_VeiId == veiculoId)
+                .ToListAsync();
+        }
+
         public async Task<int> CreateAsync(Venda venda)
         {
             _context.Vendas.Add(venda);
