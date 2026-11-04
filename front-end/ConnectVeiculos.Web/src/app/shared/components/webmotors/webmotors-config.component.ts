@@ -32,7 +32,7 @@ import { WebmotorsService, WebmotorsStatus, erroWebmotors } from '../../../core/
       <div class="form-group">
         <label>Senha do usuário de integração</label>
         <input type="password" [(ngModel)]="senha" autocomplete="new-password" />
-        <small class="wm-dica">Quem fornece esse usuário é a Webmotors (não é o login do site). A senha fica guardada criptografada.</small>
+        <small class="wm-dica">Quem fornece esse usuário é a Webmotors (não é o login do site). A senha fica salva criptografada.</small>
       </div>
       <button class="btn-primary" (click)="conectar()" [disabled]="ocupado || !cnpj || !email || !senha">
         <span class="material-icons">link</span> {{ ocupado ? 'Conectando...' : 'Conectar' }}
