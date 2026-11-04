@@ -114,6 +114,12 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/financiamentos/financiamentos.component').then(m => m.FinanciamentosComponent)
       },
       {
+        path: 'notas-fiscais',
+        loadComponent: () => import('./pages/notas-fiscais/notas-fiscais.component').then(m => m.NotasFiscaisComponent),
+        canActivate: [roleGuard],
+        data: { roles: ['Administrador', 'Gerente'] }
+      },
+      {
         path: 'relatorios',
         loadComponent: () => import('./pages/relatorios/relatorios.component').then(m => m.RelatoriosComponent),
         canActivate: [roleGuard],

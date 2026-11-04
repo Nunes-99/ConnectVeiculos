@@ -177,6 +177,26 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
         public async Task<IReadOnlyList<NfeResumo>> ListarDoVeiculoAsync(int veiculoId, CancellationToken ct = default)
             => (await _notas.GetByVeiculoAsync(veiculoId)).OrderByDescending(n => n.NfId).Select(Resumo).ToList();
 
+        /// <summary>Quantas notas a tela Notas fiscais traz de uma vez (o filtro estreita).</summary>
+        public const int LimiteLista = 500;
+
+        /// <summary>Notas de todos os veiculos, para a tela Notas fiscais.</summary>
+        public async Task<IReadOnlyList<NfeResumo>> ListarAsync(NfeFiltro filtro, CancellationToken ct = default)
+        {
+            if (filtro.De.HasValue && filtro.Ate.HasValue && filtro.De.Value.Date > filtro.Ate.Value.Date)
+                throw new NfeException("A data inicial está depois da data final.");
+            filtro.Tipo = string.IsNullOrWhiteSpace(filtro.Tipo) ? null : Tipo(filtro.Tipo);
+            filtro.Status = string.IsNullOrWhiteSpace(filtro.Status) ? null : filtro.Status.Trim().ToUpperInvariant();
+
+            return (await _notas.ListarAsync(filtro, LimiteLista)).Select(x =>
+            {
+                var resumo = Resumo(x.Nota);
+                resumo.Veiculo = x.Marca == null ? null : $"{x.Marca} {x.Modelo} {x.Ano}".Trim();
+                resumo.Placa = x.Placa;
+                return resumo;
+            }).ToList();
+        }
+
         /// <summary>
         /// Preenche a nota com o que o sistema ja sabe, nesta ordem: a ultima nota
         /// do mesmo tipo do veiculo (rejeitada ou cancelada), a venda registrada

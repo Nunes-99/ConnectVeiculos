@@ -44,6 +44,11 @@ namespace ConnectVeiculos.API.Controllers
         public Task<IActionResult> Municipios([FromQuery] string uf, [FromQuery] string? nome, CancellationToken ct)
             => Executar(() => _nfe.BuscarMunicipiosAsync(uf, nome, ct));
 
+        /// <summary>Notas de todos os veiculos (tela Notas fiscais).</summary>
+        [HttpGet]
+        public Task<IActionResult> Listar([FromQuery] NfeFiltro filtro, CancellationToken ct)
+            => Executar(() => _nfe.ListarAsync(filtro, ct));
+
         [HttpGet("veiculos/{veiculoId:int}")]
         public async Task<IActionResult> DoVeiculo(int veiculoId, CancellationToken ct)
             => Ok(await _nfe.ListarDoVeiculoAsync(veiculoId, ct));

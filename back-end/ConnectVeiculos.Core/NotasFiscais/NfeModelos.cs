@@ -145,6 +145,21 @@ namespace ConnectVeiculos.Core.NotasFiscais
         public string? CartaCorrecaoTexto { get; set; }
         public DateTime? CartaCorrecaoData { get; set; }
         public bool PodeCorrigir { get; set; }
+
+        /// <summary>So na lista geral (tela Notas fiscais): qual veiculo.</summary>
+        public string? Veiculo { get; set; }
+        public string? Placa { get; set; }
+    }
+
+    /// <summary>Filtro da tela Notas fiscais. As datas sao da emissao, dia inteiro.</summary>
+    public class NfeFiltro
+    {
+        public DateTime? De { get; set; }
+        public DateTime? Ate { get; set; }
+        public string? Tipo { get; set; }
+        public string? Status { get; set; }
+        /// <summary>Numero da nota, destinatario, placa, veiculo ou chave.</summary>
+        public string? Busca { get; set; }
     }
 
     public class NfeInutilizacaoInput

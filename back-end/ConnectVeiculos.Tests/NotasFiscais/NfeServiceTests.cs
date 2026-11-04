@@ -36,6 +36,14 @@ namespace ConnectVeiculos.Tests.NotasFiscais
             public readonly List<NotaFiscal> Itens = new();
             public Task<NotaFiscal?> GetByIdAsync(int id) => Task.FromResult(Itens.FirstOrDefault(n => n.NfId == id));
             public Task<IReadOnlyList<NotaFiscal>> GetByVeiculoAsync(int v) => Task.FromResult<IReadOnlyList<NotaFiscal>>(Itens.Where(n => n.R_VeiId == v).ToList());
+            public NfeFiltro? UltimoFiltro;
+            public Task<IReadOnlyList<NotaFiscalComVeiculo>> ListarAsync(NfeFiltro f, int limite)
+            {
+                UltimoFiltro = f;
+                return Task.FromResult<IReadOnlyList<NotaFiscalComVeiculo>>(Itens.Select(n => n.R_VeiId == 42
+                    ? new NotaFiscalComVeiculo(n, "Toyota", "Corolla", 2020, "ABC1D23")
+                    : new NotaFiscalComVeiculo(n, null, null, null, null)).ToList());
+            }
             public readonly List<NotaFiscalInutilizacao> Inutilizacoes = new();
             public Task<bool> NumeroEmUsoAsync(string a, int s, int n) => Task.FromResult(
                 Itens.Any(x => x.NfAmbiente == a && x.NfSerie == s && x.NfNumero == n)
@@ -148,6 +156,31 @@ namespace ConnectVeiculos.Tests.NotasFiscais
             var cfg = NfeVeiculoBuilderTests.Config();
             cfg.ProximoNumero = proximoNumero;
             return _service.SalvarConfigAsync(cfg);
+        }
+
+        [Fact]
+        public async Task Lista_Geral_Traz_O_Veiculo_E_Padroniza_O_Filtro()
+        {
+            _notas.Itens.Add(new NotaFiscal(42, NotaFiscal.Saida, "homologacao", 1, 10));
+            _notas.Itens.Add(new NotaFiscal(7, NotaFiscal.Entrada, "homologacao", 1, 11));
+
+            var lista = await _service.ListarAsync(new NfeFiltro { Tipo = "saida", Status = " autorizada " });
+
+            _notas.UltimoFiltro!.Tipo.Should().Be(NotaFiscal.Saida);
+            _notas.UltimoFiltro.Status.Should().Be(NotaFiscal.StatusAutorizada);
+            lista.Should().HaveCount(2);
+            lista[0].Veiculo.Should().Be("Toyota Corolla 2020");
+            lista[0].Placa.Should().Be("ABC1D23");
+            lista[1].Veiculo.Should().BeNull();
+        }
+
+        [Fact]
+        public async Task Lista_Geral_Recusa_Periodo_Invertido_E_Tipo_Invalido()
+        {
+            await _service.Invoking(s => s.ListarAsync(new NfeFiltro { De = new DateTime(2026, 11, 3), Ate = new DateTime(2026, 11, 1) }))
+                .Should().ThrowAsync<NfeException>().WithMessage("*data inicial*");
+            await _service.Invoking(s => s.ListarAsync(new NfeFiltro { Tipo = "devolucao" }))
+                .Should().ThrowAsync<NfeException>();
         }
 
         [Fact]

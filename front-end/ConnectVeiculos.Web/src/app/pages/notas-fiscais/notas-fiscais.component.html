@@ -1,0 +1,136 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1><span class="material-icons">receipt_long</span> Notas fiscais</h1>
+      <p>NF-e de compra e de venda dos veículos, direto na Sefaz. Para emitir, use o botão <span class="material-icons ico-texto">receipt_long</span> na lista de veículos.</p>
+    </div>
+  </div>
+
+  <div class="abas">
+    <button [class.ativa]="aba === 'notas'" (click)="aba = 'notas'; carregarConfig()"><span class="material-icons">list_alt</span> Notas emitidas</button>
+    <button [class.ativa]="aba === 'config'" (click)="aba = 'config'"><span class="material-icons">settings</span> Configuração</button>
+  </div>
+
+  @if (aba === 'notas') {
+    @if (config && !config.pronto) {
+      <div class="aviso">
+        <span class="material-icons">checklist</span>
+        <div>
+          <strong>A NF-e ainda não está configurada.</strong>
+          Preencha os dados da empresa e envie o certificado A1 em <a (click)="aba = 'config'">Configuração</a>.
+        </div>
+      </div>
+    } @else if (config?.ambiente === 'homologacao') {
+      <div class="aviso info">
+        <span class="material-icons">science</span>
+        <div>Ambiente de <strong>testes</strong> da Sefaz: as notas emitidas agora não têm valor fiscal.</div>
+      </div>
+    }
+
+    <div class="filtros">
+      <div class="campo busca">
+        <label>Buscar</label>
+        <input type="text" [(ngModel)]="filtro.busca" (keyup.enter)="buscar()" placeholder="Número, cliente, placa ou veículo" />
+      </div>
+      <div class="campo">
+        <label>De</label>
+        <input type="date" [(ngModel)]="filtro.de" (change)="buscar()" />
+      </div>
+      <div class="campo">
+        <label>Até</label>
+        <input type="date" [(ngModel)]="filtro.ate" (change)="buscar()" />
+      </div>
+      <div class="campo">
+        <label>Tipo</label>
+        <select [(ngModel)]="filtro.tipo" (ngModelChange)="buscar()">
+          <option value="">Compra e venda</option>
+          <option value="ENTRADA">Compra (entrada)</option>
+          <option value="SAIDA">Venda (saída)</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label>Situação</label>
+        <select [(ngModel)]="filtro.status" (ngModelChange)="buscar()">
+          <option value="">Todas</option>
+          <option value="AUTORIZADA">Autorizada</option>
+          <option value="CANCELADA">Cancelada</option>
+          <option value="REJEITADA">Rejeitada</option>
+          <option value="PENDENTE">Pendente</option>
+          <option value="INUTILIZADA">Inutilizada</option>
+        </select>
+      </div>
+      <div class="campo botoes">
+        <button class="btn-secondary" (click)="buscar()"><span class="material-icons">search</span> Filtrar</button>
+        @if (filtrando) {
+          <button class="btn-secondary" (click)="limpar()" title="Limpar filtros"><span class="material-icons">filter_alt_off</span></button>
+        }
+      </div>
+    </div>
+
+    @if (!carregando && notas.length) {
+      <div class="totais">
+        <div><small>Vendas autorizadas</small><strong>{{ moeda(total('SAIDA').valor) }}</strong><small>{{ total('SAIDA').qtd }} nota(s)</small></div>
+        <div><small>Compras autorizadas</small><strong>{{ moeda(total('ENTRADA').valor) }}</strong><small>{{ total('ENTRADA').qtd }} nota(s)</small></div>
+        <div><small>Notas na lista</small><strong>{{ notas.length }}</strong>
+          <small>{{ notas.length >= limite ? 'mostrando as ' + limite + ' mais recentes' : (filtrando ? 'com o filtro' : 'todas') }}</small>
+        </div>
+      </div>
+    }
+
+    @if (carregando) {
+      <div class="loading">Carregando...</div>
+    } @else {
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr><th>Nota</th><th>Tipo</th><th>Emissão</th><th>Veículo</th><th>Destinatário</th><th>Valor</th><th>Situação</th><th></th></tr>
+          </thead>
+          <tbody>
+            @for (n of notas; track n.id) {
+              <tr>
+                <td data-label="Nota" class="nowrap">
+                  <strong>{{ n.numero }}</strong> <span class="text-muted">série {{ n.serie }}</span>
+                  @if (n.ambiente === 'homologacao') { <br /><span class="tag-teste">teste</span> }
+                </td>
+                <td data-label="Tipo">{{ n.tipo === 'SAIDA' ? 'Venda' : 'Compra' }}</td>
+                <td data-label="Emissão" class="nowrap">{{ n.dataEmissao | date:'dd/MM/yyyy HH:mm' }}</td>
+                <td data-label="Veículo">
+                  @if (n.veiculo) { {{ n.veiculo }}<br /><span class="text-muted">{{ n.placa }}</span> }
+                  @else { <span class="text-muted">Veículo excluído</span> }
+                </td>
+                <td data-label="Destinatário">{{ n.destinatarioNome || '—' }}</td>
+                <td data-label="Valor" class="nowrap">{{ moeda(n.valor) }}</td>
+                <td data-label="Situação">
+                  <span class="chip" [attr.data-status]="n.status">{{ rotuloStatus(n.status) }}</span>
+                  @if (n.cartaCorrecaoSequencia) { <br /><span class="text-muted">com carta de correção</span> }
+                  @if (n.status === 'REJEITADA' && n.motivo) { <br /><span class="text-muted motivo" [title]="n.motivo">{{ n.motivo }}</span> }
+                </td>
+                <td class="actions">
+                  @if (n.status === 'AUTORIZADA' || n.status === 'CANCELADA') {
+                    <button class="btn-icon" (click)="baixarDanfe(n)" title="DANFE (PDF)"><span class="material-icons">picture_as_pdf</span></button>
+                    <button class="btn-icon" (click)="baixarXml(n)" title="XML"><span class="material-icons">code</span></button>
+                  }
+                  <button class="btn-icon" (click)="abrir(n)" [disabled]="abrindo === n.id" title="Abrir (reenviar, cancelar, carta de correção)">
+                    <span class="material-icons">open_in_new</span>
+                  </button>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="8" class="empty">
+                {{ filtrando ? 'Nenhuma nota com esse filtro.' : 'Nenhuma nota emitida ainda.' }}
+              </td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  } @else {
+    <div class="config-card">
+      <app-nfe-config (prontoChange)="configSalva($event)"></app-nfe-config>
+    </div>
+  }
+</div>
+
+@if (veiculoAberto) {
+  <app-nfe-veiculo [veiculo]="veiculoAberto" (fechar)="fecharVeiculo()"></app-nfe-veiculo>
+}

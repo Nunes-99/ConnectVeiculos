@@ -106,6 +106,18 @@ export interface NfeResumo {
   cartaCorrecaoTexto: string | null;
   cartaCorrecaoData: string | null;
   podeCorrigir: boolean;
+  /** So na lista geral (tela Notas fiscais). */
+  veiculo?: string | null;
+  placa?: string | null;
+}
+
+/** Filtro da tela Notas fiscais; vazio = sem filtro. Datas em yyyy-MM-dd. */
+export interface NfeFiltro {
+  de: string;
+  ate: string;
+  tipo: '' | 'ENTRADA' | 'SAIDA';
+  status: string;
+  busca: string;
 }
 
 export interface NfeInutilizacao {
@@ -163,6 +175,12 @@ export class NfeService {
 
   municipios(uf: string, nome: string): Observable<NfeMunicipio[]> {
     return this.http.get<NfeMunicipio[]>(`${this.url}/municipios`, { params: { uf, nome } });
+  }
+
+  listar(filtro: NfeFiltro): Observable<NfeResumo[]> {
+    const params: Record<string, string> = {};
+    for (const [k, v] of Object.entries(filtro)) if (v && String(v).trim()) params[k] = String(v).trim();
+    return this.http.get<NfeResumo[]>(this.url, { params });
   }
 
   doVeiculo(veiculoId: number): Observable<NfeResumo[]> {
