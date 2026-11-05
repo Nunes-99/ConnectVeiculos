@@ -319,10 +319,13 @@
             </div>
           </div>
           <div class="form-row">
-            <div class="form-group">
-              <label>Preço de Compra</label>
-              <input formControlName="veiPrecoCompra" appCurrencyMask />
-            </div>
+            <!-- Vendedor nao ve o custo (com o preco de venda, daria o lucro). -->
+            @if (veCusto) {
+              <div class="form-group">
+                <label>Preço de Compra</label>
+                <input formControlName="veiPrecoCompra" appCurrencyMask />
+              </div>
+            }
             <div class="form-group">
               <label class="required">Preço de Venda</label>
               <input formControlName="veiPreco" appCurrencyMask
@@ -774,10 +777,12 @@
       </button>
     }
 
-    <div class="acoes-menu-separador"></div>
-    <button role="menuitem" class="perigo" (click)="fecharMenu(); remove(v.veiId)">
-      <span class="material-icons">delete</span><span>Excluir</span>
-    </button>
+    @if (podeExcluir) {
+      <div class="acoes-menu-separador"></div>
+      <button role="menuitem" class="perigo" (click)="fecharMenu(); remove(v.veiId)">
+        <span class="material-icons">delete</span><span>Excluir</span>
+      </button>
+    }
   </div>
 }
 

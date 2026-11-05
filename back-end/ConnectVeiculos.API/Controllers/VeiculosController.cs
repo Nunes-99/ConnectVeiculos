@@ -1,5 +1,7 @@
 using ConnectVeiculos.Application.InputModels.Veiculos;
 using ConnectVeiculos.Application.Interfaces.Veiculos;
+using ConnectVeiculos.Application.ViewModels.Veiculos;
+using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -41,7 +43,7 @@ namespace ConnectVeiculos.API.Controllers
             [FromQuery] string intervalo = "50")
         {
             var veiculos = await consultarVeiculosUseCase.Execute(pesquisa, lojaId, inicio, intervalo);
-            return Ok(veiculos);
+            return Ok(OcultarCusto(veiculos));
         }
 
         /// <summary>
@@ -58,6 +60,7 @@ namespace ConnectVeiculos.API.Controllers
             [FromQuery] int? lojaId = null)
         {
             var result = await consultarVeiculosPaginadoUseCase.Execute(page, pageSize, search, lojaId);
+            OcultarCusto(result.Items);
             return Ok(result);
         }
 
@@ -98,6 +101,7 @@ namespace ConnectVeiculos.API.Controllers
             [FromQuery] BuscaAvancadaVeiculoInputModel input)
         {
             var result = await buscaAvancadaVeiculosUseCase.Execute(input);
+            OcultarCusto(result.Items);
             return Ok(result);
         }
 
@@ -123,6 +127,7 @@ namespace ConnectVeiculos.API.Controllers
             if (veiculo == null)
                 return NotFound();
 
+            OcultarCusto(new[] { veiculo });
             return Ok(veiculo);
         }
 
@@ -224,11 +229,17 @@ namespace ConnectVeiculos.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> AtualizarVeiculo(
             [FromServices] IAtualizarVeiculoUseCase atualizarVeiculoUseCase,
+            [FromServices] IVeiculoRepository veiculoRepository,
             int id,
             [FromBody] VeiculoInputModel inputModel)
         {
             if (inputModel == null)
                 return BadRequest("Dados do veículo não informados.");
+
+            // O vendedor nao ve o preco de compra (recebe 0): o que ele manda
+            // nao pode apagar o que o gerente cadastrou.
+            if (SoVendedor && await veiculoRepository.GetByIdAsync(id) is { } atual)
+                inputModel.VeiPrecoCompra = atual.VeiPrecoCompra;
 
             inputModel.VeiId = id;
             await atualizarVeiculoUseCase.Execute(inputModel);
@@ -269,6 +280,7 @@ namespace ConnectVeiculos.API.Controllers
         /// <response code="401">Usuario nao autenticado</response>
         /// <response code="404">Veiculo nao encontrado</response>
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Administrador,Gerente")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -281,6 +293,20 @@ namespace ConnectVeiculos.API.Controllers
         }
 
         #endregion
+
+        /// <summary>
+        /// Perfil Vendedor (decidido em 04/11/2026): nao ve preco de compra, que
+        /// junto com o preco de venda entrega o lucro de cada carro.
+        /// </summary>
+        private bool SoVendedor =>
+            User.IsInRole("Vendedor") && !User.IsInRole("Gerente") && !User.IsInRole("Administrador");
+
+        private T OcultarCusto<T>(T veiculos) where T : IEnumerable<VeiculoViewModel>
+        {
+            if (SoVendedor && veiculos != null)
+                foreach (var v in veiculos) v.VeiPrecoCompra = 0;
+            return veiculos;
+        }
     }
 
     public class AtualizarSocialRequest
