@@ -60,7 +60,9 @@ export class IntegracoesComponent implements OnInit {
       id: 'mercadolivre', nome: 'Mercado Livre', descricao: 'Anuncia os veículos disponíveis e tira do ar quando vende.',
       categoria: 'Portais e marketplaces', icone: 'ml-icon', sigla: 'ML', palavras: 'marketplace anuncio',
       visivel: () => true,
-      status: () => this.mlConectado ? { texto: 'Conectado', classe: 'connected' } : { texto: 'Desconectado', classe: 'disconnected' },
+      // Enquanto confere com o ML nao afirma "Desconectado" (piscava antes de virar "Conectado").
+      status: () => this.mlLoading && !this.mlConectado ? { texto: 'Verificando...', classe: 'pending' }
+        : this.mlConectado ? { texto: 'Conectado', classe: 'connected' } : { texto: 'Desconectado', classe: 'disconnected' },
       conectada: () => this.mlConectado
     },
     {

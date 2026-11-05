@@ -61,8 +61,8 @@
           <p>Publicação automática de anúncios</p>
         </div>
       </div>
-      <span class="status-badge" [class.connected]="mlConectado" [class.disconnected]="!mlConectado">
-        {{ mlConectado ? 'Conectado' : 'Desconectado' }}
+      <span class="status-badge" [class.connected]="mlConectado" [class.disconnected]="!mlConectado && !mlLoading">
+        {{ mlConectado ? 'Conectado' : (mlLoading ? 'Verificando...' : 'Desconectado') }}
       </span>
     </div>
     <div class="card-body">
@@ -1231,7 +1231,7 @@
              API nao tem legenda nem link, entao preco e loja vao na imagem. -->
         <div class="info-block">
           <h4><span class="material-icons">amp_stories</span> 3. Stories (somem em 24h)</h4>
-          <p>O sistema monta uma imagem vertical com a foto do carro, o preço e o nome da loja, nas cores da loja, e publica como story. Também dá para publicar na hora pelo botão <span class="material-icons inline-icon">amp_stories</span> na lista de veículos.</p>
+          <p>O sistema monta uma imagem vertical com a foto do carro, o preço e o nome da loja, nas cores da loja, e publica como story. Também dá para publicar na hora pelo menu <span class="material-icons inline-icon">more_vert</span> do veículo na lista de veículos, em <strong>Publicar story</strong>.</p>
 
           <div class="story-grupo">
             <span class="story-grupo-titulo">Onde publicar</span>

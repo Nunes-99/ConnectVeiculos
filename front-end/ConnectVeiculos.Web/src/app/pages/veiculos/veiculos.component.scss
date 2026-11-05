@@ -917,6 +917,8 @@ textarea {
   width: 260px;
   max-height: calc(100vh - 16px);
   overflow-y: auto;
+  // Ao chegar no fim do menu a rolagem nao passa para a pagina (que fecharia o menu).
+  overscroll-behavior: contain;
   padding: 6px;
   background: var(--bg-primary, #fff);
   border: 1px solid var(--border-primary, #e0e0e0);

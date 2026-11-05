@@ -720,7 +720,7 @@
 <!-- Menu de acoes do veiculo (tres pontos). Fica fora da tabela para nao ser
      cortado pela rolagem dela; a posicao vem do botao clicado. -->
 @if (menuVeiculo; as v) {
-  <div class="acoes-menu" role="menu" [style.top.px]="menuPos.top" [style.bottom.px]="menuPos.bottom" [style.left.px]="menuPos.left"
+  <div class="acoes-menu" role="menu" [style.top.px]="menuPos.top" [style.bottom.px]="menuPos.bottom" [style.left.px]="menuPos.left" [style.max-height.px]="menuPos.maxAltura"
        (click)="$event.stopPropagation()">
     <div class="acoes-menu-titulo">{{ v.veiMarca }} {{ v.veiModelo }}@if (v.veiPlaca) { · {{ v.veiPlaca }} }</div>
 
