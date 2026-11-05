@@ -318,6 +318,12 @@ export class VeiculosComponent implements OnInit {
     return 'Publicar na Página do Facebook';
   }
 
+  tituloMercadoLivre(veiculo: Veiculo): string {
+    if (veiculo.mercadoLivreAguardandoPagamento)
+      return 'Criado no Mercado Livre, mas só aparece depois que a loja pagar a taxa do anúncio';
+    return `Anunciado no Mercado Livre${this.quando(veiculo.publicacaoMercadoLivreEm)} — clique para ver o anúncio`;
+  }
+
   // Colorido enquanto o ultimo story esta no ar (24h, igual ao story).
   storyNoAr(veiculo: Veiculo): boolean {
     return !!veiculo.storyNoArAte && new Date(veiculo.storyNoArAte).getTime() > Date.now();

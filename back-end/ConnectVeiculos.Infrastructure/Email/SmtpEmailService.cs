@@ -58,29 +58,41 @@ namespace ConnectVeiculos.Infrastructure.Email
             catch { return ""; }
         }
 
-        // Precedencia: env var > banco > appsettings
-        private async Task<EmailSettings> ResolveSettingsAsync()
+        /// <summary>
+        /// O e-mail sai sempre pela conta da propria loja, cadastrada por ela em
+        /// Integracoes -> E-mail (decisao de 04/11/2026). Nao ha remetente da
+        /// plataforma: sem o SMTP da loja, o e-mail nao e' enviado (e o log diz).
+        /// Antes havia reservas no .env e no appsettings (contato.connectveiculos@gmail.com,
+        /// sem senha), que entravam campo a campo e podiam misturar com o da loja.
+        /// </summary>
+        private async Task<EmailSettings?> ResolveSettingsAsync()
         {
-            var s = new EmailSettings
+            var servidor = await _configRepository.GetValorAsync(KEY_SERVER);
+            var remetente = await _configRepository.GetValorAsync(KEY_SENDER_EMAIL);
+            if (string.IsNullOrEmpty(servidor) || string.IsNullOrEmpty(remetente)) return null;
+
+            return new EmailSettings
             {
-                SmtpServer = await ResolveAsync("EMAIL_SMTP_SERVER", KEY_SERVER, _settings.SmtpServer),
-                SmtpPort = ParsePort(await ResolveAsync("EMAIL_SMTP_PORT", KEY_PORT, _settings.SmtpPort.ToString()), _settings.SmtpPort),
-                Username = await ResolveAsync("EMAIL_USERNAME", KEY_USERNAME, _settings.Username),
-                Password = await ResolveAsync("EMAIL_PASSWORD", KEY_PASSWORD, _settings.Password),
-                SenderEmail = await ResolveAsync("EMAIL_SENDER_EMAIL", KEY_SENDER_EMAIL, _settings.SenderEmail),
-                SenderName = await ResolveAsync("EMAIL_SENDER_NAME", KEY_SENDER_NAME, _settings.SenderName),
-                EnableSsl = ParseBool(await ResolveAsync("EMAIL_ENABLE_SSL", KEY_ENABLE_SSL, _settings.EnableSsl ? "true" : "false"), _settings.EnableSsl)
+                SmtpServer = servidor,
+                SmtpPort = ParsePort(await _configRepository.GetValorAsync(KEY_PORT), _settings.SmtpPort),
+                Username = await _configRepository.GetValorAsync(KEY_USERNAME) ?? "",
+                Password = await _configRepository.GetValorAsync(KEY_PASSWORD) ?? "",
+                SenderEmail = remetente,
+                // Sem nome cadastrado, o cliente ve o nome da loja.
+                SenderName = await _configRepository.GetValorAsync(KEY_SENDER_NAME) is { Length: > 0 } nome
+                    ? nome : await NomeDaLojaAsync() ?? "",
+                EnableSsl = ParseBool(await _configRepository.GetValorAsync(KEY_ENABLE_SSL), _settings.EnableSsl)
             };
-            return s;
         }
 
-        private async Task<string> ResolveAsync(string envVar, string dbKey, string fallback)
+        private async Task<string?> NomeDaLojaAsync()
         {
-            var fromEnv = Environment.GetEnvironmentVariable(envVar);
-            if (!string.IsNullOrEmpty(fromEnv)) return fromEnv;
-            var fromDb = await _configRepository.GetValorAsync(dbKey);
-            if (!string.IsNullOrEmpty(fromDb)) return fromDb;
-            return fallback ?? "";
+            try
+            {
+                var loja = (await _lojaRepository.GetAllAsync()).OrderBy(l => l.LojId).FirstOrDefault();
+                return string.IsNullOrWhiteSpace(loja?.LojNome) ? null : loja!.LojNome.Trim();
+            }
+            catch { return null; }
         }
 
         private static int ParsePort(string value, int fallback) => int.TryParse(value, out var p) && p > 0 ? p : fallback;
@@ -95,9 +107,9 @@ namespace ConnectVeiculos.Infrastructure.Email
             try
             {
                 var s = await ResolveSettingsAsync();
-                if (string.IsNullOrEmpty(s.SmtpServer))
+                if (s == null)
                 {
-                    _logger.LogWarning("Email nao enviado: servidor SMTP nao configurado");
+                    _logger.LogWarning("Email para {To} nao enviado: a loja ainda nao cadastrou o e-mail dela em Integracoes -> E-mail ({Subject})", to, subject);
                     return false;
                 }
 
@@ -144,7 +156,7 @@ namespace ConnectVeiculos.Infrastructure.Email
             if (string.IsNullOrEmpty(server) || string.IsNullOrEmpty(sender))
                 return new EmailConfigInfo { Configurado = false, SmtpPort = _settings.SmtpPort, EnableSsl = _settings.EnableSsl };
 
-            var s = await ResolveSettingsAsync();
+            var s = (await ResolveSettingsAsync())!;
             return new EmailConfigInfo
             {
                 Configurado = true,
@@ -190,8 +202,7 @@ namespace ConnectVeiculos.Infrastructure.Email
 
             try
             {
-                var s = await ResolveSettingsAsync();
-                if (string.IsNullOrEmpty(s.SmtpServer) || string.IsNullOrEmpty(s.SenderEmail))
+                if (await ResolveSettingsAsync() == null)
                     return new EmailTestResult { Sucesso = false, Mensagem = "SMTP não configurado. Preencha os campos e salve antes de testar." };
 
                 var conteudoTeste = @"

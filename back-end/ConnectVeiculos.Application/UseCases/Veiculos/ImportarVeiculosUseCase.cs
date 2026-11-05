@@ -129,7 +129,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                         veiKm: veiculoInput.Km >= 0 ? veiculoInput.Km : 0,
                         veiPreco: veiculoInput.Preco >= 0 ? veiculoInput.Preco : 0,
                         veiDtEntrada: veiculoInput.DataEntrada ?? DateTime.Now,
-                        veiSts: !string.IsNullOrWhiteSpace(veiculoInput.Status) ? veiculoInput.Status : "Disponivel",
+                        veiSts: NormalizarStatus(veiculoInput.Status),
                         veiSitSts: !string.IsNullOrWhiteSpace(veiculoInput.Situacao) ? veiculoInput.Situacao : "Ativo",
                         veiPrecoCompra: veiculoInput.PrecoCompra >= 0 ? veiculoInput.PrecoCompra : 0
                     );
@@ -152,6 +152,21 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             }
 
             return resultado;
+        }
+
+        /// <summary>
+        /// O sistema usa D (disponivel), V (vendido), R (reservado) e I (inativo).
+        /// A planilha costuma trazer a palavra; antes ela era gravada como veio
+        /// ("Disponivel"), e o carro sumia do catalogo, do painel e dos
+        /// relatorios, que filtram por "D".
+        /// </summary>
+        public static string NormalizarStatus(string? status)
+        {
+            var s = (status ?? "").Trim().ToUpperInvariant();
+            if (s.StartsWith("V")) return "V";
+            if (s.StartsWith("R")) return "R";
+            if (s.StartsWith("I")) return "I";
+            return "D";
         }
 
         private async Task<List<ImportacaoVeiculoInputModel>> ParseCsv(IFormFile arquivo)

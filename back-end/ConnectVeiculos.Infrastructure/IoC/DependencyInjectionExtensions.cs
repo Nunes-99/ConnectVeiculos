@@ -676,6 +676,21 @@ namespace ConnectVeiculos.Infrastructure.IoC
                 NormalizeEmptyDecimalNotNull(connection, "Veiculo", "VeiPreco");
                 NormalizeEmptyDecimalNotNull(connection, "Veiculo", "VeiPrecoCompra");
 
+                // A importacao por planilha gravava o status por extenso ("Disponivel")
+                // e o carro sumia do catalogo e do painel, que filtram por D/V/R/I
+                // (I = inativo). Idempotente: so mexe no que nao esta nesses codigos.
+                using (var stsCmd = connection.CreateCommand())
+                {
+                    stsCmd.CommandText = @"UPDATE Veiculo SET VeiSts = CASE
+                            WHEN UPPER(TRIM(VeiSts)) LIKE 'V%' THEN 'V'
+                            WHEN UPPER(TRIM(VeiSts)) LIKE 'R%' THEN 'R'
+                            WHEN UPPER(TRIM(VeiSts)) LIKE 'I%' THEN 'I'
+                            ELSE 'D' END
+                        WHERE VeiSts IS NULL OR VeiSts NOT IN ('D', 'V', 'R', 'I')";
+                    try { stsCmd.ExecuteNonQuery(); }
+                    catch { /* tabela ainda nao existe em banco novo antes do EnsureCreated */ }
+                }
+
                 // Favorito: UNIQUE (email, veiculo) — bloqueia favoritos duplicados.
                 // Idempotente. SQLite cria indice composto se nao existir.
                 using (var idxCmd = connection.CreateCommand())

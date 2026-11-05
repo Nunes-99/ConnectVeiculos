@@ -46,6 +46,8 @@ services:
       # OCR de CRLV via Google Gemini (tier gratuito 1500 req/dia).
       # Tambem pode ser configurado por tenant via UI em /integracoes.
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      # E-mail: nao ha remetente da plataforma. Cada loja cadastra o dela em
+      # Integracoes -> E-mail (decisao de 04/11/2026).
       # Multi-tenant
       - ADMIN_API_TOKEN=${ADMIN_API_TOKEN:-}
       - TENANTS_DATA_DIR=${TENANTS_DATA_DIR:-/app/data}

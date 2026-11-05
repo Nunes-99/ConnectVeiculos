@@ -24,6 +24,33 @@ namespace ConnectVeiculos.Tests.UseCases.Veiculos
             _useCase = new ImportarVeiculosUseCase(_veiculoRepositoryMock.Object, _categoriaRepositoryMock.Object);
         }
 
+        [Theory]
+        [InlineData(null, "D")]
+        [InlineData("", "D")]
+        [InlineData("Disponivel", "D")]
+        [InlineData("disponível", "D")]
+        [InlineData("D", "D")]
+        [InlineData("Vendido", "V")]
+        [InlineData(" reservado ", "R")]
+        [InlineData("Inativo", "I")]
+        public void NormalizarStatus_GravaOCodigoQueOSistemaFiltra(string? planilha, string esperado)
+            => ImportarVeiculosUseCase.NormalizarStatus(planilha).Should().Be(esperado);
+
+        [Fact]
+        public async Task Execute_SemStatusNaPlanilha_EntraDisponivelComCodigoD()
+        {
+            // Antes entrava "Disponivel" e o carro nao aparecia no catalogo (que filtra "D").
+            var arquivo = CriarArquivoMock("veiculos.csv", "marca;modelo;ano;placa;preco\nToyota;Corolla;2023;ABC1234;80000");
+            _categoriaRepositoryMock.Setup(x => x.GetAllAsync()).ReturnsAsync(new List<Categoria> { new Categoria(1, "Sedan", "Veículos Sedan", true) });
+            _veiculoRepositoryMock.Setup(x => x.GetByPlacaAsync(It.IsAny<string>())).ReturnsAsync((Veiculo)null);
+            Veiculo? gravado = null;
+            _veiculoRepositoryMock.Setup(x => x.CreateAsync(It.IsAny<Veiculo>())).Callback<Veiculo>(v => gravado = v).ReturnsAsync(1);
+
+            await _useCase.Execute(arquivo, 1);
+
+            gravado!.VeiSts.Should().Be("D");
+        }
+
         [Fact]
         public async Task Execute_ComArquivoFormatoInvalido_DeveRetornarErro()
         {
