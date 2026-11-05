@@ -344,12 +344,12 @@ namespace ConnectVeiculos.Infrastructure.Services.Webmotors
             try
             {
                 using var resp = await _http.GetAsync(url);
-                if (!resp.IsSuccessStatusCode) throw new WebmotorsException($"não consegui ler a foto {numero} do ConnectVeiculos (HTTP {(int)resp.StatusCode}).");
+                if (!resp.IsSuccessStatusCode) throw new WebmotorsException($"não consegui ler a foto {numero} do Gericar (HTTP {(int)resp.StatusCode}).");
                 return await resp.Content.ReadAsByteArrayAsync();
             }
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
             {
-                throw new WebmotorsException($"não consegui ler a foto {numero} do ConnectVeiculos.");
+                throw new WebmotorsException($"não consegui ler a foto {numero} do Gericar.");
             }
         }
 

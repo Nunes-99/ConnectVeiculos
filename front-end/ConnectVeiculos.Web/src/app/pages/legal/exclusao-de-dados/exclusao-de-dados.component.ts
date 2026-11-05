@@ -24,13 +24,13 @@ export class ExclusaoDeDadosComponent implements OnInit {
 
   ngOnInit(): void {
     this.seoService.setMeta({
-      title: 'Exclusão de Dados — ConnectVeiculos',
-      description: 'Como solicitar a exclusão de seus dados pessoais da plataforma ConnectVeiculos conforme LGPD e diretrizes da Meta.'
+      title: 'Exclusão de Dados — Gericar',
+      description: 'Como solicitar a exclusão de seus dados pessoais da plataforma Gericar conforme LGPD e diretrizes da Meta.'
     });
   }
 
   abrirEmail(): void {
-    const subject = encodeURIComponent('Solicitação de Exclusão de Dados — ConnectVeiculos');
+    const subject = encodeURIComponent('Solicitação de Exclusão de Dados — Gericar');
     const body = encodeURIComponent(
       `Nome: ${this.nome() || '[seu nome]'}\n` +
       `E-mail cadastrado: ${this.email() || '[seu e-mail]'}\n\n` +

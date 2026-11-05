@@ -72,7 +72,7 @@ namespace ConnectVeiculos.API.Controllers
         public async Task<IActionResult> Test([FromBody] TestPushRequest request)
         {
             await _pushService.EnviarParaTodosAdminAsync(
-                request.Titulo ?? "Teste ConnectVeiculos",
+                request.Titulo ?? "Teste Gericar",
                 request.Corpo ?? "Notificacao push funcionando!",
                 request.Url);
             return Ok(new { mensagem = "Teste enviado." });

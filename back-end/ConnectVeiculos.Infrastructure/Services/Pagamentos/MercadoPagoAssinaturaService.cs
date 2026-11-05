@@ -71,7 +71,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Pagamentos
             var site = (_settings.PublicSiteUrl ?? "").Trim().TrimEnd('/');
             var corpo = new
             {
-                reason = $"ConnectVeiculos - Plano {plano.PlaNome}",
+                reason = $"Gericar - Plano {plano.PlaNome}",
                 external_reference = ReferenciaExterna(tenantId, planoId),
                 payer_email = email,
                 back_url = $"{site}/plano?assinatura=retorno",
@@ -129,7 +129,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Pagamentos
             var corpo = new
             {
                 transaction_amount = plano.PlaPreco,
-                description = $"ConnectVeiculos - Plano {plano.PlaNome} ({DiasPorPix} dias)",
+                description = $"Gericar - Plano {plano.PlaNome} ({DiasPorPix} dias)",
                 payment_method_id = "pix",
                 payer = new { email },
                 external_reference = ReferenciaPix(tenantId, planoId),

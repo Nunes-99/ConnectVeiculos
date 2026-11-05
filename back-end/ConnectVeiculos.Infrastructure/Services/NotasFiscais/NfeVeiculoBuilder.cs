@@ -53,7 +53,7 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
                     IndFinal = naoContribuinte ? SimNao.Sim : SimNao.Nao,
                     IndPres = IndicadorPresenca.OperacaoPresencial,
                     ProcEmi = ProcessoEmissao.AplicativoContribuinte,
-                    VerProc = "ConnectVeiculos 1.0"
+                    VerProc = "Gericar 1.0"
                 },
                 Emit = new Emit
                 {

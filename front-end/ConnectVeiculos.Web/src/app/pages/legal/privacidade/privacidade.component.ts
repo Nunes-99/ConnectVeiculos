@@ -16,8 +16,8 @@ export class PrivacidadeComponent implements OnInit {
 
   ngOnInit(): void {
     this.seoService.setMeta({
-      title: 'Política de Privacidade — ConnectVeiculos',
-      description: 'Como a ConnectVeiculos coleta, usa e protege seus dados pessoais conforme a LGPD.'
+      title: 'Política de Privacidade — Gericar',
+      description: 'Como a Gericar coleta, usa e protege seus dados pessoais conforme a LGPD.'
     });
   }
 }

@@ -25,7 +25,7 @@ import { NapistaService, NapistaStatus, erroNapista } from '../../../core/servic
     } @else if (!status.configurado) {
       <div class="np-aviso">
         <span class="material-icons">hourglass_top</span>
-        <div>Integração em liberação com o NaPista. Assim que o NaPista cadastrar o ConnectVeiculos, o botão de conectar aparece aqui.</div>
+        <div>Integração em liberação com o NaPista. Assim que o NaPista cadastrar o Gericar, o botão de conectar aparece aqui.</div>
       </div>
     } @else if (!status.conectado && outroDominio) {
       <!-- O NaPista devolve sempre para o mesmo endereco (redirect_uri cadastrada). -->

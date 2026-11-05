@@ -678,7 +678,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Credere
         private void ExigirConfigurado()
         {
             if (!_settings.Configurado)
-                throw new CredereException("A integração com a Credere ainda não foi liberada para o ConnectVeiculos.");
+                throw new CredereException("A integração com a Credere ainda não foi liberada para o Gericar.");
         }
 
         private async Task<int> LojaObrigatoriaAsync()

@@ -23,7 +23,7 @@ import { CredereService, CredereStatus, erroCredere } from '../../../core/servic
     } @else if (!status.configurado) {
       <div class="cr-aviso">
         <span class="material-icons">hourglass_top</span>
-        <div>Integração em liberação com a Credere. Assim que as chaves do ConnectVeiculos forem cadastradas, o botão de conectar aparece aqui.</div>
+        <div>Integração em liberação com a Credere. Assim que as chaves do Gericar forem cadastradas, o botão de conectar aparece aqui.</div>
       </div>
     } @else if (!status.conectado && outroDominio) {
       <!-- A Credere devolve sempre para o mesmo endereco; o cookie que protege a

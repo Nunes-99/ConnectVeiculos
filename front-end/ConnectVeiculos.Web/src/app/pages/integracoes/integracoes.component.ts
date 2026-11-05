@@ -308,7 +308,7 @@ Te esperamos na {{6}}. Até breve!`;
     username: ['', Validators.required],
     password: [''],
     senderEmail: ['', [Validators.required, Validators.email]],
-    senderName: ['ConnectVeiculos', Validators.required],
+    senderName: ['Gericar', Validators.required],
     enableSsl: [true]
   });
   smtpSalvando = false;
@@ -1049,10 +1049,12 @@ Te esperamos na {{6}}. Até breve!`;
      // o fallback global da plataforma (appsettings.json) e nao servem como
      // remetente util pra loja — tratamos como vazio pra sugerir os dados do
      // admin/loja padrao no lugar.
-     const PLATFORM_DEFAULT_NAME = 'ConnectVeiculos';
+     // "ConnectVeiculos" continua na lista: configs salvas antes da troca de marca.
+     const PLATFORM_DEFAULT_NAME = 'Gericar';
+     const PLATFORM_NOMES_PADRAO = [PLATFORM_DEFAULT_NAME, 'ConnectVeiculos'];
      const PLATFORM_DEFAULT_EMAIL = 'contato.connectveiculos@gmail.com';
 
-     const senderNameSalvo = this.smtpConfig.senderName && this.smtpConfig.senderName !== PLATFORM_DEFAULT_NAME
+     const senderNameSalvo = this.smtpConfig.senderName && !PLATFORM_NOMES_PADRAO.includes(this.smtpConfig.senderName)
        ? this.smtpConfig.senderName
        : '';
      const senderEmailSalvo = this.smtpConfig.senderEmail && this.smtpConfig.senderEmail !== PLATFORM_DEFAULT_EMAIL

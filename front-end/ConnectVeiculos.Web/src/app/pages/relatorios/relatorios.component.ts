@@ -211,7 +211,7 @@ export class RelatoriosComponent implements OnInit {
 
     // Cabecalho
     doc.setFontSize(18);
-    doc.text('ConnectVeiculos', 14, 20);
+    doc.text('Gericar', 14, 20);
     doc.setFontSize(14);
     doc.text(titulo, 14, 30);
     doc.setFontSize(10);

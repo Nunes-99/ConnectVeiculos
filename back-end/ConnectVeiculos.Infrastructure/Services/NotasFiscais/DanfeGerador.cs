@@ -192,7 +192,7 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
                     });
                 });
 
-                page.Footer().AlignRight().Text("Emitido pelo ConnectVeiculos").FontSize(5).FontColor(Colors.Grey.Medium);
+                page.Footer().AlignRight().Text("Emitido pelo Gericar").FontSize(5).FontColor(Colors.Grey.Medium);
             }));
         }
 

@@ -16,8 +16,8 @@ export class TermosComponent implements OnInit {
 
   ngOnInit(): void {
     this.seoService.setMeta({
-      title: 'Termos de Serviço — ConnectVeiculos',
-      description: 'Termos e condições de uso da plataforma SaaS ConnectVeiculos.'
+      title: 'Termos de Serviço — Gericar',
+      description: 'Termos e condições de uso da plataforma SaaS Gericar.'
     });
   }
 }

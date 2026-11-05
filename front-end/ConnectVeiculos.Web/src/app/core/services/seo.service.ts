@@ -34,7 +34,7 @@ export class SeoService {
     this.meta.updateTag({ property: 'og:description', content: description });
     this.meta.updateTag({ property: 'og:type', content: 'product' });
     this.meta.updateTag({ property: 'og:url', content: canonicalUrl });
-    this.meta.updateTag({ property: 'og:site_name', content: 'ConnectVeiculos' });
+    this.meta.updateTag({ property: 'og:site_name', content: 'Gericar' });
     this.meta.updateTag({ property: 'og:locale', content: 'pt_BR' });
     if (imageUrl) {
       // WhatsApp/Facebook escolhem a melhor imagem com base nas dimensoes.
@@ -128,24 +128,24 @@ export class SeoService {
     this.meta.updateTag({ property: 'og:description', content: opts.description });
     this.meta.updateTag({ property: 'og:type', content: 'website' });
     this.meta.updateTag({ property: 'og:url', content: canonical });
-    this.meta.updateTag({ property: 'og:site_name', content: 'ConnectVeiculos' });
+    this.meta.updateTag({ property: 'og:site_name', content: 'Gericar' });
     this.meta.updateTag({ property: 'og:locale', content: 'pt_BR' });
   }
 
   setLandingPage(): void {
-    const titleText = 'ConnectVeiculos — Sistema de Gestão para Revendas de Veículos';
+    const titleText = 'Gericar — Sistema de Gestão para Revendas de Veículos';
     const description = 'Plataforma SaaS completa para revendedores de veículos: estoque, catálogo online, leads, vendas, publicação automática no Mercado Livre e catálogo conectado ao Facebook e Instagram.';
 
     this.title.setTitle(titleText);
     this.meta.updateTag({ name: 'description', content: description });
     this.meta.updateTag({ name: 'robots', content: 'index, follow' });
-    this.meta.updateTag({ name: 'keywords', content: 'connectveiculos, sistema revenda, gestão de veículos, catálogo online, crm automotivo, software para revendedor' });
+    this.meta.updateTag({ name: 'keywords', content: 'gericar, sistema revenda, gestão de veículos, catálogo online, crm automotivo, software para revendedor' });
 
     // Open Graph
     this.meta.updateTag({ property: 'og:title', content: titleText });
     this.meta.updateTag({ property: 'og:description', content: description });
     this.meta.updateTag({ property: 'og:type', content: 'website' });
-    this.meta.updateTag({ property: 'og:site_name', content: 'ConnectVeiculos' });
+    this.meta.updateTag({ property: 'og:site_name', content: 'Gericar' });
     this.meta.updateTag({ property: 'og:locale', content: 'pt_BR' });
 
     // Twitter Card
@@ -157,7 +157,7 @@ export class SeoService {
     const jsonLd = {
       '@context': 'https://schema.org',
       '@type': 'SoftwareApplication',
-      'name': 'ConnectVeiculos',
+      'name': 'Gericar',
       'description': description,
       'applicationCategory': 'BusinessApplication',
       'operatingSystem': 'Web',
@@ -201,7 +201,7 @@ export class SeoService {
     this.meta.updateTag({ property: 'og:description', content: description });
     this.meta.updateTag({ property: 'og:type', content: 'website' });
     this.meta.updateTag({ property: 'og:url', content: canonicalUrl });
-    this.meta.updateTag({ property: 'og:site_name', content: loja?.lojNome || 'ConnectVeiculos' });
+    this.meta.updateTag({ property: 'og:site_name', content: loja?.lojNome || 'Gericar' });
     this.meta.updateTag({ property: 'og:locale', content: 'pt_BR' });
 
     const imageUrl = this.resolveLojaLogo(origin, loja?.lojImg);
@@ -241,7 +241,7 @@ export class SeoService {
     this.meta.updateTag({ property: 'og:description', content: description });
     this.meta.updateTag({ property: 'og:type', content: 'website' });
     this.meta.updateTag({ property: 'og:url', content: canonicalUrl });
-    this.meta.updateTag({ property: 'og:site_name', content: loja?.lojNome || 'ConnectVeiculos' });
+    this.meta.updateTag({ property: 'og:site_name', content: loja?.lojNome || 'Gericar' });
     this.meta.updateTag({ property: 'og:locale', content: 'pt_BR' });
     if (imageUrl) {
       this.meta.updateTag({ property: 'og:image', content: imageUrl });

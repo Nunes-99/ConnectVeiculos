@@ -859,7 +859,7 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
                 Username = request.Username,
                 Password = request.Password ?? "",
                 SenderEmail = request.SenderEmail,
-                SenderName = request.SenderName ?? "ConnectVeiculos",
+                SenderName = request.SenderName ?? "Gericar",
                 EnableSsl = request.EnableSsl
             });
             return Ok(new { mensagem = "Configuracao SMTP salva." });
@@ -1481,7 +1481,7 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
         public string Username { get; set; } = "";
         public string Password { get; set; } = "";
         public string SenderEmail { get; set; } = "";
-        public string SenderName { get; set; } = "ConnectVeiculos";
+        public string SenderName { get; set; } = "Gericar";
         public bool EnableSsl { get; set; } = true;
     }
 

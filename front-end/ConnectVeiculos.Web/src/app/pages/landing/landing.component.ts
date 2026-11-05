@@ -173,7 +173,7 @@ export class LandingComponent implements OnInit {
 
   faqs = [
     {
-      pergunta: 'O que é o ConnectVeiculos?',
+      pergunta: 'O que é o Gericar?',
       resposta: 'É uma plataforma SaaS na nuvem feita para revendas de veículos. Em um só lugar você gerencia estoque, catálogo online, leads, test drives e vendas — e publica seus veículos automaticamente no Mercado Livre, no catálogo do Facebook e na vitrine do Instagram.'
     },
     {

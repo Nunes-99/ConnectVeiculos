@@ -752,7 +752,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Napista
         private void ExigirConfigurado()
         {
             if (!_settings.Configurado)
-                throw new NapistaException("A integração com o NaPista ainda está em liberação (falta o client_id do ConnectVeiculos).");
+                throw new NapistaException("A integração com o NaPista ainda está em liberação (falta o client_id do Gericar).");
         }
 
         private async Task<ContaSalva> ContaObrigatoriaAsync()
