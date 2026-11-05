@@ -27,15 +27,16 @@ Sair com:
       própria aproveitando os acessos dos bancos?
 - [ ] Proposta por escrito, por e-mail.
 
-## 2. Guardar as chaves (no PC, Git Bash)
+## 2. Guardar as chaves (no PC, Git Bash) — único passo fora da tela
 
     bash scripts/trocar-chaves.sh
 
-Cole `CREDERE_CLIENT_ID` e `CREDERE_CLIENT_SECRET` quando pedir (as outras
-chaves: Enter para manter). Elas vão para o `.env` da VM e para o arquivo de
-credenciais do PC. Nada passa pelo chat.
+Passo a passo completo, pergunta por pergunta: **`docs/trocar-chaves.md`**.
+Resumo: N, N, e Enter em tudo menos `CREDERE_CLIENT_ID`,
+`CREDERE_CLIENT_SECRET` e (se for testar no sandbox) `CREDERE_BASE_URL`.
+Nada passa pelo chat. Depois disso, tudo é pela tela (seção 4).
 
-## 3. Testar a integração no PC (antes de publicar)
+## 3. Plano B: testar pelo terminal (só se a tela der erro)
 
 1. Pegar uma chave de acesso com a conta da loja (ou a conta de testes):
 
@@ -63,14 +64,35 @@ Pontos que a documentação deixou dúbios e o teste confirma: PATCH x PUT no
 lead, formato da data de nascimento, `users` x `user` na lista de vendedores,
 status 200 x 201 na troca do código.
 
-## 4. Publicar
+## 4. Homologar pela tela
 
-1. Juntar a branch `feature/renave-nfe` no master (CI verde).
-2. `bash scripts/publicar.sh`.
-3. Em **Integrações → Credere**: Conectar conta, escolher a loja, conferir os
-   bancos (acesso válido / inválido).
-4. Em **Financiamento**: abrir uma ficha, buscar a versão do veículo e
-   "Simular na Credere".
+O código já está no servidor (publicado em 04/11/2026). Depois do passo 2:
+
+**Conectar a conta**
+1. Entre em **https://connectveiculos.dev.br** com o usuário da **loja de
+   teste** (não a Diamante). Tem que ser esse endereço: é para ele que a
+   Credere volta depois do login (se entrar por outro, a tela avisa).
+2. **Integrações → Credere**: some o aviso "Integração em liberação" e aparece
+   **Conectar conta da Credere**. Clique.
+3. Na tela da Credere, entre com a **conta de teste** que eles passaram e autorize.
+4. De volta ao ConnectVeiculos: em **Loja na Credere**, escolha a loja.
+5. **Bancos da loja na Credere**: confira os bancos e se o acesso está válido.
+   Sem nenhum banco, peça à Credere para liberar bancos na loja de teste.
+
+**Simular**
+1. **Financiamento → Nova ficha**: cliente com o **CPF de teste** da Credere
+   (nome, telefone e e-mail podem ser fictícios). Salve.
+2. Abra a ficha → seção **Simular na Credere**.
+3. **Versão do veículo na Credere**: digite marca e modelo (ex.: Toyota
+   Corolla) e escolha a versão.
+4. Ano fabricação, ano modelo, UF e cidade de licenciamento. Se algum banco
+   exigir mais (nascimento, renda, CNH, ocupação), o campo fica marcado.
+5. **Simular na Credere** → "Aguardando os bancos..." → condições por banco
+   (parcela, taxa, entrada).
+
+Deu erro: print da mensagem para o Claude. O plano B é a seção 3.
+
+Cuidado: sem sandbox, a simulação vai aos bancos de verdade com o CPF digitado.
 
 ## Onde está o código
 
