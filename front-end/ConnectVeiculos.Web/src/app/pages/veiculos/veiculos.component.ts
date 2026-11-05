@@ -671,7 +671,7 @@ export class VeiculosComponent implements OnInit {
   // ---------- Menu de acoes (tres pontos) ----------
 
   menuVeiculo: Veiculo | null = null;
-  menuPos: { top: number | null; bottom: number | null; left: number } = { top: null, bottom: null, left: 0 };
+  menuPos: { top: number | null; bottom: number | null; left: number; maxAltura: number } = { top: null, bottom: null, left: 0, maxAltura: 0 };
 
   abrirMenu(veiculo: Veiculo, evento: MouseEvent): void {
     evento.stopPropagation();
@@ -679,10 +679,16 @@ export class VeiculosComponent implements OnInit {
     const r = (evento.currentTarget as HTMLElement).getBoundingClientRect();
     const largura = 260;
     const left = Math.max(8, Math.min(r.right - largura, window.innerWidth - largura - 8));
-    // Na metade de baixo da tela o menu abre para cima.
-    this.menuPos = r.bottom > window.innerHeight * 0.55
-      ? { top: null, bottom: window.innerHeight - r.top + 4, left }
-      : { top: r.bottom + 4, bottom: null, left };
+    // Abre para o lado com mais espaco e nunca passa da borda da tela: com os
+    // grupos Documentos e Portais o menu ficou mais alto que a janela em
+    // notebook, e os ultimos itens nao davam para clicar (rolar a pagina fecha
+    // o menu). O que nao couber rola dentro do proprio menu.
+    const margem = 8;
+    const abaixo = window.innerHeight - r.bottom - 4 - margem;
+    const acima = r.top - 4 - margem;
+    this.menuPos = abaixo >= acima
+      ? { top: r.bottom + 4, bottom: null, left, maxAltura: abaixo }
+      : { top: null, bottom: window.innerHeight - r.top + 4, left, maxAltura: acima };
     this.menuVeiculo = veiculo;
   }
 

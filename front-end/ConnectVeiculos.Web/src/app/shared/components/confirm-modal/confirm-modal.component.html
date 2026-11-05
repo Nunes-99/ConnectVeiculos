@@ -17,7 +17,7 @@
       <h3>{{ titulo }}</h3>
       <p>{{ mensagem }}</p>
       <div class="modal-actions">
-        <button class="btn-secondary" (click)="onCancelar()">{{ textoBotaoCancelar }}</button>
+        <button class="btn-secondary" data-esc (click)="onCancelar()">{{ textoBotaoCancelar }}</button>
         <button class="btn-confirm" [class]="tipo" (click)="onConfirmar()">{{ textoBotaoConfirmar }}</button>
       </div>
     </div>

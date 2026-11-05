@@ -1,4 +1,4 @@
-import { Component, OnInit, PLATFORM_ID, inject } from '@angular/core';
+import { Component, HostListener, OnInit, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
 import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
@@ -22,6 +22,30 @@ export class AppComponent implements OnInit {
 
   ngOnInit(): void {
     if (isPlatformBrowser(this.platformId)) this.avisarVersaoNova();
+  }
+
+  /**
+   * Esc fecha a janela que estiver por cima. As janelas do sistema seguem o
+   * mesmo molde (.modal-overlay com o X .btn-close/.modal-close, um botao
+   * marcado com data-esc, ou um botao Cancelar/Fechar),
+   * entao uma regra so aqui vale para todas, inclusive as que vierem depois.
+   * Clicar no proprio botao garante o mesmo comportamento do clique do usuario
+   * (ex.: janela que pede confirmacao antes de descartar).
+   */
+  @HostListener('document:keydown.escape', ['$event'])
+  fecharJanelaComEsc(ev: Event): void {
+    if (ev.defaultPrevented) return;
+    const janelas = Array.from(document.querySelectorAll<HTMLElement>('.modal-overlay'))
+      .filter(j => j.getBoundingClientRect().width > 0);
+    const topo = janelas[janelas.length - 1];
+    if (!topo) return;
+    const botoes = Array.from(topo.querySelectorAll<HTMLButtonElement>('button:not([disabled])'));
+    const fechar = topo.querySelector<HTMLButtonElement>('[data-esc]:not([disabled]), .btn-close:not([disabled]), .modal-close:not([disabled])')
+      ?? botoes.find(b => /^\s*(cancelar|fechar)\s*$/i.test(b.innerText));
+    if (fechar) {
+      ev.preventDefault();
+      fechar.click();
+    }
   }
 
   /**
