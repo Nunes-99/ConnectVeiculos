@@ -101,56 +101,12 @@
                 </span>
               </td>
               <td class="actions" data-label="Ações">
-                <!-- Publicar nas redes. O icone da rede E o botao de publicar:
-                     antes eram cinco icones (compartilhar, marcar como postado
-                     IG, marcar FB, publicar IG, publicar FB) e ninguem sabia
-                     qual fazia o que. -->
-                @if (metaFlags.instagramEnabled) {
-                  <!-- Colorido = ja publicado. Nesse caso o clique abre o post em
-                       vez de publicar de novo: republicar criaria um segundo
-                       anuncio do mesmo carro no perfil. -->
-                  <button class="btn-icon btn-social"
-                          [class.publicado]="veiculo.publicacaoInstagramUrl"
-                          (click)="acaoInstagram(veiculo)"
-                          [disabled]="publicandoIg.has(veiculo.veiId)"
-                          [title]="tituloInstagram(veiculo)">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" [attr.fill]="corInstagram(veiculo)">
-                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
-                  </svg>
-                  </button>
-                  <button class="btn-icon btn-social"
-                          [class.publicado]="veiculo.publicacaoFacebookUrl"
-                          (click)="acaoFacebook(veiculo)"
-                          [disabled]="publicandoFb.has(veiculo.veiId)"
-                          [title]="tituloFacebook(veiculo)">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" [attr.fill]="corFacebook(veiculo)">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                  </svg>
-                  </button>
-                  <!-- Story: vai para onde a loja escolheu em Integracoes. -->
-                  <button class="btn-icon"
-                          (click)="publicarStory(veiculo)"
-                          [disabled]="publicandoStory.has(veiculo.veiId) || veiculo.veiSts === 'I'"
-                          [title]="tituloStory(veiculo)">
-                    <span class="material-icons" [style.color]="corStory(veiculo)">amp_stories</span>
-                  </button>
-                }
-                <button class="btn-icon" (click)="openImagensModal(veiculo)" title="Imagens">
-                  <span class="material-icons">photo_library</span>
-                </button>
-                <button class="btn-icon" (click)="abrirConsultaDetran(veiculo)" title="Consultar débitos no Detran" [disabled]="!veiculo.veiPlaca">
-                  <span class="material-icons">gavel</span>
-                </button>
-                @if (podeWebmotors) {
-                  <button class="btn-icon" (click)="webmotorsVeiculo = veiculo" title="Anunciar na Webmotors">
-                    <span class="material-icons">directions_car</span>
-                  </button>
-                }
+                <!-- So editar fica a mostra; o resto esta no menu dos tres pontos. -->
                 <button class="btn-icon" (click)="openModal(veiculo)" title="Editar">
                   <span class="material-icons">edit</span>
                 </button>
-                <button class="btn-icon delete" (click)="remove(veiculo.veiId)" title="Excluir">
-                  <span class="material-icons">delete</span>
+                <button class="btn-icon" [class.ativo]="menuVeiculo?.veiId === veiculo.veiId" (click)="abrirMenu(veiculo, $event)" title="Mais ações">
+                  <span class="material-icons">more_vert</span>
                 </button>
               </td>
             </tr>
@@ -724,6 +680,81 @@
 
 @if (webmotorsVeiculo) {
   <app-webmotors-veiculo [veiculo]="webmotorsVeiculo" (fechar)="webmotorsVeiculo = null"></app-webmotors-veiculo>
+}
+
+@if (nfeVeiculo) {
+  <app-nfe-veiculo [veiculo]="nfeVeiculo" (fechar)="nfeVeiculo = null"></app-nfe-veiculo>
+}
+
+@if (renaveVeiculo) {
+  <app-renave-veiculo [veiculo]="renaveVeiculo" (fechar)="renaveVeiculo = null"></app-renave-veiculo>
+}
+
+@if (contratoVeiculo) {
+  <app-contrato-veiculo [veiculo]="contratoVeiculo" (fechar)="contratoVeiculo = null"></app-contrato-veiculo>
+}
+
+<!-- Menu de acoes do veiculo (tres pontos). Fica fora da tabela para nao ser
+     cortado pela rolagem dela; a posicao vem do botao clicado. -->
+@if (menuVeiculo; as v) {
+  <div class="acoes-menu" role="menu" [style.top.px]="menuPos.top" [style.bottom.px]="menuPos.bottom" [style.left.px]="menuPos.left"
+       (click)="$event.stopPropagation()">
+    <div class="acoes-menu-titulo">{{ v.veiMarca }} {{ v.veiModelo }}@if (v.veiPlaca) { · {{ v.veiPlaca }} }</div>
+
+    @if (metaFlags.instagramEnabled) {
+      <span class="acoes-menu-grupo">Publicar</span>
+      <!-- Ja publicado: o clique abre o post em vez de publicar de novo. -->
+      <button role="menuitem" (click)="fecharMenu(); acaoInstagram(v)" [disabled]="publicandoIg.has(v.veiId)" [title]="tituloInstagram(v)">
+        <span class="acoes-menu-icone"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" [attr.fill]="corInstagram(v)">
+                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
+                  </svg></span>
+        <span>{{ v.publicacaoInstagramUrl ? 'Ver post no Instagram' : 'Publicar no Instagram' }}</span>
+      </button>
+      <button role="menuitem" (click)="fecharMenu(); acaoFacebook(v)" [disabled]="publicandoFb.has(v.veiId)" [title]="tituloFacebook(v)">
+        <span class="acoes-menu-icone"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" [attr.fill]="corFacebook(v)">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                  </svg></span>
+        <span>{{ v.publicacaoFacebookUrl ? 'Ver post no Facebook' : 'Publicar no Facebook' }}</span>
+      </button>
+      <button role="menuitem" (click)="fecharMenu(); publicarStory(v)" [disabled]="publicandoStory.has(v.veiId) || v.veiSts === 'I'" [title]="tituloStory(v)">
+        <span class="material-icons" [style.color]="corStory(v)">amp_stories</span>
+        <span>Publicar story</span>
+      </button>
+    }
+
+    <span class="acoes-menu-grupo">Veículo</span>
+    <button role="menuitem" (click)="fecharMenu(); openImagensModal(v)">
+      <span class="material-icons">photo_library</span><span>Imagens</span>
+    </button>
+    <button role="menuitem" (click)="fecharMenu(); abrirConsultaDetran(v)" [disabled]="!v.veiPlaca">
+      <span class="material-icons">gavel</span><span>Consultar débitos no Detran</span>
+    </button>
+    <button role="menuitem" (click)="fecharMenu(); contratoVeiculo = v">
+      <span class="material-icons">draw</span><span>Contratos e assinatura</span>
+    </button>
+
+    @if (podeRenave) {
+      <span class="acoes-menu-grupo">Documentos</span>
+      <button role="menuitem" (click)="fecharMenu(); renaveVeiculo = v" [disabled]="!v.veiPlaca">
+        <span class="material-icons">assignment_turned_in</span><span>Renave (entrada e saída)</span>
+      </button>
+      <button role="menuitem" (click)="fecharMenu(); nfeVeiculo = v">
+        <span class="material-icons">receipt_long</span><span>Notas fiscais (NF-e)</span>
+      </button>
+    }
+
+    @if (podeWebmotors) {
+      <span class="acoes-menu-grupo">Portais</span>
+      <button role="menuitem" (click)="fecharMenu(); webmotorsVeiculo = v">
+        <span class="material-icons">directions_car</span><span>Anunciar na Webmotors</span>
+      </button>
+    }
+
+    <div class="acoes-menu-separador"></div>
+    <button role="menuitem" class="perigo" (click)="fecharMenu(); remove(v.veiId)">
+      <span class="material-icons">delete</span><span>Excluir</span>
+    </button>
+  </div>
 }
 
 <!-- Modal: Consultar Detran -->

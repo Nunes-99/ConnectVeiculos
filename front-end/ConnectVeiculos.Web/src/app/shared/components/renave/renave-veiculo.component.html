@@ -1,0 +1,262 @@
+<div class="modal-overlay" (click)="fechar.emit()">
+  <div class="modal modal-lg" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2><span class="material-icons">assignment_turned_in</span> Renave · {{ veiculo.veiPlaca }}</h2>
+      <button class="btn-close" (click)="fechar.emit()"><span class="material-icons">close</span></button>
+    </div>
+
+    <div class="modal-body">
+      <p class="rnv-veiculo">{{ veiculo.veiMarca }} {{ veiculo.veiModelo }} {{ veiculo.veiAno }} · Renavam {{ veiculo.veiRenavam || '—' }}</p>
+
+      @if (config && !config.pronto) {
+        <div class="rnv-alerta">
+          <span class="material-icons">settings</span>
+          Configure o Renave em <strong>Integrações</strong> (operador responsável e e-mail da loja)@if (!emTestes) { e envie o certificado A1 em <strong>Notas fiscais → Configuração</strong>}.
+        </div>
+      }
+      @if (emTestes) {
+        <div class="rnv-aviso-teste"><span class="material-icons">science</span> Ambiente de testes do Serpro: nada aqui vale de verdade.</div>
+      }
+
+      @if (carregando) {
+        <p>Carregando...</p>
+      } @else if (situacao) {
+        <ol class="rnv-etapas">
+          @for (e of etapas; track e.titulo) {
+            <li [class.feita]="e.feita">
+              <span class="material-icons">{{ e.feita ? 'check_circle' : 'radio_button_unchecked' }}</span>
+              {{ e.titulo }}
+              @if (e.feita && e.detalhe) { <small>{{ e.detalhe | date:'dd/MM/yyyy' }}</small> }
+            </li>
+          }
+        </ol>
+
+        <div class="rnv-proximo">
+          <strong>Próximo passo:</strong> {{ situacao.proximoPasso }}
+          @if (situacao.idEstoque) {
+            <button class="rnv-link" (click)="atualizar()" [disabled]="enviando">
+              <span class="material-icons">refresh</span> Atualizar
+            </button>
+          }
+        </div>
+
+        @if (situacao.ultimoErro) {
+          <div class="rnv-erro-box"><span class="material-icons">error</span> {{ situacao.ultimoErro }}</div>
+        }
+
+        @switch (passo) {
+          @case ('entrada') {
+            <h4>Dados do CRV (documento do carro)</h4>
+            <div class="rnv-grid">
+              <div class="form-group">
+                <label>Tipo do CRV</label>
+                <select [(ngModel)]="entrada.tipoCrv">
+                  <option value="DIGITAL">Digital (CRV-e / ATPV-e)</option>
+                  <option value="VERDE">Papel verde</option>
+                  <option value="AZUL">Papel azul</option>
+                  <option value="BRANCO">Papel branco</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Nº do CRV @if (entrada.tipoCrv === 'DIGITAL') { <small>(opcional)</small> }</label>
+                <input type="text" [(ngModel)]="entrada.numeroCrv" inputmode="numeric" />
+              </div>
+            </div>
+            <button class="btn-secondary" (click)="consultarAptidao()" [disabled]="enviando">
+              <span class="material-icons">fact_check</span> Consultar aptidão (restrições e débitos)
+            </button>
+
+            @if (aptidao) {
+              <div [class]="aptidao.apto ? 'rnv-ok' : 'rnv-erro-box'">
+                <span class="material-icons">{{ aptidao.apto ? 'check_circle' : 'block' }}</span>
+                <div>
+                  <strong>{{ aptidao.apto ? 'Apto para entrar no estoque' : 'Não apto' }}</strong>
+                  @for (m of aptidao.motivos; track m) { <small>{{ m }}</small> }
+                  @if (aptidao.comunicacaoComDetranFalhou) { <small>O Detran não respondeu: tente de novo mais tarde.</small> }
+                  @if (aptidao.existemDebitos) {
+                    <small>Débitos: IPVA {{ aptidao.debitoIpva | currency:'BRL' }} · Licenciamento {{ aptidao.debitoLicenciamento | currency:'BRL' }} · Multas {{ aptidao.debitoMultas | currency:'BRL' }}</small>
+                  }
+                  @if (aptidao.restricoes.length) { <small>Restrições: {{ aptidao.restricoes.join(', ') }}</small> }
+                </div>
+              </div>
+            }
+
+            <h4>Entrada no estoque</h4>
+            @if (origemDados) {
+              <div class="rnv-ok"><span class="material-icons">auto_fix_high</span> Vendedor preenchido com os dados {{ origemDados }}. Confira.</div>
+            }
+            <div class="rnv-grid">
+              <div class="form-group">
+                <label>Código de segurança do CRV</label>
+                <input type="text" [(ngModel)]="entrada.codigoSegurancaCrv" inputmode="numeric" />
+              </div>
+              <div class="form-group">
+                <label>CPF/CNPJ do vendedor (dono no CRV)</label>
+                <input type="text" [(ngModel)]="entrada.documentoVendedor" inputmode="numeric" />
+              </div>
+              <div class="form-group">
+                <label>E-mail do vendedor</label>
+                <input type="email" [(ngModel)]="entrada.emailVendedor" />
+              </div>
+              <div class="form-group">
+                <label>Data da compra</label>
+                <input type="date" [(ngModel)]="entrada.dataCompra" />
+              </div>
+              <div class="form-group">
+                <label>Valor da compra (R$)</label>
+                <input type="number" [(ngModel)]="entrada.valorCompra" min="0" step="0.01" />
+              </div>
+              <div class="form-group">
+                <label>Km no hodômetro</label>
+                <input type="number" [(ngModel)]="entrada.quilometragemHodometro" min="0" />
+              </div>
+            </div>
+            <button class="btn-primary" (click)="registrarEntrada()" [disabled]="enviando">
+              <span class="material-icons">login</span> {{ enviando ? 'Enviando...' : 'Registrar entrada no Renave' }}
+            </button>
+          }
+
+          @case ('assinatura') {
+            <h4>Assinatura do vendedor no ATPV</h4>
+            <p class="rnv-dica">
+              O vendedor pode assinar pelo app <strong>Carteira Digital de Trânsito</strong> (nesse caso, só clique em Atualizar),
+              ou você envia a foto do documento assinado com firma reconhecida.
+            </p>
+            <div class="rnv-grid">
+              <div class="form-group">
+                <label>Documento assinado</label>
+                <select [(ngModel)]="tipoAssinatura">
+                  <option value="crv-papel">Verso do CRV em papel</option>
+                  <option value="atpve-impresso">ATPVe impresso</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Foto</label>
+                <input type="file" accept="image/*,.pdf" (change)="escolherFoto($event)" />
+              </div>
+            </div>
+            <button class="btn-primary" (click)="enviarAssinatura()" [disabled]="enviando || !fotoAssinatura">
+              <span class="material-icons">draw</span> Enviar assinatura
+            </button>
+          }
+
+          @case ('nota-compra') {
+            <h4>NF-e de compra</h4>
+            <div class="form-group">
+              <label>Chave de acesso (44 dígitos)</label>
+              <input type="text" [(ngModel)]="chaveNota" inputmode="numeric" maxlength="54" />
+            </div>
+            <button class="btn-primary" (click)="enviarNota('COMPRA')" [disabled]="enviando">Informar nota</button>
+          }
+
+          @case ('detran') {
+            <p class="rnv-dica">O Detran transfere o veículo para a loja e confirma a entrada. Use <strong>Atualizar</strong> para ver se já confirmou.</p>
+            @if (emTestes) {
+              <button class="btn-secondary" (click)="simularDetran()" [disabled]="enviando">
+                <span class="material-icons">science</span> Simular confirmação do Detran (testes)
+              </button>
+            }
+          }
+
+          @case ('saida') {
+            <h4>Saída (venda)</h4>
+            <p class="rnv-dica">Use o código de segurança do <strong>CRV atual, emitido em nome da loja</strong> após a transferência.</p>
+            @if (origemDados) {
+              <div class="rnv-ok"><span class="material-icons">auto_fix_high</span> Comprador preenchido com os dados {{ origemDados }}. Confira.</div>
+            }
+            <div class="rnv-grid">
+              <div class="form-group">
+                <label>Código de segurança do CRV</label>
+                <input type="text" [(ngModel)]="saida.codigoSegurancaCrv" inputmode="numeric" />
+              </div>
+              <div class="form-group">
+                <label>Nº do CRV <small>(opcional)</small></label>
+                <input type="text" [(ngModel)]="saida.numeroCrv" inputmode="numeric" />
+              </div>
+              <div class="form-group">
+                <label>CPF/CNPJ do comprador</label>
+                <input type="text" [(ngModel)]="saida.documentoComprador" inputmode="numeric" />
+              </div>
+              <div class="form-group">
+                <label>Nome do comprador</label>
+                <input type="text" [(ngModel)]="saida.nomeComprador" />
+              </div>
+              <div class="form-group">
+                <label>E-mail do comprador</label>
+                <input type="email" [(ngModel)]="saida.emailComprador" />
+              </div>
+              <div class="form-group">
+                <label>UF</label>
+                <select [(ngModel)]="saida.uf" (ngModelChange)="municipio = null; municipios = []">
+                  @for (uf of ufs; track uf) { <option [value]="uf">{{ uf }}</option> }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Município</label>
+                @if (municipio) {
+                  <div class="rnv-municipio">{{ municipio.nome }}/{{ municipio.uf }}
+                    <button class="rnv-link" (click)="municipio = null">trocar</button>
+                  </div>
+                } @else {
+                  <input type="text" [(ngModel)]="buscaMunicipio" (keyup.enter)="buscarMunicipios()" (blur)="buscarMunicipios()" placeholder="Digite e tecle Enter" />
+                  @if (municipios.length > 1) {
+                    <select (change)="municipio = municipios[$any($event.target).selectedIndex - 1] || null">
+                      <option>Escolha...</option>
+                      @for (m of municipios; track m.id) { <option>{{ m.nome }}</option> }
+                    </select>
+                  }
+                }
+              </div>
+              <div class="form-group">
+                <label>CEP <small>(preenche o endereço)</small></label>
+                <input type="text" [(ngModel)]="saida.cep" (blur)="buscarCep()" (keyup.enter)="buscarCep()" inputmode="numeric" maxlength="9" />
+              </div>
+              <div class="form-group">
+                <label>Endereço</label>
+                <input type="text" [(ngModel)]="saida.logradouro" />
+              </div>
+              <div class="form-group">
+                <label>Número</label>
+                <input type="text" [(ngModel)]="saida.numero" />
+              </div>
+              <div class="form-group">
+                <label>Bairro</label>
+                <input type="text" [(ngModel)]="saida.bairro" />
+              </div>
+              <div class="form-group">
+                <label>Data da venda</label>
+                <input type="date" [(ngModel)]="saida.dataVenda" />
+              </div>
+              <div class="form-group">
+                <label>Valor da venda (R$)</label>
+                <input type="number" [(ngModel)]="saida.valorVenda" min="0" step="0.01" />
+              </div>
+            </div>
+            <button class="btn-primary" (click)="registrarSaida()" [disabled]="enviando">
+              <span class="material-icons">logout</span> {{ enviando ? 'Enviando...' : 'Registrar saída no Renave' }}
+            </button>
+          }
+
+          @case ('nota-venda') {
+            <button class="btn-secondary" (click)="baixarAtpv()" [disabled]="enviando">
+              <span class="material-icons">picture_as_pdf</span> Baixar ATPVe do comprador
+            </button>
+            <h4>NF-e de venda</h4>
+            <div class="form-group">
+              <label>Chave de acesso (44 dígitos)</label>
+              <input type="text" [(ngModel)]="chaveNota" inputmode="numeric" maxlength="54" />
+            </div>
+            <button class="btn-primary" (click)="enviarNota('VENDA')" [disabled]="enviando">Informar nota</button>
+          }
+
+          @case ('concluido') {
+            <div class="rnv-ok"><span class="material-icons">task_alt</span> Tudo registrado no Renave.</div>
+            <button class="btn-secondary" (click)="baixarAtpv()" [disabled]="enviando">
+              <span class="material-icons">picture_as_pdf</span> Baixar ATPVe
+            </button>
+          }
+        }
+      }
+    </div>
+  </div>
+</div>

@@ -69,6 +69,18 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/legal/exclusao-de-dados/exclusao-de-dados.component').then(m => m.ExclusaoDeDadosComponent)
   },
   {
+    // Volta do login da Credere (redirect_uri cadastrada na Credere). Fora do
+    // layout logado: quem conectou pelo dominio proprio da loja nao tem sessao
+    // no connectveiculos.dev.br, e o guard jogava o codigo fora.
+    path: 'integracoes/credere',
+    loadComponent: () => import('./pages/integracoes/credere-retorno.component').then(m => m.CredereRetornoComponent)
+  },
+  {
+    // Link publico que o cliente abre para assinar um contrato (sem login).
+    path: 'assinar/:tenantSlug/:token',
+    loadComponent: () => import('./pages/assinar/assinar.component').then(m => m.AssinarComponent)
+  },
+  {
     path: '',
     component: MainLayoutComponent,
     canActivate: [authGuard],
@@ -109,11 +121,16 @@ export const routes: Routes = [
         path: 'vendas',
         loadComponent: () => import('./pages/vendas/vendas.component').then(m => m.VendasComponent)
       },
-      // TODO: ativar quando tiver parceria com bancos (BV, Pan, etc)
-      // {
-      //   path: 'financiamentos',
-      //   loadComponent: () => import('./pages/financiamentos/financiamentos.component').then(m => m.FinanciamentosComponent)
-      // },
+      {
+        path: 'financiamentos',
+        loadComponent: () => import('./pages/financiamentos/financiamentos.component').then(m => m.FinanciamentosComponent)
+      },
+      {
+        path: 'notas-fiscais',
+        loadComponent: () => import('./pages/notas-fiscais/notas-fiscais.component').then(m => m.NotasFiscaisComponent),
+        canActivate: [roleGuard],
+        data: { roles: ['Administrador', 'Gerente'] }
+      },
       {
         path: 'relatorios',
         loadComponent: () => import('./pages/relatorios/relatorios.component').then(m => m.RelatoriosComponent),
@@ -136,6 +153,12 @@ export const routes: Routes = [
       {
         path: 'documentos',
         loadComponent: () => import('./pages/documentos-veiculo/documentos-veiculo.component').then(m => m.DocumentosVeiculoComponent)
+      },
+      {
+        path: 'contratos',
+        loadComponent: () => import('./pages/contratos/contratos.component').then(m => m.ContratosComponent),
+        canActivate: [roleGuard],
+        data: { roles: ['Administrador', 'Gerente', 'Vendedor'] }
       },
       {
         path: 'integracoes',

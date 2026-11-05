@@ -39,20 +39,24 @@ namespace ConnectVeiculos.API.Controllers
             return Ok(documentos);
         }
 
+        // Os da tela (Laudo Cautelar, Vistoria, Licenciamento, Em andamento) e os
+        // antigos da API. A tela mandava tipos que a API recusava.
+        private static readonly string[] TiposValidos =
+            { "CRLV", "LAUDO_CAUTELAR", "LAUDO", "VISTORIA", "TRANSFERENCIA", "IPVA", "LICENCIAMENTO", "SEGURO", "MULTA", "FINANCIAMENTO", "OUTROS" };
+        private static readonly string[] StatusValidos = { "PENDENTE", "EM_ANDAMENTO", "EM_DIA", "VENCIDO", "CONCLUIDO" };
+
         [HttpPost]
         public async Task<IActionResult> Criar([FromBody] CriarDocumentoRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Tipo))
-                return BadRequest("Tipo do documento é obrigatório.");
+                return BadRequest(new { error = "Tipo do documento é obrigatório." });
             if (request.VeiculoId <= 0)
-                return BadRequest("Veiculo invalido.");
-            var tiposValidos = new[] { "CRLV", "IPVA", "LAUDO", "TRANSFERENCIA", "SEGURO", "MULTA", "FINANCIAMENTO", "OUTROS" };
-            if (!tiposValidos.Contains(request.Tipo.ToUpperInvariant()))
-                return BadRequest($"Tipo invalido. Use um destes: {string.Join(", ", tiposValidos)}.");
-            var statusValidos = new[] { "PENDENTE", "EM_DIA", "VENCIDO", "CONCLUIDO" };
+                return BadRequest(new { error = "Veículo inválido." });
+            if (!TiposValidos.Contains(request.Tipo.ToUpperInvariant()))
+                return BadRequest(new { error = $"Tipo inválido. Use um destes: {string.Join(", ", TiposValidos)}." });
             var statusFinal = string.IsNullOrEmpty(request.Status) ? "PENDENTE" : request.Status.ToUpperInvariant();
-            if (!statusValidos.Contains(statusFinal))
-                return BadRequest($"Status invalido. Use um destes: {string.Join(", ", statusValidos)}.");
+            if (!StatusValidos.Contains(statusFinal))
+                return BadRequest(new { error = $"Status inválido. Use um destes: {string.Join(", ", StatusValidos)}." });
 
             var doc = new VeiculoDocumento(0, request.VeiculoId, request.Tipo.ToUpperInvariant(),
                 statusFinal, request.Arquivo, request.Observacao, request.DataVencimento);
@@ -67,9 +71,13 @@ namespace ConnectVeiculos.API.Controllers
         {
             var doc = await _context.VeiculosDocumentos.FindAsync(id);
             if (doc == null) return NotFound();
+            if (!string.IsNullOrEmpty(request.Tipo) && !TiposValidos.Contains(request.Tipo.ToUpperInvariant()))
+                return BadRequest(new { error = $"Tipo inválido. Use um destes: {string.Join(", ", TiposValidos)}." });
+            if (!string.IsNullOrEmpty(request.Status) && !StatusValidos.Contains(request.Status.ToUpperInvariant()))
+                return BadRequest(new { error = $"Status inválido. Use um destes: {string.Join(", ", StatusValidos)}." });
 
-            doc.AtualizarDados(request.Tipo, request.Arquivo, request.Observacao, request.DataVencimento);
-            if (!string.IsNullOrEmpty(request.Status)) doc.AlterarStatus(request.Status);
+            doc.AtualizarDados(request.Tipo?.ToUpperInvariant(), request.Arquivo, request.Observacao, request.DataVencimento);
+            if (!string.IsNullOrEmpty(request.Status)) doc.AlterarStatus(request.Status.ToUpperInvariant());
 
             await _context.SaveChangesAsync();
             return NoContent();
@@ -80,8 +88,10 @@ namespace ConnectVeiculos.API.Controllers
         {
             var doc = await _context.VeiculosDocumentos.FindAsync(id);
             if (doc == null) return NotFound();
+            if (string.IsNullOrEmpty(request.Status) || !StatusValidos.Contains(request.Status.ToUpperInvariant()))
+                return BadRequest(new { error = $"Status inválido. Use um destes: {string.Join(", ", StatusValidos)}." });
 
-            doc.AlterarStatus(request.Status);
+            doc.AlterarStatus(request.Status.ToUpperInvariant());
             await _context.SaveChangesAsync();
             return NoContent();
         }

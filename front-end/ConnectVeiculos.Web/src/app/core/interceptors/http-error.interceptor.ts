@@ -5,6 +5,16 @@ import { Router } from '@angular/router';
 import { catchError, switchMap, throwError } from 'rxjs';
 import { AuthService, ToastService } from '../services';
 
+/**
+ * APIs cujas telas mostram o proprio aviso, com a mensagem do servidor
+ * ({ error }). O aviso geral daqui duplicava o delas.
+ */
+const AVISO_NA_TELA = [
+  '/api/contratos', '/api/assinar/', '/api/nfe', '/api/renave', '/api/certificado-digital',
+  '/api/integracoes/webmotors', '/api/integracoes/credere',
+  '/api/financiamento/fichas', '/api/financiamento/bancos-loja', '/api/financiamento/estimativa'
+];
+
 export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
   const authService = inject(AuthService);
@@ -83,11 +93,14 @@ export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
         errorMessage = 'Erro interno do servidor';
       }
 
-      if (isPlatformBrowser(platformId) && error.status !== 401) {
+      const avisoNaTela = AVISO_NA_TELA.some(p => (req.url || '').includes(p));
+      if (isPlatformBrowser(platformId) && error.status !== 401 && !avisoNaTela) {
         toast.error(errorMessage);
       }
 
-      return throwError(() => new Error(errorMessage));
+      // Error com a mensagem pronta, mas levando status e corpo da resposta:
+      // as telas que leem o { error } do servidor (err.error.error) seguem lendo.
+      return throwError(() => Object.assign(new Error(errorMessage), { status: error.status, error: error.error }));
     })
   );
 };

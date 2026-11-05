@@ -1,10 +1,57 @@
 <div class="page-header">
   <h1><span class="material-icons">hub</span> Integrações</h1>
-  <p>Gerencie as integrações com plataformas externas para publicação automática de veículos.</p>
+  <p>Conecte a loja a portais, redes sociais e serviços. Clique em uma integração para configurar.</p>
 </div>
 
+<div class="catalogo-barra">
+  <div class="search-bar">
+    <div class="search-input">
+      <span class="material-icons">search</span>
+      <input type="text" [(ngModel)]="buscaIntegracao" placeholder="Buscar integração" />
+    </div>
+  </div>
+  <div class="catalogo-filtros">
+    <button [class.ativo]="filtroIntegracao === 'todas'" (click)="filtroIntegracao = 'todas'">Todas</button>
+    <button [class.ativo]="filtroIntegracao === 'conectadas'" (click)="filtroIntegracao = 'conectadas'">
+      Conectadas <span class="contagem">{{ totalConectadas }}</span>
+    </button>
+    @for (c of categoriasVisiveis; track c) {
+      <button [class.ativo]="filtroIntegracao === c" (click)="filtroIntegracao = c">{{ c }}</button>
+    }
+  </div>
+</div>
+
+@for (grupo of catalogoFiltrado; track grupo.categoria) {
+  <h2 class="catalogo-categoria">{{ grupo.categoria }}</h2>
+  <div class="catalogo-grid">
+    @for (item of grupo.itens; track item.id) {
+      <button class="catalogo-card" (click)="abrirIntegracao(item.id)">
+        <span class="platform-icon" [ngClass]="item.icone">
+          @if (item.material) { <span class="material-icons">{{ item.material }}</span> } @else { {{ item.sigla }} }
+        </span>
+        <span class="catalogo-texto">
+          <strong>{{ item.nome }}</strong>
+          <small>{{ item.descricao }}</small>
+        </span>
+        <span class="catalogo-rodape">
+          <span class="status-badge" [ngClass]="item.status().classe">{{ item.status().texto }}</span>
+          <span class="catalogo-acao">Configurar <span class="material-icons">chevron_right</span></span>
+        </span>
+      </button>
+    }
+  </div>
+} @empty {
+  <p class="catalogo-vazio">Nenhuma integração encontrada.</p>
+}
+
+@if (integracaoAberta) {
+  <div class="painel-fundo" (click)="fecharIntegracao()"></div>
+}
+<aside class="painel-integracao" [class.aberto]="!!integracaoAberta" role="dialog" aria-label="Configurar integração">
+  <button class="painel-fechar" (click)="fecharIntegracao()" title="Fechar"><span class="material-icons">close</span></button>
 <div class="integracoes-grid">
   <!-- Mercado Livre -->
+  @if (integracaoAberta === 'mercadolivre') {
   <div class="integracao-card">
     <div class="card-header">
       <div class="platform-info">
@@ -114,6 +161,7 @@
       <small>Custo: Grátis (taxas do ML aplicam-se apenas em vendas realizadas pela plataforma)</small>
     </div>
   </div>
+  }
 
   <!-- Webmotors (estoque da loja; usuario de integracao fornecido pela Webmotors) -->
   <div class="integracao-card">
@@ -139,7 +187,7 @@
   </div>
 
   <!-- WhatsApp Business -->
-  @if (true) {
+  @if (integracaoAberta === 'whatsapp') {
   <div class="integracao-card">
     <div class="card-header">
       <div class="platform-info">
@@ -337,6 +385,7 @@
   }
 
   <!-- E-mail / SMTP -->
+  @if (integracaoAberta === 'email') {
   <div class="integracao-card">
     <div class="card-header">
       <div class="platform-info">
@@ -389,6 +438,62 @@
       <small>Custo: grátis se usar e-mail próprio (Locaweb, UOL, KingHost, Gmail). Pago se usar serviço dedicado tipo SendGrid (free 100/dia, depois ~R$100/mês para 50k).</small>
     </div>
   </div>
+
+  }
+
+  <!-- Renave (estoque eletronico da Senatran/Serpro) -->
+  @if (integracaoAberta === 'renave') {
+  <div class="integracao-card">
+    <div class="card-header">
+      <div class="platform-info">
+        <span class="platform-icon renave-icon">
+          <span class="material-icons">assignment_turned_in</span>
+        </span>
+        <div>
+          <h3>Renave</h3>
+          <p>Entrada e saída de veículos no estoque eletrônico (Senatran)</p>
+        </div>
+      </div>
+      <span class="status-badge" [class.connected]="renavePronto" [class.disconnected]="!renavePronto">
+        {{ renavePronto ? 'Configurado' : 'Não configurado' }}
+      </span>
+    </div>
+    <div class="card-body">
+      <app-renave-config (prontoChange)="renavePronto = $event"></app-renave-config>
+    </div>
+    <div class="card-footer">
+      <span class="material-icons">info</span>
+      <small>Custo: cobrado pelo Serpro por operação de entrada ou saída, direto da loja. Os testes (homologação) são gratuitos.</small>
+    </div>
+  </div>
+  }
+
+  <!-- Credere: financiamento multibanco (a loja assina a Credere e conecta aqui) -->
+  @if (integracaoAberta === 'credere') {
+  <div class="integracao-card">
+    <div class="card-header">
+      <div class="platform-info">
+        <span class="platform-icon nfe-icon">
+          <span class="material-icons">account_balance</span>
+        </span>
+        <div>
+          <h3>Credere</h3>
+          <p>Financiamento em vários bancos com pré-aprovação</p>
+        </div>
+      </div>
+      <span class="status-badge" [class.connected]="credereConectada" [class.disconnected]="!credereConectada">
+        {{ credereConectada ? 'Conectado' : 'Não conectado' }}
+      </span>
+    </div>
+    <div class="card-body">
+      <app-credere-config (conectadoChange)="credereConectada = $event"></app-credere-config>
+    </div>
+    <div class="card-footer">
+      <span class="material-icons">info</span>
+      <small>A assinatura da Credere é da loja. As simulações vão aos bancos em que a loja já é credenciada.</small>
+    </div>
+  </div>
+  }
 
   <!-- Modal config SMTP -->
   @if (showSmtpConfigModal) {
@@ -809,7 +914,7 @@
        Quem publica no Facebook e no Instagram hoje e' o card de posts abaixo.
        Ao religar: corrigir os bullets, rever o selo RECOMENDADO e testar o
        caminho ponta a ponta antes de oferecer. -->
-  @if (mostrarCatalogoFeed) {
+  @if (mostrarCatalogoFeed && integracaoAberta === 'catalogo-feed') {
   <div class="integracao-card">
     <div class="card-header">
       <div class="platform-info">
@@ -877,7 +982,7 @@
        Quando MEI/Business Verification/App Review estiverem prontos, ligar a flag.
        Workaround sem MEI: ligar a flag + adicionar contas como tester no painel
        Meta (limite 100). Banner abaixo orienta o cliente. -->
-  @if (metaFlags.instagramEnabled) {
+  @if (metaFlags.instagramEnabled && integracaoAberta === 'meta') {
   <div class="integracao-card">
     <div class="card-header">
       <div class="platform-info">
@@ -1284,6 +1389,7 @@
   }
 
   <!-- Marketing no Google (card informativo enquanto Vehicle Ads nao esta liberado no Brasil) -->
+  @if (integracaoAberta === 'google') {
   <div class="integracao-card">
     <div class="card-header">
       <div class="platform-info">
@@ -1351,11 +1457,12 @@
       <small>Quando o Google liberar Vehicle Ads no Brasil, ativaremos a publicação automática nesta tela. Por enquanto, indexação orgânica + Google Ads próprio é o caminho recomendado.</small>
     </div>
   </div>
+  }
 
   <!-- Dominio proprio: o catalogo da loja no endereco dela (opcional).
        So entra dominio que ja aponta para o servidor, e depois de cadastrado
        nao se edita: para trocar, remove (com confirmacao) e cadastra outro. -->
-  @if (dominioInfo) {
+  @if (dominioInfo && integracaoAberta === 'dominio') {
   <div class="integracao-card">
     <div class="card-header">
       <div class="platform-info">
@@ -1724,3 +1831,4 @@
   }
   }
 </div>
+</aside>

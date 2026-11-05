@@ -7,6 +7,7 @@ namespace ConnectVeiculos.Core.Interfaces.Database.Repositories.Vendas
         Task<Venda> GetByIdAsync(int id);
         Task<IEnumerable<Venda>> GetAllAsync();
         Task<IEnumerable<Venda>> GetByVendedorIdAsync(int vendedorId);
+        Task<IEnumerable<Venda>> GetByVeiculoIdAsync(int veiculoId);
         Task<int> CreateAsync(Venda venda);
         Task UpdateAsync(Venda venda);
         Task DeleteAsync(int id);

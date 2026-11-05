@@ -1,0 +1,192 @@
+// Estilos do Renave (cartao em Integracoes e janela do veiculo).
+// Cores pelas variaveis do tema, para funcionar no claro e no escuro.
+// Modal, botoes e campos vem do estilo compartilhado: o encapsulamento do
+// Angular nao deixa o da pagina chegar aos componentes.
+@import '../../../../styles/shared';
+
+.rnv-texto, .rnv-dica, .rnv-veiculo {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin: 0 0 0.75rem;
+}
+
+.rnv-dica { display: block; margin-top: 0.35rem; }
+.rnv-dica a { color: var(--primary, #1a237e); text-decoration: underline; cursor: pointer; }
+
+.rnv-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0 1rem;
+}
+
+.rnv-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.rnv-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0 0 0.75rem;
+  color: var(--primary, #1a237e);
+  cursor: pointer;
+  font-size: 0.85rem;
+  .material-icons { font-size: 18px; }
+}
+
+.rnv-bloco {
+  border-top: 1px solid var(--border-primary, #eee);
+  padding-top: 0.75rem;
+  margin-top: 0.5rem;
+  h4 { display: flex; align-items: center; gap: 0.35rem; margin: 0 0 0.5rem; font-size: 0.95rem; }
+}
+
+h4 { margin: 1rem 0 0.5rem; font-size: 0.95rem; color: var(--text-primary); }
+
+.rnv-cert, .rnv-ok, .rnv-erro-box, .rnv-alerta, .rnv-aviso-teste {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  margin: 0.5rem 0 0.75rem;
+  font-size: 0.85rem;
+  div { display: flex; flex-direction: column; gap: 0.15rem; flex: 1; }
+  small { color: inherit; opacity: 0.85; }
+}
+
+.rnv-cert, .rnv-ok { background: var(--status-success-bg, #e8f5e9); color: var(--status-success, #2e7d32); }
+.rnv-erro-box, .rnv-cert.rnv-erro { background: var(--status-error-bg, #ffebee); color: var(--status-error, #c62828); }
+.rnv-alerta, .rnv-aviso-teste { background: var(--status-warning-bg, #fff8e1); color: var(--status-warning, #8d6e00); }
+
+.rnv-cert-envio {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 0 1rem;
+  align-items: end;
+  .form-group { margin-bottom: 0; }
+  .form-group input, .form-group label.rnv-arquivo { height: 44px; }
+  > button { height: 44px; white-space: nowrap; }
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    > button { justify-self: start; }
+  }
+}
+
+// Campo de arquivo no mesmo desenho dos outros campos (o nativo do navegador destoa).
+.form-group label.rnv-arquivo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0 14px;
+  box-sizing: border-box;
+  border: 1px dashed var(--border-secondary);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-weight: 400;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  input { display: none; }
+  .material-icons { font-size: 20px; }
+  .rnv-arquivo-nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  &:hover { border-color: var(--brand-primary); }
+  &.escolhido { border-style: solid; color: var(--text-primary); }
+}
+
+.btn-mini-rnv {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.rnv-teste {
+  border: 1px dashed var(--border-primary, #ccc);
+  border-radius: 8px;
+  padding: 0.75rem;
+  font-size: 0.85rem;
+  small { display: block; color: var(--text-secondary); margin: 0.25rem 0; }
+  ul { margin: 0.25rem 0 0; padding-left: 1.1rem; }
+  button { background: none; border: none; color: var(--primary, #1a237e); cursor: pointer; font-size: 0.8rem; }
+}
+
+.rnv-etapas {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.35rem;
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    .material-icons { font-size: 18px; }
+    small { margin-left: auto; }
+    &.feita { color: var(--status-success, #2e7d32); }
+  }
+}
+
+.rnv-proximo {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  .rnv-link { margin: 0 0 0 auto; }
+}
+
+.rnv-municipio {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  .rnv-link { margin: 0; }
+}
+
+// ---------------- NF-e ----------------
+
+.nfe-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+  th { text-align: left; color: var(--text-secondary); font-weight: 500; padding: 0.35rem; border-bottom: 1px solid var(--border-primary, #eee); }
+  td { padding: 0.35rem; border-bottom: 1px solid var(--border-primary, #eee); vertical-align: top; }
+}
+
+.nfe-acoes { white-space: nowrap; text-align: right; }
+
+.nfe-motivo { display: block; color: var(--status-error, #c62828); font-size: 0.75rem; margin-top: 0.2rem; }
+
+.nfe-status {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: var(--status-warning-bg, #fff8e1);
+  color: var(--status-warning, #8d6e00);
+  &[data-status='AUTORIZADA'] { background: var(--status-success-bg, #e8f5e9); color: var(--status-success, #2e7d32); }
+  &[data-status='REJEITADA'], &[data-status='CANCELADA'] { background: var(--status-error-bg, #ffebee); color: var(--status-error, #c62828); }
+  &[data-status='INUTILIZADA'] { background: var(--bg-secondary, #f0f0f0); color: var(--text-secondary); }
+}
+
+.nfe-cce { display: block; color: var(--text-secondary); font-size: 0.75rem; margin-top: 0.2rem; .rnv-link { margin: 0 0 0 0.25rem; font-size: 0.75rem; } }
+
+.rnv-alerta textarea { width: 100%; margin-top: 0.35rem; font: inherit; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border-primary, #ccc); }
+
+.nfe-inut { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0 0.75rem; }
+
+.rnv-erro-box input { width: 100%; margin-top: 0.35rem; }

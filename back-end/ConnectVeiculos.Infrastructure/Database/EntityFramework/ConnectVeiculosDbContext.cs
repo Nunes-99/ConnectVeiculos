@@ -27,6 +27,7 @@ using ConnectVeiculos.Core.Entities.Negociacoes;
 using ConnectVeiculos.Core.Entities.Publicacoes;
 using ConnectVeiculos.Core.Entities.PushSubscriptions;
 using ConnectVeiculos.Core.Entities.Integracoes;
+using ConnectVeiculos.Core.Entities.Contratos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using System.Globalization;
@@ -65,8 +66,16 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
         public DbSet<VeiculoWebmotors> VeiculosWebmotors { get; set; }
         public DbSet<ConfiguracaoSistema> Configuracoes { get; set; }
         public DbSet<VeiculoDocumento> VeiculosDocumentos { get; set; }
+        public DbSet<ModeloContrato> ModelosContrato { get; set; }
+        public DbSet<Contrato> Contratos { get; set; }
+        public DbSet<ContratoSignatario> ContratosSignatarios { get; set; }
         public DbSet<PushSubscription> PushSubscriptions { get; set; }
         public DbSet<IntegracaoMercadoLivre> IntegracoesMercadoLivre { get; set; }
+        public DbSet<Core.Entities.Renave.VeiculoRenave> VeiculosRenave { get; set; }
+        public DbSet<Core.Entities.NotasFiscais.NotaFiscal> NotasFiscais { get; set; }
+        public DbSet<Core.Entities.NotasFiscais.NotaFiscalInutilizacao> NotasFiscaisInutilizacoes { get; set; }
+        public DbSet<Core.Entities.Financiamentos.BancoFinanciamentoLoja> BancosFinanciamentoLoja { get; set; }
+        public DbSet<Core.Entities.Financiamentos.FichaFinanciamento> FichasFinanciamento { get; set; }
         public DbSet<IntegracaoLog> IntegracoesLogs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -396,6 +405,35 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
             // Favorito
             modelBuilder.Entity<Favorito>(entity => { entity.ToTable("Favorito"); entity.HasKey(e => e.FavId); entity.Property(e => e.FavId).ValueGeneratedOnAdd(); entity.Property(e => e.FavEmail).HasMaxLength(255).IsRequired(); entity.Property(e => e.FavNome).HasMaxLength(200); entity.Property(e => e.FavTelefone).HasMaxLength(20); entity.HasIndex(e => new { e.FavEmail, e.R_VeiId }).IsUnique(); });
 
+            // Contratos e assinatura eletronica
+            modelBuilder.Entity<ModeloContrato>(entity =>
+            {
+                entity.ToTable("ModeloContrato");
+                entity.HasKey(e => e.MdcId);
+                entity.Property(e => e.MdcId).ValueGeneratedOnAdd();
+                entity.Property(e => e.MdcNome).HasMaxLength(150).IsRequired();
+                entity.Property(e => e.MdcTipo).HasMaxLength(20).IsRequired();
+                entity.Property(e => e.MdcConteudo).IsRequired();
+            });
+            modelBuilder.Entity<Contrato>(entity =>
+            {
+                entity.ToTable("Contrato");
+                entity.HasKey(e => e.CtrId);
+                entity.Property(e => e.CtrId).ValueGeneratedOnAdd();
+                entity.Property(e => e.CtrStatus).HasMaxLength(20).IsRequired();
+                entity.HasIndex(e => e.R_VeiId);
+                entity.Ignore(e => e.Aberto);
+                entity.HasMany(e => e.Signatarios).WithOne().HasForeignKey(s => s.R_CtrId).OnDelete(DeleteBehavior.Cascade);
+            });
+            modelBuilder.Entity<ContratoSignatario>(entity =>
+            {
+                entity.ToTable("ContratoSignatario");
+                entity.HasKey(e => e.CsgId);
+                entity.Property(e => e.CsgId).ValueGeneratedOnAdd();
+                entity.HasIndex(e => e.CsgTokenHash).IsUnique();
+                entity.Ignore(e => e.Assinou);
+            });
+
             // VeiculoDocumento
             modelBuilder.Entity<VeiculoDocumento>(entity =>
             {
@@ -431,6 +469,79 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
                 entity.Property(e => e.IntSellerId).HasMaxLength(50);
                 entity.Property(e => e.IntMlNickname).HasMaxLength(100);
                 entity.Property(e => e.IntMlEmail).HasMaxLength(200);
+            });
+
+            modelBuilder.Entity<Core.Entities.Financiamentos.BancoFinanciamentoLoja>(entity =>
+            {
+                entity.ToTable("BancoFinanciamentoLoja");
+                entity.HasKey(e => e.BflId);
+                entity.Property(e => e.BflId).ValueGeneratedOnAdd();
+                entity.Property(e => e.BflNome).HasMaxLength(80).IsRequired();
+                entity.Property(e => e.BflPortalUrl).HasMaxLength(500);
+                entity.Property(e => e.BflObservacao).HasMaxLength(1000);
+            });
+
+            modelBuilder.Entity<Core.Entities.Financiamentos.FichaFinanciamento>(entity =>
+            {
+                entity.ToTable("FichaFinanciamento");
+                entity.HasKey(e => e.FifId);
+                entity.Property(e => e.FifId).ValueGeneratedOnAdd();
+                entity.HasIndex(e => e.R_UsuId);
+                entity.Property(e => e.FifNome).HasMaxLength(150).IsRequired();
+                entity.Property(e => e.FifCpf).HasMaxLength(11).IsRequired();
+                entity.Property(e => e.FifTelefone).HasMaxLength(11).IsRequired();
+                entity.Property(e => e.FifEmail).HasMaxLength(150).IsRequired();
+                entity.Property(e => e.FifStatus).HasMaxLength(20).IsRequired();
+                entity.Property(e => e.FifObservacao).HasMaxLength(1000);
+            });
+
+            modelBuilder.Entity<Core.Entities.Renave.VeiculoRenave>(entity =>
+            {
+                entity.ToTable("VeiculoRenave");
+                entity.HasKey(e => e.RnvId);
+                entity.Property(e => e.RnvId).ValueGeneratedOnAdd();
+                entity.HasIndex(e => e.R_VeiId).IsUnique();
+                entity.Property(e => e.RnvEstado).HasMaxLength(30);
+                entity.Property(e => e.RnvChaveNfEntrada).HasMaxLength(44);
+                entity.Property(e => e.RnvChaveNfSaida).HasMaxLength(44);
+                entity.Property(e => e.RnvCompradorDocumento).HasMaxLength(14);
+                entity.Property(e => e.RnvCompradorNome).HasMaxLength(200);
+                entity.Property(e => e.RnvCompradorEmail).HasMaxLength(200);
+                entity.Property(e => e.RnvVendedorDocumento).HasMaxLength(14);
+                entity.Property(e => e.RnvVendedorEmail).HasMaxLength(200);
+                entity.Property(e => e.RnvNumeroAtpv).HasMaxLength(30);
+                entity.Property(e => e.RnvUltimoErro).HasMaxLength(1000);
+                entity.Ignore(e => e.EmEstoque);
+            });
+
+            modelBuilder.Entity<Core.Entities.NotasFiscais.NotaFiscal>(entity =>
+            {
+                entity.ToTable("NotaFiscal");
+                entity.HasKey(e => e.NfId);
+                entity.Property(e => e.NfId).ValueGeneratedOnAdd();
+                entity.HasIndex(e => e.R_VeiId);
+                entity.HasIndex(e => new { e.NfAmbiente, e.NfSerie, e.NfNumero }).IsUnique();
+                entity.Property(e => e.NfTipo).HasMaxLength(10);
+                entity.Property(e => e.NfAmbiente).HasMaxLength(15);
+                entity.Property(e => e.NfChave).HasMaxLength(44);
+                entity.Property(e => e.NfStatus).HasMaxLength(15);
+                entity.Property(e => e.NfMotivo).HasMaxLength(1000);
+                entity.Property(e => e.NfProtocolo).HasMaxLength(20);
+                entity.Property(e => e.NfDestDocumento).HasMaxLength(14);
+                entity.Property(e => e.NfDestNome).HasMaxLength(200);
+                entity.Ignore(e => e.PodeReenviar);
+                entity.Property(e => e.NfCceTexto).HasMaxLength(1000);
+                entity.Property(e => e.NfCceProtocolo).HasMaxLength(20);
+            });
+
+            modelBuilder.Entity<Core.Entities.NotasFiscais.NotaFiscalInutilizacao>(entity =>
+            {
+                entity.ToTable("NotaFiscalInutilizacao");
+                entity.HasKey(e => e.NfiId);
+                entity.Property(e => e.NfiId).ValueGeneratedOnAdd();
+                entity.Property(e => e.NfiAmbiente).HasMaxLength(15);
+                entity.Property(e => e.NfiJustificativa).HasMaxLength(255);
+                entity.Property(e => e.NfiProtocolo).HasMaxLength(20);
             });
 
             modelBuilder.Entity<IntegracaoLog>(entity =>

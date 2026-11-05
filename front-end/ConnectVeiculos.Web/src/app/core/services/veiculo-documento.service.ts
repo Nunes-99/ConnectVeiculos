@@ -31,6 +31,9 @@ export const TIPOS_DOCUMENTO = [
   { codigo: 'VISTORIA', label: 'Vistoria' },
   { codigo: 'IPVA', label: 'IPVA' },
   { codigo: 'LICENCIAMENTO', label: 'Licenciamento' },
+  { codigo: 'SEGURO', label: 'Seguro' },
+  { codigo: 'MULTA', label: 'Multa' },
+  { codigo: 'FINANCIAMENTO', label: 'Financiamento' },
   { codigo: 'OUTROS', label: 'Outros' }
 ];
 

@@ -90,6 +90,12 @@ services:
       - SearchConsoleSettings__ClientId=${SEARCH_CONSOLE_CLIENT_ID:-}
       - SearchConsoleSettings__ClientSecret=${SEARCH_CONSOLE_CLIENT_SECRET:-}
       - SearchConsoleSettings__RefreshToken=${SEARCH_CONSOLE_REFRESH_TOKEN:-}
+      # Credere: chaves do ConnectVeiculos como plataforma parceira (cada loja conecta a conta dela)
+      - CredereSettings__ClientId=${CREDERE_CLIENT_ID:-}
+      - CredereSettings__ClientSecret=${CREDERE_CLIENT_SECRET:-}
+      # Endereco da API: vazio = producao; a Credere pode passar outro para a homologacao.
+      - CredereSettings__BaseUrl=${CREDERE_BASE_URL:-https://app.meucredere.com.br/api/v1}
+      - CredereSettings__RedirectUri=${CREDERE_REDIRECT_URI:-https://connectveiculos.dev.br/integracoes/credere}
       - SearchConsoleSettings__SiteUrl=${SEARCH_CONSOLE_SITE_URL:-https://connectveiculos.dev.br/}
       - SearchConsoleSettings__PublicSiteUrl=${PUBLIC_SITE_URL:-https://connectveiculos.dev.br}
       # Assinatura mensal dos planos no cartao (conta Mercado Pago da plataforma).

@@ -1,8 +1,10 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, HostListener, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { VeiculoService, LojaService, CategoriaService, ImagemService, VeiculoImagem, ToastService, FipeService, FipeMarca, FipeModelo, AuthService } from '../../core/services';
 import { WebmotorsVeiculoComponent } from '../../shared/components/webmotors/webmotors-veiculo.component';
+import { RenaveVeiculoComponent } from '../../shared/components/renave/renave-veiculo.component';
+import { NfeVeiculoComponent } from '../../shared/components/renave/nfe-veiculo.component';
 import { IntegracaoService, MetaFeatureFlags } from '../../core/services/integracao.service';
 import { CompartilharInstagramService } from '../../core/services/compartilhar-instagram.service';
 import { Veiculo, Loja, Categoria } from '../../core/models';
@@ -10,12 +12,13 @@ import { MaskDirective, CurrencyMaskDirective, SalvandoDirective } from '../../s
 import { PaginationComponent, ConfirmModalComponent } from '../../shared/components';
 import { ScannerDocumentoComponent, CrlvExtraido } from '../../shared/components/scanner-documento/scanner-documento.component';
 import { getDetranLink, DetranLink } from '../../shared/utils/detran-links.util';
+import { ContratoVeiculoComponent } from '../../shared/components/contratos/contrato-veiculo.component';
 import * as XLSX from 'xlsx';
 
 @Component({
   selector: 'app-veiculos',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaskDirective, CurrencyMaskDirective, PaginationComponent, ConfirmModalComponent, ScannerDocumentoComponent, SalvandoDirective, WebmotorsVeiculoComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaskDirective, CurrencyMaskDirective, PaginationComponent, ConfirmModalComponent, ScannerDocumentoComponent, SalvandoDirective, RenaveVeiculoComponent, NfeVeiculoComponent, ContratoVeiculoComponent, WebmotorsVeiculoComponent],
   templateUrl: './veiculos.component.html',
   styleUrl: './veiculos.component.scss'
 })
@@ -162,6 +165,14 @@ export class VeiculosComponent implements OnInit {
   // Consulta Detran
   showDetranModal = false;
   detranVeiculo: Veiculo | null = null;
+
+  // Renave: entrada/saida no estoque eletronico tem efeito legal, so Admin e Gerente.
+  renaveVeiculo: Veiculo | null = null;
+  nfeVeiculo: Veiculo | null = null;
+  get podeRenave(): boolean { return this.auth.isGerente(); }
+
+  // Contratos e assinatura eletronica do veiculo.
+  contratoVeiculo: Veiculo | null = null;
 
   // Webmotors: a API so atende Administrador e Gerente (como Integracoes).
   webmotorsVeiculo: Veiculo | null = null;
@@ -641,6 +652,37 @@ export class VeiculosComponent implements OnInit {
     this.uploadingImage = false;
     this.uploadTotal = 0;
     this.uploadCurrent = 0;
+  }
+
+  // ---------- Menu de acoes (tres pontos) ----------
+
+  menuVeiculo: Veiculo | null = null;
+  menuPos: { top: number | null; bottom: number | null; left: number } = { top: null, bottom: null, left: 0 };
+
+  abrirMenu(veiculo: Veiculo, evento: MouseEvent): void {
+    evento.stopPropagation();
+    if (this.menuVeiculo?.veiId === veiculo.veiId) { this.fecharMenu(); return; }
+    const r = (evento.currentTarget as HTMLElement).getBoundingClientRect();
+    const largura = 260;
+    const left = Math.max(8, Math.min(r.right - largura, window.innerWidth - largura - 8));
+    // Na metade de baixo da tela o menu abre para cima.
+    this.menuPos = r.bottom > window.innerHeight * 0.55
+      ? { top: null, bottom: window.innerHeight - r.top + 4, left }
+      : { top: r.bottom + 4, bottom: null, left };
+    this.menuVeiculo = veiculo;
+  }
+
+  @HostListener('document:click')
+  @HostListener('document:keydown.escape')
+  @HostListener('window:resize')
+  fecharMenu(): void {
+    this.menuVeiculo = null;
+  }
+
+  // A tabela rola dentro da pagina; o menu fixo nao acompanharia.
+  @HostListener('window:scroll')
+  fecharMenuAoRolar(): void {
+    if (this.menuVeiculo) this.fecharMenu();
   }
 
   remove(id: number): void {

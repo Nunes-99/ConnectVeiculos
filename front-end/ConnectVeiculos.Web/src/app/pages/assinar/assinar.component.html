@@ -1,0 +1,84 @@
+<div class="assinar">
+  @if (carregando) {
+    <p class="centro">Carregando o documento...</p>
+  } @else if (erro) {
+    <div class="cartao centro">
+      <span class="material-icons grande">link_off</span>
+      <h1>Não foi possível abrir</h1>
+      <p>{{ erro }}</p>
+      <p class="dica">Se precisar, peça um link novo para a loja.</p>
+    </div>
+  } @else if (info) {
+    <header class="topo">
+      <span class="material-icons">draw</span>
+      <div>
+        <strong>{{ info.loja }}</strong>
+        <small>enviou um documento para você assinar</small>
+      </div>
+    </header>
+
+    @if (info.jaAssinou) {
+      <div class="cartao sucesso">
+        <span class="material-icons grande">verified</span>
+        <h1>Documento assinado</h1>
+        <p>Sua assinatura foi registrada em {{ info.assinadoEm | date:'dd/MM/yyyy HH:mm' }}.
+          @if (info.statusContrato === 'ASSINADO') { Todas as partes já assinaram. } @else { Falta a assinatura da loja; você pode baixar o PDF de novo depois. }
+        </p>
+        <button class="btn-primary" (click)="baixarPdf()"><span class="material-icons">picture_as_pdf</span> Baixar PDF</button>
+      </div>
+    } @else if (info.statusContrato !== 'AGUARDANDO') {
+      <div class="cartao centro"><p>Este documento não está mais aguardando assinatura.</p></div>
+    }
+
+    <app-contrato-texto [blocos]="info.blocos"></app-contrato-texto>
+    <p class="dica">Código do documento (SHA-256): {{ info.hash }}</p>
+
+    @if (!info.jaAssinou && info.statusContrato === 'AGUARDANDO') {
+      <section class="cartao">
+        <h2>Assinar como {{ info.papel.toLowerCase() }}</h2>
+
+        <div class="form-group">
+          <label>Seu nome completo</label>
+          <input type="text" [(ngModel)]="nome" autocomplete="name" />
+        </div>
+        <div class="form-group">
+          <label>Seu CPF ou CNPJ</label>
+          <input type="text" [(ngModel)]="documento" inputmode="numeric" autocomplete="off" />
+        </div>
+
+        @if (info.precisaCodigo) {
+          <div class="form-group">
+            <label>Código de confirmação</label>
+            <div class="linha-codigo">
+              <input type="text" [(ngModel)]="codigo" inputmode="numeric" maxlength="6" placeholder="6 números" autocomplete="one-time-code" />
+              <button class="btn-secondary" (click)="pedirCodigo()" [disabled]="enviandoCodigo">
+                <span class="material-icons">mail</span> {{ codigoEnviadoPara ? 'Enviar de novo' : 'Receber código' }}
+              </button>
+            </div>
+            <small class="dica">
+              @if (codigoEnviadoPara) { Enviamos o código para {{ codigoEnviadoPara }}. Vale por 10 minutos (olhe também o spam). }
+              @else { Vamos mandar um código para {{ info.emailMascarado }} para confirmar que é você. }
+            </small>
+          </div>
+        } @else {
+          <p class="aviso">Este documento não tem e-mail para confirmar sua identidade. Peça à loja para colher sua assinatura pessoalmente.</p>
+        }
+
+        <label class="rotulo">Sua assinatura</label>
+        <app-assinatura-pad (mudou)="imagem = $event"></app-assinatura-pad>
+
+        <label class="aceite">
+          <input type="checkbox" [(ngModel)]="aceite" />
+          Li o documento acima e concordo com ele. Assino eletronicamente, nos termos da Lei 14.063/2020.
+        </label>
+
+        @if (aviso) { <p class="aviso">{{ aviso }}</p> }
+
+        <button class="btn-primary assinar-btn" (click)="assinar()" [disabled]="!podeAssinar || assinando || !info.precisaCodigo">
+          <span class="material-icons">check</span> {{ assinando ? 'Assinando...' : 'Assinar documento' }}
+        </button>
+        <p class="dica">Registramos data, hora, IP e o navegador usados na assinatura.</p>
+      </section>
+    }
+  }
+</div>
