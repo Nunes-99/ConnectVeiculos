@@ -1,0 +1,136 @@
+<div class="modal-overlay" (click)="fechar.emit()">
+  <div class="modal modal-lg" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2><span class="material-icons">directions_car</span> Webmotors · {{ veiculo.veiPlaca || 'sem placa' }}</h2>
+      <button class="btn-close" (click)="fechar.emit()"><span class="material-icons">close</span></button>
+    </div>
+
+    <div class="modal-body">
+      <p class="wm-texto">{{ veiculo.veiMarca }} {{ veiculo.veiModelo }} {{ veiculo.veiAno }} · {{ veiculo.veiCor }} · {{ veiculo.veiPreco | currency:'BRL' }}</p>
+
+      @if (erroCarga) {
+        <div class="wm-erro"><span class="material-icons">error</span> {{ erroCarga }}</div>
+      } @else if (!info || !dados) {
+        <p class="wm-texto">Carregando as tabelas da Webmotors...</p>
+      } @else {
+        @if (info.publicado) {
+          <div class="wm-ok">
+            <span class="material-icons">check_circle</span>
+            <div>
+              <strong>Anunciado · código {{ info.codigoAnuncio }}</strong>
+              <small>{{ info.fotos }} foto(s) · atualizado em {{ info.atualizadoEm | date:'dd/MM/yyyy HH:mm' }}. Mudanças no cadastro atualizam o anúncio sozinhas.</small>
+            </div>
+          </div>
+        } @else if (info.status === 'PAUSADO') {
+          <div class="wm-aviso"><span class="material-icons">visibility_off</span> Tirado do ar pela loja. Só volta clicando em <strong>Anunciar</strong>.</div>
+        } @else if (info.status === 'REMOVIDO' && info.publicadoEm) {
+          <div class="wm-aviso"><span class="material-icons">visibility_off</span> Fora do ar (veículo vendido ou indisponível). Volta sozinho se ficar disponível de novo.</div>
+        }
+        @if (info.erro) {
+          <div class="wm-erro"><span class="material-icons">error</span> {{ info.erro }}</div>
+        }
+        @if (info.sugestao) {
+          <div class="wm-aviso">
+            <span class="material-icons">auto_fix_high</span>
+            <div>Preenchido a partir do cadastro do veículo. <strong>Confira</strong>, principalmente a versão, antes de anunciar.</div>
+          </div>
+        }
+        @if (!disponivel) {
+          <div class="wm-aviso"><span class="material-icons">info</span> Só veículo <strong>disponível</strong> pode ser anunciado.</div>
+        }
+
+        <div class="wm-grid">
+          <div class="form-group">
+            <label>Marca</label>
+            <select [(ngModel)]="dados.marcaId" (ngModelChange)="marcaMudou()">
+              <option [ngValue]="null">Escolha...</option>
+              @for (m of marcas; track m.codigo) { <option [ngValue]="m.codigo">{{ m.nome }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Modelo</label>
+            <select [(ngModel)]="dados.modeloId" (ngModelChange)="modeloMudou()" [disabled]="!dados.marcaId">
+              <option [ngValue]="null">Escolha...</option>
+              @for (m of modelos; track m.codigo) { <option [ngValue]="m.codigo">{{ m.nome }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Ano do modelo</label>
+            <input type="number" [(ngModel)]="dados.anoModelo" (change)="anoMudou()" />
+          </div>
+          <div class="form-group">
+            <label>Ano de fabricação</label>
+            <input type="number" [(ngModel)]="dados.anoFabricacao" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Versão</label>
+          <select [(ngModel)]="dados.versaoId" [disabled]="!dados.modeloId">
+            <option [ngValue]="null">{{ versoes.length ? 'Escolha...' : 'Nenhuma versão para este ano' }}</option>
+            @for (v of versoes; track v.codigo) { <option [ngValue]="v.codigo">{{ v.nome }}</option> }
+          </select>
+        </div>
+
+        <div class="wm-grid">
+          <div class="form-group">
+            <label>Câmbio</label>
+            <select [(ngModel)]="dados.cambioId">
+              <option [ngValue]="null">Escolha...</option>
+              @for (c of cambios; track c.codigo) { <option [ngValue]="c.codigo">{{ c.nome }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Combustível</label>
+            <select [(ngModel)]="dados.combustivelId">
+              <option [ngValue]="null">Escolha...</option>
+              @for (c of combustiveis; track c.codigo) { <option [ngValue]="c.codigo">{{ c.nome }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Cor</label>
+            <select [(ngModel)]="dados.corId">
+              <option [ngValue]="null">Escolha...</option>
+              @for (c of cores; track c.codigo) { <option [ngValue]="c.codigo">{{ c.nome }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Portas</label>
+            <select [(ngModel)]="dados.portas">
+              <option [ngValue]="null">Escolha...</option>
+              @for (p of portas; track p.codigo) { <option [ngValue]="p.codigo">{{ p.nome }}</option> }
+            </select>
+          </div>
+        </div>
+
+        <h4>Características</h4>
+        <div class="wm-checks">
+          @for (c of caracteristicas; track c.campo) {
+            <label><input type="checkbox" [ngModel]="valor(c.campo)" (ngModelChange)="marcar(c.campo, $event)" /> {{ c.rotulo }}</label>
+          }
+        </div>
+
+        <h4>Opcionais <small>({{ dados.opcionais.length }} marcados)</small></h4>
+        <div class="wm-checks wm-opcionais">
+          @for (o of opcionais; track o.codigo) {
+            <label><input type="checkbox" [checked]="temOpcional(o.codigo)" (change)="alternarOpcional(o.codigo)" /> {{ o.nome }}</label>
+          }
+        </div>
+
+        <p class="wm-dica">Preço, quilometragem, placa, observação e fotos vêm do cadastro do veículo (até 20 fotos, na ordem do cadastro).</p>
+
+        <div class="wm-acoes">
+          <button class="btn-primary" (click)="publicar()" [disabled]="ocupado || !disponivel">
+            <span class="material-icons">{{ info.publicado ? 'sync' : 'publish' }}</span>
+            {{ ocupado ? 'Enviando...' : (info.publicado ? 'Salvar e atualizar anúncio' : 'Anunciar na Webmotors') }}
+          </button>
+          @if (info.publicado) {
+            <button class="btn-secondary" (click)="remover()" [disabled]="ocupado">
+              <span class="material-icons">visibility_off</span> Tirar do ar
+            </button>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>

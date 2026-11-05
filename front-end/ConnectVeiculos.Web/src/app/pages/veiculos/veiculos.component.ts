@@ -2,6 +2,8 @@ import { Component, HostListener, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { VeiculoService, LojaService, CategoriaService, ImagemService, VeiculoImagem, ToastService, FipeService, FipeMarca, FipeModelo, AuthService } from '../../core/services';
+import { WebmotorsVeiculoComponent } from '../../shared/components/webmotors/webmotors-veiculo.component';
+import { NapistaVeiculoComponent } from '../../shared/components/napista/napista-veiculo.component';
 import { RenaveVeiculoComponent } from '../../shared/components/renave/renave-veiculo.component';
 import { NfeVeiculoComponent } from '../../shared/components/renave/nfe-veiculo.component';
 import { IntegracaoService, MetaFeatureFlags } from '../../core/services/integracao.service';
@@ -17,7 +19,7 @@ import * as XLSX from 'xlsx';
 @Component({
   selector: 'app-veiculos',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaskDirective, CurrencyMaskDirective, PaginationComponent, ConfirmModalComponent, ScannerDocumentoComponent, SalvandoDirective, RenaveVeiculoComponent, NfeVeiculoComponent, ContratoVeiculoComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaskDirective, CurrencyMaskDirective, PaginationComponent, ConfirmModalComponent, ScannerDocumentoComponent, SalvandoDirective, RenaveVeiculoComponent, NfeVeiculoComponent, ContratoVeiculoComponent, WebmotorsVeiculoComponent, NapistaVeiculoComponent],
   templateUrl: './veiculos.component.html',
   styleUrl: './veiculos.component.scss'
 })
@@ -172,6 +174,12 @@ export class VeiculosComponent implements OnInit {
 
   // Contratos e assinatura eletronica do veiculo.
   contratoVeiculo: Veiculo | null = null;
+
+  // Webmotors: a API so atende Administrador e Gerente (como Integracoes).
+  webmotorsVeiculo: Veiculo | null = null;
+  // NaPista: mesma regra (a API so atende Administrador e Gerente).
+  napistaVeiculo: Veiculo | null = null;
+  get podeWebmotors(): boolean { return this.auth.isGerente(); }
   detranLink: DetranLink = { uf: '', nome: '', url: '' };
 
   // Paginacao

@@ -130,7 +130,8 @@ export class LeadsComponent implements OnInit {
       'TEST_DRIVE': 'Test Drive',
       'DIRETO': 'Direto',
       'INDICACAO': 'Indicação',
-      'FINANCIAMENTO': 'Solicitação de Financiamento'
+      'FINANCIAMENTO': 'Solicitação de Financiamento',
+      'NAPISTA': 'NaPista'
     };
     return labels[origem] || origem;
   }

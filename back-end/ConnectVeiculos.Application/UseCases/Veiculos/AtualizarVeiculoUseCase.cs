@@ -1,4 +1,4 @@
-﻿using ConnectVeiculos.Application.InputModels.Veiculos;
+using ConnectVeiculos.Application.InputModels.Veiculos;
 using ConnectVeiculos.Application.Interfaces.Veiculos;
 using ConnectVeiculos.Core.Entities.Publicacoes;
 using ConnectVeiculos.Core.Interfaces.Database.Common;
@@ -237,6 +237,22 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Erro na integracao externa para veiculo {VeiculoId}", inputModel.VeiId);
+                }
+
+                // Webmotors: altera o anuncio (preco, km, fotos) ou o devolve ao
+                // voltar a disponivel. A saida de disponivel ja passa pelo
+                // MarcarVeiculoIndisponivelAsync acima. Segundo plano: SOAP lento.
+                if (inputModel.VeiSts == "D")
+                {
+                    var idWebmotors = inputModel.VeiId;
+                    _backgroundRunner.Enqueue<IWebmotorsService>(
+                        s => s.SincronizarVeiculoAsync(idWebmotors),
+                        $"atualizar anuncio da Webmotors do veiculo {idWebmotors}");
+
+                    // NaPista: mesmo motivo (preco, km, fotos).
+                    _backgroundRunner.Enqueue<INapistaService>(
+                        s => s.SincronizarVeiculoAsync(idWebmotors),
+                        $"atualizar anuncio do NaPista do veiculo {idWebmotors}");
                 }
             }
             catch

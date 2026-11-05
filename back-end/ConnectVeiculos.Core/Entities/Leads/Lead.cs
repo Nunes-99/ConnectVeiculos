@@ -19,7 +19,12 @@ namespace ConnectVeiculos.Core.Entities.Leads
         public decimal? LeaEntrada { get; private set; }
         public int? LeaParcelas { get; private set; }
 
+        /// <summary>Id do lead no portal de origem (ex.: NaPista), para importar sem duplicar.</summary>
+        public string LeaExternoId { get; private set; }
+
         public Lead() { }
+
+        public void DefinirExternoId(string externoId) => LeaExternoId = externoId;
 
         public Lead(int leaId, int? rVeiId, int? rLojId, string leaNomeCliente, string leaTelefone,
             string leaEmail, string leaOrigem, string leaStatus, string leaObservacao,

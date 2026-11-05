@@ -1,0 +1,145 @@
+<div class="modal-overlay" (click)="fechar.emit()">
+  <div class="modal modal-lg" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2><span class="np-logo">NP</span> NaPista · {{ veiculo.veiPlaca || veiculo.veiChassi || 'sem placa' }}</h2>
+      <button class="btn-close" (click)="fechar.emit()"><span class="material-icons">close</span></button>
+    </div>
+
+    <div class="modal-body">
+      <p class="np-texto">{{ veiculo.veiMarca }} {{ veiculo.veiModelo }} {{ veiculo.veiAno }} · {{ veiculo.veiCor }} · {{ veiculo.veiPreco | currency:'BRL' }}</p>
+
+      @if (erroCarga) {
+        <div class="np-erro"><span class="material-icons">error</span> {{ erroCarga }}</div>
+      } @else if (!info || !dados) {
+        <p class="np-texto">Carregando o catálogo do NaPista...</p>
+      } @else {
+        @if (info.publicado) {
+          <div class="np-ok">
+            <span class="material-icons">check_circle</span>
+            <div>
+              <strong>Anunciado no NaPista</strong>
+              <small>{{ info.fotos }} foto(s) · atualizado em {{ info.atualizadoEm | date:'dd/MM/yyyy HH:mm' }}. Mudanças no cadastro atualizam o anúncio sozinhas; vender marca como vendido lá.</small>
+            </div>
+          </div>
+        } @else if (info.status === 'PAUSADO') {
+          <div class="np-aviso"><span class="material-icons">visibility_off</span> Tirado do ar pela loja. Só volta clicando em <strong>Anunciar</strong>.</div>
+        } @else if (info.status === 'REMOVIDO' && info.publicadoEm) {
+          <div class="np-aviso"><span class="material-icons">visibility_off</span> Fora do ar (veículo vendido ou indisponível). Volta sozinho se ficar disponível de novo.</div>
+        }
+        @if (info.erro) {
+          <div class="np-erro"><span class="material-icons">error</span> {{ info.erro }}</div>
+        }
+        @if (info.sugestao) {
+          <div class="np-aviso">
+            <span class="material-icons">auto_fix_high</span>
+            <div>Preenchido a partir do cadastro do veículo. <strong>Confira</strong>, principalmente a versão, antes de anunciar.</div>
+          </div>
+        }
+        @if (!disponivel) {
+          <div class="np-aviso"><span class="material-icons">info</span> Só veículo <strong>disponível</strong> pode ser anunciado.</div>
+        }
+
+        <div class="np-grid">
+          <div class="form-group">
+            <label>Tipo</label>
+            <select [(ngModel)]="dados.categoria" (ngModelChange)="categoriaMudou()" [disabled]="info.publicado">
+              @for (c of categorias; track c.id) { <option [ngValue]="c.id">{{ c.nome }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Marca</label>
+            <select [(ngModel)]="dados.marcaId" (ngModelChange)="marcaMudou()">
+              <option [ngValue]="null">Escolha...</option>
+              @for (m of marcas; track m.id) { <option [ngValue]="m.id">{{ m.nome }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Modelo</label>
+            <select [(ngModel)]="dados.modeloId" (ngModelChange)="modeloMudou()" [disabled]="!dados.marcaId">
+              <option [ngValue]="null">Escolha...</option>
+              @for (m of modelos; track m.id) { <option [ngValue]="m.id">{{ m.nome }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Ano do modelo</label>
+            <input type="number" [(ngModel)]="dados.anoModelo" (change)="anoMudou()" />
+          </div>
+          <div class="form-group">
+            <label>Ano de fabricação</label>
+            <input type="number" [(ngModel)]="dados.anoFabricacao" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Versão</label>
+          <select [(ngModel)]="dados.versaoId" [disabled]="!dados.modeloId">
+            <option [ngValue]="null">{{ versoes.length ? 'Escolha...' : 'Nenhuma versão para este ano' }}</option>
+            @for (v of versoes; track v.id) { <option [ngValue]="v.id">{{ v.nome }}</option> }
+          </select>
+          @if (info.publicado) {
+            <small class="np-dica">Trocar a versão ou os anos cria um anúncio novo no NaPista (o atual sai do ar).</small>
+          }
+        </div>
+
+        <div class="np-grid">
+          <div class="form-group">
+            <label>Câmbio</label>
+            <select [(ngModel)]="dados.cambio">
+              <option [ngValue]="null">Escolha...</option>
+              @for (c of atributos.cambios; track c.id) { <option [ngValue]="c.id">{{ c.nome }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Combustível</label>
+            <select [(ngModel)]="dados.combustivel">
+              <option [ngValue]="null">Escolha...</option>
+              @for (c of atributos.combustiveis; track c.id) { <option [ngValue]="c.id">{{ c.nome }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Cor</label>
+            <select [(ngModel)]="dados.cor">
+              <option [ngValue]="null">Escolha...</option>
+              @for (c of atributos.cores; track c.id) { <option [ngValue]="c.id">{{ c.nome }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Portas</label>
+            <select [(ngModel)]="dados.portas">
+              <option [ngValue]="null">—</option>
+              @for (p of [2, 3, 4, 5]; track p) { <option [ngValue]="p">{{ p }}</option> }
+            </select>
+          </div>
+        </div>
+
+        <label class="np-check"><input type="checkbox" [(ngModel)]="dados.blindado" /> Blindado</label>
+
+        @if (atributos.opcionais.length) {
+          <h4>Opcionais <small>({{ dados.opcionais.length }} marcados)</small></h4>
+          <div class="form-group np-busca">
+            <input type="text" [(ngModel)]="buscaOpcional" placeholder="Buscar opcional (ex.: airbag)" />
+          </div>
+          <div class="np-checks np-opcionais">
+            @for (o of opcionaisVisiveis; track o.id) {
+              <label><input type="checkbox" [checked]="temOpcional(o.id)" (change)="alternarOpcional(o.id)" /> {{ o.nome }}</label>
+            }
+          </div>
+        }
+
+        <p class="np-dica">Preço, quilometragem, placa, observação e fotos vêm do cadastro do veículo (até 20 fotos, na ordem do cadastro).</p>
+
+        <div class="np-acoes">
+          <button class="btn-primary" (click)="publicar()" [disabled]="ocupado || !disponivel">
+            <span class="material-icons">{{ info.publicado ? 'sync' : 'publish' }}</span>
+            {{ ocupado ? 'Enviando...' : (info.publicado ? 'Salvar e atualizar anúncio' : 'Anunciar no NaPista') }}
+          </button>
+          @if (info.publicado) {
+            <button class="btn-secondary" (click)="pausar()" [disabled]="ocupado">
+              <span class="material-icons">visibility_off</span> {{ confirmarPausa ? 'Confirmar: tirar do ar' : 'Tirar do ar' }}
+            </button>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>

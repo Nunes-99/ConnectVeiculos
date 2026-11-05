@@ -37,6 +37,18 @@ services:
       - ML_APP_ID=${ML_APP_ID:-}
       - ML_CLIENT_SECRET=${ML_CLIENT_SECRET:-}
       - ML_REDIRECT_URI=${ML_REDIRECT_URI:-https://connectveiculos.dev.br/api/integracoes/mercadolivre/callback}
+      # Webmotors: homologacao ate a Webmotors liberar a producao (chamado PTS-1524).
+      # Producao: WEBMOTORS_BASE_URL=https://integracao.webmotors.com.br no .env.
+      - WebmotorsSettings__BaseUrl=${WEBMOTORS_BASE_URL:-https://hportal.webmotors.com.br/IntegracaoRevendedor}
+      - WebmotorsSettings__Token=${WEBMOTORS_TOKEN:-}
+      # NaPista: desenvolvimento ate o NaPista liberar a producao. Producao no .env:
+      # NAPISTA_AUTH_URL=https://auth.napista.com.br/realms/marketplace-dealer/protocol/openid-connect
+      # NAPISTA_API_URL=<endereco de producao que o NaPista informar>
+      - NapistaSettings__ClientId=${NAPISTA_CLIENT_ID:-}
+      - NapistaSettings__AuthUrl=${NAPISTA_AUTH_URL:-https://auth.development.napista.com.br/realms/marketplace-dealer/protocol/openid-connect}
+      - NapistaSettings__ApiUrl=${NAPISTA_API_URL:-https://api.development.napista.com.br/seller-inventory-api}
+      - NapistaSettings__RedirectUri=${NAPISTA_REDIRECT_URI:-https://connectveiculos.dev.br/integracoes/napista}
+      - NapistaSettings__Escopos=${NAPISTA_ESCOPOS:-openid}
       - WHATSAPP_ACCESS_TOKEN=${WHATSAPP_ACCESS_TOKEN:-}
       - WHATSAPP_PHONE_ID=${WHATSAPP_PHONE_ID:-}
       - WHATSAPP_VERIFY_TOKEN=${WHATSAPP_VERIFY_TOKEN:-}

@@ -63,6 +63,8 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
         public DbSet<Favorito> Favoritos { get; set; }
         public DbSet<Negociacao> Negociacoes { get; set; }
         public DbSet<VeiculoPublicacao> VeiculoPublicacoes { get; set; }
+        public DbSet<VeiculoWebmotors> VeiculosWebmotors { get; set; }
+        public DbSet<VeiculoNapista> VeiculosNapista { get; set; }
         public DbSet<ConfiguracaoSistema> Configuracoes { get; set; }
         public DbSet<VeiculoDocumento> VeiculosDocumentos { get; set; }
         public DbSet<ModeloContrato> ModelosContrato { get; set; }
@@ -279,6 +281,30 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
                 entity.Property(e => e.PubUrl).HasMaxLength(500);
             });
 
+            modelBuilder.Entity<VeiculoWebmotors>(entity =>
+            {
+                entity.ToTable("VeiculoWebmotors");
+                entity.HasKey(e => e.VwmId);
+                entity.Property(e => e.VwmId).ValueGeneratedOnAdd();
+                entity.HasIndex(e => e.R_VeiId).IsUnique();
+                entity.Ignore(e => e.EstaPublicado);
+                entity.Ignore(e => e.Pausado);
+            });
+
+            modelBuilder.Entity<VeiculoNapista>(entity =>
+            {
+                entity.ToTable("VeiculoNapista");
+                entity.HasKey(e => e.VnpId);
+                entity.Property(e => e.VnpId).ValueGeneratedOnAdd();
+                entity.HasIndex(e => e.R_VeiId).IsUnique();
+                entity.Property(e => e.VnpAnuncioId).HasMaxLength(64);
+                entity.Property(e => e.VnpStatus).HasMaxLength(20);
+                entity.Property(e => e.VnpErro).HasMaxLength(1000);
+                entity.Ignore(e => e.TemAnuncio);
+                entity.Ignore(e => e.EstaPublicado);
+                entity.Ignore(e => e.Pausado);
+            });
+
             // Venda
             modelBuilder.Entity<Venda>(entity =>
             {
@@ -386,7 +412,7 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
             modelBuilder.Entity<VeiculoDespesa>(entity => { entity.ToTable("VeiculoDespesa"); entity.HasKey(e => e.DesId); entity.Property(e => e.DesId).ValueGeneratedOnAdd(); entity.Property(e => e.DesTipo).HasMaxLength(50).IsRequired(); entity.Property(e => e.DesDescricao).HasMaxLength(500); entity.Property(e => e.DesValor).HasPrecision(10, 2); });
 
             // Lead
-            modelBuilder.Entity<Lead>(entity => { entity.ToTable("Lead"); entity.HasKey(e => e.LeaId); entity.Property(e => e.LeaId).ValueGeneratedOnAdd(); entity.Property(e => e.LeaNomeCliente).HasMaxLength(200); entity.Property(e => e.LeaTelefone).HasMaxLength(20); entity.Property(e => e.LeaEmail).HasMaxLength(255); entity.Property(e => e.LeaOrigem).HasMaxLength(30); entity.Property(e => e.LeaStatus).HasMaxLength(20); entity.Property(e => e.LeaObservacao).HasMaxLength(1000); entity.Property(e => e.LeaCpf).HasMaxLength(14); entity.Property(e => e.LeaRenda).HasPrecision(12, 2); entity.Property(e => e.LeaEntrada).HasPrecision(12, 2); });
+            modelBuilder.Entity<Lead>(entity => { entity.ToTable("Lead"); entity.HasKey(e => e.LeaId); entity.Property(e => e.LeaId).ValueGeneratedOnAdd(); entity.Property(e => e.LeaNomeCliente).HasMaxLength(200); entity.Property(e => e.LeaTelefone).HasMaxLength(20); entity.Property(e => e.LeaEmail).HasMaxLength(255); entity.Property(e => e.LeaOrigem).HasMaxLength(30); entity.Property(e => e.LeaStatus).HasMaxLength(20); entity.Property(e => e.LeaObservacao).HasMaxLength(1000); entity.Property(e => e.LeaCpf).HasMaxLength(14); entity.Property(e => e.LeaExternoId).HasMaxLength(80); entity.Property(e => e.LeaRenda).HasPrecision(12, 2); entity.Property(e => e.LeaEntrada).HasPrecision(12, 2); });
 
             // Negociacao
             modelBuilder.Entity<Negociacao>(entity => { entity.ToTable("Negociacao"); entity.HasKey(e => e.NegId); entity.Property(e => e.NegId).ValueGeneratedOnAdd(); entity.Property(e => e.NegNomeCliente).HasMaxLength(200); entity.Property(e => e.NegTelefone).HasMaxLength(20); entity.Property(e => e.NegEmail).HasMaxLength(255); entity.Property(e => e.NegValorProposta).HasPrecision(10, 2); entity.Property(e => e.NegStatus).HasMaxLength(20); entity.Property(e => e.NegObservacao).HasMaxLength(1000); });

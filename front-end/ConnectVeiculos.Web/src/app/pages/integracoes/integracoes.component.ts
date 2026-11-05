@@ -10,6 +10,10 @@ import { AuthService, LojaService, ToastService } from '../../core/services';
 import { RenaveConfigComponent } from '../../shared/components/renave/renave-config.component';
 import { CredereConfigComponent } from '../../shared/components/credere/credere-config.component';
 import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal.component';
+import { WebmotorsConfigComponent } from '../../shared/components/webmotors/webmotors-config.component';
+import { NapistaConfigComponent } from '../../shared/components/napista/napista-config.component';
+import { WebmotorsService } from '../../core/services/webmotors.service';
+import { NapistaService } from '../../core/services/napista.service';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
@@ -33,7 +37,7 @@ interface ItemIntegracao {
 @Component({
   selector: 'app-integracoes',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, ConfirmModalComponent, RenaveConfigComponent, CredereConfigComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, ConfirmModalComponent, WebmotorsConfigComponent, NapistaConfigComponent, RenaveConfigComponent, CredereConfigComponent],
   templateUrl: './integracoes.component.html',
   styleUrl: './integracoes.component.scss'
 })
@@ -41,6 +45,8 @@ export class IntegracoesComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private renaveApi = inject(RenaveService);
   private credereApi = inject(CredereService);
+  private webmotorsApi = inject(WebmotorsService);
+  private napistaApi = inject(NapistaService);
   private router = inject(Router);
 
   // ---------- Catalogo ----------
@@ -56,6 +62,20 @@ export class IntegracoesComponent implements OnInit {
       visivel: () => true,
       status: () => this.mlConectado ? { texto: 'Conectado', classe: 'connected' } : { texto: 'Desconectado', classe: 'disconnected' },
       conectada: () => this.mlConectado
+    },
+    {
+      id: 'webmotors', nome: 'Webmotors', descricao: 'Anúncios no estoque da loja na Webmotors.',
+      categoria: 'Portais e marketplaces', icone: 'wm-icon', sigla: 'WM', palavras: 'portal anuncio webmotors',
+      visivel: () => true,
+      status: () => this.wmConectado ? { texto: 'Conectado', classe: 'connected' } : { texto: 'Desconectado', classe: 'disconnected' },
+      conectada: () => this.wmConectado
+    },
+    {
+      id: 'napista', nome: 'NaPista', descricao: 'Anuncia os veículos no NaPista e traz os leads de lá.',
+      categoria: 'Portais e marketplaces', icone: 'napista-icon', sigla: 'NP', palavras: 'portal anuncio napista lead bv',
+      visivel: () => true,
+      status: () => this.napistaConectado ? { texto: 'Conectado', classe: 'connected' } : { texto: 'Desconectado', classe: 'disconnected' },
+      conectada: () => this.napistaConectado
     },
     {
       id: 'renave', nome: 'Renave', descricao: 'Entrada e saída dos veículos no estoque eletrônico (Senatran).',
@@ -239,6 +259,8 @@ Te esperamos na {{6}}. Até breve!`;
   }
 
   mlConectado = false;
+  wmConectado = false;
+  napistaConectado = false;
   // Quanto falta pro token do ML vencer. Ver MercadoLivreStatus.
   mlMinutosRestantes: number | null = null;
   mlExpirando = false;
@@ -378,6 +400,8 @@ Te esperamos na {{6}}. Até breve!`;
     // daqui, para o cartao do catalogo mostrar antes de abrir o painel.
     this.renaveApi.obterConfig().subscribe({ next: c => this.renavePronto = c.pronto, error: () => {} });
     this.credereApi.status().subscribe({ next: s => this.credereConectada = s.conectado, error: () => {} });
+    this.webmotorsApi.status().subscribe({ next: s => this.wmConectado = s.conectado && !s.erro, error: () => {} });
+    this.napistaApi.status().subscribe({ next: s => this.napistaConectado = s.conectado && !!s.sellerId, error: () => {} });
     this.route.queryParamMap.subscribe(p => {
       const abrir = p.get('abrir');
       this.integracaoAberta = abrir && this.catalogo.some(i => i.id === abrir) ? abrir : null;
