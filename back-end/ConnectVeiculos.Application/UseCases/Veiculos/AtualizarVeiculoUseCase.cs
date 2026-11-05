@@ -1,4 +1,4 @@
-﻿using ConnectVeiculos.Application.InputModels.Veiculos;
+using ConnectVeiculos.Application.InputModels.Veiculos;
 using ConnectVeiculos.Application.Interfaces.Veiculos;
 using ConnectVeiculos.Core.Entities.Publicacoes;
 using ConnectVeiculos.Core.Interfaces.Database.Common;
@@ -248,6 +248,11 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                     _backgroundRunner.Enqueue<IWebmotorsService>(
                         s => s.SincronizarVeiculoAsync(idWebmotors),
                         $"atualizar anuncio da Webmotors do veiculo {idWebmotors}");
+
+                    // NaPista: mesmo motivo (preco, km, fotos).
+                    _backgroundRunner.Enqueue<INapistaService>(
+                        s => s.SincronizarVeiculoAsync(idWebmotors),
+                        $"atualizar anuncio do NaPista do veiculo {idWebmotors}");
                 }
             }
             catch

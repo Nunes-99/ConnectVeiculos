@@ -34,6 +34,7 @@ namespace ConnectVeiculos.Tests.Publicacoes
         private readonly Mock<IGoogleMerchantService> _google = new();
         private readonly Mock<IStoryService> _stories = new();
         private readonly Mock<IWebmotorsService> _webmotors = new();
+        private readonly Mock<INapistaService> _napista = new();
 
         public PublicacaoAutomaticaServiceTests()
         {
@@ -279,7 +280,7 @@ namespace ConnectVeiculos.Tests.Publicacoes
         private PublicacaoAutomaticaService Criar() => new(
             _veiculos.Object, _imagens.Object, _publicacoes.Object, _ml.Object,
             _fbCatalogo.Object, _fbPage.Object, _instagram.Object, _google.Object, _stories.Object,
-            _webmotors.Object, NullLogger<PublicacaoAutomaticaService>.Instance,
+            _webmotors.Object, _napista.Object, NullLogger<PublicacaoAutomaticaService>.Instance,
             tentativas: 6, intervaloMs: 1, leiturasEstaveis: 2);
 
         /// <summary>Uma contagem de fotos por leitura; a ultima se repete.</summary>

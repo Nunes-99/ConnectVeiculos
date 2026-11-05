@@ -293,6 +293,7 @@ namespace ConnectVeiculos.Infrastructure.IoC
              services.AddTransient<Core.Interfaces.Database.Repositories.Financiamentos.IFinanciamentoLojaRepository, Database.EntityFramework.Repositories.FinanciamentoLojaRepository>();
              services.AddTransient<Core.Interfaces.Database.Repositories.Integracoes.IIntegracaoLogRepository, Database.EntityFramework.Repositories.IntegracaoLogRepository>();
              services.AddTransient<Core.Interfaces.Database.Repositories.Integracoes.IVeiculoWebmotorsRepository, Database.EntityFramework.Repositories.VeiculoWebmotorsRepository>();
+             services.AddTransient<Core.Interfaces.Database.Repositories.Integracoes.IVeiculoNapistaRepository, Database.EntityFramework.Repositories.VeiculoNapistaRepository>();
 
              // Repositories - Tenants/Planos (billing camada 1)
              services.AddTransient<Core.Interfaces.Database.Repositories.Tenants.IPlanoRepository, Database.EntityFramework.Repositories.PlanoRepository>();
@@ -336,6 +337,11 @@ namespace ConnectVeiculos.Infrastructure.IoC
             // Webmotors: SOAP com IP liberado pela Webmotors; BaseUrl define homologacao x producao.
             services.Configure<Services.Webmotors.WebmotorsSettings>(configuration.GetSection("WebmotorsSettings"));
             services.AddHttpClient<Core.Interfaces.Services.IWebmotorsService, Services.Webmotors.WebmotorsService>()
+                .ConfigureHttpClient(client => client.Timeout = TimeSpan.FromSeconds(60));
+
+            // NaPista: OAuth (Keycloak) por loja + API REST de estoque e leads.
+            services.Configure<Services.Napista.NapistaSettings>(configuration.GetSection("NapistaSettings"));
+            services.AddHttpClient<Core.Interfaces.Services.INapistaService, Services.Napista.NapistaService>()
                 .ConfigureHttpClient(client => client.Timeout = TimeSpan.FromSeconds(60));
 
             services.AddTransient<Core.Interfaces.Services.IFeedService, Services.Feed.FeedService>();
@@ -675,6 +681,20 @@ namespace ConnectVeiculos.Infrastructure.IoC
                     idxFicha.ExecuteNonQuery();
                 }
 
+                // NaPista: anuncio de cada veiculo (versao/valores escolhidos e id do anuncio)
+                CreateTableIfNotExists(connection, "VeiculoNapista",
+                    @"VnpId INTEGER PRIMARY KEY AUTOINCREMENT,
+                      R_VeiId INTEGER NOT NULL UNIQUE,
+                      VnpAnuncioId TEXT,
+                      VnpStatus TEXT,
+                      VnpDadosJson TEXT,
+                      VnpFotosAssinatura TEXT,
+                      VnpFotos INTEGER NOT NULL DEFAULT 0,
+                      VnpErro TEXT,
+                      VnpPublicadoEm TEXT,
+                      VnpAtualizadoEm TEXT,
+                      VnpRemovidoEm TEXT");
+
                 CreateTableIfNotExists(connection, "IntegracaoLog",
                     @"IlgId INTEGER PRIMARY KEY AUTOINCREMENT,
                       IlgNivel INTEGER NOT NULL DEFAULT 0,
@@ -709,6 +729,8 @@ namespace ConnectVeiculos.Infrastructure.IoC
                 AddColumnIfNotExists(connection, "Lead", "LeaRenda", "REAL");
                 AddColumnIfNotExists(connection, "Lead", "LeaEntrada", "REAL");
                 AddColumnIfNotExists(connection, "Lead", "LeaParcelas", "INTEGER");
+                // Id do lead no portal de origem (NaPista): importar de novo nao duplica.
+                AddColumnIfNotExists(connection, "Lead", "LeaExternoId", "TEXT");
 
                 // Tabela de configuracoes do sistema (tokens ML/Google/Facebook etc.)
                 CreateTableIfNotExists(connection, "ConfiguracaoSistema",
