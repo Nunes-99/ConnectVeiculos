@@ -215,6 +215,7 @@ namespace ConnectVeiculos.API.Controllers
         /// Atualiza um veiculo existente
         /// </summary>
         /// <param name="atualizarVeiculoUseCase">Use case de atualizacao injetado</param>
+        /// <param name="veiculoRepository">Le o preco de compra atual quando quem salva e' vendedor (ele nao ve o custo)</param>
         /// <param name="id">ID do veiculo a ser atualizado</param>
         /// <param name="inputModel">Novos dados do veiculo</param>
         /// <returns>Sem conteudo</returns>
