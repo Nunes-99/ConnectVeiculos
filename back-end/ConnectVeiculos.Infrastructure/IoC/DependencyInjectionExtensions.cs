@@ -569,6 +569,7 @@ namespace ConnectVeiculos.Infrastructure.IoC
                 AddColumnIfNotExists(connection, "VeiculoRenave", "RnvVendedorDocumento", "TEXT");
                 AddColumnIfNotExists(connection, "VeiculoRenave", "RnvVendedorEmail", "TEXT");
                 AddColumnIfNotExists(connection, "VeiculoRenave", "RnvCompradorEmail", "TEXT");
+                AddColumnIfNotExists(connection, "VeiculoRenave", "RnvZeroKm", "INTEGER NOT NULL DEFAULT 0");
 
                 // NF-e de veiculos emitida pelo sistema (entrada na compra, saida na venda)
                 CreateTableIfNotExists(connection, "NotaFiscal",

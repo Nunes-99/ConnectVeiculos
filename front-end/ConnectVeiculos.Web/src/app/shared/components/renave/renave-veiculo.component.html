@@ -1,7 +1,7 @@
 <div class="modal-overlay" (click)="fechar.emit()">
   <div class="modal modal-lg" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h2><span class="material-icons">assignment_turned_in</span> Renave · {{ veiculo.veiPlaca }}</h2>
+      <h2><span class="material-icons">assignment_turned_in</span> Renave · {{ veiculo.veiPlaca || veiculo.veiChassi }}</h2>
       <button class="btn-close" (click)="fechar.emit()"><span class="material-icons">close</span></button>
     </div>
 
@@ -44,8 +44,27 @@
           <div class="rnv-erro-box"><span class="material-icons">error</span> {{ situacao.ultimoErro }}</div>
         }
 
+        @if (podeTermoEntrada || podeTermoSaida) {
+          <div class="rnv-acoes">
+            @if (podeTermoEntrada) {
+              <button class="btn-secondary" (click)="baixarTermo('entrada')" [disabled]="enviando">
+                <span class="material-icons">description</span> Termo de entrada
+              </button>
+            }
+            @if (podeTermoSaida) {
+              <button class="btn-secondary" (click)="baixarTermo('saida')" [disabled]="enviando">
+                <span class="material-icons">description</span> Termo de saída
+              </button>
+            }
+          </div>
+        }
+
         @switch (passo) {
           @case ('entrada') {
+            <p class="rnv-dica">
+              Zero km vindo da montadora? A entrada é pelo chassi, em <strong>Integrações → Renave → Zero km pendentes</strong>.
+              Abaixo é a entrada de usado.
+            </p>
             <h4>Dados do CRV (documento do carro)</h4>
             <div class="rnv-grid">
               <div class="form-group">
@@ -160,19 +179,26 @@
 
           @case ('saida') {
             <h4>Saída (venda)</h4>
-            <p class="rnv-dica">Use o código de segurança do <strong>CRV atual, emitido em nome da loja</strong> após a transferência.</p>
+            @if (zeroKm) {
+              <p class="rnv-dica">Zero km: sem CRV. O primeiro emplacamento é feito pelo comprador no Detran.</p>
+            } @else {
+              <p class="rnv-dica">Use o código de segurança do <strong>CRV atual, emitido em nome da loja</strong> após a transferência.</p>
+            }
+            <p class="rnv-dica">O Renave exige todos os dados do comprador: nome, e-mail e endereço completo (o CEP preenche a rua e o bairro).</p>
             @if (origemDados) {
               <div class="rnv-ok"><span class="material-icons">auto_fix_high</span> Comprador preenchido com os dados {{ origemDados }}. Confira.</div>
             }
             <div class="rnv-grid">
-              <div class="form-group">
-                <label>Código de segurança do CRV</label>
-                <input type="text" [(ngModel)]="saida.codigoSegurancaCrv" inputmode="numeric" />
-              </div>
-              <div class="form-group">
-                <label>Nº do CRV <small>(opcional)</small></label>
-                <input type="text" [(ngModel)]="saida.numeroCrv" inputmode="numeric" />
-              </div>
+              @if (!zeroKm) {
+                <div class="form-group">
+                  <label>Código de segurança do CRV</label>
+                  <input type="text" [(ngModel)]="saida.codigoSegurancaCrv" inputmode="numeric" />
+                </div>
+                <div class="form-group">
+                  <label>Nº do CRV <small>(opcional)</small></label>
+                  <input type="text" [(ngModel)]="saida.numeroCrv" inputmode="numeric" />
+                </div>
+              }
               <div class="form-group">
                 <label>CPF/CNPJ do comprador</label>
                 <input type="text" [(ngModel)]="saida.documentoComprador" inputmode="numeric" />
@@ -231,6 +257,13 @@
                 <label>Valor da venda (R$)</label>
                 <input type="number" [(ngModel)]="saida.valorVenda" min="0" step="0.01" />
               </div>
+              @if (zeroKm) {
+                <div class="form-group">
+                  <label>Chave da NF-e de venda</label>
+                  <input type="text" [(ngModel)]="saida.chaveNotaFiscal" inputmode="numeric" maxlength="54" placeholder="44 dígitos" />
+                  <small class="rnv-dica">No zero km o Renave exige a nota junto com a saída.</small>
+                </div>
+              }
             </div>
             <button class="btn-primary" (click)="registrarSaida()" [disabled]="enviando">
               <span class="material-icons">logout</span> {{ enviando ? 'Enviando...' : 'Registrar saída no Renave' }}
@@ -238,9 +271,11 @@
           }
 
           @case ('nota-venda') {
-            <button class="btn-secondary" (click)="baixarAtpv()" [disabled]="enviando">
-              <span class="material-icons">picture_as_pdf</span> Baixar ATPVe do comprador
-            </button>
+            @if (!zeroKm) {
+              <button class="btn-secondary" (click)="baixarAtpv()" [disabled]="enviando">
+                <span class="material-icons">picture_as_pdf</span> Baixar ATPVe do comprador
+              </button>
+            }
             <h4>NF-e de venda</h4>
             <div class="form-group">
               <label>Chave de acesso (44 dígitos)</label>
@@ -251,9 +286,11 @@
 
           @case ('concluido') {
             <div class="rnv-ok"><span class="material-icons">task_alt</span> Tudo registrado no Renave.</div>
-            <button class="btn-secondary" (click)="baixarAtpv()" [disabled]="enviando">
-              <span class="material-icons">picture_as_pdf</span> Baixar ATPVe
-            </button>
+            @if (!zeroKm) {
+              <button class="btn-secondary" (click)="baixarAtpv()" [disabled]="enviando">
+                <span class="material-icons">picture_as_pdf</span> Baixar ATPVe
+              </button>
+            }
           }
         }
       }

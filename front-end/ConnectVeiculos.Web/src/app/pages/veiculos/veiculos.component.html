@@ -747,7 +747,8 @@
 
     @if (podeRenave) {
       <span class="acoes-menu-grupo">Documentos</span>
-      <button role="menuitem" (click)="fecharMenu(); renaveVeiculo = v" [disabled]="!v.veiPlaca">
+      <!-- Zero km nao tem placa: basta o chassi. -->
+      <button role="menuitem" (click)="fecharMenu(); renaveVeiculo = v" [disabled]="!v.veiPlaca && !v.veiChassi">
         <span class="material-icons">assignment_turned_in</span><span>Renave (entrada e saída)</span>
       </button>
       <button role="menuitem" (click)="fecharMenu(); nfeVeiculo = v">

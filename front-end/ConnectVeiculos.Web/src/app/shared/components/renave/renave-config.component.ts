@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../core/services/toast.service';
 import { RenaveConexao, RenaveConfig, RenaveService, RenaveVeiculoTeste, erroRenave } from '../../../core/services/renave.service';
+import { RenaveOperacoesComponent } from './renave-operacoes.component';
 
 /**
  * Corpo do cartao "Renave" em Integracoes: ambiente, operador responsavel,
@@ -13,7 +14,7 @@ import { RenaveConexao, RenaveConfig, RenaveService, RenaveVeiculoTeste, erroRen
 @Component({
   selector: 'app-renave-config',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, RenaveOperacoesComponent],
   templateUrl: './renave-config.component.html',
   styleUrl: './renave.scss'
 })

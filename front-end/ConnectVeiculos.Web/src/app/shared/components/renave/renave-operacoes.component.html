@@ -1,0 +1,290 @@
+<!-- Importar estoque: para quem ja usava o Renave por outro sistema. -->
+<div class="rnv-bloco">
+  <h4><span class="material-icons">cloud_download</span> Importar estoque do Renave</h4>
+  <p class="rnv-texto">
+    Para lojas que já tinham veículos no estoque do Renave antes do ConnectVeiculos. Liga cada carro ao veículo do sistema
+    com a mesma placa ou chassi; o que não existir é cadastrado com os dados mínimos, como <strong>Reservado</strong>
+    (fora do catálogo e das redes até você completar o cadastro). <strong>Não faz nova entrada no Renave.</strong>
+  </p>
+  <div class="rnv-acoes">
+    <button class="btn-secondary" (click)="importar()" [disabled]="importando">
+      <span class="material-icons">cloud_download</span> {{ importando ? 'Buscando no Renave...' : 'Importar do Renave' }}
+    </button>
+  </div>
+
+  @if (importacao) {
+    <div class="rnv-ok">
+      <span class="material-icons">task_alt</span>
+      <div>
+        <strong>{{ importacao.encontrados }} no estoque do Renave</strong>
+        <small>
+          {{ importacao.vinculados }} ligado(s) a veículos do sistema · {{ importacao.criados }} cadastrado(s) ·
+          {{ importacao.jaVinculados }} já estavam ligados · {{ importacao.ignorados }} ignorado(s)
+        </small>
+        @if (importacao.soUltimosTresMeses) {
+          <small>O Renave só devolveu as entradas dos últimos 3 meses. Carros mais antigos: use Consultar veículo.</small>
+        }
+      </div>
+    </div>
+    @if (importacao.itens.length) {
+      <div class="rnv-tabela-rolagem">
+        <table class="nfe-tabela">
+          <thead><tr><th>Placa / chassi</th><th>Situação no Renave</th><th>Resultado</th></tr></thead>
+          <tbody>
+            @for (i of importacao.itens; track i.idEstoque) {
+              <tr>
+                <td>{{ i.placa || i.chassi }} @if (i.zeroKm) { <small class="rnv-tag">0 km</small> }</td>
+                <td>{{ i.estado }}</td>
+                <td>
+                  {{ rotuloAcao(i.acao) }}
+                  @if (i.mensagem) { <span class="nfe-motivo" [class.rnv-neutro]="i.acao !== 'ignorado'">{{ i.mensagem }}</span> }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (importacao.criados) {
+        <small class="rnv-dica">Os cadastrados estão em <a routerLink="/veiculos">Veículos</a> como Reservado, com o modelo "Importado do Renave".</small>
+      }
+    }
+  }
+</div>
+
+<div class="rnv-bloco">
+  <div class="rnv-abas">
+    <button [class.ativa]="aba === 'zero-km'" (click)="trocarAba('zero-km')"><span class="material-icons">new_releases</span> Zero km pendentes</button>
+    <button [class.ativa]="aba === 'entregas'" (click)="trocarAba('entregas')"><span class="material-icons">local_shipping</span> Entregas</button>
+    <button [class.ativa]="aba === 'consulta'" (click)="trocarAba('consulta')"><span class="material-icons">search</span> Consultar veículo</button>
+    @if (emTestes) {
+      <button [class.ativa]="aba === 'testes'" (click)="trocarAba('testes')"><span class="material-icons">science</span> Testes</button>
+    }
+  </div>
+
+  @switch (aba) {
+    <!-- ---------------- Zero km ---------------- -->
+    @case ('zero-km') {
+      <p class="rnv-texto">
+        Carros zero km que a montadora mandou para a loja e esperam a <strong>entrada no estoque</strong>. Dê entrada
+        com a nota da montadora, ou rejeite se a loja não ficou com o carro.
+      </p>
+      <button class="rnv-link" (click)="carregarZeroKm()" [disabled]="carregandoZeroKm">
+        <span class="material-icons">{{ pendentes ? 'refresh' : 'search' }}</span>
+        {{ carregandoZeroKm ? 'Consultando...' : pendentes ? 'Atualizar' : 'Consultar pendentes no Renave' }}
+      </button>
+
+      @if (pendentes && !pendentes.length && !carregandoZeroKm) {
+        <p class="rnv-dica">Nenhum zero km pendente para esta loja.</p>
+      }
+      @if (pendentes?.length) {
+        @if (pendentes!.length > 10) {
+          <div class="rnv-filtro">
+            <div class="form-group">
+              <label>Buscar pelo chassi</label>
+              <input type="text" [(ngModel)]="buscaChassi" placeholder="Parte do chassi" />
+            </div>
+          </div>
+        }
+        @if (pendentesVisiveis.length > 50) {
+          <p class="rnv-dica">{{ pendentesVisiveis.length }} pendentes. Mostrando os 50 mais recentes; busque pelo chassi para achar outro.</p>
+        } @else if (!pendentesVisiveis.length) {
+          <p class="rnv-dica">Nenhum pendente com esse chassi.</p>
+        }
+        <div class="rnv-tabela-rolagem">
+          <table class="nfe-tabela">
+            <thead><tr><th>Chassi</th><th>Enviado em</th><th>Veículo no sistema</th><th></th></tr></thead>
+            <tbody>
+              @for (p of pendentesVisiveis.slice(0, 50); track p.chassi) {
+                <tr>
+                  <td>
+                    <code>{{ p.chassi }}</code>
+                    @if (!p.acabado) { <small class="rnv-tag" title="Veículo inacabado (para implementação/carroceria)">inacabado</small> }
+                  </td>
+                  <td>{{ p.dataHoraCadastro | date:'dd/MM/yyyy HH:mm' }}</td>
+                  <td>{{ p.veiculoDescricao || 'Será cadastrado' }}</td>
+                  <td class="nfe-acoes">
+                    <button class="rnv-link" (click)="abrir(p.chassi, 'entrada')"><span class="material-icons">login</span> Dar entrada</button>
+                    <button class="rnv-link" (click)="abrir(p.chassi, 'rejeicao')"><span class="material-icons">block</span> Rejeitar</button>
+                  </td>
+                </tr>
+                @if (aberto?.chassi === p.chassi) {
+                  <tr class="rnv-linha-form">
+                    <td colspan="4">
+                      @if (aberto!.tipo === 'entrada') {
+                        <div class="rnv-grid">
+                          <div class="form-group">
+                            <label>Data da entrada</label>
+                            <input type="date" [(ngModel)]="entrada.dataEntrada" />
+                          </div>
+                          <div class="form-group">
+                            <label>Valor de compra (R$)</label>
+                            <input type="number" [(ngModel)]="entrada.valorCompra" min="0" step="0.01" />
+                          </div>
+                          <div class="form-group">
+                            <label>Km no hodômetro</label>
+                            <input type="number" [(ngModel)]="entrada.quilometragemHodometro" min="0" />
+                          </div>
+                          <div class="form-group">
+                            <label>Chave da NF-e da montadora</label>
+                            <input type="text" [(ngModel)]="entrada.chaveNotaFiscal" inputmode="numeric" maxlength="54" placeholder="44 dígitos" />
+                          </div>
+                        </div>
+                        <button class="btn-primary" (click)="darEntrada(p)" [disabled]="enviando">
+                          <span class="material-icons">login</span> {{ enviando ? 'Enviando...' : 'Registrar entrada no Renave' }}
+                        </button>
+                      } @else {
+                        <div class="rnv-grid">
+                          <div class="form-group">
+                            <label>Motivo da rejeição</label>
+                            <select [(ngModel)]="motivoRejeicao">
+                              <option value="DESISTENCIA">Desistência</option>
+                              <option value="ERRO_OPERACIONAL_MONTADORA">Erro operacional da montadora</option>
+                            </select>
+                          </div>
+                        </div>
+                        <button class="btn-primary" (click)="rejeitar(p)" [disabled]="enviando">
+                          <span class="material-icons">block</span> {{ enviando ? 'Enviando...' : 'Rejeitar no Renave' }}
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+
+    <!-- ---------------- Entregas ---------------- -->
+    @case ('entregas') {
+      <p class="rnv-texto">
+        Zero km vendidos por outra concessionária em que a montadora indicou esta loja para <strong>entregar</strong> o carro ao comprador.
+      </p>
+      <div class="rnv-filtro">
+        <div class="form-group">
+          <label>Situação</label>
+          <select [(ngModel)]="filtroEntregas" (ngModelChange)="carregarEntregas()">
+            <option value="PENDENTE">Pendentes</option>
+            <option value="REALIZADA">Realizadas</option>
+            <option value="CANCELADA">Canceladas</option>
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <button class="rnv-link" (click)="carregarEntregas()" [disabled]="carregandoEntregas">
+          <span class="material-icons">{{ entregas ? 'refresh' : 'search' }}</span>
+          {{ carregandoEntregas ? 'Consultando...' : entregas ? 'Atualizar' : 'Consultar no Renave' }}
+        </button>
+      </div>
+
+      @if (entregas && !entregas.length && !carregandoEntregas) {
+        <p class="rnv-dica">Nenhuma entrega nesta situação.</p>
+      }
+      @if (entregas?.length) {
+        <div class="rnv-tabela-rolagem">
+          <table class="nfe-tabela">
+            <thead><tr><th>Chassi</th><th>Vendida por (CNPJ)</th><th>Situação</th><th></th></tr></thead>
+            <tbody>
+              @for (e of entregas!.slice(0, 100); track e.id) {
+                <tr>
+                  <td><code>{{ e.chassi }}</code></td>
+                  <td>{{ e.cnpjVendedor || '—' }}</td>
+                  <td>
+                    <span class="nfe-status" [attr.data-status]="e.estado === 'REALIZADA' ? 'AUTORIZADA' : e.estado === 'CANCELADA' ? 'CANCELADA' : ''">{{ e.estado }}</span>
+                    @if (e.dataRealizacao) { <small class="rnv-dica">em {{ e.dataRealizacao | date:'dd/MM/yyyy HH:mm' }}</small> }
+                    @if (e.dataCancelamento) { <small class="rnv-dica">em {{ e.dataCancelamento | date:'dd/MM/yyyy HH:mm' }}</small> }
+                  </td>
+                  <td class="nfe-acoes">
+                    @if (e.estado === 'PENDENTE') {
+                      <button class="rnv-link" (click)="acaoEntrega(e, 'realizar')" [disabled]="enviando">
+                        <span class="material-icons">check</span>
+                        {{ confirmando?.id === e.id && confirmando?.acao === 'realizar' ? 'Confirmar entrega' : 'Entreguei' }}
+                      </button>
+                      <button class="rnv-link" (click)="acaoEntrega(e, 'cancelar')" [disabled]="enviando">
+                        <span class="material-icons">close</span>
+                        {{ confirmando?.id === e.id && confirmando?.acao === 'cancelar' ? 'Confirmar cancelamento' : 'Cancelar' }}
+                      </button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+
+    <!-- ---------------- Consulta ---------------- -->
+    @case ('consulta') {
+      <p class="rnv-texto">Consulta no Renave por placa, chassi ou Renavam: restrições e os estoques deste veículo na loja.</p>
+      <div class="rnv-grid">
+        <div class="form-group">
+          <label>Placa</label>
+          <input type="text" [(ngModel)]="busca.placa" (keyup.enter)="consultar()" maxlength="8" />
+        </div>
+        <div class="form-group">
+          <label>Chassi</label>
+          <input type="text" [(ngModel)]="busca.chassi" (keyup.enter)="consultar()" maxlength="20" />
+        </div>
+        <div class="form-group">
+          <label>Renavam</label>
+          <input type="text" [(ngModel)]="busca.renavam" (keyup.enter)="consultar()" inputmode="numeric" maxlength="11" />
+        </div>
+      </div>
+      <button class="btn-secondary" (click)="consultar()" [disabled]="consultando">
+        <span class="material-icons">search</span> {{ consultando ? 'Consultando...' : 'Consultar no Renave' }}
+      </button>
+
+      @if (consulta) {
+        <div [class]="consulta.restricoes.length ? 'rnv-alerta' : 'rnv-ok'">
+          <span class="material-icons">{{ consulta.restricoes.length ? 'warning' : 'check_circle' }}</span>
+          <div>
+            <strong>{{ consulta.placa || 'Sem placa' }} · Chassi {{ consulta.chassi }} · Renavam {{ consulta.renavam || '—' }}</strong>
+            <small>{{ consulta.acabado ? 'Veículo acabado' : 'Veículo inacabado' }}@if (consulta.dataPreCadastro) { · pré-cadastro em {{ consulta.dataPreCadastro | date:'dd/MM/yyyy' }} }</small>
+            <small>Restrições: {{ consulta.restricoes.length ? consulta.restricoes.join(', ') : 'nenhuma' }}</small>
+            <small>
+              @if (consulta.veiculoId) { Está cadastrado em <a routerLink="/veiculos">Veículos</a>. } @else { Não está cadastrado no sistema. }
+            </small>
+          </div>
+        </div>
+        @if (consulta.estoques.length) {
+          <table class="nfe-tabela">
+            <thead><tr><th>Estoque</th><th>Situação</th><th>Entrada</th><th>Saída</th></tr></thead>
+            <tbody>
+              @for (s of consulta.estoques; track s.id) {
+                <tr>
+                  <td>{{ s.id }}</td>
+                  <td>{{ s.estado }}</td>
+                  <td>{{ s.dataEntrada | date:'dd/MM/yyyy' }}</td>
+                  <td>{{ s.dataSaida | date:'dd/MM/yyyy' }}@if (s.motivoSaida) { <small class="rnv-dica">{{ s.motivoSaida }}</small> }</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else {
+          <p class="rnv-dica">Nenhum estoque deste veículo na loja nos últimos 3 meses.</p>
+        }
+      }
+    }
+
+    <!-- ---------------- Testes (homologacao) ---------------- -->
+    @case ('testes') {
+      <p class="rnv-texto">
+        Só no ambiente de testes: cria um zero km fictício no Serpro, como se a montadora tivesse mandado para a loja.
+        Ele aparece em <strong>Zero km pendentes</strong>. Na entrada, qualquer chave de NF-e com dígito verificador válido serve,
+        por exemplo <code>35261111222333000181550010000001231000001234</code>.
+      </p>
+      <button class="btn-secondary" (click)="criarZeroKmTeste()" [disabled]="criandoZeroKm">
+        <span class="material-icons">science</span> {{ criandoZeroKm ? 'Criando...' : 'Criar zero km de teste' }}
+      </button>
+      @if (zeroKmTeste) {
+        <div class="rnv-teste">
+          <strong>Zero km de teste criado</strong>
+          <ul>
+            <li>Chassi: <code>{{ zeroKmTeste }}</code> <button (click)="copiar(zeroKmTeste)">copiar</button></li>
+          </ul>
+        </div>
+      }
+    }
+  }
+</div>

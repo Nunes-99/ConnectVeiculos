@@ -6,7 +6,9 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using ConnectVeiculos.Core.Entities.Renave;
+using ConnectVeiculos.Core.Interfaces.Database.Repositories.Categorias;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Configuracoes;
+using ConnectVeiculos.Core.Interfaces.Database.Repositories.Lojas;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Renave;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Services;
@@ -22,8 +24,10 @@ namespace ConnectVeiculos.Infrastructure.Services.Renave
     ///   -> (Detran confirma) -> saida -> ATPVe do comprador -> NF-e de venda.
     /// A configuracao (ambiente, operador, certificado) fica na
     /// ConfiguracaoSistema do tenant; o certificado e a senha, cifrados.
+    /// Zero km, entregas, consulta e importacao do estoque ficam em
+    /// RenaveService.Estoque.cs.
     /// </summary>
-    public class RenaveService : IRenaveService
+    public partial class RenaveService : IRenaveService
     {
         private const string KeyAmbiente = "RENAVE_AMBIENTE";
         private const string KeyOperadorCpf = "RENAVE_OPERADOR_CPF";
@@ -47,6 +51,8 @@ namespace ConnectVeiculos.Infrastructure.Services.Renave
         private readonly IVeiculoRepository _veiculos;
         private readonly ICertificadoDigitalService _certificado;
         private readonly ILogger<RenaveService> _logger;
+        private readonly ILojaRepository? _lojas;
+        private readonly ICategoriaRepository? _categorias;
 
         public RenaveService(
             IRenaveTransporte transporte,
@@ -55,7 +61,10 @@ namespace ConnectVeiculos.Infrastructure.Services.Renave
             IVeiculoRenaveRepository registros,
             IVeiculoRepository veiculos,
             ICertificadoDigitalService certificado,
-            ILogger<RenaveService> logger)
+            ILogger<RenaveService> logger,
+            // So para cadastrar veiculo na importacao e no zero km.
+            ILojaRepository? lojas = null,
+            ICategoriaRepository? categorias = null)
         {
             _transporte = transporte;
             _settings = settings.Value;
@@ -64,6 +73,8 @@ namespace ConnectVeiculos.Infrastructure.Services.Renave
             _veiculos = veiculos;
             _certificado = certificado;
             _logger = logger;
+            _lojas = lojas;
+            _categorias = categorias;
         }
 
         // ================================================================
@@ -278,6 +289,8 @@ namespace ConnectVeiculos.Infrastructure.Services.Renave
         {
             var ctx = await ContextoAsync(exigirOperador: false, ct);
             var registro = await RegistroEmEstoqueAsync(veiculoId);
+            if (registro.RnvZeroKm)
+                throw new RenaveException("Zero km não tem assinatura de vendedor no ATPV.");
             if (foto == null || foto.Length == 0)
                 throw new RenaveException("Envie a foto do documento assinado.");
 
@@ -331,7 +344,6 @@ namespace ConnectVeiculos.Infrastructure.Services.Renave
         {
             var ctx = await ContextoAsync(exigirOperador: true, ct);
             var registro = await RegistroEmEstoqueAsync(veiculoId);
-            var (placa, renavam) = await PlacaRenavamAsync(veiculoId);
 
             var comprador = SoDigitos(input.DocumentoComprador);
             if (!DocumentoValido(comprador))
@@ -340,6 +352,69 @@ namespace ConnectVeiculos.Infrastructure.Services.Renave
                 throw new RenaveException("Escolha o município do comprador.");
             if (input.ValorVenda <= 0)
                 throw new RenaveException("Informe o valor de venda.");
+
+            // O Renave cobra um campo do comprador por vez ("Bairro é obrigatório",
+            // depois "E-mail...", "Número..."; homologacao 04/11/2026): aqui sai
+            // tudo o que falta numa mensagem so.
+            var faltando = new List<string>();
+            if (string.IsNullOrWhiteSpace(input.NomeComprador)) faltando.Add("nome");
+            if (string.IsNullOrWhiteSpace(input.EmailComprador) || !input.EmailComprador.Contains('@')) faltando.Add("e-mail");
+            if (SoDigitos(input.Cep).Length != 8) faltando.Add("CEP");
+            if (string.IsNullOrWhiteSpace(input.Logradouro)) faltando.Add("endereço");
+            if (string.IsNullOrWhiteSpace(input.Numero)) faltando.Add("número");
+            if (string.IsNullOrWhiteSpace(input.Bairro)) faltando.Add("bairro");
+            if (faltando.Count > 0)
+                throw new RenaveException($"O Renave exige do comprador: {string.Join(", ", faltando)}.");
+
+            var dadosComprador = new
+            {
+                numeroDocumento = comprador,
+                tipoDocumento = comprador.Length == 14 ? "CNPJ" : "CPF",
+                nome = Vazio(input.NomeComprador?.Trim()),
+                email = Vazio(input.EmailComprador?.Trim()),
+                endereco = new
+                {
+                    codigoMunicipio = input.CodigoMunicipio,
+                    cep = Vazio(SoDigitos(input.Cep)),
+                    logradouro = Vazio(input.Logradouro?.Trim()),
+                    numero = Vazio(input.Numero?.Trim()),
+                    complemento = Vazio(input.Complemento?.Trim()),
+                    bairro = Vazio(input.Bairro?.Trim())
+                }
+            };
+
+            // Zero km: sai pelo id do estoque, sem placa nem CRV (o primeiro
+            // emplacamento e' feito pelo comprador no Detran).
+            if (registro.RnvZeroKm)
+            {
+                // O swagger marca como opcional, mas o Renave recusa a saida do
+                // zero km sem a nota de venda (homologacao 04/11/2026).
+                var chaveVenda = SoDigitos(input.ChaveNotaFiscal);
+                if (chaveVenda.Length == 0)
+                    throw new RenaveException("Informe a chave da NF-e de venda: no zero km ela vai junto com a saída.");
+                if (!ChaveNfeValida(chaveVenda))
+                    throw new RenaveException("Chave da NF-e inválida (44 dígitos).");
+                var corpoZeroKm = new
+                {
+                    idEstoque = registro.RnvIdEstoque,
+                    chaveNotaFiscal = chaveVenda,
+                    dataVenda = Data(input.DataVenda),
+                    valorVenda = input.ValorVenda,
+                    emailEstabelecimento = ctx.Config.EmailLoja,
+                    cpfOperadorResponsavel = ctx.Config.OperadorCpf,
+                    comprador = dadosComprador
+                };
+                using var docZeroKm = await ChamarComRegistroAsync(ctx, registro, HttpMethod.Post, "/api/saidas-estoque-veiculo-zero-km", corpoZeroKm, ct);
+                registro.RegistrarSaida(Texto(docZeroKm.RootElement, "estado") ?? registro.RnvEstado ?? "",
+                    input.DataVenda.Date, input.ValorVenda, comprador, Vazio(input.NomeComprador?.Trim()),
+                    Vazio(input.EmailComprador?.Trim()));
+                registro.RegistrarNotaSaida(chaveVenda);
+                await _registros.SalvarAsync(registro);
+                _logger.LogInformation("Renave: saida do zero km {VeiculoId} registrada (estoque {Estoque})", veiculoId, registro.RnvIdEstoque);
+                return ParaSituacao(veiculoId, registro);
+            }
+
+            var (placa, renavam) = await PlacaRenavamAsync(veiculoId);
             var codigo = SoDigitos(input.CodigoSegurancaCrv);
             if (codigo.Length == 0)
                 throw new RenaveException("Informe o código de segurança do CRV atual (emitido em nome da loja).");
@@ -350,22 +425,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Renave
                 valorVenda = input.ValorVenda,
                 emailEstabelecimento = ctx.Config.EmailLoja,
                 cpfOperadorResponsavel = ctx.Config.OperadorCpf,
-                comprador = new
-                {
-                    numeroDocumento = comprador,
-                    tipoDocumento = comprador.Length == 14 ? "CNPJ" : "CPF",
-                    nome = Vazio(input.NomeComprador?.Trim()),
-                    email = Vazio(input.EmailComprador?.Trim()),
-                    endereco = new
-                    {
-                        codigoMunicipio = input.CodigoMunicipio,
-                        cep = Vazio(SoDigitos(input.Cep)),
-                        logradouro = Vazio(input.Logradouro?.Trim()),
-                        numero = Vazio(input.Numero?.Trim()),
-                        complemento = Vazio(input.Complemento?.Trim()),
-                        bairro = Vazio(input.Bairro?.Trim())
-                    }
-                },
+                comprador = dadosComprador,
                 veiculo = new
                 {
                     placa,
@@ -390,6 +450,8 @@ namespace ConnectVeiculos.Infrastructure.Services.Renave
             var registro = await _registros.GetByVeiculoAsync(veiculoId);
             if (registro?.RnvDtSaida == null)
                 throw new RenaveException("O ATPVe só existe depois da saída registrada no Renave.");
+            if (registro.RnvZeroKm)
+                throw new RenaveException("Zero km não tem ATPVe: o primeiro registro é feito pelo comprador no Detran.");
             var (placa, renavam) = await PlacaRenavamAsync(veiculoId);
 
             using var doc = await ChamarComRegistroAsync(ctx, registro, HttpMethod.Get, $"/api/pdf-atpv/{placa}/{renavam}", null, ct);
@@ -613,6 +675,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Renave
             s.NumeroAtpv = r.RnvNumeroAtpv;
             s.UltimoErro = r.RnvUltimoErro;
             s.AtualizadoEm = r.RnvAtualizadoEm;
+            s.ZeroKm = r.RnvZeroKm;
             s.ProximoPasso = ProximoPasso(r);
             return s;
         }
@@ -620,6 +683,11 @@ namespace ConnectVeiculos.Infrastructure.Services.Renave
         private static string ProximoPasso(VeiculoRenave r)
         {
             if (r.RnvIdEstoque == null) return "Registrar a entrada no Renave";
+            if (r.RnvZeroKm)
+            {
+                if (r.RnvDtSaida == null) return "Zero km em estoque no Renave: registrar a saída ao vender";
+                return r.RnvChaveNfSaida == null ? "Informar a chave da NF-e de venda" : "Concluído";
+            }
             if (r.RnvDtSaida == null)
             {
                 if (r.RnvDtAssinaturaVendedor == null) return "Enviar a assinatura do vendedor (ATPV)";

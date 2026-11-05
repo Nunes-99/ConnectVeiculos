@@ -23,6 +23,9 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework.Repositories
             return await _context.VeiculosRenave.AsNoTracking().Where(r => ids.Contains(r.R_VeiId)).ToListAsync();
         }
 
+        public async Task<IReadOnlyList<VeiculoRenave>> GetTodosAsync()
+            => await _context.VeiculosRenave.AsNoTracking().ToListAsync();
+
         public async Task SalvarAsync(VeiculoRenave registro)
         {
             if (registro.RnvId == 0) _context.VeiculosRenave.Add(registro);

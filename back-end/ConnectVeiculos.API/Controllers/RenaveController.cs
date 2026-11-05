@@ -122,11 +122,72 @@ namespace ConnectVeiculos.API.Controllers
             }
         }
 
+        [HttpGet("veiculos/{veiculoId:int}/termo-entrada")]
+        public Task<IActionResult> TermoEntrada(int veiculoId, CancellationToken ct) => TermoAsync(veiculoId, false, ct);
+
+        [HttpGet("veiculos/{veiculoId:int}/termo-saida")]
+        public Task<IActionResult> TermoSaida(int veiculoId, CancellationToken ct) => TermoAsync(veiculoId, true, ct);
+
+        private async Task<IActionResult> TermoAsync(int veiculoId, bool saida, CancellationToken ct)
+        {
+            try
+            {
+                var (pdf, numero) = await _renave.ObterTermoAsync(veiculoId, saida, ct);
+                var nome = saida ? "Termo-saida" : "Termo-entrada";
+                return File(pdf, "application/pdf", $"{nome}-{(string.IsNullOrEmpty(numero) ? veiculoId.ToString() : numero)}.pdf");
+            }
+            catch (RenaveException ex)
+            {
+                return UnprocessableEntity(new { error = ex.Message });
+            }
+        }
+
+        // ---------------- Estoque da loja no Renave ----------------
+
+        /// <summary>Traz para o sistema o estoque que ja esta no Renave (nao faz nova entrada).</summary>
+        [HttpPost("importar-estoque")]
+        public Task<IActionResult> ImportarEstoque(CancellationToken ct)
+            => Executar(() => _renave.ImportarEstoqueAsync(ct));
+
+        [HttpGet("consulta")]
+        public Task<IActionResult> Consultar([FromQuery] string? placa, [FromQuery] string? chassi, [FromQuery] string? renavam, CancellationToken ct)
+            => Executar(() => _renave.ConsultarVeiculoAsync(placa, chassi, renavam, ct));
+
+        // ---------------- Zero km e entregas ----------------
+
+        [HttpGet("zero-km/pendentes")]
+        public Task<IActionResult> ZeroKmPendentes(CancellationToken ct)
+            => Executar(() => _renave.ListarZeroKmPendentesAsync(ct));
+
+        [HttpPost("zero-km/entrada")]
+        public Task<IActionResult> EntradaZeroKm([FromBody] RenaveEntradaZeroKmInput input, CancellationToken ct)
+            => Executar(() => _renave.EntradaZeroKmAsync(input, ct));
+
+        [HttpPost("zero-km/rejeicao")]
+        public Task<IActionResult> RejeitarZeroKm([FromBody] RenaveRejeicaoZeroKmInput input, CancellationToken ct)
+            => Executar(async () => { await _renave.RejeitarZeroKmAsync(input, ct); return new { ok = true }; });
+
+        [HttpGet("entregas")]
+        public Task<IActionResult> Entregas([FromQuery] string? estado, CancellationToken ct)
+            => Executar(() => _renave.ListarEntregasAsync(estado, ct));
+
+        [HttpPost("entregas/{idEntrega:long}/realizar")]
+        public Task<IActionResult> RealizarEntrega(long idEntrega, CancellationToken ct)
+            => Executar(() => _renave.RealizarEntregaAsync(idEntrega, ct));
+
+        [HttpPost("entregas/{idEntrega:long}/cancelar")]
+        public Task<IActionResult> CancelarEntrega(long idEntrega, CancellationToken ct)
+            => Executar(() => _renave.CancelarEntregaAsync(idEntrega, ct));
+
         // ---------------- Homologacao ----------------
 
         [HttpPost("teste/veiculo")]
         public Task<IActionResult> CriarVeiculoTeste(CancellationToken ct)
             => Executar(() => _renave.CriarVeiculoTesteAsync(ct));
+
+        [HttpPost("teste/zero-km")]
+        public Task<IActionResult> CriarZeroKmTeste([FromQuery] bool acabado = true, CancellationToken ct = default)
+            => Executar(() => _renave.CriarZeroKmTesteAsync(acabado, ct));
 
         [HttpPost("teste/veiculos/{veiculoId:int}/transferencia-detran")]
         public Task<IActionResult> SimularDetran(int veiculoId, CancellationToken ct)

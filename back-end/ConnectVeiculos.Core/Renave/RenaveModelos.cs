@@ -116,6 +116,9 @@ namespace ConnectVeiculos.Core.Renave
 
         public DateTime DataVenda { get; set; }
         public decimal ValorVenda { get; set; }
+
+        /// <summary>Chave da NF-e de venda. Obrigatoria no zero km (vai junto na saida); no usado e' informada depois.</summary>
+        public string? ChaveNotaFiscal { get; set; }
     }
 
     /// <summary>Como o vendedor assinou o ATPV na compra.</summary>
@@ -147,8 +150,130 @@ namespace ConnectVeiculos.Core.Renave
         public string? UltimoErro { get; set; }
         public DateTime? AtualizadoEm { get; set; }
 
+        /// <summary>Zero km: sem CRV, sem assinatura do vendedor e sem ATPVe.</summary>
+        public bool ZeroKm { get; set; }
+
         /// <summary>Proximo passo sugerido para a tela (texto curto).</summary>
         public string ProximoPasso { get; set; } = string.Empty;
+    }
+
+    // ---------------- Importacao do estoque ----------------
+
+    /// <summary>Resultado de "Importar estoque do Renave" (nenhuma entrada nova e' feita no Renave).</summary>
+    public class RenaveImportacaoResultado
+    {
+        public int Encontrados { get; set; }
+        public int Vinculados { get; set; }
+        public int Criados { get; set; }
+        public int JaVinculados { get; set; }
+        public int Ignorados { get; set; }
+
+        /// <summary>O Renave nao aceitou o periodo longo: veio so o padrao dele (ultimos 3 meses).</summary>
+        public bool SoUltimosTresMeses { get; set; }
+
+        public List<RenaveImportacaoItem> Itens { get; set; } = new();
+    }
+
+    public static class RenaveAcaoImportacao
+    {
+        public const string Vinculado = "vinculado";
+        public const string Criado = "criado";
+        public const string JaVinculado = "ja-vinculado";
+        public const string Ignorado = "ignorado";
+    }
+
+    public class RenaveImportacaoItem
+    {
+        public long IdEstoque { get; set; }
+        public string? Placa { get; set; }
+        public string? Chassi { get; set; }
+        public string? Estado { get; set; }
+        public bool ZeroKm { get; set; }
+        public int? VeiculoId { get; set; }
+        public string Acao { get; set; } = string.Empty;
+        public string? Mensagem { get; set; }
+    }
+
+    // ---------------- Zero km ----------------
+
+    /// <summary>Zero km que a montadora mandou para a loja e ainda espera a entrada no estoque.</summary>
+    public class RenaveZeroKmPendente
+    {
+        public string Chassi { get; set; } = string.Empty;
+        public DateTime? DataHoraCadastro { get; set; }
+        public bool Acabado { get; set; }
+
+        /// <summary>Veiculo do sistema com o mesmo chassi, se houver.</summary>
+        public int? VeiculoId { get; set; }
+        public string? VeiculoDescricao { get; set; }
+    }
+
+    public class RenaveEntradaZeroKmInput
+    {
+        public string Chassi { get; set; } = string.Empty;
+
+        /// <summary>Veiculo do sistema que recebe a entrada. Vazio: usa o do mesmo chassi ou cadastra um com os dados minimos.</summary>
+        public int? VeiculoId { get; set; }
+
+        public DateTime DataEntrada { get; set; }
+        public decimal ValorCompra { get; set; }
+        public int QuilometragemHodometro { get; set; }
+        public string? ChaveNotaFiscal { get; set; }
+    }
+
+    public class RenaveRejeicaoZeroKmInput
+    {
+        public string Chassi { get; set; } = string.Empty;
+
+        /// <summary>DESISTENCIA ou ERRO_OPERACIONAL_MONTADORA.</summary>
+        public string Motivo { get; set; } = string.Empty;
+    }
+
+    /// <summary>Entrega de zero km indicada pela montadora (a loja entrega o carro vendido por outra).</summary>
+    public class RenaveEntrega
+    {
+        public long Id { get; set; }
+        public string? Chassi { get; set; }
+
+        /// <summary>PENDENTE, REALIZADA ou CANCELADA.</summary>
+        public string? Estado { get; set; }
+        public string? CnpjEntregador { get; set; }
+        public string? CnpjVendedor { get; set; }
+        public string? IdAtpv { get; set; }
+        public DateTime? DataRealizacao { get; set; }
+        public DateTime? DataCancelamento { get; set; }
+        public string? MotivoCancelamento { get; set; }
+    }
+
+    // ---------------- Consulta ----------------
+
+    public class RenaveConsulta
+    {
+        public string? Placa { get; set; }
+        public string? Renavam { get; set; }
+        public string? Chassi { get; set; }
+        public bool Acabado { get; set; }
+        public DateTime? DataPreCadastro { get; set; }
+        public List<string> Restricoes { get; set; } = new();
+        public List<RenaveEstoqueResumo> Estoques { get; set; } = new();
+
+        /// <summary>Veiculo do sistema com a mesma placa ou chassi, se houver.</summary>
+        public int? VeiculoId { get; set; }
+    }
+
+    public class RenaveEstoqueResumo
+    {
+        public long Id { get; set; }
+        public string? Estado { get; set; }
+        public DateTime? DataEntrada { get; set; }
+        public DateTime? DataSaida { get; set; }
+        public string? MotivoSaida { get; set; }
+    }
+
+    public class RenaveZeroKmTeste
+    {
+        public string Chassi { get; set; } = string.Empty;
+        public bool Acabado { get; set; }
     }
 
     public class RenaveMunicipio

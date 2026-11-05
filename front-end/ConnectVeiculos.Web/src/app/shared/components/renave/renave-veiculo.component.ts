@@ -6,7 +6,7 @@ import { ToastService } from '../../../core/services/toast.service';
 import { CepService, mesmaCidade } from '../../../core/services/cep.service';
 import { NfeService, ORIGEM_SUGESTAO } from '../../../core/services/nfe.service';
 import {
-  RenaveAptidao, RenaveConfig, RenaveMunicipio, RenaveService, RenaveSituacao, TipoCrv, erroRenave
+  RenaveAptidao, RenaveConfig, RenaveMunicipio, RenaveService, RenaveSituacao, TipoCrv, baixarPdfRenave, erroRenave
 } from '../../../core/services/renave.service';
 
 interface Etapa { titulo: string; feita: boolean; detalhe?: string | null; }
@@ -56,7 +56,7 @@ export class RenaveVeiculoComponent implements OnInit {
   saida = {
     codigoSegurancaCrv: '', numeroCrv: '', documentoComprador: '', nomeComprador: '', emailComprador: '',
     uf: 'SP', cep: '', logradouro: '', numero: '', complemento: '', bairro: '',
-    dataVenda: this.hoje(), valorVenda: 0
+    dataVenda: this.hoje(), valorVenda: 0, chaveNotaFiscal: ''
   };
   buscaMunicipio = '';
   municipios: RenaveMunicipio[] = [];
@@ -163,8 +163,19 @@ export class RenaveVeiculoComponent implements OnInit {
     return this.config?.ambiente !== 'producao';
   }
 
+  get zeroKm(): boolean {
+    return !!this.situacao?.zeroKm;
+  }
+
   get etapas(): Etapa[] {
     const s = this.situacao;
+    if (s?.zeroKm) {
+      return [
+        { titulo: 'Entrada (zero km)', feita: !!s.idEstoque, detalhe: s.dataEntrada },
+        { titulo: 'Saída (venda)', feita: !!s.dataSaida, detalhe: s.dataSaida },
+        { titulo: 'NF-e de venda', feita: !!s.chaveNfSaida }
+      ];
+    }
     return [
       { titulo: 'Entrada no estoque', feita: !!s?.idEstoque, detalhe: s?.dataEntrada },
       { titulo: 'Assinatura do vendedor', feita: !!s?.dataAssinaturaVendedor, detalhe: s?.dataAssinaturaVendedor },
@@ -179,6 +190,8 @@ export class RenaveVeiculoComponent implements OnInit {
   get passo(): 'entrada' | 'assinatura' | 'nota-compra' | 'detran' | 'saida' | 'nota-venda' | 'concluido' {
     const s = this.situacao;
     if (!s?.idEstoque) return 'entrada';
+    // Zero km: sem assinatura de vendedor, nota de compra na entrada e sem espera do Detran.
+    if (s.zeroKm && !s.dataSaida) return 'saida';
     if (!s.dataSaida) {
       if (!s.dataAssinaturaVendedor) return 'assinatura';
       if (!s.chaveNfEntrada) return 'nota-compra';
@@ -267,8 +280,28 @@ export class RenaveVeiculoComponent implements OnInit {
       complemento: s.complemento || null,
       bairro: s.bairro || null,
       dataVenda: s.dataVenda,
-      valorVenda: s.valorVenda
-    }), 'Saída registrada. O ATPVe do comprador já pode ser baixado.');
+      valorVenda: s.valorVenda,
+      chaveNotaFiscal: this.zeroKm ? s.chaveNotaFiscal : null
+    }), this.zeroKm ? 'Saída do zero km registrada no Renave.' : 'Saída registrada. O ATPVe do comprador já pode ser baixado.');
+  }
+
+  /** O Renave so emite termo para usado; o de entrada, depois da assinatura do vendedor. */
+  get podeTermoEntrada(): boolean {
+    const s = this.situacao;
+    return !!s && !s.zeroKm && !!s.idEstoque && !!s.dataAssinaturaVendedor;
+  }
+
+  get podeTermoSaida(): boolean {
+    const s = this.situacao;
+    return !!s && !s.zeroKm && !!s.dataSaida;
+  }
+
+  baixarTermo(tipo: 'entrada' | 'saida'): void {
+    this.enviando = true;
+    baixarPdfRenave(this.renave.termo(this.veiculo.veiId, tipo), `Termo-${tipo}-${this.veiculo.veiPlaca}.pdf`, erro => {
+      this.enviando = false;
+      if (erro) this.toast.error(erro);
+    });
   }
 
   baixarAtpv(): void {

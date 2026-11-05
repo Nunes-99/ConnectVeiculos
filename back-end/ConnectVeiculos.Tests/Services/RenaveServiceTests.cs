@@ -54,6 +54,7 @@ namespace ConnectVeiculos.Tests.Services
             public Task<IReadOnlyList<VeiculoRenave>> GetByVeiculosAsync(IEnumerable<int> ids)
                 => Task.FromResult<IReadOnlyList<VeiculoRenave>>(ids.Where(Itens.ContainsKey).Select(i => Itens[i]).ToList());
             public Task SalvarAsync(VeiculoRenave registro) { Itens[registro.R_VeiId] = registro; return Task.CompletedTask; }
+            public Task<IReadOnlyList<VeiculoRenave>> GetTodosAsync() => Task.FromResult<IReadOnlyList<VeiculoRenave>>(Itens.Values.ToList());
         }
 
         private readonly TransporteFalso _http = new();
@@ -132,6 +133,8 @@ namespace ConnectVeiculos.Tests.Services
             var acao = () => _service.SolicitarSaidaAsync(7, new RenaveSaidaInput
             {
                 CodigoSegurancaCrv = "1", DocumentoComprador = CpfValido, CodigoMunicipio = 7005,
+                NomeComprador = "Fulano", EmailComprador = "fulano@ex.com", Cep = "13320000",
+                Logradouro = "Rua A", Numero = "10", Bairro = "Centro",
                 DataVenda = DateTime.Today, ValorVenda = 60000m
             });
 
