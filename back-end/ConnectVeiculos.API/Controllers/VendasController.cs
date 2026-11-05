@@ -94,6 +94,7 @@ namespace ConnectVeiculos.API.Controllers
         /// <response code="400">Dados invalidos ou venda estornada</response>
         /// <response code="404">Venda nao encontrada</response>
         [HttpPut("{id}")]
+        [Authorize(Roles = "Administrador,Gerente")] // vendedor registra, mas nao edita venda (04/11/2026)
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -120,6 +121,7 @@ namespace ConnectVeiculos.API.Controllers
         /// <response code="401">Usuario nao autenticado</response>
         /// <response code="404">Venda nao encontrada</response>
         [HttpPost("{id}/estornar")]
+        [Authorize(Roles = "Administrador,Gerente")] // estorno devolve o carro ao estoque: so gestao
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]

@@ -1,4 +1,3 @@
-version: '3.8'
 
 # Stack producao do ConnectVeiculos:
 #   nginx           -> reverse proxy + HTTPS (porta 80/443)

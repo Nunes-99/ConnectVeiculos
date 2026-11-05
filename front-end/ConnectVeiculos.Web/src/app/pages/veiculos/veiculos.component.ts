@@ -172,6 +172,11 @@ export class VeiculosComponent implements OnInit {
   nfeVeiculo: Veiculo | null = null;
   get podeRenave(): boolean { return this.auth.isGerente(); }
 
+  // Perfil Vendedor (04/11/2026): nao exclui/inativa veiculo nem ve o preco de
+  // compra. A API tambem barra; aqui so some da tela.
+  get podeExcluir(): boolean { return this.auth.isGerente(); }
+  get veCusto(): boolean { return !this.auth.hasRole('Vendedor'); }
+
   // Contratos e assinatura eletronica do veiculo.
   contratoVeiculo: Veiculo | null = null;
 
@@ -927,8 +932,11 @@ export class VeiculosComponent implements OnInit {
   exportarExcel(): void {
     const wb = XLSX.utils.book_new();
 
+    // O cabecalho nao tinha Renavam e as colunas saiam deslocadas a partir dela.
+    // Vendedor exporta sem o preco de compra.
+    const custo = this.veCusto;
     const data = [
-      ['Marca', 'Modelo', 'Ano', 'Placa', 'Chassi', 'Cor', 'KM', 'Preco Compra', 'Preco Venda', 'Status', 'Loja', 'Categoria', 'Data Entrada'],
+      ['Marca', 'Modelo', 'Ano', 'Placa', 'Chassi', 'Renavam', 'Cor', 'KM', ...(custo ? ['Preco Compra'] : []), 'Preco Venda', 'Status', 'Loja', 'Categoria', 'Data Entrada'],
       ...this.veiculos.map(v => [
         v.veiMarca,
         v.veiModelo,
@@ -938,7 +946,7 @@ export class VeiculosComponent implements OnInit {
         v.veiRenavam || '',
         v.veiCor || '',
         v.veiKm || 0,
-        v.veiPrecoCompra || 0,
+        ...(custo ? [v.veiPrecoCompra || 0] : []),
         v.veiPreco,
         this.getStatusLabel(v.veiSts),
         v.lojaNome || '',

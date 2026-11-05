@@ -45,7 +45,7 @@
                 </span>
               </td>
               <td class="actions" data-label="Ações">
-                @if (venda.venStatus === 'A') {
+                @if (venda.venStatus === 'A' && podeGerirVenda) {
                   <button class="btn-icon-text" (click)="editar(venda)" title="Editar dados do comprador">
                     <span class="material-icons">edit</span>
                     <span>Editar</span>

@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { VendaService, VeiculoService, UsuarioService, ToastService } from '../../core/services';
+import { VendaService, VeiculoService, UsuarioService, ToastService, AuthService } from '../../core/services';
 import { Venda, Veiculo, Usuario } from '../../core/models';
 import { MaskDirective, CurrencyMaskDirective, SalvandoDirective } from '../../shared/directives';
 import { PaginationComponent, ConfirmModalComponent } from '../../shared/components';
@@ -17,6 +17,10 @@ import { PaginationComponent, ConfirmModalComponent } from '../../shared/compone
 })
 export class VendasComponent implements OnInit {
   private vendaService = inject(VendaService);
+  private auth = inject(AuthService);
+
+  /** Editar e estornar venda: so Gerente e Administrador (04/11/2026); o vendedor registra. */
+  get podeGerirVenda(): boolean { return this.auth.isGerente(); }
   private veiculoService = inject(VeiculoService);
   private usuarioService = inject(UsuarioService);
   private fb = inject(FormBuilder);
