@@ -22,7 +22,7 @@ if [ ! -t 0 ]; then
   exit 1
 fi
 
-declare -A NOVAS
+declare -A NOVAS=()
 
 read -r -p "Gerar nova JWT_SECRET_KEY_CLIENTE? Todo mundo precisa entrar de novo. [s/N] " r
 # O openssl do Git Bash termina as linhas com \r\n: sem tirar o \r, a chave
