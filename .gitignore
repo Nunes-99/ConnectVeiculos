@@ -72,3 +72,6 @@ importar_veiculos*.csv
 
 # Gerados na VM por scripts/dominios-proprios.sh
 nginx/dominios/*.conf
+
+# Lista pessoal de pendencias (dados de clientes e contratos)
+docs/pendencias-do-vitor.md
