@@ -76,6 +76,11 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/integracoes/credere-retorno.component').then(m => m.CredereRetornoComponent)
   },
   {
+    // Volta do login do NaPista: mesmo motivo da Credere (fora do layout logado).
+    path: 'integracoes/napista',
+    loadComponent: () => import('./pages/integracoes/napista-retorno.component').then(m => m.NapistaRetornoComponent)
+  },
+  {
     // Link publico que o cliente abre para assinar um contrato (sem login).
     path: 'assinar/:tenantSlug/:token',
     loadComponent: () => import('./pages/assinar/assinar.component').then(m => m.AssinarComponent)

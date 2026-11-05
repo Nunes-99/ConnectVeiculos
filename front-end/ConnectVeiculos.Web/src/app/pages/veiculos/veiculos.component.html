@@ -682,6 +682,10 @@
   <app-webmotors-veiculo [veiculo]="webmotorsVeiculo" (fechar)="webmotorsVeiculo = null"></app-webmotors-veiculo>
 }
 
+@if (napistaVeiculo) {
+  <app-napista-veiculo [veiculo]="napistaVeiculo" (fechar)="napistaVeiculo = null"></app-napista-veiculo>
+}
+
 @if (nfeVeiculo) {
   <app-nfe-veiculo [veiculo]="nfeVeiculo" (fechar)="nfeVeiculo = null"></app-nfe-veiculo>
 }
@@ -747,6 +751,9 @@
       <span class="acoes-menu-grupo">Portais</span>
       <button role="menuitem" (click)="fecharMenu(); webmotorsVeiculo = v">
         <span class="material-icons">directions_car</span><span>Anunciar na Webmotors</span>
+      </button>
+      <button role="menuitem" (click)="fecharMenu(); napistaVeiculo = v">
+        <span class="material-icons">storefront</span><span>Anunciar no NaPista</span>
       </button>
     }
 

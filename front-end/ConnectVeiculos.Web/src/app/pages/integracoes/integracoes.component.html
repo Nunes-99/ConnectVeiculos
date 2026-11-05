@@ -164,6 +164,7 @@
   }
 
   <!-- Webmotors (estoque da loja; usuario de integracao fornecido pela Webmotors) -->
+  @if (integracaoAberta === 'webmotors') {
   <div class="integracao-card">
     <div class="card-header">
       <div class="platform-info">
@@ -185,6 +186,32 @@
       <small>Custo: o plano da loja na Webmotors. A integração não cobra nada a mais.</small>
     </div>
   </div>
+  }
+
+  <!-- NaPista (OAuth com o usuario da loja no NaPista; estoque e leads) -->
+  @if (integracaoAberta === 'napista') {
+  <div class="integracao-card">
+    <div class="card-header">
+      <div class="platform-info">
+        <span class="platform-icon napista-icon">NP</span>
+        <div>
+          <h3>NaPista</h3>
+          <p>Anúncios e leads no portal NaPista</p>
+        </div>
+      </div>
+      <span class="status-badge" [class.connected]="napistaConectado" [class.disconnected]="!napistaConectado">
+        {{ napistaConectado ? 'Conectado' : 'Desconectado' }}
+      </span>
+    </div>
+    <div class="card-body">
+      <app-napista-config (conectadoChange)="napistaConectado = $event"></app-napista-config>
+    </div>
+    <div class="card-footer">
+      <span class="material-icons">info</span>
+      <small>Custo: o plano da loja no NaPista. A integração não cobra nada a mais.</small>
+    </div>
+  </div>
+  }
 
   <!-- WhatsApp Business -->
   @if (integracaoAberta === 'whatsapp') {
