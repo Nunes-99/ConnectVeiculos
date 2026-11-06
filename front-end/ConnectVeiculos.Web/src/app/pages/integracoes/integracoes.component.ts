@@ -89,7 +89,7 @@ export class IntegracoesComponent implements OnInit {
     {
       id: 'credere', nome: 'Credere', descricao: 'Financiamento em vários bancos com pré-aprovação.',
       categoria: 'Documentos e financiamento', icone: 'nfe-icon', material: 'account_balance', palavras: 'financiamento banco multibanco',
-      visivel: () => true,
+      visivel: () => this.mostrarCredere,
       status: () => this.credereConectada ? { texto: 'Conectado', classe: 'connected' } : { texto: 'Não conectado', classe: 'disconnected' },
       conectada: () => this.credereConectada
     },
@@ -192,6 +192,11 @@ export class IntegracoesComponent implements OnInit {
   // Catalog de anuncios pagos. Desligado junto com o card de feed: o
   // interruptor dependia de Catalog ID e Token que nunca foram configurados.
   readonly mostrarCatalogoAdsPago = false;
+
+  // Credere (financiamento multibanco). Desligado em 06/11/2026: a integracao
+  // fica para depois dos primeiros clientes. O codigo continua pronto; para
+  // religar, true aqui e CREDERE_LIGADA em financiamentos.component.ts.
+  readonly mostrarCredere = false;
 
   private integracaoService = inject(IntegracaoService);
   private toast = inject(ToastService);
@@ -401,7 +406,8 @@ Te esperamos na {{6}}. Até breve!`;
     // A situacao das integracoes que tem tela propria (componentes filhos) vem
     // daqui, para o cartao do catalogo mostrar antes de abrir o painel.
     this.renaveApi.obterConfig().subscribe({ next: c => this.renavePronto = c.pronto, error: () => {} });
-    this.credereApi.status().subscribe({ next: s => this.credereConectada = s.conectado, error: () => {} });
+    if (this.mostrarCredere)
+      this.credereApi.status().subscribe({ next: s => this.credereConectada = s.conectado, error: () => {} });
     this.webmotorsApi.status().subscribe({ next: s => this.wmConectado = s.conectado && !s.erro, error: () => {} });
     this.napistaApi.status().subscribe({ next: s => this.napistaConectado = s.conectado && !!s.sellerId, error: () => {} });
     this.route.queryParamMap.subscribe(p => {

@@ -13,6 +13,12 @@ import {
   CredereSimulacaoInput, CredereStatus, OCUPACOES_CREDERE, erroCredere
 } from '../../core/services/credere.service';
 
+/**
+ * Credere (simulacao multibanco) desligada em 06/11/2026: fica para depois dos
+ * primeiros clientes. Para religar, true aqui e mostrarCredere em integracoes.component.ts.
+ */
+const CREDERE_LIGADA = false;
+
 /** Consulta o resultado a cada 5 s (o que a Credere sugere) por ate 3 min. */
 const INTERVALO_CREDERE = 5000;
 const TENTATIVAS_CREDERE = 36;
@@ -91,7 +97,7 @@ export class FinanciamentosComponent implements OnInit, OnDestroy {
   private consulta: ReturnType<typeof setInterval> | null = null;
 
   get credereAtiva(): boolean {
-    return !!this.credere?.conectado && !!this.credere.lojaId;
+    return CREDERE_LIGADA && !!this.credere?.conectado && !!this.credere.lojaId;
   }
 
   ngOnDestroy(): void {
@@ -100,7 +106,7 @@ export class FinanciamentosComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.carregar();
-    this.credereApi.status().subscribe({ next: s => this.credere = s, error: () => {} });
+    if (CREDERE_LIGADA) this.credereApi.status().subscribe({ next: s => this.credere = s, error: () => {} });
     this.veiculoService.getAll().subscribe({
       next: v => this.veiculos = v.filter(x => x.veiSts === 'D').sort((a, b) => a.veiMarca.localeCompare(b.veiMarca)),
       error: () => {}
