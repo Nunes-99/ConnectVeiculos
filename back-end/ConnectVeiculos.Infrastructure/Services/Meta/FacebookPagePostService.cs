@@ -142,43 +142,26 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
 
             var slug = _tenantContext.IsResolved ? _tenantContext.TenantSlug : null;
             var linkVeiculo = CatalogoUrl.Veiculo(baseUrl, slug, veiculoId);
-            var imagemPrincipal = imagens.Where(i => i.ImgSts).OrderBy(i => i.ImgOrdem).FirstOrDefault();
-            var imageUrl = imagemPrincipal != null
-                ? $"{baseUrl}/api/imagens/file?path={Uri.EscapeDataString(imagemPrincipal.ImgCaminho)}&max=1440&format=jpeg"
-                : "";
+            var fotos = imagens.Where(i => i.ImgSts).OrderBy(i => i.ImgOrdem)
+                .Take(MaxFotosPorPost)
+                .Select(i => $"{baseUrl}/api/imagens/file?path={Uri.EscapeDataString(i.ImgCaminho)}&max=1440&format=jpeg")
+                .ToList();
 
             var legenda = MontarLegenda(veiculo, loja, linkVeiculo);
 
             try
             {
-                // Post com foto principal: POST /{page-id}/photos com url=... e message=...
-                // (Facebook publica como post de foto no feed da Page automaticamente.)
-                var url = $"https://graph.facebook.com/{_settings.ApiVersion}/{pageId}/photos";
-                var payload = new
+                string? postId = null;
+                if (fotos.Count > 1)
                 {
-                    url = imageUrl,
-                    message = legenda,
-                    access_token = token
-                };
-                var json = JsonSerializer.Serialize(payload);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-                var resp = await _httpClient.PostAsync(url, content);
-                var body = await resp.Content.ReadAsStringAsync();
-
-                if (!resp.IsSuccessStatusCode)
-                {
-                    _logger.LogWarning("Facebook Page post veiculo {VeiculoId} falhou: {Body}", veiculoId, body);
-                    return null;
+                    postId = await PublicarVariasFotosAsync(pageId, token, fotos, legenda, veiculoId);
+                    if (postId == null)
+                        _logger.LogWarning("Facebook Page post veiculo {VeiculoId}: post com varias fotos falhou, tentando so a principal", veiculoId);
                 }
-
-                _logger.LogInformation("Facebook Page post veiculo {VeiculoId}: OK", veiculoId);
-                using var doc = JsonDocument.Parse(body);
-                // Resposta: { "id": "{page-id}_{post-id}", "post_id": "..." }
-                var postId = doc.RootElement.TryGetProperty("post_id", out var pid) ? pid.GetString()
-                           : doc.RootElement.TryGetProperty("id", out var id) ? id.GetString()
-                           : null;
+                postId ??= await PublicarUmaFotoAsync(pageId, token, fotos.FirstOrDefault() ?? "", legenda, veiculoId);
                 if (string.IsNullOrEmpty(postId)) return null;
 
+                _logger.LogInformation("Facebook Page post veiculo {VeiculoId}: OK", veiculoId);
                 return new PublicacaoResult
                 {
                     ExternoId = postId,
@@ -190,6 +173,76 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
                 _logger.LogError(ex, "Erro ao postar veiculo {VeiculoId} na Facebook Page", veiculoId);
                 return null;
             }
+        }
+
+        // O Facebook aceita mais, mas o post mostra no maximo 5 na grade e
+        // 10 ja cobre o carro; mesmo limite do carrossel do Instagram.
+        private const int MaxFotosPorPost = 10;
+
+        /// <summary>Post de uma foto: POST /{page-id}/photos com url e message (vai direto pro feed).</summary>
+        private async Task<string?> PublicarUmaFotoAsync(string pageId, string token, string imageUrl, string legenda, int veiculoId)
+        {
+            var url = $"https://graph.facebook.com/{_settings.ApiVersion}/{pageId}/photos";
+            var payload = new { url = imageUrl, message = legenda, access_token = token };
+            var resp = await _httpClient.PostAsync(url, new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"));
+            var body = await resp.Content.ReadAsStringAsync();
+            if (!resp.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Facebook Page post veiculo {VeiculoId} falhou: {Body}", veiculoId, body);
+                return null;
+            }
+
+            using var doc = JsonDocument.Parse(body);
+            // Resposta: { "id": "{photo-id}", "post_id": "{page-id}_{post-id}" }
+            return doc.RootElement.TryGetProperty("post_id", out var pid) ? pid.GetString()
+                 : doc.RootElement.TryGetProperty("id", out var id) ? id.GetString()
+                 : null;
+        }
+
+        /// <summary>
+        /// Post com varias fotos: cada foto sobe sem ir pro feed (published=false)
+        /// e o post em /{page-id}/feed junta todas em attached_media. Se menos de
+        /// 2 fotos subirem, devolve null e quem chamou cai no post de uma foto.
+        /// </summary>
+        private async Task<string?> PublicarVariasFotosAsync(string pageId, string token, List<string> fotos, string legenda, int veiculoId)
+        {
+            var fotoUrl = $"https://graph.facebook.com/{_settings.ApiVersion}/{pageId}/photos";
+            var ids = new List<string>();
+            // Uma de cada vez: o Facebook baixa cada foto do nosso servidor.
+            foreach (var foto in fotos)
+            {
+                var payload = new { url = foto, published = false, access_token = token };
+                var resp = await _httpClient.PostAsync(fotoUrl, new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"));
+                var body = await resp.Content.ReadAsStringAsync();
+                if (!resp.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("Facebook Page post veiculo {VeiculoId}: foto {Foto} nao subiu: {Body}", veiculoId, foto, body);
+                    continue;
+                }
+                using var doc = JsonDocument.Parse(body);
+                if (doc.RootElement.TryGetProperty("id", out var id) && id.GetString() is { Length: > 0 } photoId)
+                    ids.Add(photoId);
+            }
+            if (ids.Count < 2) return null;
+
+            var feedUrl = $"https://graph.facebook.com/{_settings.ApiVersion}/{pageId}/feed";
+            var post = new
+            {
+                message = legenda,
+                attached_media = ids.Select(i => new { media_fbid = i }).ToArray(),
+                access_token = token
+            };
+            var postResp = await _httpClient.PostAsync(feedUrl, new StringContent(JsonSerializer.Serialize(post), Encoding.UTF8, "application/json"));
+            var postBody = await postResp.Content.ReadAsStringAsync();
+            if (!postResp.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Facebook Page post veiculo {VeiculoId} com {Qtd} fotos falhou: {Body}", veiculoId, ids.Count, postBody);
+                return null;
+            }
+
+            using var postDoc = JsonDocument.Parse(postBody);
+            // Resposta: { "id": "{page-id}_{post-id}" }
+            return postDoc.RootElement.TryGetProperty("id", out var postId) ? postId.GetString() : null;
         }
 
         public async Task<bool> AtualizarLegendaDoPostAsync(string postId, int veiculoId, string statusVeiculo)
