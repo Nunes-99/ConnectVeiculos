@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Globalization;
 using System.Net.Http.Headers;
 using System.Text;
@@ -252,7 +252,8 @@ namespace ConnectVeiculos.Infrastructure.Services.Webmotors
 
         private async Task EnviarAsync(Conta conta, Veiculo veiculo, VeiculoWebmotors anuncio, WebmotorsAnuncioDados dados)
         {
-            var modalidade = conta.ModalidadeId ?? throw new WebmotorsException("Escolha a modalidade de anúncio em Integrações → Webmotors.");
+            var modalidade = conta.ModalidadeId ?? throw new WebmotorsException(
+                "Escolha a modalidade de anúncio em Integrações → Webmotors. Se a lista estiver vazia, a loja não tem plano ativo na Webmotors: fale com o comercial Webmotors.");
             var alterar = anuncio.EstaPublicado;
             var operacao = alterar ? "AlterarCarro" : "IncluirCarro";
             var corpo = WebmotorsSoap.Anuncio(alterar ? anuncio.VwmCodigoAnuncio!.Value : 0, modalidade, dados,

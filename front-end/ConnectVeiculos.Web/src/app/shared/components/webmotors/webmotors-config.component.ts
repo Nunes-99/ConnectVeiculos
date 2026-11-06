@@ -54,6 +54,15 @@ import { WebmotorsService, WebmotorsStatus, erroWebmotors } from '../../../core/
         <div class="wm-erro"><span class="material-icons">error</span> {{ status.erro }}</div>
       }
 
+      @if (!status.erro && !status.modalidades.length) {
+        <div class="wm-aviso">
+          <span class="material-icons">info</span>
+          <div>
+            <strong>Nenhum plano ativo na Webmotors</strong>
+            <small>A conta conectou, mas a Webmotors não liberou nenhuma modalidade de anúncio para esta loja. Fale com o seu comercial Webmotors para contratar um plano e depois clique em Atualizar.</small>
+          </div>
+        </div>
+      } @else {
       <div class="form-group">
         <label>Modalidade de anúncio</label>
         <select [ngModel]="status.modalidadeId" (ngModelChange)="escolherModalidade($event)" [disabled]="ocupado">
@@ -63,6 +72,7 @@ import { WebmotorsService, WebmotorsStatus, erroWebmotors } from '../../../core/
           }
         </select>
       </div>
+      }
 
       <div class="wm-acoes">
         <button class="btn-secondary" (click)="carregar()" [disabled]="ocupado"><span class="material-icons">refresh</span> Atualizar</button>
