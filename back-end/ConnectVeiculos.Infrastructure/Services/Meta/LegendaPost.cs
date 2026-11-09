@@ -127,7 +127,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
         {
             var sb = new StringBuilder();
             sb.Append('#').Append(Tag(v.VeiMarca)).Append(' ');
-            sb.Append('#').Append(Tag(v.VeiMarca + v.VeiModelo)).Append(' ');
+            sb.Append('#').Append(Tag(v.VeiMarca + NomeDoModelo(v.VeiModelo))).Append(' ');
             var ehFacebook = string.Equals(rede, Facebook, StringComparison.OrdinalIgnoreCase);
             sb.Append(ehFacebook ? "#carros #usados #seminovos" : "#carros #usados #seminovos #carrosanovenda");
             if (!string.IsNullOrWhiteSpace(loja?.LojCidade))
@@ -136,6 +136,15 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
                 if (!ehFacebook) sb.Append(" #").Append(Tag("carros" + loja.LojCidade));
             }
             return sb.ToString();
+        }
+
+        // So o nome do modelo, sem a versao: "Civic EXL 2.0 16V 4p Aut." virava
+        // #HondaCivicEXL2016V4pAut, e o "2016" parecia o ano. Hashtag que as
+        // pessoas seguem e' #HondaCivic.
+        private static string NomeDoModelo(string? modelo)
+        {
+            if (string.IsNullOrWhiteSpace(modelo)) return "";
+            return modelo.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries)[0];
         }
 
         private static string Tag(string? raw)

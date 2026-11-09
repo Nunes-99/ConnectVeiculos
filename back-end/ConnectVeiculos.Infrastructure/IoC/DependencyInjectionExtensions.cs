@@ -390,6 +390,7 @@ namespace ConnectVeiculos.Infrastructure.IoC
                 .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(30));
             services.AddScoped<Core.Interfaces.Services.IStoryService, Services.Stories.StoryService>();
             services.AddScoped<Core.Interfaces.Services.IRedesPersonalizacaoService, Services.Meta.RedesPersonalizacaoService>();
+            services.AddScoped<Core.Interfaces.Services.IPostManualService, Services.Meta.PostManualService>();
 
             // Worker que avisa por e-mail antes de a conexao com o ML cair. Sem
             // refresh_token o token dura 6h, e a loja descobria a queda pela

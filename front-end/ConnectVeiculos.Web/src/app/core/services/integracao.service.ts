@@ -183,6 +183,13 @@ export interface RedesPersonalizacao {
   layouts: LayoutStory[];
 }
 
+/** Andamento do post manual (Instagram ou Facebook) que roda em segundo plano. */
+export interface PostManualSituacao {
+  estado: 'publicando' | 'publicado' | 'falhou';
+  mensagem: string;
+  url?: string | null;
+}
+
 export type RedeSocial = 'instagram' | 'facebook';
 export type TipoArte = 'post' | 'story';
 
@@ -438,15 +445,23 @@ export class IntegracaoService {
     return this.http.post<TestIntegracaoResult>(`${this.baseUrl}/integracoes/instagram/test`, {});
   }
 
-  /** Sem legenda (ou igual ao modelo da loja) o post usa o modelo da loja. */
-  publicarVeiculoInstagram(veiculoId: number, legenda?: string): Observable<{ externoId: string; url: string; mensagem: string }> {
-    return this.http.post<{ externoId: string; url: string; mensagem: string }>(
+  /**
+   * Sem legenda (ou igual ao modelo da loja) o post usa o modelo da loja.
+   * O servidor confere, responde na hora e publica em segundo plano: o
+   * andamento vem de situacaoPostManual().
+   */
+  publicarVeiculoInstagram(veiculoId: number, legenda?: string): Observable<PostManualSituacao> {
+    return this.http.post<PostManualSituacao>(
       `${this.baseUrl}/integracoes/instagram/publicar/${veiculoId}`, { legenda: legenda ?? null });
   }
 
-  publicarVeiculoFacebookPage(veiculoId: number, legenda?: string): Observable<{ externoId: string; url: string; mensagem: string }> {
-    return this.http.post<{ externoId: string; url: string; mensagem: string }>(
+  publicarVeiculoFacebookPage(veiculoId: number, legenda?: string): Observable<PostManualSituacao> {
+    return this.http.post<PostManualSituacao>(
       `${this.baseUrl}/integracoes/facebook/page-publicar/${veiculoId}`, { legenda: legenda ?? null });
+  }
+
+  situacaoPostManual(rede: RedeSocial, veiculoId: number): Observable<PostManualSituacao> {
+    return this.http.get<PostManualSituacao>(`${this.baseUrl}/integracoes/redes/post-manual/${rede}/${veiculoId}`);
   }
 
   // Personalização dos posts e stories

@@ -38,6 +38,16 @@ namespace ConnectVeiculos.Tests.Publicacoes
         }
 
         [Fact]
+        public void HashtagDoModeloNaoLevaAVersao()
+        {
+            // "Civic EXL 2.0 16V 4p Aut." virava #HondaCivicEXL2016V4pAut: o "2016" parecia o ano.
+            var civic = new Veiculo(8, 1, 1, "Honda", "Civic EXL 2.0 16V 4p Aut.", 2023, "ABC1D23", "", "Branco", 15000, 115000m, DateTime.Today, "D", "", 0m, "");
+
+            LegendaPost.Montar("{hashtags}", LegendaPost.Instagram, civic, null, null)
+                .Should().StartWith("#Honda #HondaCivic #carros");
+        }
+
+        [Fact]
         public void ModeloDaLojaTrocaAsVariaveis()
         {
             var texto = LegendaPost.Montar("{MARCA} {modelo} por {preco} na {loja}!", LegendaPost.Instagram, Gol, Loja(), null);
