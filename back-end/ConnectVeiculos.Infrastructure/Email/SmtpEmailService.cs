@@ -102,7 +102,10 @@ namespace ConnectVeiculos.Infrastructure.Email
             return value.Equals("true", StringComparison.OrdinalIgnoreCase) || value == "1";
         }
 
-        public async Task<bool> SendEmailAsync(string to, string subject, string body)
+        public Task<bool> SendEmailAsync(string to, string subject, string body)
+            => SendEmailAsync(to, subject, body, Array.Empty<EmailAnexo>());
+
+        public async Task<bool> SendEmailAsync(string to, string subject, string body, IReadOnlyList<EmailAnexo> anexos)
         {
             try
             {
@@ -134,6 +137,8 @@ namespace ConnectVeiculos.Infrastructure.Email
                     IsBodyHtml = true
                 };
                 message.To.Add(to);
+                foreach (var a in anexos)
+                    message.Attachments.Add(new Attachment(new MemoryStream(a.Conteudo), a.Nome, a.ContentType));
 
                 await client.SendMailAsync(message);
                 _logger.LogInformation("Email enviado para {To}: {Subject}", to, subject);

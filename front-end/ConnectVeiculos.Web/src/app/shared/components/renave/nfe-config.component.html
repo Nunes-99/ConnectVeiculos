@@ -86,7 +86,12 @@
       <input type="text" [(ngModel)]="config.ncmPadrao" inputmode="numeric" maxlength="8" />
       <small class="rnv-dica">Varia com a cilindrada (ex.: 8703.22, 8703.23...). Dá para trocar em cada nota.</small>
     </div>
-    @for (op of [{ t: 'Compra (NF-e de entrada)', r: config.compra }, { t: 'Venda (NF-e de saída)', r: config.venda }]; track op.t) {
+    <div class="form-group">
+      <label>CEST padrão do veículo</label>
+      <input type="text" [(ngModel)]="config.cestPadrao" inputmode="numeric" maxlength="7" />
+      <small class="rnv-dica">Obrigatório quando o ICMS é por substituição tributária ({{ simples ? 'CSOSN 500' : 'CST 60' }}), comum no zero km. Confirme o código com o contador.</small>
+    </div>
+    @for (op of [{ t: 'Compra (NF-e de entrada)', r: config.compra }, { t: 'Venda (NF-e de saída)', r: config.venda }, { t: 'Devolução de venda (NF-e de entrada que desfaz a venda)', r: config.devolucao }]; track op.t) {
       <h4>{{ op.t }}</h4>
       <div class="rnv-grid">
         <div class="form-group"><label>Natureza da operação</label><input type="text" [(ngModel)]="op.r.naturezaOperacao" /></div>
@@ -100,8 +105,55 @@
         <div class="form-group"><label>Redução da base (%)</label><input type="number" [(ngModel)]="op.r.reducaoBaseIcms" min="0" max="100" step="0.01" /></div>
         <div class="form-group"><label>CST do PIS</label><input type="text" [(ngModel)]="op.r.cstPis" maxlength="2" /></div>
         <div class="form-group"><label>CST da COFINS</label><input type="text" [(ngModel)]="op.r.cstCofins" maxlength="2" /></div>
+        @if (op.r.cstPis === '01' || op.r.cstPis === '02') {
+          <div class="form-group"><label>Alíquota PIS (%)</label><input type="number" [(ngModel)]="op.r.aliquotaPis" min="0" step="0.01" /></div>
+        }
+        @if (op.r.cstCofins === '01' || op.r.cstCofins === '02') {
+          <div class="form-group"><label>Alíquota COFINS (%)</label><input type="number" [(ngModel)]="op.r.aliquotaCofins" min="0" step="0.01" /></div>
+        }
+        @if (config.ibsCbsAtivo) {
+          <div class="form-group">
+            <label>CST do IBS/CBS</label>
+            <select [(ngModel)]="op.r.cstIbsCbs">
+              <option value="000">000 · Tributação integral</option>
+              <option value="200">200 · Com redução de alíquota</option>
+              <option value="410">410 · Imunidade / não incidência</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Classificação tributária (cClassTrib)</label><input type="text" [(ngModel)]="op.r.classTribIbsCbs" maxlength="6" inputmode="numeric" /></div>
+          @if (op.r.cstIbsCbs === '200') {
+            <div class="form-group"><label>Redução da alíquota (%)</label><input type="number" [(ngModel)]="op.r.reducaoIbsCbs" min="0" max="100" step="0.01" /></div>
+          }
+        }
       </div>
     }
+    <h4>Reforma tributária (IBS e CBS)</h4>
+    <label class="rnv-check">
+      <input type="checkbox" [(ngModel)]="config.ibsCbsAtivo" />
+      Informar IBS e CBS nas notas
+    </label>
+    <small class="rnv-dica">
+      Obrigatório para o regime normal com a transição da reforma (a CBS passa a valer em 2027). As alíquotas mudam a cada ano:
+      em 2026, CBS 0,9% e IBS 0,1%. Confirme alíquotas, CST e classificação com o contador antes de ligar em produção.
+    </small>
+    @if (config.ibsCbsAtivo) {
+      <div class="rnv-grid">
+        <div class="form-group"><label>Alíquota CBS (%)</label><input type="number" [(ngModel)]="config.aliquotaCbs" min="0" max="100" step="0.01" /></div>
+        <div class="form-group"><label>Alíquota IBS estadual (%)</label><input type="number" [(ngModel)]="config.aliquotaIbsUf" min="0" max="100" step="0.01" /></div>
+        <div class="form-group"><label>Alíquota IBS municipal (%)</label><input type="number" [(ngModel)]="config.aliquotaIbsMun" min="0" max="100" step="0.01" /></div>
+      </div>
+    }
+
+    <h4>Envio ao cliente</h4>
+    <label class="rnv-check">
+      <input type="checkbox" [(ngModel)]="config.enviarEmailAoAutorizar" />
+      Mandar XML e DANFE para o e-mail do cliente assim que a nota for autorizada
+    </label>
+    <small class="rnv-dica">
+      A loja é obrigada a entregar o XML ao cliente. O envio sai pela conta de e-mail da loja (Integrações → E-mail) e só acontece em produção.
+      Na lista de notas do veículo também dá para enviar quando quiser.
+    </small>
+
     <div class="form-group">
       <label>Informações complementares fixas</label>
       <input type="text" [(ngModel)]="config.informacoesComplementares" placeholder="Ex.: Empresa optante pelo Simples Nacional" />

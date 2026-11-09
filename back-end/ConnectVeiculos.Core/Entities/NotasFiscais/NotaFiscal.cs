@@ -10,6 +10,8 @@ namespace ConnectVeiculos.Core.Entities.NotasFiscais
     {
         public const string Entrada = "ENTRADA";
         public const string Saida = "SAIDA";
+        /// <summary>Devolucao de venda: entrada com finalidade 4, referenciando a nota de venda.</summary>
+        public const string Devolucao = "DEVOLUCAO";
 
         public const string StatusPendente = "PENDENTE";
         public const string StatusAutorizada = "AUTORIZADA";
@@ -61,6 +63,21 @@ namespace ConnectVeiculos.Core.Entities.NotasFiscais
         public string? NfCceProtocolo { get; private set; }
         public DateTime? NfCceData { get; private set; }
         public string? NfCceXml { get; private set; }
+
+        /// <summary>Devolucao: chave da nota de venda devolvida.</summary>
+        public string? NfChaveReferenciada { get; private set; }
+
+        /// <summary>Ultimo envio de XML e DANFE ao cliente (obrigacao do emitente).</summary>
+        public string? NfEmailEnviadoPara { get; private set; }
+        public DateTime? NfDtEnvioEmail { get; private set; }
+
+        public void ReferenciarNota(string chave) => NfChaveReferenciada = chave;
+
+        public void RegistrarEnvioEmail(string email)
+        {
+            NfEmailEnviadoPara = email;
+            NfDtEnvioEmail = DateTime.UtcNow;
+        }
 
         public NotaFiscal() { }
 

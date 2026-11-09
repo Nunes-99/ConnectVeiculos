@@ -12,6 +12,13 @@ export interface NfeRegraOperacao {
   reducaoBaseIcms: number;
   cstPis: string;
   cstCofins: string;
+  /** Alíquotas em %: só valem para CST 01 e 02 (tributado). */
+  aliquotaPis: number;
+  aliquotaCofins: number;
+  /** Reforma tributária: CST (000, 200, 410), cClassTrib (6 dígitos) e redução % da alíquota (CST 200). */
+  cstIbsCbs: string;
+  classTribIbsCbs: string;
+  reducaoIbsCbs: number;
 }
 
 export interface NfeConfig {
@@ -33,8 +40,19 @@ export interface NfeConfig {
   serie: number;
   proximoNumero: number;
   ncmPadrao: string;
+  /** CEST do veículo: obrigatório quando o ICMS é por substituição tributária (CST 60 / CSOSN 500). */
+  cestPadrao: string | null;
   compra: NfeRegraOperacao;
   venda: NfeRegraOperacao;
+  /** Devolução de venda (entrada, finalidade 4). */
+  devolucao: NfeRegraOperacao;
+  /** Reforma tributária: informa IBS e CBS na nota. */
+  ibsCbsAtivo: boolean;
+  aliquotaCbs: number;
+  aliquotaIbsUf: number;
+  aliquotaIbsMun: number;
+  /** Manda XML e DANFE ao cliente assim que a nota é autorizada (só em produção). */
+  enviarEmailAoAutorizar: boolean;
   informacoesComplementares: string | null;
   respTecCnpj: string | null;
   respTecContato: string | null;
@@ -69,6 +87,42 @@ export interface NfeEmissao {
   ncm: string | null;
   meioPagamento: string;
   informacoesComplementares: string | null;
+  /** Situação do cliente no ICMS; vazio decide pela inscrição estadual. */
+  indicadorIe?: 'contribuinte' | 'isento' | 'nao_contribuinte' | null;
+  cest?: string | null;
+  /** DIFAL: venda a consumidor final de outro estado por loja do regime normal. */
+  aliquotaInternaDestino?: number | null;
+  percentualFcpDestino?: number | null;
+  /** Só para veículo novo (zero km): detalhamento exigido pela Sefaz. */
+  veiculoNovo?: NfeVeiculoNovo | null;
+}
+
+/** Grupo veicProd da NF-e: dados da nota da montadora e códigos do Renavam. */
+export interface NfeVeiculoNovo {
+  tipoOperacao: number;
+  chassi: string;
+  codigoCor: string;
+  descricaoCor: string;
+  potencia: string;
+  cilindradas: string;
+  pesoLiquido: string;
+  pesoBruto: string;
+  numeroSerie: string;
+  tipoCombustivel: string;
+  numeroMotor: string;
+  capacidadeTracao: string;
+  distanciaEixos: string;
+  anoModelo: number;
+  anoFabricacao: number;
+  tipoPintura: string;
+  tipoVeiculo: string;
+  especieVeiculo: string;
+  vinRemarcado: boolean;
+  condicao: number;
+  codigoMarcaModelo: number;
+  corDenatran: string;
+  lotacao: number;
+  restricao: number;
 }
 
 /** Dados ja conhecidos para preencher a nota; origem diz de onde vieram. */
@@ -86,7 +140,7 @@ export const ORIGEM_SUGESTAO: Record<string, string> = {
 export interface NfeResumo {
   id: number;
   veiculoId: number;
-  tipo: 'ENTRADA' | 'SAIDA';
+  tipo: 'ENTRADA' | 'SAIDA' | 'DEVOLUCAO';
   ambiente: string;
   serie: number;
   numero: number;
@@ -106,6 +160,14 @@ export interface NfeResumo {
   cartaCorrecaoTexto: string | null;
   cartaCorrecaoData: string | null;
   podeCorrigir: boolean;
+  /** Devolução: chave da venda devolvida. */
+  chaveReferenciada: string | null;
+  /** Venda autorizada ainda não devolvida. */
+  podeDevolver: boolean;
+  emailEnviadoPara: string | null;
+  emailEnviadoEm: string | null;
+  /** E-mail informado na emissão (sugestão para o envio). */
+  emailCliente: string | null;
   /** So na lista geral (tela Notas fiscais). */
   veiculo?: string | null;
   placa?: string | null;
@@ -115,7 +177,7 @@ export interface NfeResumo {
 export interface NfeFiltro {
   de: string;
   ate: string;
-  tipo: '' | 'ENTRADA' | 'SAIDA';
+  tipo: '' | 'ENTRADA' | 'SAIDA' | 'DEVOLUCAO';
   status: string;
   busca: string;
 }
@@ -202,6 +264,16 @@ export class NfeService {
   /** Confere na Sefaz uma nota pendente (sem resposta). */
   consultar(notaId: number): Observable<NfeResumo> {
     return this.http.post<NfeResumo>(`${this.url}/${notaId}/consultar`, {});
+  }
+
+  /** NF-e de devolução de uma venda autorizada (desfaz a venda depois das 24 h do cancelamento). */
+  devolver(notaId: number): Observable<NfeResumo> {
+    return this.http.post<NfeResumo>(`${this.url}/${notaId}/devolucao`, null);
+  }
+
+  /** Manda XML e DANFE ao cliente pela conta de e-mail da loja. */
+  enviarEmail(notaId: number, email: string): Observable<NfeResumo> {
+    return this.http.post<NfeResumo>(`${this.url}/${notaId}/email`, { email });
   }
 
   cancelar(notaId: number, justificativa: string): Observable<NfeResumo> {

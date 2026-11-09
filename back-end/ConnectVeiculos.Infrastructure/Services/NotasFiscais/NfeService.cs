@@ -7,6 +7,7 @@ using ConnectVeiculos.Core.Interfaces.Database.Repositories.NotasFiscais;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Renave;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Vendas;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
+using ConnectVeiculos.Core.Interfaces.Email;
 using ConnectVeiculos.Core.Interfaces.Services;
 using ConnectVeiculos.Core.Interfaces.Tenancy;
 using ConnectVeiculos.Core.NotasFiscais;
@@ -43,11 +44,12 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
         private readonly ITenantContext _tenant;
         private readonly HttpClient _http;
         private readonly ILogger<NfeService> _logger;
+        private readonly IEmailService? _email;
 
         public NfeService(IConfiguracaoSistemaRepository config, INotaFiscalRepository notas, IVeiculoRepository veiculos,
             IVendaRepository vendas, IVeiculoRenaveRepository registrosRenave,
             ICertificadoDigitalService certificado, INfeSefaz sefaz, IRenaveService renave, ITenantContext tenant,
-            HttpClient http, ILogger<NfeService> logger)
+            HttpClient http, ILogger<NfeService> logger, IEmailService? email = null)
         {
             _config = config;
             _notas = notas;
@@ -60,6 +62,7 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
             _tenant = tenant;
             _http = http;
             _logger = logger;
+            _email = email;
         }
 
         // ================================================================
@@ -74,6 +77,7 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
             catch (JsonException) { cfg = Padrao(); }
 
             var cert = await _certificado.ObterInfoAsync(ct);
+            cfg.Devolucao ??= NfeVeiculoBuilder.RegraDevolucaoPadrao(cfg.Crt);
             cfg.CertificadoValido = cert.Valido;
             cfg.CertificadoCnpj = cert.Cnpj;
             cfg.Pendencias = Pendencias(cfg);
@@ -89,6 +93,16 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
             if (input.Serie is < 0 or > 999) throw new NfeException("Série deve ficar entre 0 e 999.");
             if (input.ProximoNumero is < 1 or > 999_999_999) throw new NfeException("Número da próxima nota inválido.");
             if (!string.IsNullOrWhiteSpace(input.Uf)) NfeVeiculoBuilder.Uf(input.Uf);
+            if (input.IbsCbsAtivo)
+            {
+                foreach (var a in new[] { input.AliquotaCbs, input.AliquotaIbsUf, input.AliquotaIbsMun })
+                    if (a is < 0 or > 100) throw new NfeException("Alíquotas do IBS/CBS devem ficar entre 0 e 100%.");
+                foreach (var r in new[] { input.Compra, input.Venda, input.Devolucao ?? NfeVeiculoBuilder.RegraDevolucaoPadrao(input.Crt) })
+                {
+                    if (NfeVeiculoBuilder.SoDigitos(r.CstIbsCbs).Length != 3) throw new NfeException("CST do IBS/CBS deve ter 3 dígitos.");
+                    if (NfeVeiculoBuilder.SoDigitos(r.ClassTribIbsCbs).Length != 6) throw new NfeException("Classificação tributária do IBS/CBS deve ter 6 dígitos.");
+                }
+            }
 
             input.Ambiente = input.Ambiente == "producao" ? "producao" : "homologacao";
             input.Cnpj = cnpj;
@@ -104,6 +118,7 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
 
         private static NfeConfigInfo Padrao() => new()
         {
+            Devolucao = NfeVeiculoBuilder.RegraDevolucaoPadrao(1),
             Compra = new NfeRegraOperacao
             {
                 NaturezaOperacao = "Compra de veiculo usado", CfopInterno = "1102", CfopInterestadual = "2102",
@@ -175,7 +190,22 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
         // ================================================================
 
         public async Task<IReadOnlyList<NfeResumo>> ListarDoVeiculoAsync(int veiculoId, CancellationToken ct = default)
-            => (await _notas.GetByVeiculoAsync(veiculoId)).OrderByDescending(n => n.NfId).Select(Resumo).ToList();
+        {
+            var notas = (await _notas.GetByVeiculoAsync(veiculoId)).ToList();
+            return notas.OrderByDescending(n => n.NfId).Select(n =>
+            {
+                var r = Resumo(n);
+                r.PodeDevolver = n.NfTipo == NotaFiscal.Saida && n.NfStatus == NotaFiscal.StatusAutorizada
+                                 && DevolucaoDa(notas, n) == null;
+                return r;
+            }).ToList();
+        }
+
+        /// <summary>A devolucao (valida ou ainda em andamento) de uma nota de venda, se houver.</summary>
+        private static NotaFiscal? DevolucaoDa(IEnumerable<NotaFiscal> notas, NotaFiscal venda)
+            => venda.NfChave == null ? null : notas.FirstOrDefault(d =>
+                d.NfTipo == NotaFiscal.Devolucao && d.NfChaveReferenciada == venda.NfChave
+                && d.NfStatus is NotaFiscal.StatusAutorizada or NotaFiscal.StatusPendente or NotaFiscal.StatusRejeitada);
 
         /// <summary>Quantas notas a tela Notas fiscais traz de uma vez (o filtro estreita).</summary>
         public const int LimiteLista = 500;
@@ -185,7 +215,9 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
         {
             if (filtro.De.HasValue && filtro.Ate.HasValue && filtro.De.Value.Date > filtro.Ate.Value.Date)
                 throw new NfeException("A data inicial está depois da data final.");
-            filtro.Tipo = string.IsNullOrWhiteSpace(filtro.Tipo) ? null : Tipo(filtro.Tipo);
+            filtro.Tipo = string.IsNullOrWhiteSpace(filtro.Tipo) ? null
+                : string.Equals(filtro.Tipo, NotaFiscal.Devolucao, StringComparison.OrdinalIgnoreCase) ? NotaFiscal.Devolucao
+                : Tipo(filtro.Tipo);
             filtro.Status = string.IsNullOrWhiteSpace(filtro.Status) ? null : filtro.Status.Trim().ToUpperInvariant();
 
             return (await _notas.ListarAsync(filtro, LimiteLista)).Select(x =>
@@ -363,8 +395,10 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
             Validar(input);
             _ = await _veiculos.GetByIdAsync(veiculoId) ?? throw new NfeException("Veículo não encontrado.");
 
-            var existentes = await _notas.GetByVeiculoAsync(veiculoId);
-            if (existentes.Any(n => n.NfTipo == tipo && n.NfStatus == NotaFiscal.StatusAutorizada))
+            var existentes = (await _notas.GetByVeiculoAsync(veiculoId)).ToList();
+            // Venda ja devolvida nao conta: o carro voltou e pode ser vendido de novo.
+            if (existentes.Any(n => n.NfTipo == tipo && n.NfStatus == NotaFiscal.StatusAutorizada
+                                    && !(tipo == NotaFiscal.Saida && DevolucaoDa(existentes, n)?.NfStatus == NotaFiscal.StatusAutorizada)))
                 throw new NfeException($"Este veículo já tem NF-e de {(tipo == NotaFiscal.Entrada ? "compra" : "venda")} autorizada. Cancele-a antes de emitir outra.");
             if (existentes.FirstOrDefault(n => n.NfTipo == tipo && n.PodeReenviar) is { } pendente)
                 return await ReenviarAsync(pendente.NfId, input, ct);
@@ -380,6 +414,11 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
             var dados = correcao ?? (nota.NfDadosJson == null ? null : JsonSerializer.Deserialize<NfeEmissaoInput>(nota.NfDadosJson, Json))
                 ?? throw new NfeException("Informe os dados da nota.");
             dados.Tipo = nota.NfTipo;
+            if (nota.NfTipo == NotaFiscal.Devolucao)
+            {
+                dados.ChaveReferenciada = nota.NfChaveReferenciada;
+                dados.MeioPagamento = "90";
+            }
             Validar(dados);
 
             var cfg = await ObterConfigAsync(ct);
@@ -496,6 +535,7 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
                 _logger.LogInformation("NF-e {Chave} autorizada (protocolo {Protocolo})", chave, ret.Protocolo);
                 var resumo = Resumo(nota);
                 resumo.Motivo = await InformarRenaveAsync(nota, ct) ?? resumo.Motivo;
+                await EnviarEmailAutomaticoAsync(nota, cfg, dados.Email, resumo, ct);
                 return resumo;
             }
 
@@ -507,6 +547,135 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
             if (ret.CStat == 204 && await ResolverPelaConsultaAsync(nota, ct) is { } jaAutorizada) return jaAutorizada;
             throw new NfeException($"A Sefaz rejeitou a nota ({ret.CStat}): {ret.Motivo}");
         }
+
+        // ================================================================
+        // Devolucao de venda
+        // ================================================================
+
+        /// <summary>
+        /// Emite a NF-e de devolucao de uma venda autorizada: nota de entrada,
+        /// finalidade 4, referenciando a chave da venda, com o mesmo cliente e
+        /// valor. E' o caminho para desfazer a venda depois das 24 horas em que
+        /// o cancelamento e' permitido.
+        /// </summary>
+        public async Task<NfeResumo> EmitirDevolucaoAsync(int notaVendaId, NfeEmissaoInput? ajustes, CancellationToken ct = default)
+        {
+            var venda = await _notas.GetByIdAsync(notaVendaId) ?? throw new NfeException("Nota não encontrada.");
+            if (venda.NfTipo != NotaFiscal.Saida || venda.NfStatus != NotaFiscal.StatusAutorizada || venda.NfChave == null)
+                throw new NfeException("Só dá para devolver uma NF-e de venda autorizada.");
+
+            var cfg = await ObterConfigAsync(ct);
+            if (!cfg.Pronto)
+                throw new NfeException("Complete a configuração da NF-e em Notas fiscais → Configuração: " + string.Join(", ", cfg.Pendencias) + ".");
+            if (venda.NfAmbiente != cfg.Ambiente)
+                throw new NfeException("A nota de venda foi emitida em outro ambiente (testes/produção) do que o configurado agora.");
+
+            var notas = (await _notas.GetByVeiculoAsync(venda.R_VeiId)).ToList();
+            if (DevolucaoDa(notas, venda) is { } existente)
+            {
+                if (existente.NfStatus == NotaFiscal.StatusAutorizada)
+                    throw new NfeException($"Esta venda já foi devolvida (NF-e nº {existente.NfNumero}).");
+                return await ReenviarAsync(existente.NfId, ajustes, ct);
+            }
+
+            var dados = ajustes
+                ?? (venda.NfDadosJson == null ? null : JsonSerializer.Deserialize<NfeEmissaoInput>(venda.NfDadosJson, Json))
+                ?? throw new NfeException("Os dados da nota de venda não ficaram guardados: informe o cliente.");
+            dados.Tipo = NotaFiscal.Devolucao;
+            dados.ChaveReferenciada = venda.NfChave;
+            dados.MeioPagamento = "90";
+            if (dados.Valor <= 0) dados.Valor = venda.NfValor;
+            if (dados.Valor > venda.NfValor)
+                throw new NfeException("O valor da devolução não pode passar o da venda.");
+            // DIFAL e' so da venda; a devolucao e' entrada.
+            dados.AliquotaInternaDestino = null;
+            dados.PercentualFcpDestino = null;
+            Validar(dados);
+
+            var nota = await ReservarNumeroAsync(venda.R_VeiId, NotaFiscal.Devolucao, cfg, ct);
+            nota.ReferenciarNota(venda.NfChave);
+            await _notas.SalvarAsync(nota);
+            return await EnviarAsync(nota, dados, cfg, ct);
+        }
+
+        // ================================================================
+        // Envio do XML e do DANFE ao cliente
+        // ================================================================
+
+        /// <summary>
+        /// Manda o XML autorizado, o DANFE e, se houver, a carta de correcao para
+        /// o e-mail do cliente — o emitente e' obrigado a entregar o XML ao
+        /// destinatario. Sai pela conta de e-mail da loja (Integracoes -> E-mail).
+        /// </summary>
+        public async Task<NfeResumo> EnviarEmailAsync(int notaId, string? email, CancellationToken ct = default)
+        {
+            var nota = await _notas.GetByIdAsync(notaId) ?? throw new NfeException("Nota não encontrada.");
+            if (nota.NfStatus != NotaFiscal.StatusAutorizada || string.IsNullOrEmpty(nota.NfXml))
+                throw new NfeException("Só dá para enviar nota autorizada.");
+            var destino = (email ?? EmailDosDados(nota) ?? "").Trim();
+            if (!EmailValido(destino)) throw new NfeException("Informe um e-mail válido do cliente.");
+
+            if (!await EnviarArquivosAsync(nota, destino, ct))
+                throw new NfeException("Não foi possível enviar o e-mail. Confira a conta de e-mail da loja em Integrações → E-mail.");
+            nota.RegistrarEnvioEmail(destino);
+            await _notas.SalvarAsync(nota);
+            return Resumo(nota);
+        }
+
+        /// <summary>Envio automatico logo apos a autorizacao; falha so vira aviso.</summary>
+        private async Task EnviarEmailAutomaticoAsync(NotaFiscal nota, NfeConfigInfo cfg, string? email, NfeResumo resumo, CancellationToken ct)
+        {
+            // Em testes nao: o cliente receberia uma nota sem valor fiscal.
+            if (!cfg.EnviarEmailAoAutorizar || nota.NfAmbiente != "producao" || _email == null) return;
+            var destino = email?.Trim();
+            if (string.IsNullOrEmpty(destino) || !EmailValido(destino)) return;
+            try
+            {
+                if (await EnviarArquivosAsync(nota, destino, ct))
+                {
+                    nota.RegistrarEnvioEmail(destino);
+                    await _notas.SalvarAsync(nota);
+                    resumo.EmailEnviadoPara = nota.NfEmailEnviadoPara;
+                    resumo.EmailEnviadoEm = nota.NfDtEnvioEmail;
+                }
+                else resumo.Motivo = "Nota autorizada, mas o e-mail ao cliente não saiu: confira Integrações → E-mail e use \"Enviar por e-mail\".";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "NF-e {Chave}: falha ao enviar o e-mail ao cliente", nota.NfChave);
+            }
+        }
+
+        private async Task<bool> EnviarArquivosAsync(NotaFiscal nota, string destino, CancellationToken ct)
+        {
+            if (_email == null) return false;
+            var cfg = await ObterConfigAsync(ct);
+            var (pdf, nomePdf) = await ObterDanfeAsync(nota.NfId, ct);
+            var anexos = new List<EmailAnexo>
+            {
+                new($"{nota.NfChave}-procNFe.xml", System.Text.Encoding.UTF8.GetBytes(nota.NfXml!), "application/xml"),
+                new(nomePdf, pdf, "application/pdf")
+            };
+            if (!string.IsNullOrEmpty(nota.NfCceXml))
+                anexos.Add(new($"{nota.NfChave}-cce-{nota.NfCceSequencia}.xml", System.Text.Encoding.UTF8.GetBytes(nota.NfCceXml), "application/xml"));
+
+            var loja = System.Net.WebUtility.HtmlEncode(cfg.NomeFantasia ?? cfg.RazaoSocial ?? "a loja");
+            var tipo = nota.NfTipo == NotaFiscal.Devolucao ? "devolução" : nota.NfTipo == NotaFiscal.Entrada ? "compra" : "venda";
+            var corpo = $"<p>Olá,</p><p>Segue a NF-e nº {nota.NfNumero} ({tipo}) emitida por {loja}: o arquivo XML e o DANFE em PDF.</p>"
+                      + $"<p>Chave de acesso: <strong>{nota.NfChave}</strong><br>Consulta: https://www.nfe.fazenda.gov.br/portal/consultaRecaptcha.aspx</p>"
+                      + "<p>Guarde o XML: ele é o documento fiscal.</p>";
+            return await _email.SendEmailAsync(destino, $"NF-e nº {nota.NfNumero} - {cfg.NomeFantasia ?? cfg.RazaoSocial}", corpo, anexos);
+        }
+
+        private static string? EmailDosDados(NotaFiscal n)
+        {
+            if (n.NfDadosJson == null) return null;
+            try { return JsonSerializer.Deserialize<NfeEmissaoInput>(n.NfDadosJson, Json)?.Email; }
+            catch (JsonException) { return null; }
+        }
+
+        private static bool EmailValido(string e)
+            => System.Text.RegularExpressions.Regex.IsMatch(e, @"^[^@\s]+@[^@\s]+\.[^@\s]+$");
 
         public async Task<NfeResumo> CancelarAsync(int notaId, string justificativa, CancellationToken ct = default)
         {
@@ -814,7 +983,11 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
             CartaCorrecaoSequencia = n.NfCceSequencia,
             CartaCorrecaoTexto = n.NfCceTexto,
             CartaCorrecaoData = n.NfCceData,
-            PodeCorrigir = n.NfStatus == NotaFiscal.StatusAutorizada && n.NfCceSequencia < NotaFiscal.MaximoCartasCorrecao
+            PodeCorrigir = n.NfStatus == NotaFiscal.StatusAutorizada && n.NfCceSequencia < NotaFiscal.MaximoCartasCorrecao,
+            ChaveReferenciada = n.NfChaveReferenciada,
+            EmailEnviadoPara = n.NfEmailEnviadoPara,
+            EmailEnviadoEm = n.NfDtEnvioEmail,
+            EmailCliente = EmailDosDados(n)
         };
     }
 

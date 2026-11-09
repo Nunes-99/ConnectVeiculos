@@ -27,11 +27,14 @@
             <tbody>
               @for (n of notas; track n.id) {
                 <tr>
-                  <td>{{ n.tipo === 'ENTRADA' ? 'Compra' : 'Venda' }}</td>
+                  <td>{{ rotuloTipo(n) }}</td>
                   <td>{{ n.numero }}</td>
                   <td>
                     <span class="nfe-status" [attr.data-status]="n.status">{{ rotuloStatus(n.status) }}</span>
                     @if (n.status === 'REJEITADA' || n.status === 'PENDENTE' || n.status === 'INUTILIZADA') { <small class="nfe-motivo">{{ n.motivo }}</small> }
+                    @if (n.emailEnviadoPara) {
+                      <small class="nfe-motivo">Enviada para {{ n.emailEnviadoPara }} em {{ n.emailEnviadoEm | date:'dd/MM/yyyy HH:mm' }}</small>
+                    }
                     @if (n.cartaCorrecaoSequencia) {
                       <small class="nfe-cce">CC-e nº {{ n.cartaCorrecaoSequencia }}: {{ n.cartaCorrecaoTexto }}
                         <button class="rnv-link" (click)="baixarCartaCorrecao(n)">XML</button>
@@ -52,6 +55,12 @@
                     }
                     @if (n.podeCorrigir) {
                       <button class="btn-icon" title="Carta de correção" (click)="abrirCorrecao(n)"><span class="material-icons">edit_note</span></button>
+                    }
+                    @if (n.status === 'AUTORIZADA') {
+                      <button class="btn-icon" title="Enviar XML e DANFE por e-mail ao cliente" (click)="abrirEmail(n)"><span class="material-icons">forward_to_inbox</span></button>
+                    }
+                    @if (n.podeDevolver) {
+                      <button class="btn-icon" title="Emitir nota de devolução (desfaz a venda)" (click)="abrirDevolucao(n)"><span class="material-icons">assignment_return</span></button>
                     }
                     @if (n.podeCancelar) {
                       <button class="btn-icon delete" title="Cancelar nota" (click)="cancelando = n; corrigindo = null; justificativa = ''"><span class="material-icons">block</span></button>
@@ -75,6 +84,43 @@
               <div class="rnv-acoes">
                 <button class="btn-primary" (click)="confirmarCancelamento()" [disabled]="enviando || justificativa.trim().length < 15">Cancelar nota</button>
                 <button class="btn-secondary" (click)="cancelando = null">Voltar</button>
+              </div>
+            </div>
+          </div>
+        }
+
+        @if (enviandoEmail) {
+          <div class="rnv-alerta">
+            <span class="material-icons">forward_to_inbox</span>
+            <div>
+              <strong>Enviar a NF-e nº {{ enviandoEmail.numero }} ao cliente</strong>
+              <small>Vai o XML (o documento fiscal), o DANFE em PDF e a carta de correção, se houver, pela conta de e-mail da loja.</small>
+              <input type="email" [(ngModel)]="emailDestino" placeholder="email@cliente.com.br" />
+              <div class="rnv-acoes">
+                <button class="btn-primary" (click)="confirmarEmail()" [disabled]="enviando || !emailDestino.trim()">
+                  {{ enviando ? 'Enviando...' : 'Enviar' }}
+                </button>
+                <button class="btn-secondary" (click)="enviandoEmail = null">Voltar</button>
+              </div>
+            </div>
+          </div>
+        }
+
+        @if (devolvendo) {
+          <div class="rnv-erro-box">
+            <span class="material-icons">assignment_return</span>
+            <div>
+              <strong>Emitir a devolução da venda (NF-e nº {{ devolvendo.numero }})?</strong>
+              <small>
+                É uma nota de entrada que desfaz a venda: mesmo cliente e mesmo valor, referenciando a nota de venda.
+                Use quando já passaram as 24 horas do cancelamento. Depois dela, o carro pode ganhar uma nova nota de venda.
+                A venda no sistema (tela Vendas) e o Renave não mudam sozinhos.
+              </small>
+              <div class="rnv-acoes">
+                <button class="btn-primary" (click)="confirmarDevolucao()" [disabled]="enviando">
+                  {{ enviando ? 'Enviando à Sefaz...' : 'Emitir devolução' }}
+                </button>
+                <button class="btn-secondary" (click)="devolvendo = null">Voltar</button>
               </div>
             </div>
           </div>
@@ -120,6 +166,15 @@
             <div class="form-group"><label>CPF/CNPJ</label><input type="text" [(ngModel)]="form.documento" inputmode="numeric" /></div>
             <div class="form-group"><label>Nome / razão social</label><input type="text" [(ngModel)]="form.nome" /></div>
             <div class="form-group"><label>Inscrição estadual <small>(só se for contribuinte)</small></label><input type="text" [(ngModel)]="form.inscricaoEstadual" /></div>
+            <div class="form-group">
+              <label>Situação no ICMS</label>
+              <select [(ngModel)]="form.indicadorIe">
+                <option [ngValue]="null">Pela inscrição ({{ form.inscricaoEstadual?.trim() ? 'contribuinte' : 'não contribuinte' }})</option>
+                <option ngValue="contribuinte">Contribuinte (tem inscrição estadual)</option>
+                <option ngValue="isento">Contribuinte isento de inscrição</option>
+                <option ngValue="nao_contribuinte">Não contribuinte (pessoa física, a maioria)</option>
+              </select>
+            </div>
             <div class="form-group"><label>E-mail</label><input type="email" [(ngModel)]="form.email" /></div>
             <div class="form-group"><label>Telefone</label><input type="text" [(ngModel)]="form.telefone" inputmode="tel" /></div>
             <div class="form-group">
@@ -163,7 +218,118 @@
               <label>NCM <small>(vazio = padrão {{ config?.ncmPadrao }})</small></label>
               <input type="text" [(ngModel)]="form.ncm" inputmode="numeric" maxlength="8" />
             </div>
+            <div class="form-group">
+              <label>CEST <small>(vazio = padrão {{ config?.cestPadrao || 'nenhum' }})</small></label>
+              <input type="text" [(ngModel)]="form.cest" inputmode="numeric" maxlength="7" />
+            </div>
           </div>
+
+          @if (precisaDifal) {
+            <div class="rnv-alerta">
+              <span class="material-icons">info</span>
+              Venda para consumidor final de outro estado ({{ form.endereco.uf }}): a nota leva o diferencial de alíquota (DIFAL).
+              Confirme as alíquotas com o contador.
+            </div>
+            <div class="rnv-grid">
+              <div class="form-group"><label>Alíquota interna do ICMS em {{ form.endereco.uf }} (%)</label><input type="number" [(ngModel)]="form.aliquotaInternaDestino" min="0" max="40" step="0.01" /></div>
+              <div class="form-group"><label>Fundo de Combate à Pobreza em {{ form.endereco.uf }} (%)</label><input type="number" [(ngModel)]="form.percentualFcpDestino" min="0" max="4" step="0.01" /></div>
+            </div>
+          }
+
+          @if (form.tipo === 'SAIDA') {
+            <label class="rnv-check">
+              <input type="checkbox" [checked]="!!form.veiculoNovo" (change)="alternarVeiculoNovo($any($event.target).checked)" />
+              Veículo novo (zero km): incluir o detalhamento do veículo exigido pela Sefaz
+            </label>
+          }
+          @if (form.veiculoNovo; as vn) {
+            <div class="rnv-alerta">
+              <span class="material-icons">info</span>
+              Copie os dados da nota da montadora. Os códigos de combustível, tipo de veículo e marca/modelo são os da tabela do Renavam.
+            </div>
+            <div class="rnv-grid">
+              <div class="form-group">
+                <label>Tipo de operação</label>
+                <select [(ngModel)]="vn.tipoOperacao">
+                  <option [ngValue]="1">Venda concessionária</option>
+                  <option [ngValue]="2">Faturamento direto a consumidor final</option>
+                  <option [ngValue]="3">Venda direta a grandes consumidores</option>
+                  <option [ngValue]="0">Outros</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Chassi</label><input type="text" [(ngModel)]="vn.chassi" maxlength="17" /></div>
+              <div class="form-group"><label>Código da cor (montadora)</label><input type="text" [(ngModel)]="vn.codigoCor" maxlength="4" /></div>
+              <div class="form-group"><label>Descrição da cor</label><input type="text" [(ngModel)]="vn.descricaoCor" maxlength="40" /></div>
+              <div class="form-group">
+                <label>Cor (tabela Denatran)</label>
+                <select [(ngModel)]="vn.corDenatran">
+                  <option value="">Escolha...</option>
+                  @for (c of coresDenatran; track c.codigo) { <option [value]="c.codigo">{{ c.codigo }} {{ c.nome }}</option> }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Tipo de pintura</label>
+                <select [(ngModel)]="vn.tipoPintura">
+                  <option value="">Escolha...</option>
+                  <option value="S">Sólida</option>
+                  <option value="M">Metálica</option>
+                  <option value="P">Perolizada</option>
+                  <option value="F">Fosca</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Potência (CV)</label><input type="text" [(ngModel)]="vn.potencia" maxlength="4" inputmode="numeric" /></div>
+              <div class="form-group"><label>Cilindradas (cm³)</label><input type="text" [(ngModel)]="vn.cilindradas" maxlength="4" inputmode="numeric" /></div>
+              <div class="form-group"><label>Peso líquido (t)</label><input type="text" [(ngModel)]="vn.pesoLiquido" maxlength="9" placeholder="Ex.: 1.1200" /></div>
+              <div class="form-group"><label>Peso bruto (t)</label><input type="text" [(ngModel)]="vn.pesoBruto" maxlength="9" placeholder="Ex.: 1.5500" /></div>
+              <div class="form-group"><label>Capacidade máx. de tração (t)</label><input type="text" [(ngModel)]="vn.capacidadeTracao" maxlength="9" placeholder="Ex.: 1.5500" /></div>
+              <div class="form-group"><label>Distância entre eixos (mm)</label><input type="text" [(ngModel)]="vn.distanciaEixos" maxlength="4" inputmode="numeric" /></div>
+              <div class="form-group"><label>Número de série</label><input type="text" [(ngModel)]="vn.numeroSerie" maxlength="9" /></div>
+              <div class="form-group"><label>Número do motor</label><input type="text" [(ngModel)]="vn.numeroMotor" maxlength="21" /></div>
+              <div class="form-group"><label>Combustível (código Renavam)</label><input type="text" [(ngModel)]="vn.tipoCombustivel" maxlength="2" placeholder="Ex.: 16 álcool/gasolina" /></div>
+              <div class="form-group"><label>Tipo de veículo (código Renavam)</label><input type="text" [(ngModel)]="vn.tipoVeiculo" maxlength="2" placeholder="06 automóvel" /></div>
+              <div class="form-group">
+                <label>Espécie</label>
+                <select [(ngModel)]="vn.especieVeiculo">
+                  <option value="1">Passageiro</option>
+                  <option value="2">Carga</option>
+                  <option value="3">Misto</option>
+                  <option value="4">Corrida</option>
+                  <option value="5">Tração</option>
+                  <option value="6">Especial</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Código marca/modelo (Denatran)</label><input type="number" [(ngModel)]="vn.codigoMarcaModelo" min="1" max="999999" /></div>
+              <div class="form-group"><label>Ano de fabricação</label><input type="number" [(ngModel)]="vn.anoFabricacao" min="1900" max="2100" /></div>
+              <div class="form-group"><label>Ano modelo</label><input type="number" [(ngModel)]="vn.anoModelo" min="1900" max="2100" /></div>
+              <div class="form-group"><label>Lotação (com motorista)</label><input type="number" [(ngModel)]="vn.lotacao" min="1" max="999" /></div>
+              <div class="form-group">
+                <label>Condição</label>
+                <select [(ngModel)]="vn.condicao">
+                  <option [ngValue]="1">Acabado</option>
+                  <option [ngValue]="2">Inacabado</option>
+                  <option [ngValue]="3">Semiacabado</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Restrição</label>
+                <select [(ngModel)]="vn.restricao">
+                  <option [ngValue]="0">Não há</option>
+                  <option [ngValue]="1">Alienação fiduciária</option>
+                  <option [ngValue]="2">Arrendamento mercantil</option>
+                  <option [ngValue]="3">Reserva de domínio</option>
+                  <option [ngValue]="4">Penhor de veículos</option>
+                  <option [ngValue]="9">Outras</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>VIN</label>
+                <select [(ngModel)]="vn.vinRemarcado">
+                  <option [ngValue]="false">Normal</option>
+                  <option [ngValue]="true">Remarcado</option>
+                </select>
+              </div>
+            </div>
+          }
           <div class="form-group">
             <label>Informações complementares</label>
             <input type="text" [(ngModel)]="form.informacoesComplementares" />

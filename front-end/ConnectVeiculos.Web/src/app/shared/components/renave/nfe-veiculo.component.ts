@@ -48,6 +48,9 @@ export class NfeVeiculoComponent implements OnInit {
   justificativa = '';
 
   corrigindo: NfeResumo | null = null;
+  devolvendo: NfeResumo | null = null;
+  enviandoEmail: NfeResumo | null = null;
+  emailDestino = '';
   correcao = '';
 
   ngOnInit(): void {
@@ -66,7 +69,52 @@ export class NfeVeiculoComponent implements OnInit {
       valor: tipo === 'SAIDA' ? (this.veiculo?.veiPreco || 0) : (this.veiculo?.veiPrecoCompra || 0),
       ncm: null,
       meioPagamento: tipo === 'SAIDA' ? '17' : '90',
-      informacoesComplementares: null
+      informacoesComplementares: null,
+      indicadorIe: null,
+      cest: null,
+      aliquotaInternaDestino: null,
+      percentualFcpDestino: null,
+      veiculoNovo: null
+    };
+  }
+
+  /** Cores da tabela da Denatran (grupo veicProd da NF-e). */
+  readonly coresDenatran = [
+    { codigo: '01', nome: 'Amarelo' }, { codigo: '02', nome: 'Azul' }, { codigo: '03', nome: 'Bege' },
+    { codigo: '04', nome: 'Branca' }, { codigo: '05', nome: 'Cinza' }, { codigo: '06', nome: 'Dourada' },
+    { codigo: '07', nome: 'Grená' }, { codigo: '08', nome: 'Laranja' }, { codigo: '09', nome: 'Marrom' },
+    { codigo: '10', nome: 'Prata' }, { codigo: '11', nome: 'Preta' }, { codigo: '12', nome: 'Rosa' },
+    { codigo: '13', nome: 'Roxa' }, { codigo: '14', nome: 'Verde' }, { codigo: '15', nome: 'Vermelha' },
+    { codigo: '16', nome: 'Fantasia' }
+  ];
+
+  /** Situação no ICMS que vai na nota: a escolhida ou, sem escolha, pela inscrição. */
+  get situacaoIe(): 'contribuinte' | 'isento' | 'nao_contribuinte' {
+    return this.form.indicadorIe || (this.form.inscricaoEstadual?.trim() ? 'contribuinte' : 'nao_contribuinte');
+  }
+
+  /**
+   * DIFAL (EC 87/2015): venda para consumidor final não contribuinte de outro
+   * estado, por loja do regime normal. Sem a alíquota interna do destino a
+   * Sefaz rejeita a nota.
+   */
+  get precisaDifal(): boolean {
+    return this.form.tipo === 'SAIDA' && !!this.config && (this.config.crt === 2 || this.config.crt === 3)
+      && !!this.form.endereco.uf && this.form.endereco.uf !== this.config.uf
+      && this.situacaoIe === 'nao_contribuinte';
+  }
+
+  /** Zero km: a Sefaz exige o detalhamento do veículo, com os dados da nota da montadora. */
+  alternarVeiculoNovo(ligado: boolean): void {
+    if (!ligado) { this.form.veiculoNovo = null; return; }
+    const v = this.veiculo;
+    const ano = Number(v?.veiAno) || new Date().getFullYear();
+    this.form.veiculoNovo = {
+      tipoOperacao: 1, chassi: v?.veiChassi || '', codigoCor: '', descricaoCor: v?.veiCor || '',
+      potencia: '', cilindradas: '', pesoLiquido: '', pesoBruto: '', numeroSerie: '', tipoCombustivel: '',
+      numeroMotor: '', capacidadeTracao: '', distanciaEixos: '', anoModelo: ano, anoFabricacao: ano,
+      tipoPintura: '', tipoVeiculo: '06', especieVeiculo: '1', vinRemarcado: false, condicao: 1,
+      codigoMarcaModelo: 0, corDenatran: '', lotacao: 5, restricao: 0
     };
   }
 
@@ -106,6 +154,11 @@ export class NfeVeiculoComponent implements OnInit {
           ncm: d.ncm || null,
           meioPagamento: d.meioPagamento || vazio.meioPagamento,
           informacoesComplementares: d.informacoesComplementares || null,
+          indicadorIe: d.indicadorIe || null,
+          cest: d.cest || null,
+          aliquotaInternaDestino: d.aliquotaInternaDestino ?? null,
+          percentualFcpDestino: d.percentualFcpDestino ?? null,
+          veiculoNovo: d.veiculoNovo || null,
           endereco: {
             logradouro: e.logradouro || '', numero: e.numero || '', complemento: e.complemento || '',
             bairro: e.bairro || '', cep: e.cep || '', codigoMunicipio: e.codigoMunicipio || 0,
@@ -194,6 +247,58 @@ export class NfeVeiculoComponent implements OnInit {
         this.recarregar();
       },
       error: async err => { this.enviando = false; this.toast.error(await erroApi(err, 'Não foi possível consultar a Sefaz.')); this.recarregar(); }
+    });
+  }
+
+  rotuloTipo(n: NfeResumo): string {
+    return n.tipo === 'ENTRADA' ? 'Compra' : n.tipo === 'DEVOLUCAO' ? 'Devolução' : 'Venda';
+  }
+
+  abrirDevolucao(n: NfeResumo): void {
+    this.devolvendo = n;
+    this.cancelando = null;
+    this.corrigindo = null;
+    this.enviandoEmail = null;
+  }
+
+  confirmarDevolucao(): void {
+    if (!this.devolvendo) return;
+    this.enviando = true;
+    this.nfe.devolver(this.devolvendo.id).subscribe({
+      next: r => {
+        this.enviando = false;
+        this.devolvendo = null;
+        this.toast.success(`Devolução autorizada (NF-e nº ${r.numero}).`);
+        if (r.motivo?.includes('e-mail')) this.toast.warning(r.motivo);
+        this.recarregar();
+      },
+      error: async err => {
+        this.enviando = false;
+        this.toast.error(await erroApi(err, 'A devolução não foi autorizada.'));
+        this.recarregar();
+      }
+    });
+  }
+
+  abrirEmail(n: NfeResumo): void {
+    this.enviandoEmail = n;
+    this.emailDestino = n.emailEnviadoPara || n.emailCliente || '';
+    this.cancelando = null;
+    this.corrigindo = null;
+    this.devolvendo = null;
+  }
+
+  confirmarEmail(): void {
+    if (!this.enviandoEmail) return;
+    this.enviando = true;
+    this.nfe.enviarEmail(this.enviandoEmail.id, this.emailDestino.trim()).subscribe({
+      next: r => {
+        this.enviando = false;
+        this.enviandoEmail = null;
+        this.toast.success(`XML e DANFE enviados para ${r.emailEnviadoPara}.`);
+        this.recarregar();
+      },
+      error: async err => { this.enviando = false; this.toast.error(await erroApi(err, 'Não foi possível enviar o e-mail.')); }
     });
   }
 

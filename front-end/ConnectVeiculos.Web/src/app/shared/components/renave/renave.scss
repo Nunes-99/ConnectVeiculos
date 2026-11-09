@@ -236,3 +236,8 @@ h4 { margin: 1rem 0 0.5rem; font-size: 0.95rem; color: var(--text-primary); }
   .form-group { margin-bottom: 0.5rem; min-width: 180px; }
   .rnv-link { margin-bottom: 1.1rem; }
 }
+
+.rnv-check {
+  display: flex; align-items: center; gap: 8px; margin: 12px 0;
+  font-size: 14px; color: var(--text-primary); cursor: pointer;
+}

@@ -3,6 +3,9 @@ namespace ConnectVeiculos.Core.Interfaces.Email
     public interface IEmailService
     {
         Task<bool> SendEmailAsync(string to, string subject, string body);
+
+        /// <summary>Envia com anexos (ex.: XML e DANFE da NF-e). False se nao deu.</summary>
+        Task<bool> SendEmailAsync(string to, string subject, string body, IReadOnlyList<EmailAnexo> anexos);
         Task<bool> SendVendaConfirmadaAsync(string to, string compradorNome, string veiculoDescricao, decimal valorVenda);
         Task<bool> SendVendaEstornadaAsync(string to, string compradorNome, string veiculoDescricao);
         Task<bool> SendNovoUsuarioAsync(string to, string usuarioNome, string senhaTemporaria);
@@ -44,4 +47,7 @@ namespace ConnectVeiculos.Core.Interfaces.Email
         public bool Sucesso { get; set; }
         public string? Mensagem { get; set; }
     }
+
+    /// <summary>Arquivo anexado a um e-mail.</summary>
+    public record EmailAnexo(string Nome, byte[] Conteudo, string ContentType);
 }

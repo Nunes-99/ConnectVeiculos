@@ -43,9 +43,10 @@
       <div class="campo form-group">
         <label>Tipo</label>
         <select [(ngModel)]="filtro.tipo" (ngModelChange)="buscar()">
-          <option value="">Compra e venda</option>
+          <option value="">Todos</option>
           <option value="ENTRADA">Compra (entrada)</option>
           <option value="SAIDA">Venda (saída)</option>
+          <option value="DEVOLUCAO">Devolução de venda</option>
         </select>
       </div>
       <div class="campo form-group">
@@ -92,7 +93,7 @@
                   <strong>{{ n.numero }}</strong> <span class="text-muted">série {{ n.serie }}</span>
                   @if (n.ambiente === 'homologacao') { <br /><span class="tag-teste">teste</span> }
                 </td>
-                <td data-label="Tipo">{{ n.tipo === 'SAIDA' ? 'Venda' : 'Compra' }}</td>
+                <td data-label="Tipo">{{ n.tipo === 'SAIDA' ? 'Venda' : n.tipo === 'DEVOLUCAO' ? 'Devolução' : 'Compra' }}</td>
                 <td data-label="Emissão" class="nowrap">{{ n.dataEmissao | date:'dd/MM/yyyy HH:mm' }}</td>
                 <td data-label="Veículo">
                   @if (n.veiculo) { {{ n.veiculo }}<br /><span class="text-muted">{{ n.placa }}</span> }
