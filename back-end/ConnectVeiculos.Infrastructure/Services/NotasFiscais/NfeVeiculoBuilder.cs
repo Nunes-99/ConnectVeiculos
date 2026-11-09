@@ -19,16 +19,33 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
         public static EnviNFe Montar(NfeConfigInfo cfg, NfeEmissaoInput dados, Veiculo veiculo,
             int serie, int numero, int codigoNumerico, DateTime dataEmissao, bool homologacao)
         {
-            var entrada = string.Equals(dados.Tipo, "ENTRADA", StringComparison.OrdinalIgnoreCase);
-            var regra = entrada ? cfg.Compra : cfg.Venda;
+            var devolucao = string.Equals(dados.Tipo, "DEVOLUCAO", StringComparison.OrdinalIgnoreCase);
+            // Devolucao de venda e' uma entrada (o carro volta para a loja).
+            var entrada = devolucao || string.Equals(dados.Tipo, "ENTRADA", StringComparison.OrdinalIgnoreCase);
+            var regra = devolucao ? (cfg.Devolucao ?? RegraDevolucaoPadrao(cfg.Crt)) : entrada ? cfg.Compra : cfg.Venda;
+            var chaveReferenciada = SoDigitos(dados.ChaveReferenciada);
+            if (devolucao && chaveReferenciada.Length != 44)
+                throw new NfeException("Devolução precisa da chave (44 dígitos) da nota de venda devolvida.");
             var ufEmit = Uf(cfg.Uf);
             var ufDest = Uf(dados.Endereco.Uf);
             var interna = ufEmit == ufDest;
             var valor = Math.Round(dados.Valor, 2);
             var documento = SoDigitos(dados.Documento);
-            var naoContribuinte = string.IsNullOrWhiteSpace(dados.InscricaoEstadual);
+            var indIe = IndicadorIe(dados);
+            // Sem inscricao (isento ou nao contribuinte) o cliente e' consumidor final.
+            var consumidorFinal = indIe != IndicadorIEDestinatario.ContribuinteICMS;
 
             var (icms, vBc, vIcms) = MontarIcms(cfg.Crt, regra, valor);
+            var (pis, vPis) = MontarPis(regra.CstPis, regra.AliquotaPis, valor);
+            var (cofins, vCofins) = MontarCofins(regra.CstCofins, regra.AliquotaCofins, valor);
+            var cest = Cest(regra, cfg, dados);
+            var difal = entrada || interna || indIe != IndicadorIEDestinatario.NaoContribuinte || cfg.Crt is 1 or 4
+                ? null
+                : MontarDifal(dados, ufEmit, ufDest, vBc);
+
+            // A base do IBS/CBS, na transicao, desconta os tributos atuais.
+            var deducoes = vIcms + vPis + vCofins + (decimal)(difal?.VICMSUFDest ?? 0) + (decimal)(difal?.VFCPUFDest ?? 0);
+            (IBSCBS Grupo, IBSCBSTot Total)? ibsCbs = cfg.IbsCbsAtivo ? MontarIbsCbs(cfg, regra, valor, deducoes) : null;
 
             var infNfe = new InfNFe
             {
@@ -49,8 +66,9 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
                     TpImp = FormatoImpressaoDANFE.NormalRetrato,
                     TpEmis = TipoEmissao.Normal,
                     TpAmb = homologacao ? TipoAmbiente.Homologacao : TipoAmbiente.Producao,
-                    FinNFe = FinalidadeNFe.Normal,
-                    IndFinal = naoContribuinte ? SimNao.Sim : SimNao.Nao,
+                    FinNFe = devolucao ? FinalidadeNFe.Devolucao : FinalidadeNFe.Normal,
+                    NFref = devolucao ? new List<NFref> { new NFref { RefNFe = chaveReferenciada } } : null,
+                    IndFinal = consumidorFinal ? SimNao.Sim : SimNao.Nao,
                     IndPres = IndicadorPresenca.OperacaoPresencial,
                     ProcEmi = ProcessoEmissao.AplicativoContribuinte,
                     VerProc = "ConnectVeiculos 1.0"
@@ -75,7 +93,7 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
                     IE = SoDigitos(cfg.InscricaoEstadual),
                     CRT = Crt(cfg.Crt)
                 },
-                Dest = MontarDestinatario(dados, documento, ufDest, naoContribuinte, homologacao),
+                Dest = MontarDestinatario(dados, documento, ufDest, indIe, homologacao),
                 Det = new List<Det>
                 {
                     new Det
@@ -87,6 +105,7 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
                             CEAN = "SEM GTIN",
                             XProd = Limitar(DescricaoVeiculo(veiculo), 120),
                             NCM = SoDigitos(string.IsNullOrWhiteSpace(dados.Ncm) ? cfg.NcmPadrao : dados.Ncm),
+                            CEST = cest,
                             CFOP = SoDigitos(interna ? regra.CfopInterno : regra.CfopInterestadual),
                             UCom = "UN",
                             QCom = 1m,
@@ -96,13 +115,16 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
                             UTrib = "UN",
                             QTrib = 1m,
                             VUnTrib = valor,
-                            IndTot = SimNao.Sim
+                            IndTot = SimNao.Sim,
+                            VeicProd = dados.VeiculoNovo == null ? null : MontarVeiculoNovo(dados.VeiculoNovo)
                         },
                         Imposto = new Imposto
                         {
                             ICMS = icms,
-                            PIS = MontarPis(regra.CstPis),
-                            COFINS = MontarCofins(regra.CstCofins)
+                            ICMSUFDest = difal,
+                            PIS = pis,
+                            COFINS = cofins,
+                            IBSCBS = ibsCbs?.Grupo
                         }
                     }
                 },
@@ -112,12 +134,19 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
                     {
                         VBC = (double)vBc,
                         VICMS = (double)vIcms,
+                        VICMSUFDest = difal?.VICMSUFDest ?? 0,
+                        VFCPUFDest = difal?.VFCPUFDest ?? 0,
+                        VICMSUFRemet = 0,
                         VProd = (double)valor,
+                        VPIS = (double)vPis,
+                        VCOFINS = (double)vCofins,
                         VNF = (double)valor
-                    }
+                    },
+                    IBSCBSTot = ibsCbs?.Total
                 },
                 Transp = new Transp { ModFrete = ModalidadeFrete.SemOcorrenciaTransporte },
-                Pag = MontarPagamento(dados.MeioPagamento, valor),
+                // Devolucao nao tem pagamento (regra da Sefaz para finalidade 4).
+                Pag = MontarPagamento(devolucao ? "90" : dados.MeioPagamento, valor),
                 InfAdic = MontarInfAdic(cfg, dados, veiculo),
                 InfRespTec = MontarRespTec(cfg)
             };
@@ -142,7 +171,7 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
             return SemAcento(sb.ToString()).ToUpperInvariant();
         }
 
-        private static Dest MontarDestinatario(NfeEmissaoInput d, string documento, UFBrasil uf, bool naoContribuinte, bool homologacao)
+        private static Dest MontarDestinatario(NfeEmissaoInput d, string documento, UFBrasil uf, IndicadorIEDestinatario indIe, bool homologacao)
         {
             var dest = new Dest
             {
@@ -162,8 +191,9 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
                     XPais = "BRASIL",
                     Fone = Vazio(SoDigitos(d.Telefone))
                 },
-                IndIEDest = naoContribuinte ? IndicadorIEDestinatario.NaoContribuinte : IndicadorIEDestinatario.ContribuinteICMS,
-                IE = naoContribuinte ? null : SoDigitos(d.InscricaoEstadual),
+                IndIEDest = indIe,
+                // Isento e nao contribuinte nao levam IE (regra da Sefaz).
+                IE = indIe == IndicadorIEDestinatario.ContribuinteICMS ? SoDigitos(d.InscricaoEstadual) : null,
                 Email = Vazio(d.Email?.Trim())
             };
             if (documento.Length == 14) dest.CNPJ = documento;
@@ -224,6 +254,8 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
                 }, baseCalculo, imposto),
                 "40" or "41" or "50" =>
                     (new ICMS { ICMS40 = new ICMS40 { Orig = OrigemMercadoria.Nacional, CST = codigo } }, 0m, 0m),
+                // ICMS ja cobrado por substituicao tributaria (carro zero km comprado da montadora).
+                "60" => (new ICMS { ICMS60 = new ICMS60 { Orig = OrigemMercadoria.Nacional, CST = codigo } }, 0m, 0m),
                 "90" when aliquota > 0 => (new ICMS
                 {
                     ICMS90 = new ICMS90
@@ -233,26 +265,226 @@ namespace ConnectVeiculos.Infrastructure.Services.NotasFiscais
                     }
                 }, baseCalculo, imposto),
                 "90" => (new ICMS { ICMS90 = new ICMS90 { Orig = OrigemMercadoria.Nacional, CST = codigo } }, 0m, 0m),
-                _ => throw new NfeException($"CST do ICMS não suportado: '{codigo}'. Use 00, 20, 40, 41, 50 ou 90.")
+                _ => throw new NfeException($"CST do ICMS não suportado: '{codigo}'. Use 00, 20, 40, 41, 50, 60 ou 90.")
             };
         }
 
         private static readonly HashSet<string> CstNaoTributado = new() { "04", "05", "06", "07", "08", "09" };
+        private static readonly HashSet<string> CstTributadoAliquota = new() { "01", "02" };
 
-        private static PIS MontarPis(string cst)
+        /// <summary>
+        /// PIS conforme o CST: 01/02 tributado pela aliquota (lucro presumido ou
+        /// real), 04 a 09 sem incidencia, o resto (49, 99...) no grupo "outras".
+        /// </summary>
+        public static (PIS Pis, decimal Valor) MontarPis(string cst, decimal aliquota, decimal valor)
         {
             cst = (cst ?? "").Trim();
-            return CstNaoTributado.Contains(cst)
-                ? new PIS { PISNT = new PISNT { CST = cst } }
-                : new PIS { PISOutr = new PISOutr { CST = cst, VBC = 0, PPIS = 0, VPIS = 0 } };
+            if (CstNaoTributado.Contains(cst)) return (new PIS { PISNT = new PISNT { CST = cst } }, 0m);
+            if (CstTributadoAliquota.Contains(cst))
+            {
+                var v = Math.Round(valor * aliquota / 100m, 2);
+                return (new PIS { PISAliq = new PISAliq { CST = cst, VBC = (double)valor, PPIS = (double)aliquota, VPIS = (double)v } }, v);
+            }
+            return (new PIS { PISOutr = new PISOutr { CST = cst, VBC = 0, PPIS = 0, VPIS = 0 } }, 0m);
         }
 
-        private static COFINS MontarCofins(string cst)
+        public static (COFINS Cofins, decimal Valor) MontarCofins(string cst, decimal aliquota, decimal valor)
         {
             cst = (cst ?? "").Trim();
-            return CstNaoTributado.Contains(cst)
-                ? new COFINS { COFINSNT = new COFINSNT { CST = cst } }
-                : new COFINS { COFINSOutr = new COFINSOutr { CST = cst, VBC = 0, PCOFINS = 0, VCOFINS = 0 } };
+            if (CstNaoTributado.Contains(cst)) return (new COFINS { COFINSNT = new COFINSNT { CST = cst } }, 0m);
+            if (CstTributadoAliquota.Contains(cst))
+            {
+                var v = Math.Round(valor * aliquota / 100m, 2);
+                return (new COFINS { COFINSAliq = new COFINSAliq { CST = cst, VBC = (double)valor, PCOFINS = (double)aliquota, VCOFINS = (double)v } }, v);
+            }
+            return (new COFINS { COFINSOutr = new COFINSOutr { CST = cst, VBC = 0, PCOFINS = 0, VCOFINS = 0 } }, 0m);
+        }
+
+        /// <summary>
+        /// Situacao do cliente no ICMS. Vazio decide pela inscricao: com IE e'
+        /// contribuinte, sem IE nao contribuinte (o comportamento de antes).
+        /// </summary>
+        public static IndicadorIEDestinatario IndicadorIe(NfeEmissaoInput d)
+        {
+            var temIe = !string.IsNullOrWhiteSpace(SoDigitos(d.InscricaoEstadual));
+            return (d.IndicadorIe ?? "").Trim().ToLowerInvariant() switch
+            {
+                "contribuinte" when !temIe => throw new NfeException("Cliente contribuinte do ICMS precisa da inscrição estadual."),
+                "contribuinte" => IndicadorIEDestinatario.ContribuinteICMS,
+                "isento" => IndicadorIEDestinatario.ContribuinteIsento,
+                "nao_contribuinte" => IndicadorIEDestinatario.NaoContribuinte,
+                "" => temIe ? IndicadorIEDestinatario.ContribuinteICMS : IndicadorIEDestinatario.NaoContribuinte,
+                var x => throw new NfeException($"Situação do cliente no ICMS inválida: '{x}'.")
+            };
+        }
+
+        /// <summary>CSTs/CSOSNs de ICMS por substituicao tributaria: com eles a Sefaz exige o CEST.</summary>
+        private static readonly HashSet<string> CodigosComSt = new() { "10", "30", "60", "70", "201", "202", "203", "500" };
+
+        private static string? Cest(NfeRegraOperacao regra, NfeConfigInfo cfg, NfeEmissaoInput d)
+        {
+            var cest = SoDigitos(string.IsNullOrWhiteSpace(d.Cest) ? cfg.CestPadrao : d.Cest);
+            if (cest.Length is > 0 and not 7) throw new NfeException("CEST deve ter 7 dígitos.");
+            if (CodigosComSt.Contains((regra.CstIcms ?? "").Trim()))
+            {
+                if (cest.Length == 0)
+                    throw new NfeException("ICMS por substituição tributária exige o CEST do veículo. Informe o CEST padrão em Notas fiscais → Configuração (confirme o código com o contador).");
+                return cest;
+            }
+            return cest.Length == 0 ? null : cest;
+        }
+
+        // UFs do Sul e Sudeste, menos o Espirito Santo: de la para o resto do
+        // pais a aliquota interestadual e' 7%; nos outros casos, 12%.
+        private static readonly HashSet<UFBrasil> SulSudesteSemEs = new() { UFBrasil.SP, UFBrasil.RJ, UFBrasil.MG, UFBrasil.PR, UFBrasil.SC, UFBrasil.RS };
+
+        public static decimal AliquotaInterestadual(UFBrasil origem, UFBrasil destino)
+            => SulSudesteSemEs.Contains(origem) && !SulSudesteSemEs.Contains(destino) ? 7m : 12m;
+
+        /// <summary>
+        /// Diferencial de aliquota (EC 87/2015): venda para consumidor final nao
+        /// contribuinte de outro estado por loja do regime normal. A partir de
+        /// 2019 o diferencial e' todo da UF de destino (pICMSInterPart = 100).
+        /// </summary>
+        private static ICMSUFDest MontarDifal(NfeEmissaoInput d, UFBrasil origem, UFBrasil destino, decimal baseCalculo)
+        {
+            if (d.AliquotaInternaDestino is not { } interna || interna <= 0 || interna > 40)
+                throw new NfeException($"Venda para consumidor final de outro estado ({destino}): informe a alíquota interna do ICMS em {destino} para o diferencial de alíquota (DIFAL). Confirme o valor com o contador.");
+            var fcp = Math.Clamp(d.PercentualFcpDestino ?? 0m, 0m, 4m);
+            var inter = AliquotaInterestadual(origem, destino);
+            var vIcms = Math.Max(0m, Math.Round(baseCalculo * (interna - inter) / 100m, 2));
+            var vFcp = Math.Round(baseCalculo * fcp / 100m, 2);
+            return new ICMSUFDest
+            {
+                VBCUFDest = (double)baseCalculo,
+                VBCFCPUFDest = fcp > 0 ? (double)baseCalculo : 0,
+                PFCPUFDest = (double)fcp,
+                PICMSUFDest = (double)interna,
+                PICMSInter = (double)inter,
+                PICMSInterPart = 100,
+                VFCPUFDest = (double)vFcp,
+                VICMSUFDest = (double)vIcms,
+                VICMSUFRemet = 0
+            };
+        }
+
+        /// <summary>Regra de devolucao quando a loja ainda nao configurou a dela.</summary>
+        public static NfeRegraOperacao RegraDevolucaoPadrao(int crt) => new()
+        {
+            NaturezaOperacao = "Devolucao de venda de veiculo",
+            CfopInterno = "1202",
+            CfopInterestadual = "2202",
+            CstIcms = crt is 1 or 4 ? "900" : "90",
+            CstPis = "49",
+            CstCofins = "49"
+        };
+
+        private static readonly HashSet<string> CstIbsCbsComValor = new() { "000", "200" };
+        private static readonly HashSet<string> CstIbsCbsSemValor = new() { "410" };
+
+        /// <summary>
+        /// IBS e CBS da reforma tributaria (NT 2025.002). Na transicao a base e'
+        /// o valor da operacao menos ICMS, PIS e COFINS. CST 200 aplica a
+        /// reducao de aliquota da regra; 410 (imunidade / nao incidencia) vai
+        /// sem valores.
+        /// </summary>
+        public static (IBSCBS Grupo, IBSCBSTot Total) MontarIbsCbs(NfeConfigInfo cfg, NfeRegraOperacao regra, decimal valor, decimal deducoes)
+        {
+            var cst = SoDigitos(regra.CstIbsCbs);
+            var classe = SoDigitos(regra.ClassTribIbsCbs);
+            if (cst.Length != 3 || !(CstIbsCbsComValor.Contains(cst) || CstIbsCbsSemValor.Contains(cst)))
+                throw new NfeException($"CST do IBS/CBS não suportado: '{regra.CstIbsCbs}'. Use 000, 200 ou 410 (confirme com o contador).");
+            if (classe.Length != 6)
+                throw new NfeException("Classificação tributária do IBS/CBS (cClassTrib) deve ter 6 dígitos.");
+
+            var grupo = new IBSCBS { CST = cst, CClassTrib = classe };
+            if (CstIbsCbsSemValor.Contains(cst))
+                return (grupo, TotalIbsCbs(0, 0, 0, 0));
+
+            var reducao = cst == "200" ? Math.Clamp(regra.ReducaoIbsCbs, 0m, 100m) : 0m;
+            if (cst == "200" && reducao <= 0)
+                throw new NfeException("CST 200 do IBS/CBS precisa do percentual de redução da alíquota.");
+            var vBc = Math.Max(0m, Math.Round(valor - deducoes, 2));
+            decimal Efetiva(decimal p) => Math.Round(p * (100m - reducao) / 100m, 4);
+            decimal Valor(decimal p) => Math.Round(vBc * Efetiva(p) / 100m, 2);
+            GRed? Red(decimal p) => reducao > 0 ? new GRed { PRedAliq = (double)reducao, PAliqEfet = (double)Efetiva(p) } : null;
+
+            var vUf = Valor(cfg.AliquotaIbsUf);
+            var vMun = Valor(cfg.AliquotaIbsMun);
+            var vCbs = Valor(cfg.AliquotaCbs);
+            grupo.GIBSCBS = new GIBSCBS
+            {
+                VBC = (double)vBc,
+                GIBSUF = new GIBSUF { PIBSUF = (double)cfg.AliquotaIbsUf, GRed = Red(cfg.AliquotaIbsUf), VIBSUF = (double)vUf },
+                GIBSMun = new GIBSMun { PIBSMun = (double)cfg.AliquotaIbsMun, GRed = Red(cfg.AliquotaIbsMun), VIBSMun = (double)vMun },
+                VIBS = (double)(vUf + vMun),
+                GCBS = new GCBS { PCBS = (double)cfg.AliquotaCbs, GRed = Red(cfg.AliquotaCbs), VCBS = (double)vCbs }
+            };
+            return (grupo, TotalIbsCbs(vBc, vUf, vMun, vCbs));
+        }
+
+        private static IBSCBSTot TotalIbsCbs(decimal vBc, decimal vUf, decimal vMun, decimal vCbs) => new()
+        {
+            VBCIBSCBS = (double)vBc,
+            GIBS = new GIBSTot
+            {
+                GIBSUF = new GIBSUFTot { VDif = 0, VDevTrib = 0, VIBSUF = (double)vUf },
+                GIBSMun = new GIBSMunTot { VDif = 0, VDevTrib = 0, VIBSMun = (double)vMun },
+                VIBS = (double)(vUf + vMun),
+                VCredPres = 0,
+                VCredPresCondSus = 0
+            },
+            GCBS = new GCBSTot { VDif = 0, VDevTrib = 0, VCBS = (double)vCbs, VCredPres = 0, VCredPresCondSus = 0 }
+        };
+
+        /// <summary>Detalhamento de veiculo novo (grupo veicProd), exigido pela Sefaz na venda de zero km.</summary>
+        public static VeicProd MontarVeiculoNovo(NfeVeiculoNovo n)
+        {
+            string Obrig(string? v, string campo, int max)
+            {
+                var t = SemAcento((v ?? "").Trim()).ToUpperInvariant();
+                if (t.Length == 0) throw new NfeException($"Veículo novo: informe {campo}.");
+                if (t.Length > max) throw new NfeException($"Veículo novo: {campo} aceita no máximo {max} caracteres.");
+                return t;
+            }
+            var chassi = Obrig(n.Chassi, "o chassi", 17);
+            if (chassi.Length != 17) throw new NfeException("Veículo novo: o chassi tem 17 caracteres.");
+            if (n.TipoOperacao is < 0 or > 3) throw new NfeException("Veículo novo: tipo de operação inválido.");
+            if (n.Condicao is < 1 or > 3) throw new NfeException("Veículo novo: condição do veículo inválida.");
+            if (n.Restricao is not (0 or 1 or 2 or 3 or 4 or 9)) throw new NfeException("Veículo novo: restrição inválida.");
+            if (n.CodigoMarcaModelo is < 1 or > 999999) throw new NfeException("Veículo novo: informe o código marca/modelo da Denatran (6 dígitos).");
+            if (n.AnoModelo is < 1900 or > 2100 || n.AnoFabricacao is < 1900 or > 2100) throw new NfeException("Veículo novo: informe o ano de fabricação e o ano modelo.");
+            if (n.Lotacao is < 1 or > 999) throw new NfeException("Veículo novo: informe a lotação.");
+            var corDenatran = SoDigitos(n.CorDenatran);
+            if (corDenatran.Length is < 1 or > 2) throw new NfeException("Veículo novo: informe a cor na tabela da Denatran (01 a 16).");
+
+            return new VeicProd
+            {
+                TpOp = (TipoOperacaoVeicNovo)n.TipoOperacao,
+                Chassi = chassi,
+                CCor = Obrig(n.CodigoCor, "o código da cor da montadora", 4),
+                XCor = Obrig(n.DescricaoCor, "a descrição da cor", 40),
+                Pot = Obrig(n.Potencia, "a potência (CV)", 4),
+                Cilin = Obrig(n.Cilindradas, "as cilindradas", 4),
+                PesoL = Obrig(n.PesoLiquido, "o peso líquido", 9),
+                PesoB = Obrig(n.PesoBruto, "o peso bruto", 9),
+                NSerie = Obrig(n.NumeroSerie, "o número de série", 9),
+                TpComb = Obrig(n.TipoCombustivel, "o tipo de combustível (tabela Renavam)", 2),
+                NMotor = Obrig(n.NumeroMotor, "o número do motor", 21),
+                CMT = Obrig(n.CapacidadeTracao, "a capacidade máxima de tração", 9),
+                Dist = Obrig(n.DistanciaEixos, "a distância entre eixos", 4),
+                AnoMod = n.AnoModelo.ToString(CultureInfo.InvariantCulture),
+                AnoFab = n.AnoFabricacao.ToString(CultureInfo.InvariantCulture),
+                TpPint = Obrig(n.TipoPintura, "o tipo de pintura", 1),
+                TpVeic = Obrig(n.TipoVeiculo, "o tipo de veículo (tabela Renavam)", 2),
+                EspVeic = Obrig(n.EspecieVeiculo, "a espécie do veículo", 1),
+                VIN = n.VinRemarcado ? CondicaoVIN.Remarcado : CondicaoVIN.Normal,
+                CondVeic = (CondicaoVeiculo)n.Condicao,
+                CMod = n.CodigoMarcaModelo,
+                CCorDENATRAN = corDenatran.PadLeft(2, '0'),
+                Lota = n.Lotacao,
+                TpRest = (TipoRestricaoVeiculo)n.Restricao
+            };
         }
 
         public static Pag MontarPagamento(string codigo, decimal valor)

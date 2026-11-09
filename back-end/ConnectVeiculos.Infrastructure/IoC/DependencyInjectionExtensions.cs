@@ -627,6 +627,10 @@ namespace ConnectVeiculos.Infrastructure.IoC
                       NfCceData TEXT,
                       NfCceXml TEXT,
                       UNIQUE (NfAmbiente, NfSerie, NfNumero)");
+                // Devolucao (nota referenciada) e envio do XML ao cliente.
+                AddColumnIfNotExists(connection, "NotaFiscal", "NfChaveReferenciada", "TEXT");
+                AddColumnIfNotExists(connection, "NotaFiscal", "NfEmailEnviadoPara", "TEXT");
+                AddColumnIfNotExists(connection, "NotaFiscal", "NfDtEnvioEmail", "TEXT");
                 AddColumnIfNotExists(connection, "NotaFiscal", "NfCceSequencia", "INTEGER NOT NULL DEFAULT 0");
                 AddColumnIfNotExists(connection, "NotaFiscal", "NfCceTexto", "TEXT");
                 AddColumnIfNotExists(connection, "NotaFiscal", "NfCceProtocolo", "TEXT");

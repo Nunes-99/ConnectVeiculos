@@ -28,5 +28,11 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         Task<NfeInutilizacaoInfo> InutilizarAsync(NfeInutilizacaoInput input, CancellationToken ct = default);
         Task<(string Xml, string NomeArquivo)> ObterXmlInutilizacaoAsync(int id, CancellationToken ct = default);
         Task<(byte[] Pdf, string NomeArquivo)> ObterDanfeAsync(int notaId, CancellationToken ct = default);
+
+        /// <summary>NF-e de devolucao de uma venda autorizada (desfaz a venda depois das 24 h do cancelamento).</summary>
+        Task<NfeResumo> EmitirDevolucaoAsync(int notaVendaId, NfeEmissaoInput? ajustes, CancellationToken ct = default);
+
+        /// <summary>Manda XML e DANFE ao cliente pela conta de e-mail da loja.</summary>
+        Task<NfeResumo> EnviarEmailAsync(int notaId, string? email, CancellationToken ct = default);
     }
 }

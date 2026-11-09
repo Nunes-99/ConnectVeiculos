@@ -92,6 +92,22 @@ namespace ConnectVeiculos.API.Controllers
         public Task<IActionResult> XmlCartaCorrecao(int notaId, CancellationToken ct)
             => Arquivo(() => _nfe.ObterXmlCartaCorrecaoAsync(notaId, ct));
 
+        /// <summary>Devolucao de uma venda autorizada; corpo opcional ajusta os dados do cliente.</summary>
+        [HttpPost("{notaId:int}/devolucao")]
+        public Task<IActionResult> Devolucao(int notaId,
+            [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] NfeEmissaoInput? ajustes,
+            CancellationToken ct)
+            => Executar(() => _nfe.EmitirDevolucaoAsync(notaId, ajustes, ct));
+
+        public class EmailInput
+        {
+            public string? Email { get; set; }
+        }
+
+        [HttpPost("{notaId:int}/email")]
+        public Task<IActionResult> EnviarEmail(int notaId, [FromBody] EmailInput input, CancellationToken ct)
+            => Executar(() => _nfe.EnviarEmailAsync(notaId, input.Email, ct));
+
         [HttpGet("inutilizacoes")]
         public async Task<IActionResult> Inutilizacoes(CancellationToken ct) => Ok(await _nfe.ListarInutilizacoesAsync(ct));
 

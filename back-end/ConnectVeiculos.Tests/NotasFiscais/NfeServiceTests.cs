@@ -8,6 +8,7 @@ using ConnectVeiculos.Core.Interfaces.Database.Repositories.Vendas;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Configuracoes;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.NotasFiscais;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Veiculos;
+using ConnectVeiculos.Core.Interfaces.Email;
 using ConnectVeiculos.Core.Interfaces.Services;
 using ConnectVeiculos.Core.Interfaces.Tenancy;
 using ConnectVeiculos.Core.NotasFiscais;
@@ -83,6 +84,8 @@ namespace ConnectVeiculos.Tests.NotasFiscais
             public readonly Queue<Func<string, NfeRetornoConsulta>> Consultas = new();
             public readonly List<string> Consultadas = new();
             public int Assinadas;
+            /// <summary>Autoriza devolvendo um nfeProc de verdade (para gerar o DANFE).</summary>
+            public bool ProcReal;
 
             public NfeRetornoAutorizacao Autorizar(EnviNFe xml, X509Certificate2 certificado, Action<string> assinada)
             {
@@ -95,7 +98,16 @@ namespace ConnectVeiculos.Tests.NotasFiscais
 
                 Enviadas.Add(xml);
                 if (FalhaNoEnvio is { } falha) { FalhaNoEnvio = null; throw falha; }
-                return Respostas.Count > 0 ? Respostas.Dequeue() : Autorizada();
+                if (Respostas.Count > 0) return Respostas.Dequeue();
+                var r = Autorizada();
+                if (ProcReal)
+                {
+                    var chave = xml.NFe[0].InfNFeField.Chave;
+                    r.XmlProc = NfeSefazUnimake.MontarProc(
+                        autorizacao.ConteudoXMLAssinado.GetElementsByTagName("NFe")[0]!.OuterXml,
+                        $"<protNFe xmlns=\"http://www.portalfiscal.inf.br/nfe\" versao=\"4.00\"><infProt><tpAmb>2</tpAmb><chNFe>{chave}</chNFe><nProt>135260000000123</nProt><cStat>100</cStat></infProt></protNFe>");
+                }
+                return r;
             }
 
             public NfeRetornoConsulta Consultar(string chave, bool homologacao, X509Certificate2 certificado)
@@ -147,6 +159,7 @@ namespace ConnectVeiculos.Tests.NotasFiscais
         private readonly Mock<IRenaveService> _renave = new();
         private readonly Mock<IVendaRepository> _vendas = new();
         private readonly Mock<IVeiculoRenaveRepository> _registrosRenave = new();
+        private readonly Mock<IEmailService> _email = new();
 
         /// <summary>IBGE falso: devolve sempre os mesmos municipios.</summary>
         private sealed class IbgeFalso : HttpMessageHandler
@@ -179,7 +192,7 @@ namespace ConnectVeiculos.Tests.NotasFiscais
 
             _service = new NfeService(_config, _notas, veiculos.Object, _vendas.Object, _registrosRenave.Object,
                 cert.Object, _sefaz, _renave.Object, tenant.Object,
-                new HttpClient(new IbgeFalso()), NullLogger<NfeService>.Instance);
+                new HttpClient(new IbgeFalso()), NullLogger<NfeService>.Instance, _email.Object);
         }
 
         private Task ConfigurarAsync(int proximoNumero = 10)
@@ -210,8 +223,12 @@ namespace ConnectVeiculos.Tests.NotasFiscais
         {
             await _service.Invoking(s => s.ListarAsync(new NfeFiltro { De = new DateTime(2026, 11, 3), Ate = new DateTime(2026, 11, 1) }))
                 .Should().ThrowAsync<NfeException>().WithMessage("*data inicial*");
-            await _service.Invoking(s => s.ListarAsync(new NfeFiltro { Tipo = "devolucao" }))
+            await _service.Invoking(s => s.ListarAsync(new NfeFiltro { Tipo = "transferencia" }))
                 .Should().ThrowAsync<NfeException>();
+
+            // Devolucao virou tipo valido no filtro.
+            await _service.ListarAsync(new NfeFiltro { Tipo = "devolucao" });
+            _notas.UltimoFiltro!.Tipo.Should().Be(NotaFiscal.Devolucao);
         }
 
         [Fact]
@@ -661,6 +678,94 @@ namespace ConnectVeiculos.Tests.NotasFiscais
             nova.Status.Should().Be(NotaFiscal.StatusAutorizada);
             nova.Numero.Should().Be(3);
             _sefaz.Assinadas.Should().Be(3);
+        }
+
+        [Fact]
+        public async Task Devolucao_Desfaz_A_Venda_E_Libera_Uma_Nova_Venda()
+        {
+            await ConfigurarAsync(proximoNumero: 1);
+            var venda = await _service.EmitirAsync(42, NfeVeiculoBuilderTests.Venda());
+            (await _service.ListarDoVeiculoAsync(42)).Single().PodeDevolver.Should().BeTrue();
+
+            var devolucao = await _service.EmitirDevolucaoAsync(venda.Id, null);
+
+            devolucao.Status.Should().Be(NotaFiscal.StatusAutorizada);
+            devolucao.Tipo.Should().Be(NotaFiscal.Devolucao);
+            devolucao.ChaveReferenciada.Should().Be(venda.Chave);
+            devolucao.Valor.Should().Be(venda.Valor);
+            var enviada = _sefaz.Enviadas.Last().NFe[0].InfNFeField;
+            enviada.Ide.FinNFe.Should().Be(FinalidadeNFe.Devolucao);
+            enviada.Ide.NFref[0].RefNFe.Should().Be(venda.Chave);
+
+            var lista = await _service.ListarDoVeiculoAsync(42);
+            lista.Single(n => n.Id == venda.Id).PodeDevolver.Should().BeFalse();
+
+            // A venda devolvida nao impede vender o carro de novo.
+            var nova = await _service.EmitirAsync(42, NfeVeiculoBuilderTests.Venda());
+            nova.Status.Should().Be(NotaFiscal.StatusAutorizada);
+
+            var deNovo = () => _service.EmitirDevolucaoAsync(venda.Id, null);
+            await deNovo.Should().ThrowAsync<NfeException>().WithMessage("*já foi devolvida*");
+        }
+
+        [Fact]
+        public async Task So_Devolve_Venda_Autorizada()
+        {
+            await ConfigurarAsync();
+            var compra = NfeVeiculoBuilderTests.Venda();
+            compra.Tipo = "ENTRADA";
+            compra.MeioPagamento = "90";
+            var nCompra = await _service.EmitirAsync(42, compra);
+
+            var acao = () => _service.EmitirDevolucaoAsync(nCompra.Id, null);
+
+            await acao.Should().ThrowAsync<NfeException>().WithMessage("*venda autorizada*");
+        }
+
+        [Fact]
+        public async Task Envia_Xml_E_Danfe_Ao_Cliente_E_Registra_O_Envio()
+        {
+            await ConfigurarAsync();
+            _sefaz.ProcReal = true;
+            var nota = await _service.EmitirAsync(42, NfeVeiculoBuilderTests.Venda());
+            IReadOnlyList<EmailAnexo>? anexos = null;
+            _email.Setup(e => e.SendEmailAsync("joao@exemplo.com", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyList<EmailAnexo>>()))
+                  .Callback((string _, string _, string _, IReadOnlyList<EmailAnexo> a) => anexos = a)
+                  .ReturnsAsync(true);
+
+            // Sem e-mail informado usa o que veio na emissao.
+            var r = await _service.EnviarEmailAsync(nota.Id, null);
+
+            r.EmailEnviadoPara.Should().Be("joao@exemplo.com");
+            r.EmailEnviadoEm.Should().NotBeNull();
+            anexos!.Select(a => a.ContentType).Should().BeEquivalentTo("application/xml", "application/pdf");
+            anexos!.First(a => a.ContentType == "application/xml").Nome.Should().EndWith("-procNFe.xml");
+        }
+
+        [Fact]
+        public async Task Sem_Conta_De_Email_Avisa_E_Nao_Registra()
+        {
+            await ConfigurarAsync();
+            _sefaz.ProcReal = true;
+            var nota = await _service.EmitirAsync(42, NfeVeiculoBuilderTests.Venda());
+            _email.Setup(e => e.SendEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyList<EmailAnexo>>()))
+                  .ReturnsAsync(false);
+
+            var acao = () => _service.EnviarEmailAsync(nota.Id, "cliente@exemplo.com");
+
+            await acao.Should().ThrowAsync<NfeException>().WithMessage("*Integrações → E-mail*");
+            _notas.Itens.Single().NfEmailEnviadoPara.Should().BeNull();
+        }
+
+        [Fact]
+        public async Task Em_Testes_Nao_Manda_Email_Sozinho_Ao_Cliente()
+        {
+            await ConfigurarAsync();
+            _sefaz.ProcReal = true;
+
+            await _service.EmitirAsync(42, NfeVeiculoBuilderTests.Venda());
+
+            _email.Verify(e => e.SendEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyList<EmailAnexo>>()), Times.Never);
         }
 
         [Fact]
