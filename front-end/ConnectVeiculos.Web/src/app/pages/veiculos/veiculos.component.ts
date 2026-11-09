@@ -1,4 +1,4 @@
-import { Component, HostListener, inject, OnInit } from '@angular/core';
+import { Component, HostListener, inject, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { VeiculoService, LojaService, CategoriaService, ImagemService, VeiculoImagem, ToastService, FipeService, FipeMarca, FipeModelo, AuthService } from '../../core/services';
@@ -25,7 +25,7 @@ import * as XLSX from 'xlsx';
   templateUrl: './veiculos.component.html',
   styleUrl: './veiculos.component.scss'
 })
-export class VeiculosComponent implements OnInit {
+export class VeiculosComponent implements OnInit, OnDestroy {
   private veiculoService = inject(VeiculoService);
   private lojaService = inject(LojaService);
   private categoriaService = inject(CategoriaService);
@@ -43,6 +43,8 @@ export class VeiculosComponent implements OnInit {
   metaFlags: MetaFeatureFlags = { instagramEnabled: false, appConfigured: false, appId: '', developmentMode: false };
   // Set de veiculoId em publicacao no momento (pra desabilitar o botao durante request).
   publicandoStory = new Set<number>();
+  // Posts manuais em segundo plano, chave "rede:veiculoId".
+  publicandoPost = new Set<string>();
   // Janelas de publicar: legenda editavel (post) e escolha do layout (story).
   postModal: { veiculo: Veiculo; rede: 'instagram' | 'facebook' } | null = null;
   storyModal: Veiculo | null = null;
@@ -383,9 +385,41 @@ export class VeiculosComponent implements OnInit {
     this.postModal = { veiculo, rede: 'facebook' };
   }
 
-  aoPublicarPost(): void {
+  // O servidor publica em segundo plano (leva ~1 min, mais que o nginx
+  // espera). A lista pergunta o andamento ate sair e entao mostra o selo,
+  // ou o motivo se nao deu certo.
+  private acompanhamentos: ReturnType<typeof setTimeout>[] = [];
+
+  aoAgendarPost(veiculo: Veiculo, rede: 'instagram' | 'facebook'): void {
     this.postModal = null;
-    this.loadData();
+    const chave = `${rede}:${veiculo.veiId}`;
+    this.publicandoPost.add(chave);
+    const nome = rede === 'instagram' ? 'Instagram' : 'Facebook';
+    const inicio = Date.now();
+    const conferir = () => {
+      this.integracaoService.situacaoPostManual(rede, veiculo.veiId).subscribe({
+        next: s => {
+          if (s.estado === 'publicando' && Date.now() - inicio < 240_000) {
+            this.acompanhamentos.push(setTimeout(conferir, 5000));
+            return;
+          }
+          this.publicandoPost.delete(chave);
+          if (s.estado === 'publicado') this.toast.success(`${veiculo.veiMarca} ${veiculo.veiModelo}: ${s.mensagem}`);
+          else if (s.estado === 'falhou') this.toast.error(s.mensagem);
+          else this.toast.warning(`A publicação no ${nome} está demorando. Confira em alguns minutos.`);
+          this.loadData();
+        },
+        error: () => {
+          this.publicandoPost.delete(chave);
+          this.loadData();
+        }
+      });
+    };
+    this.acompanhamentos.push(setTimeout(conferir, 5000));
+  }
+
+  ngOnDestroy(): void {
+    this.acompanhamentos.forEach(t => clearTimeout(t));
   }
 
   corDaLoja(veiculo: Veiculo): string | undefined {

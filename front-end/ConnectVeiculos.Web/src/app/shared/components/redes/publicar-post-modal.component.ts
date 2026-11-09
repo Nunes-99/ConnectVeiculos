@@ -70,7 +70,8 @@ export class PublicarPostModalComponent implements OnInit, OnDestroy {
   @Input() veiculoNome = '';
   @Input({ required: true }) rede!: RedeSocial;
   @Output() fechar = new EventEmitter<void>();
-  @Output() publicado = new EventEmitter<{ url: string; mensagem: string }>();
+  /** O servidor aceitou: a publicacao segue em segundo plano. */
+  @Output() agendado = new EventEmitter<string>();
 
   @ViewChild('campo') campo?: ElementRef<HTMLTextAreaElement>;
 
@@ -150,8 +151,8 @@ export class PublicarPostModalComponent implements OnInit, OnDestroy {
     req.subscribe({
       next: r => {
         this.publicando = false;
-        this.toast.success(r?.mensagem || 'Publicado!');
-        this.publicado.emit({ url: r.url, mensagem: r.mensagem });
+        this.toast.info(r?.mensagem || 'Publicando… o selo aparece na lista quando terminar.');
+        this.agendado.emit(this.rede);
       },
       // O httpErrorInterceptor ja mostra o motivo que o servidor mandou.
       error: () => this.publicando = false

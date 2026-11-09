@@ -1318,77 +1318,54 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
             return r.Sucesso ? Ok(r) : StatusCode(502, r);
         }
 
-        // Publica um veiculo manualmente — ignora flag auto-post mas respeita
-        // demais restricoes (credenciais, rate limit 25/24h, sem imagens, etc).
-        // Se ja existe publicacao ATIVA pra este veiculo, marca a anterior como
-        // REMOVIDA antes de criar a nova (republicacao manual).
+        // Botoes "Publicar no Instagram / Facebook" da lista de veiculos. O post
+        // com capa e varias fotos leva mais que os 60s do nginx: o painel dava
+        // erro enquanto o post saia, e quem clicava de novo publicava em dobro.
+        // Confere o que da na hora, responde 202 e publica em segundo plano; o
+        // painel acompanha por GET redes/post-manual/{rede}/{veiculoId}.
+        // Republicar marca a publicacao ATIVA anterior como REMOVIDA.
         [HttpPost("instagram/publicar/{veiculoId}")]
         [Authorize(Roles = "Administrador,Gerente")]
-        public async Task<IActionResult> PublicarVeiculoInstagram(
-            [FromServices] IInstagramPostService ig,
-            [FromServices] IVeiculoPublicacaoRepository pubRepo,
+        public Task<IActionResult> PublicarVeiculoInstagram(
+            [FromServices] IPostManualService posts,
             [FromServices] IRedesPersonalizacaoService personalizacao,
+            [FromServices] ITenantBackgroundRunner backgroundRunner,
             int veiculoId,
             [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] PublicarPostInput? input)
-        {
-            var (modelo, erro) = await LegendaDaPublicacaoAsync(personalizacao, "instagram", input?.Legenda);
-            if (erro != null) return BadRequest(new { error = erro });
-
-            var r = await ig.PublicarManualAsync(veiculoId, modelo);
-            if (r == null)
-            {
-                // Conexao com a Meta caida e' o motivo que o lojista consegue
-                // resolver sozinho: confere antes de cair no texto generico.
-                var teste = await ig.TestarAsync();
-                return StatusCode(502, new { error = teste.Sucesso
-                    ? "Falha ao publicar. Verifique: imagens, URL HTTPS, rate limit 25/24h. Veja logs pro motivo exato."
-                    : teste.Mensagem });
-            }
-
-            var existente = await pubRepo.GetAtivaByVeiculoEPlataformaAsync(veiculoId, "Instagram");
-            if (existente != null)
-            {
-                existente.Remover();
-                await pubRepo.UpdateAsync(existente);
-            }
-            var publicacaoIg = new VeiculoPublicacao(veiculoId, "Instagram", r.ExternoId, r.Url);
-            publicacaoIg.DefinirLegenda(modelo);
-            await pubRepo.CreateAsync(publicacaoIg);
-            return Ok(new { externoId = r.ExternoId, url = r.Url, mensagem = "Publicado no Instagram!" });
-        }
+            => PublicarPostManualAsync(posts, personalizacao, backgroundRunner, "instagram", veiculoId, input?.Legenda);
 
         [HttpPost("facebook/page-publicar/{veiculoId}")]
         [Authorize(Roles = "Administrador,Gerente")]
-        public async Task<IActionResult> PublicarVeiculoFacebookPage(
-            [FromServices] IFacebookPagePostService fp,
-            [FromServices] IVeiculoPublicacaoRepository pubRepo,
+        public Task<IActionResult> PublicarVeiculoFacebookPage(
+            [FromServices] IPostManualService posts,
             [FromServices] IRedesPersonalizacaoService personalizacao,
+            [FromServices] ITenantBackgroundRunner backgroundRunner,
             int veiculoId,
             [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] PublicarPostInput? input)
+            => PublicarPostManualAsync(posts, personalizacao, backgroundRunner, "facebook", veiculoId, input?.Legenda);
+
+        [HttpGet("redes/post-manual/{rede}/{veiculoId}")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public IActionResult SituacaoPostManual([FromServices] IPostManualService posts, string rede, int veiculoId)
         {
-            var (modelo, erro) = await LegendaDaPublicacaoAsync(personalizacao, "facebook", input?.Legenda);
+            var s = posts.Situacao(veiculoId, rede);
+            return s == null ? NotFound(new { error = "Nenhuma publicação em andamento." }) : Ok(s);
+        }
+
+        private async Task<IActionResult> PublicarPostManualAsync(
+            IPostManualService posts, IRedesPersonalizacaoService personalizacao,
+            ITenantBackgroundRunner backgroundRunner, string rede, int veiculoId, string? legenda)
+        {
+            var (modelo, erro) = await LegendaDaPublicacaoAsync(personalizacao, rede, legenda);
             if (erro != null) return BadRequest(new { error = erro });
 
-            var r = await fp.PublicarManualAsync(veiculoId, modelo);
-            if (r == null)
-            {
-                // Ver PublicarVeiculoInstagram.
-                var teste = await fp.TestarAsync();
-                return StatusCode(502, new { error = teste.Sucesso
-                    ? "Falha ao publicar na Page. Verifique: imagens, URL HTTPS. Veja logs pro motivo exato."
-                    : teste.Mensagem });
-            }
+            var r = await posts.PrepararAsync(veiculoId, rede);
+            if (r.Estado == PostManualSituacao.Falhou) return UnprocessableEntity(new { error = r.Mensagem });
 
-            var existente = await pubRepo.GetAtivaByVeiculoEPlataformaAsync(veiculoId, "FacebookPage");
-            if (existente != null)
-            {
-                existente.Remover();
-                await pubRepo.UpdateAsync(existente);
-            }
-            var publicacaoFb = new VeiculoPublicacao(veiculoId, "FacebookPage", r.ExternoId, r.Url);
-            publicacaoFb.DefinirLegenda(modelo);
-            await pubRepo.CreateAsync(publicacaoFb);
-            return Ok(new { externoId = r.ExternoId, url = r.Url, mensagem = "Publicado na Facebook Page!" });
+            backgroundRunner.Enqueue<IPostManualService>(
+                p => p.PublicarAsync(veiculoId, rede, modelo),
+                $"post manual {rede} do veiculo {veiculoId}");
+            return Accepted(r);
         }
 
         // ----- Stories (Instagram + Facebook Page) -----
