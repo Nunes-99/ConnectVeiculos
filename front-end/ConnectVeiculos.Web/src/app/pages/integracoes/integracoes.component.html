@@ -1280,6 +1280,15 @@
           }
         </div>
 
+        <!-- Legenda, capa (primeira imagem) e layout do story. Vazio = padrao do
+             sistema; ver RedesPersonalizacaoService. -->
+        <div class="info-block">
+          <h4><span class="material-icons">brush</span> 4. Legendas, capa e layout</h4>
+          <p>Deixe os posts e stories com a cara da loja: escreva a legenda, envie a primeira imagem e escolha um dos 10 layouts do story. O que você não mudar sai no padrão do sistema.</p>
+          <app-personalizar-redes [layout]="storyConfig.layout" [cor]="lojaPadraoCor"
+                                  (layoutChange)="setStoryLayout($event)" />
+        </div>
+
         <!-- Facebook Catalog (Vehicle Ads pago) — OCULTO.
              O interruptor nao liga nada: depende de Catalog ID + Token que nunca
              foram configurados, e o proprio card avisava que "toggle nao tera

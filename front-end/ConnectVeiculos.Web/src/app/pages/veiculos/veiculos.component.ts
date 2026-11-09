@@ -14,12 +14,14 @@ import { PaginationComponent, ConfirmModalComponent } from '../../shared/compone
 import { ScannerDocumentoComponent, CrlvExtraido } from '../../shared/components/scanner-documento/scanner-documento.component';
 import { getDetranLink, DetranLink } from '../../shared/utils/detran-links.util';
 import { ContratoVeiculoComponent } from '../../shared/components/contratos/contrato-veiculo.component';
+import { PublicarPostModalComponent } from '../../shared/components/redes/publicar-post-modal.component';
+import { PublicarStoryModalComponent } from '../../shared/components/redes/publicar-story-modal.component';
 import * as XLSX from 'xlsx';
 
 @Component({
   selector: 'app-veiculos',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaskDirective, CurrencyMaskDirective, PaginationComponent, ConfirmModalComponent, ScannerDocumentoComponent, SalvandoDirective, RenaveVeiculoComponent, NfeVeiculoComponent, ContratoVeiculoComponent, WebmotorsVeiculoComponent, NapistaVeiculoComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaskDirective, CurrencyMaskDirective, PaginationComponent, ConfirmModalComponent, ScannerDocumentoComponent, SalvandoDirective, RenaveVeiculoComponent, NfeVeiculoComponent, ContratoVeiculoComponent, WebmotorsVeiculoComponent, NapistaVeiculoComponent, PublicarPostModalComponent, PublicarStoryModalComponent],
   templateUrl: './veiculos.component.html',
   styleUrl: './veiculos.component.scss'
 })
@@ -40,9 +42,10 @@ export class VeiculosComponent implements OnInit {
   // enquanto App Meta nao tiver Business Verification + App Review.
   metaFlags: MetaFeatureFlags = { instagramEnabled: false, appConfigured: false, appId: '', developmentMode: false };
   // Set de veiculoId em publicacao no momento (pra desabilitar o botao durante request).
-  publicandoIg = new Set<number>();
-  publicandoFb = new Set<number>();
   publicandoStory = new Set<number>();
+  // Janelas de publicar: legenda editavel (post) e escolha do layout (story).
+  postModal: { veiculo: Veiculo; rede: 'instagram' | 'facebook' } | null = null;
+  storyModal: Veiculo | null = null;
 
 
   veiculos: Veiculo[] = [];
@@ -308,24 +311,20 @@ export class VeiculosComponent implements OnInit {
   private readonly COR_APAGADA = '#c9ced6';
 
   corInstagram(veiculo: Veiculo): string {
-    if (this.publicandoIg.has(veiculo.veiId)) return this.COR_APAGADA;
     return veiculo.publicacaoInstagramUrl ? '#E1306C' : this.COR_APAGADA;
   }
 
   corFacebook(veiculo: Veiculo): string {
-    if (this.publicandoFb.has(veiculo.veiId)) return this.COR_APAGADA;
     return veiculo.publicacaoFacebookUrl ? '#1877F2' : this.COR_APAGADA;
   }
 
   tituloInstagram(veiculo: Veiculo): string {
-    if (this.publicandoIg.has(veiculo.veiId)) return 'Publicando no Instagram…';
     if (veiculo.publicacaoInstagramUrl)
       return `Publicado no Instagram${this.quando(veiculo.publicacaoInstagramEm)} — clique para ver o post`;
     return 'Publicar no Instagram';
   }
 
   tituloFacebook(veiculo: Veiculo): string {
-    if (this.publicandoFb.has(veiculo.veiId)) return 'Publicando no Facebook…';
     if (veiculo.publicacaoFacebookUrl)
       return `Publicado no Facebook${this.quando(veiculo.publicacaoFacebookEm)} — clique para ver o post`;
     return 'Publicar na Página do Facebook';
@@ -365,14 +364,15 @@ export class VeiculosComponent implements OnInit {
     return ` em ${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
   }
 
-  // Ja publicado: abre o post. Ainda nao: publica. O mesmo icone serve pros dois
-  // casos porque publicar duas vezes o mesmo carro e sempre engano.
+  // Ja publicado: abre o post. Ainda nao: abre a janela de publicar, com a
+  // legenda da loja para ajustar. O mesmo icone serve pros dois casos porque
+  // publicar duas vezes o mesmo carro e sempre engano.
   acaoInstagram(veiculo: Veiculo): void {
     if (veiculo.publicacaoInstagramUrl) {
       window.open(veiculo.publicacaoInstagramUrl, '_blank', 'noopener');
       return;
     }
-    this.publicarNoInstagram(veiculo.veiId);
+    this.postModal = { veiculo, rede: 'instagram' };
   }
 
   acaoFacebook(veiculo: Veiculo): void {
@@ -380,55 +380,34 @@ export class VeiculosComponent implements OnInit {
       window.open(veiculo.publicacaoFacebookUrl, '_blank', 'noopener');
       return;
     }
-    this.publicarNaFacebookPage(veiculo.veiId);
+    this.postModal = { veiculo, rede: 'facebook' };
   }
 
-  publicarNoInstagram(veiculoId: number): void {
-    if (this.publicandoIg.has(veiculoId)) return;
-    this.publicandoIg.add(veiculoId);
-    this.integracaoService.publicarVeiculoInstagram(veiculoId).subscribe({
-      next: (r) => {
-        this.publicandoIg.delete(veiculoId);
-        this.toast.success(r?.mensagem || 'Publicado no Instagram!');
-        this.loadData();
-      },
-      // O httpErrorInterceptor ja mostra a mensagem do servidor. Mostrar outra
-      // aqui saia em dobro: o erro chega como Error, sem err.error, e caia
-      // sempre no texto generico por cima do motivo real.
-      error: () => this.publicandoIg.delete(veiculoId)
-    });
+  aoPublicarPost(): void {
+    this.postModal = null;
+    this.loadData();
   }
 
-  publicarNaFacebookPage(veiculoId: number): void {
-    if (this.publicandoFb.has(veiculoId)) return;
-    this.publicandoFb.add(veiculoId);
-    this.integracaoService.publicarVeiculoFacebookPage(veiculoId).subscribe({
-      next: (r) => {
-        this.publicandoFb.delete(veiculoId);
-        this.toast.success(r?.mensagem || 'Publicado na Page Facebook!');
-        this.loadData();
-      },
-      // Mensagem de erro: ver publicarNoInstagram.
-      error: () => this.publicandoFb.delete(veiculoId)
-    });
+  corDaLoja(veiculo: Veiculo): string | undefined {
+    return this.lojas.find(l => l.lojId === veiculo.r_LojId)?.lojCorPrimaria;
   }
 
   // Story some em 24h, entao o botao nao vira "abrir": publicar de novo o
   // mesmo carro e' uso normal. Vendido sai com a arte de VENDIDO, sem preco.
+  // A janela deixa escolher o layout so para este carro.
   publicarStory(veiculo: Veiculo): void {
     if (this.publicandoStory.has(veiculo.veiId)) return;
+    this.storyModal = veiculo;
+  }
+
+  /** O servidor conferiu e agendou; a publicacao leva ~2 min. */
+  aoAgendarStory(veiculo: Veiculo): void {
+    this.storyModal = null;
     this.publicandoStory.add(veiculo.veiId);
-    this.integracaoService.publicarStory(veiculo.veiId).subscribe({
-      // O servidor so confere e agenda; a publicacao leva ~2 min. Recarrega
-      // depois disso para o icone ficar colorido sem o usuario atualizar.
-      next: (r) => {
-        this.publicandoStory.delete(veiculo.veiId);
-        this.toast.success(r?.mensagem || 'Publicando o story. Em cerca de 2 minutos estará no ar.');
-        setTimeout(() => this.loadData(), 150_000);
-      },
-      // Mensagem de erro: ver publicarNoInstagram.
-      error: () => this.publicandoStory.delete(veiculo.veiId)
-    });
+    setTimeout(() => {
+      this.publicandoStory.delete(veiculo.veiId);
+      this.loadData();
+    }, 150_000);
   }
 
   // Compartilhamento manual: gera JPG composto (1080x1080 com preco/marca em

@@ -174,7 +174,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Publicacoes
             {
                 var fb = await _publicacaoRepository.GetAtivaByVeiculoEPlataformaAsync(veiculoId, "FacebookPage");
                 if (fb != null)
-                    await _facebookPagePostService.AtualizarLegendaDoPostAsync(fb.PubExternoId, veiculoId, novoStatus);
+                    await _facebookPagePostService.AtualizarLegendaDoPostAsync(fb.PubExternoId, veiculoId, novoStatus, fb.PubLegenda);
             }
             catch (Exception ex) { _logger.LogError(ex, "Erro ao marcar post do Facebook do veiculo {VeiculoId}", veiculoId); }
 
@@ -249,7 +249,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Publicacoes
             {
                 var fb = await _publicacaoRepository.GetAtivaByVeiculoEPlataformaAsync(veiculoId, "FacebookPage");
                 if (fb != null)
-                    await _facebookPagePostService.AtualizarLegendaDoPostAsync(fb.PubExternoId, veiculoId, "D");
+                    await _facebookPagePostService.AtualizarLegendaDoPostAsync(fb.PubExternoId, veiculoId, "D", fb.PubLegenda);
                 else
                     await PublicarFacebookPageAsync(veiculoId);
             }
@@ -263,7 +263,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Publicacoes
                 var fb = await _publicacaoRepository.GetAtivaByVeiculoEPlataformaAsync(veiculoId, "FacebookPage");
                 if (fb == null) return;
 
-                await _facebookPagePostService.AtualizarLegendaDoPostAsync(fb.PubExternoId, veiculoId, statusVeiculo);
+                await _facebookPagePostService.AtualizarLegendaDoPostAsync(fb.PubExternoId, veiculoId, statusVeiculo, fb.PubLegenda);
             }
             catch (Exception ex)
             {

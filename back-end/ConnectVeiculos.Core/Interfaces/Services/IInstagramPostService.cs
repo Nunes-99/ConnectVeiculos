@@ -41,8 +41,10 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         /// Variante manual: publica mesmo se auto-post estiver desabilitado.
         /// Respeita demais restricoes (credenciais, imagens, rate limit).
         /// Usado pelo endpoint "Publicar agora" na tela de veiculos.
+        /// <paramref name="modeloLegenda"/> e' a legenda editada na hora (pode
+        /// ter variaveis); nula usa o modelo da loja.
         /// </summary>
-        Task<PublicacaoResult?> PublicarManualAsync(int veiculoId);
+        Task<PublicacaoResult?> PublicarManualAsync(int veiculoId, string? modeloLegenda = null);
 
         /// <summary>
         /// Publica uma imagem 9:16 ja pronta como story. Divide com o feed o

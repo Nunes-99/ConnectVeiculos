@@ -5,6 +5,7 @@ import { CredereService } from '../../core/services/credere.service';
 import { isPlatformBrowser } from '@angular/common';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { PersonalizarRedesComponent } from '../../shared/components/redes/personalizar-redes.component';
 import { IntegracaoService, DominioProprioInfo, MercadoLivreContaInfo, MercadoLivreSincronizacaoResult, WhatsAppConfigInfo, EmailConfigInfo, FacebookConfigInfo, GoogleMerchantConfigInfo, TestIntegracaoResult, MetaConnectionInfo, MetaPageOption, FacebookPagePostConfigInfo, InstagramPostConfigInfo, MetaFeatureFlags, StoryConfigInfo, StoryConfigInput } from '../../core/services/integracao.service';
 import { AuthService, LojaService, ToastService } from '../../core/services';
 import { RenaveConfigComponent } from '../../shared/components/renave/renave-config.component';
@@ -37,7 +38,7 @@ interface ItemIntegracao {
 @Component({
   selector: 'app-integracoes',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, ConfirmModalComponent, WebmotorsConfigComponent, NapistaConfigComponent, RenaveConfigComponent, CredereConfigComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, ConfirmModalComponent, WebmotorsConfigComponent, NapistaConfigComponent, RenaveConfigComponent, CredereConfigComponent, PersonalizarRedesComponent],
   templateUrl: './integracoes.component.html',
   styleUrl: './integracoes.component.scss'
 })
@@ -205,6 +206,8 @@ export class IntegracoesComponent implements OnInit {
   // "Nome remetente" do SMTP. Vazio se a chamada nao terminou ainda ou
   // se nao ha lojas cadastradas.
   private lojaPadraoNome = '';
+  /** Cor da loja padrao, usada nas miniaturas dos layouts de story. */
+  lojaPadraoCor: string | null = null;
 
   // WhatsApp templates modal
   showWaTemplatesModal = false;
@@ -378,7 +381,7 @@ Te esperamos na {{6}}. Até breve!`;
   igConfig: InstagramPostConfigInfo = { instagramConectado: false, autoPostHabilitado: false };
   storyConfig: StoryConfigInfo = {
     noInstagram: false, noFacebook: false, aoChegar: false, aoBaixarPreco: false, aoVender: false,
-    quantidadeImagens: 3, instagramConectado: false, facebookConectado: false
+    quantidadeImagens: 3, layout: 1, instagramConectado: false, facebookConectado: false
   };
   fbCatalogConfig: FacebookConfigInfo = { configurado: false, tokenDefinido: false, autoPostHabilitado: false };
   fbPageTesteResultado: TestIntegracaoResult | null = null;
@@ -638,6 +641,10 @@ Te esperamos na {{6}}. Até breve!`;
     this.salvarStory({ quantidadeImagens: Number(valor) });
   }
 
+  setStoryLayout(layout: number): void {
+    this.salvarStory({ layout });
+  }
+
   private salvarStory(mudanca: Partial<StoryConfigInput>): void {
     const anterior = { ...this.storyConfig };
     const novo: StoryConfigInput = {
@@ -647,6 +654,7 @@ Te esperamos na {{6}}. Até breve!`;
       aoBaixarPreco: this.storyConfig.aoBaixarPreco,
       aoVender: this.storyConfig.aoVender,
       quantidadeImagens: this.storyConfig.quantidadeImagens,
+      layout: this.storyConfig.layout,
       ...mudanca
     };
     this.storyConfig = { ...this.storyConfig, ...mudanca };
@@ -714,6 +722,7 @@ Te esperamos na {{6}}. Até breve!`;
       next: (lojas) => {
         const padrao = lojas.find(l => l.lojPadraoCatalogo) || lojas[0];
         this.lojaPadraoNome = padrao?.lojNome || '';
+        this.lojaPadraoCor = padrao?.lojCorPrimaria || null;
       }
     });
   }

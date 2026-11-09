@@ -1327,9 +1327,14 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
         public async Task<IActionResult> PublicarVeiculoInstagram(
             [FromServices] IInstagramPostService ig,
             [FromServices] IVeiculoPublicacaoRepository pubRepo,
-            int veiculoId)
+            [FromServices] IRedesPersonalizacaoService personalizacao,
+            int veiculoId,
+            [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] PublicarPostInput? input)
         {
-            var r = await ig.PublicarManualAsync(veiculoId);
+            var (modelo, erro) = await LegendaDaPublicacaoAsync(personalizacao, "instagram", input?.Legenda);
+            if (erro != null) return BadRequest(new { error = erro });
+
+            var r = await ig.PublicarManualAsync(veiculoId, modelo);
             if (r == null)
             {
                 // Conexao com a Meta caida e' o motivo que o lojista consegue
@@ -1346,7 +1351,9 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
                 existente.Remover();
                 await pubRepo.UpdateAsync(existente);
             }
-            await pubRepo.CreateAsync(new VeiculoPublicacao(veiculoId, "Instagram", r.ExternoId, r.Url));
+            var publicacaoIg = new VeiculoPublicacao(veiculoId, "Instagram", r.ExternoId, r.Url);
+            publicacaoIg.DefinirLegenda(modelo);
+            await pubRepo.CreateAsync(publicacaoIg);
             return Ok(new { externoId = r.ExternoId, url = r.Url, mensagem = "Publicado no Instagram!" });
         }
 
@@ -1355,9 +1362,14 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
         public async Task<IActionResult> PublicarVeiculoFacebookPage(
             [FromServices] IFacebookPagePostService fp,
             [FromServices] IVeiculoPublicacaoRepository pubRepo,
-            int veiculoId)
+            [FromServices] IRedesPersonalizacaoService personalizacao,
+            int veiculoId,
+            [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] PublicarPostInput? input)
         {
-            var r = await fp.PublicarManualAsync(veiculoId);
+            var (modelo, erro) = await LegendaDaPublicacaoAsync(personalizacao, "facebook", input?.Legenda);
+            if (erro != null) return BadRequest(new { error = erro });
+
+            var r = await fp.PublicarManualAsync(veiculoId, modelo);
             if (r == null)
             {
                 // Ver PublicarVeiculoInstagram.
@@ -1373,7 +1385,9 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
                 existente.Remover();
                 await pubRepo.UpdateAsync(existente);
             }
-            await pubRepo.CreateAsync(new VeiculoPublicacao(veiculoId, "FacebookPage", r.ExternoId, r.Url));
+            var publicacaoFb = new VeiculoPublicacao(veiculoId, "FacebookPage", r.ExternoId, r.Url);
+            publicacaoFb.DefinirLegenda(modelo);
+            await pubRepo.CreateAsync(publicacaoFb);
             return Ok(new { externoId = r.ExternoId, url = r.Url, mensagem = "Publicado na Facebook Page!" });
         }
 
@@ -1403,15 +1417,144 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
         public async Task<IActionResult> PublicarStory(
             [FromServices] IStoryService stories,
             [FromServices] ITenantBackgroundRunner backgroundRunner,
-            int veiculoId)
+            int veiculoId,
+            [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] PublicarStoryInput? input)
         {
             var r = await stories.PrepararManualAsync(veiculoId);
             if (!r.Sucesso) return UnprocessableEntity(new { error = r.Mensagem });
 
+            var layout = input?.Layout;
             backgroundRunner.Enqueue<IStoryService>(
-                s => s.PublicarManualAsync(veiculoId),
+                s => s.PublicarManualAsync(veiculoId, layout),
                 $"story manual do veiculo {veiculoId}");
             return Accepted(r);
+        }
+
+        // ----- Personalizacao dos posts e stories (legenda, capa, previa) -----
+
+        [HttpGet("redes/personalizacao")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> GetPersonalizacaoRedes([FromServices] IRedesPersonalizacaoService personalizacao)
+            => Ok(await personalizacao.GetAsync());
+
+        [HttpPut("redes/legendas")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> SalvarLegendasRedes(
+            [FromServices] IRedesPersonalizacaoService personalizacao,
+            [FromBody] LegendasInput input)
+        {
+            const int maximo = 2200;
+            if ((input.LegendaInstagram?.Length ?? 0) > maximo || (input.LegendaFacebook?.Length ?? 0) > maximo)
+                return BadRequest(new { error = $"A legenda pode ter no máximo {maximo} caracteres (limite do Instagram)." });
+
+            await personalizacao.SalvarLegendasAsync(input.LegendaInstagram, input.LegendaFacebook);
+            return Ok(await personalizacao.GetAsync());
+        }
+
+        /// <summary>
+        /// Legenda de um carro para a janela de publicar: o modelo da loja (o
+        /// texto editavel, com variaveis) e como ele fica preenchido.
+        /// </summary>
+        [HttpGet("redes/legenda/{veiculoId}")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> GetLegendaVeiculo(
+            [FromServices] IRedesPersonalizacaoService personalizacao,
+            int veiculoId,
+            [FromQuery] string rede = "instagram")
+        {
+            rede = rede == "facebook" ? "facebook" : "instagram";
+            var modelo = await personalizacao.ModeloLegendaAsync(rede);
+            return Ok(new { modelo, texto = await personalizacao.MontarLegendaAsync(veiculoId, rede, modelo) });
+        }
+
+        /// <summary>Preenche um modelo com os dados de um carro (ou de um exemplo).</summary>
+        [HttpPost("redes/legenda/previa")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> PreviaLegenda(
+            [FromServices] IRedesPersonalizacaoService personalizacao,
+            [FromBody] PreviaLegendaInput input)
+        {
+            var rede = input.Rede == "facebook" ? "facebook" : "instagram";
+            return Ok(new { texto = await personalizacao.MontarLegendaAsync(input.VeiculoId, rede, input.Modelo) });
+        }
+
+        [HttpPost("redes/capa")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("api")]
+        [RequestSizeLimit(TamanhoMaximoCapa)]
+        [RequestFormLimits(MultipartBodyLengthLimit = TamanhoMaximoCapa)]
+        public async Task<IActionResult> EnviarCapaRedes(
+            [FromServices] IRedesPersonalizacaoService personalizacao,
+            [FromQuery] string tipo,
+            IFormFile arquivo)
+        {
+            if (!TipoArte.Valido(tipo)) return BadRequest(new { error = "Tipo inválido: use post ou story." });
+            if (arquivo == null || arquivo.Length == 0) return BadRequest(new { error = "Arquivo não enviado." });
+            if (arquivo.Length > TamanhoMaximoCapa)
+                return BadRequest(new { error = $"Arquivo muito grande. Máximo {TamanhoMaximoCapa / (1024 * 1024)} MB." });
+
+            var extensao = Path.GetExtension(arquivo.FileName).ToLowerInvariant();
+            if (!new[] { ".jpg", ".jpeg", ".png", ".webp" }.Contains(extensao))
+                return BadRequest(new { error = "Use uma imagem JPG, PNG ou WEBP." });
+
+            try
+            {
+                await using var stream = arquivo.OpenReadStream();
+                var caminho = await personalizacao.SalvarCapaAsync(tipo, stream);
+                return Ok(new { caminho });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        [HttpDelete("redes/capa")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        public async Task<IActionResult> RemoverCapaRedes(
+            [FromServices] IRedesPersonalizacaoService personalizacao,
+            [FromQuery] string tipo)
+        {
+            if (!TipoArte.Valido(tipo)) return BadRequest(new { error = "Tipo inválido: use post ou story." });
+            await personalizacao.RemoverCapaAsync(tipo);
+            return NoContent();
+        }
+
+        /// <summary>
+        /// Previa da arte em JPEG reduzido: tipo=post (capa do feed), tipo=story
+        /// com layout (arte do layout) ou sem layout (capa do story).
+        /// </summary>
+        [HttpGet("redes/previa-arte")]
+        [Authorize(Roles = "Administrador,Gerente")]
+        [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("api")]
+        public async Task<IActionResult> PreviaArteRedes(
+            [FromServices] IRedesPersonalizacaoService personalizacao,
+            [FromQuery] string tipo,
+            [FromQuery] int? layout,
+            [FromQuery] int? veiculoId)
+        {
+            if (!TipoArte.Valido(tipo)) return BadRequest(new { error = "Tipo inválido: use post ou story." });
+            var jpeg = await personalizacao.PreviaArteAsync(tipo, layout, veiculoId);
+            if (jpeg == null)
+                return NotFound(new { error = "Cadastre um veículo com foto para ver a prévia." });
+            return File(jpeg, "image/jpeg");
+        }
+
+        private const int TamanhoMaximoCapa = 10 * 1024 * 1024;
+
+        /// <summary>
+        /// Legenda escrita na janela de publicar. Igual ao modelo da loja vira
+        /// null — o post segue o modelo da loja, inclusive quando o Facebook
+        /// reescreve a legenda depois.
+        /// </summary>
+        private static async Task<(string? Modelo, string? Erro)> LegendaDaPublicacaoAsync(
+            IRedesPersonalizacaoService personalizacao, string rede, string? legenda)
+        {
+            if (string.IsNullOrWhiteSpace(legenda)) return (null, null);
+            var texto = legenda.Replace("\r\n", "\n").Trim();
+            if (texto.Length > 2200) return (null, "A legenda pode ter no máximo 2200 caracteres (limite do Instagram).");
+            var daLoja = (await personalizacao.ModeloLegendaAsync(rede)).Replace("\r\n", "\n").Trim();
+            return (texto == daLoja ? null : texto, null);
         }
 
         // ==========================================
@@ -1488,5 +1631,24 @@ h1{{color:{cor};margin-bottom:16px}} button{{padding:8px 20px;border:0;backgroun
     public class TestarSmtpRequest
     {
         public string Destinatario { get; set; } = "";
+    }
+
+    public class PublicarPostInput
+    {
+        /// <summary>Legenda editada na hora; vazia usa o modelo da loja.</summary>
+        public string? Legenda { get; set; }
+    }
+
+    public class PublicarStoryInput
+    {
+        /// <summary>Layout so desta publicacao (1 a 10); nulo usa o da loja.</summary>
+        public int? Layout { get; set; }
+    }
+
+    public class PreviaLegendaInput
+    {
+        public int? VeiculoId { get; set; }
+        public string Rede { get; set; } = "instagram";
+        public string? Modelo { get; set; }
     }
 }

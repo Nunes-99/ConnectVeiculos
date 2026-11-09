@@ -17,8 +17,12 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         /// </summary>
         Task<PublicacaoResult?> PublicarVeiculoAsync(int veiculoId);
 
-        /// <summary>Variante manual — ignora auto-post desabilitado.</summary>
-        Task<PublicacaoResult?> PublicarManualAsync(int veiculoId);
+        /// <summary>
+        /// Variante manual — ignora auto-post desabilitado.
+        /// <paramref name="modeloLegenda"/> e' a legenda editada na hora (pode
+        /// ter variaveis); nula usa o modelo da loja.
+        /// </summary>
+        Task<PublicacaoResult?> PublicarManualAsync(int veiculoId, string? modeloLegenda = null);
 
         /// <summary>
         /// Reescreve a legenda de um post ja publicado com os dados atuais do
@@ -29,11 +33,14 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         ///
         /// O selo vem de <paramref name="statusVeiculo"/>: "D" nao carimba nada.
         ///
+        /// <paramref name="modeloLegenda"/> e' o modelo usado quando o post foi
+        /// publicado com legenda editada na hora; nulo usa o modelo da loja.
+        ///
         /// So o Facebook permite isso. O Instagram nao tem endpoint pra editar
         /// legenda de midia publicada (a Graph API so deixa ligar/desligar
         /// comentarios), entao la o post fica como esta.
         /// </summary>
-        Task<bool> AtualizarLegendaDoPostAsync(string postId, int veiculoId, string statusVeiculo);
+        Task<bool> AtualizarLegendaDoPostAsync(string postId, int veiculoId, string statusVeiculo, string? modeloLegenda = null);
 
         /// <summary>
         /// Publica uma imagem 9:16 ja pronta como story da Page. Null se nao

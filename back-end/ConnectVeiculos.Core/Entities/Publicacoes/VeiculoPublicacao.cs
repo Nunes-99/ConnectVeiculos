@@ -11,6 +11,13 @@ namespace ConnectVeiculos.Core.Entities.Publicacoes
         public DateTime? PubDtPublicacao { get; private set; }
         public DateTime? PubDtRemocao { get; private set; }
 
+        /// <summary>
+        /// Legenda escrita na hora de publicar (pode ter variaveis como {preco}).
+        /// Nula quando o post usou o modelo da loja. Guardada para o Facebook
+        /// reescrever a legenda com o preco novo sem perder o texto da loja.
+        /// </summary>
+        public string? PubLegenda { get; private set; }
+
         /// <summary>Anuncio no ar na plataforma.</summary>
         public const string StatusAtivo = "ATIVO";
 
@@ -37,6 +44,9 @@ namespace ConnectVeiculos.Core.Entities.Publicacoes
             PubUrl = url;
             PubDtPublicacao = DateTime.UtcNow;
         }
+
+        public void DefinirLegenda(string? modelo)
+            => PubLegenda = string.IsNullOrWhiteSpace(modelo) ? null : modelo;
 
         public void Remover()
         {

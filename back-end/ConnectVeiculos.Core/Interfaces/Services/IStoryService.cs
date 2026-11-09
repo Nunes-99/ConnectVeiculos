@@ -23,8 +23,9 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         /// <summary>
         /// Botao "Publicar story" da lista de veiculos. Ignora os interruptores
         /// de evento, mas respeita onde a loja escolheu publicar.
+        /// <paramref name="layout"/> troca o layout da loja so nesta publicacao.
         /// </summary>
-        Task<StoryPublicacaoResultado> PublicarManualAsync(int veiculoId);
+        Task<StoryPublicacaoResultado> PublicarManualAsync(int veiculoId, int? layout = null);
 
         /// <summary>
         /// Confere na hora o que impede o botao manual (sem destino, carro
@@ -56,6 +57,9 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         /// arte com preco e mais fotos do carro, na ordem do cadastro (1 a 3).
         /// </summary>
         public int QuantidadeImagens { get; set; } = 3;
+
+        /// <summary>Layout da arte com preco (1 a 10, ver StoryArte.Layouts).</summary>
+        public int Layout { get; set; } = 1;
     }
 
     public class StoryConfigInfo : StoryConfigInput

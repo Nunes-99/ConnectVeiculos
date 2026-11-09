@@ -27,10 +27,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
         public const string KEY_AO_BAIXAR_PRECO = "META_STORY_AO_BAIXAR_PRECO";
         public const string KEY_AO_VENDER = "META_STORY_AO_VENDER";
         public const string KEY_QTD_IMAGENS = "META_STORY_QTD_IMAGENS";
-
-        // A arte so precisa existir ate a Meta baixar. Dois dias de folga cobrem
-        // uma nova tentativa manual sem deixar a pasta crescer para sempre.
-        private static readonly TimeSpan ValidadeArte = TimeSpan.FromDays(2);
+        public const string KEY_LAYOUT = "META_STORY_LAYOUT";
 
         // Preco que baixa varias vezes no mesmo dia viraria uma sequencia de
         // stories do mesmo carro. Um por dia ja avisa quem segue a loja.
@@ -107,6 +104,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
                 AoBaixarPreco = await LigadoAsync(KEY_AO_BAIXAR_PRECO),
                 AoVender = await LigadoAsync(KEY_AO_VENDER),
                 QuantidadeImagens = await QuantidadeImagensAsync(),
+                Layout = await LayoutAsync(),
                 InstagramConectado = await _instagramPostService.IsConfiguredAsync(),
                 FacebookConectado = await _facebookPagePostService.IsConfiguredAsync()
             };
@@ -121,9 +119,11 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
             await GravarAsync(KEY_AO_VENDER, config.AoVender);
             var quantidade = Math.Clamp(config.QuantidadeImagens, MinImagensPorSequencia, MaxImagensPorSequencia);
             await _configRepository.SetValorAsync(KEY_QTD_IMAGENS, quantidade.ToString(CultureInfo.InvariantCulture));
+            var layout = StoryArte.LayoutValido(config.Layout) ? config.Layout : StoryArte.LayoutPadrao;
+            await _configRepository.SetValorAsync(KEY_LAYOUT, layout.ToString(CultureInfo.InvariantCulture));
             _logger.LogInformation(
-                "Stories configurados: Instagram={Ig} Facebook={Fb} chegar={Chegar} preco={Preco} vender={Vender} imagens={Qtd}",
-                config.NoInstagram, config.NoFacebook, config.AoChegar, config.AoBaixarPreco, config.AoVender, quantidade);
+                "Stories configurados: Instagram={Ig} Facebook={Fb} chegar={Chegar} preco={Preco} vender={Vender} imagens={Qtd} layout={Layout}",
+                config.NoInstagram, config.NoFacebook, config.AoChegar, config.AoBaixarPreco, config.AoVender, quantidade, layout);
         }
 
         public async Task PublicarAutomaticoAsync(int veiculoId, string evento, decimal? precoAnterior = null)
@@ -147,7 +147,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
                     return;
                 }
 
-                var r = await PublicarAsync(veiculoId, evento, precoAnterior);
+                var r = await PublicarAsync(veiculoId, evento, precoAnterior, null);
                 if (!r.Sucesso)
                     _logger.LogInformation("Story {Evento} do veiculo {VeiculoId} nao publicado: {Motivo}", evento, veiculoId, r.Mensagem);
             }
@@ -201,7 +201,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
                 : null;
         }
 
-        public async Task<StoryPublicacaoResultado> PublicarManualAsync(int veiculoId)
+        public async Task<StoryPublicacaoResultado> PublicarManualAsync(int veiculoId, int? layout = null)
         {
             var chave = ChaveManual(veiculoId);
             if (!PublicandoAgora.TryAdd(chave, 0))
@@ -211,7 +211,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
                 var recente = await MotivoStoryRecenteAsync(veiculoId);
                 if (recente != null) return Falha(recente);
 
-                var r = await PublicarAsync(veiculoId, EventoStory.Manual, null);
+                var r = await PublicarAsync(veiculoId, EventoStory.Manual, null, layout);
                 // Em segundo plano ninguem ve o retorno: o motivo fica no log.
                 if (!r.Sucesso)
                     _logger.LogWarning("Story manual do veiculo {VeiculoId} nao publicado: {Motivo}", veiculoId, r.Mensagem);
@@ -234,7 +234,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
             return datas.Count == 0 ? null : datas.Max();
         }
 
-        private async Task<StoryPublicacaoResultado> PublicarAsync(int veiculoId, string evento, decimal? precoAnterior)
+        private async Task<StoryPublicacaoResultado> PublicarAsync(int veiculoId, string evento, decimal? precoAnterior, int? layoutEscolhido)
         {
             var noInstagram = await LigadoAsync(KEY_NO_INSTAGRAM) && await _instagramPostService.IsConfiguredAsync();
             var noFacebook = await LigadoAsync(KEY_NO_FACEBOOK) && await _facebookPagePostService.IsConfiguredAsync();
@@ -252,29 +252,51 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
             if (imagens.Count == 0) return Falha("O veículo não tem foto.");
 
             var loja = await _lojaRepository.GetByIdAsync(veiculo.R_LojId);
-            var baseUrl = NormalizeBaseUrl(loja?.LojUrlCatalogo) ?? NormalizeBaseUrl(_settings?.PublicSiteUrl);
+            var baseUrl = ArtesTemporarias.NormalizarBaseUrl(loja?.LojUrlCatalogo) ?? ArtesTemporarias.NormalizarBaseUrl(_settings?.PublicSiteUrl);
             if (baseUrl == null || !baseUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                 return Falha("O endereço público do site precisa ser HTTPS para a Meta baixar a imagem.");
 
-            var arquivoFoto = CaminhoNoDisco(imagens[0].ImgCaminho);
-            if (!File.Exists(arquivoFoto)) return Falha("O arquivo da foto principal não existe no servidor.");
+            var arquivos = imagens.Select(i => CaminhoNoDisco(i.ImgCaminho)).ToList();
+            if (!File.Exists(arquivos[0])) return Falha("O arquivo da foto principal não existe no servidor.");
+            var existentes = arquivos.Where(File.Exists).ToList();
 
             // Manual de carro que ja saiu mostra o que aconteceu com ele, nao preco.
             if (evento == EventoStory.Manual && veiculo.VeiSts == "V") evento = EventoStory.Vendido;
 
             var dados = MontarDados(veiculo, loja, evento, precoAnterior);
+            var tour = evento == EventoStory.Novo || evento == EventoStory.Manual;
             var urls = new List<string>();
 
-            using (var foto = await Image.LoadAsync(arquivoFoto))
-                urls.Add(await GravarArteAsync(StoryArte.Gerar(foto, dados), baseUrl));
+            // A capa que a loja enviou abre a sequencia do carro novo e do botao
+            // manual. Preco e venda sao recados de uma arte so: sem capa.
+            if (tour && await CapaDaLojaAsync() is { } capa)
+            {
+                using var img = await Image.LoadAsync(capa);
+                urls.Add(await GravarArteAsync(StoryArte.GerarCapa(img, StoryArte.Largura, StoryArte.Altura), baseUrl));
+            }
+
+            // A arte com preco, no layout da loja (ou no escolhido na hora).
+            var layout = StoryArte.LayoutEfetivo(
+                layoutEscolhido is { } l && StoryArte.LayoutValido(l) ? l : await LayoutAsync(),
+                existentes.Count);
+            var usadas = StoryArte.FotosDoLayout(layout);
+            var fotosDaArte = new List<Image>();
+            try
+            {
+                foreach (var arquivo in existentes.Take(usadas))
+                    fotosDaArte.Add(await Image.LoadAsync(arquivo));
+                urls.Add(await GravarArteAsync(StoryArte.GerarLayout(layout, fotosDaArte, dados), baseUrl));
+            }
+            finally
+            {
+                foreach (var f in fotosDaArte) f.Dispose();
+            }
 
             // Carro novo e o botao manual viram um "tour": a arte completa e mais
-            // algumas fotos. Preco e venda sao recados, uma arte so basta.
-            if (evento == EventoStory.Novo || evento == EventoStory.Manual)
+            // algumas fotos, sem repetir as que ja foram montadas na arte.
+            if (tour)
             {
-                var extras = imagens.Skip(1)
-                    .Select(i => CaminhoNoDisco(i.ImgCaminho))
-                    .Where(File.Exists)
+                var extras = existentes.Skip(usadas)
                     .Take(await QuantidadeImagensAsync() - 1)
                     .ToList();
                 foreach (var extra in extras)
@@ -400,32 +422,20 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
                           && p.PubDtPublicacao >= corte);
         }
 
-        /// <summary>
-        /// Grava a arte onde o /api/imagens/file ja serve arquivos, e aproveita
-        /// para apagar as antigas. Devolve a URL publica que a Meta vai baixar.
-        /// </summary>
-        private async Task<string> GravarArteAsync(byte[] jpeg, string baseUrl)
+        private Task<string> GravarArteAsync(byte[] jpeg, string baseUrl)
+            => ArtesTemporarias.GravarAsync(_environment.ContentRootPath, jpeg, baseUrl, _logger);
+
+        private async Task<string?> CapaDaLojaAsync()
         {
-            var pasta = Path.Combine(_environment.ContentRootPath, "uploads", "_stories");
-            Directory.CreateDirectory(pasta);
-
-            try
-            {
-                foreach (var antigo in Directory.EnumerateFiles(pasta, "*.jpg"))
-                {
-                    if (DateTime.UtcNow - File.GetLastWriteTimeUtc(antigo) > ValidadeArte)
-                        File.Delete(antigo);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogDebug(ex, "Falha ao limpar artes antigas de story");
-            }
-
-            var nome = $"{Guid.NewGuid():N}.jpg";
-            await File.WriteAllBytesAsync(Path.Combine(pasta, nome), jpeg);
-            return $"{baseUrl}/api/imagens/file?path={Uri.EscapeDataString($"/uploads/_stories/{nome}")}";
+            var caminho = await _configRepository.GetValorAsync(RedesPersonalizacaoService.KEY_CAPA_STORY);
+            if (string.IsNullOrWhiteSpace(caminho)) return null;
+            var arquivo = CaminhoNoDisco(caminho);
+            return File.Exists(arquivo) ? arquivo : null;
         }
+
+        private async Task<int> LayoutAsync()
+            => int.TryParse(await _configRepository.GetValorAsync(KEY_LAYOUT), NumberStyles.Integer, CultureInfo.InvariantCulture, out var n)
+               && StoryArte.LayoutValido(n) ? n : StoryArte.LayoutPadrao;
 
         private string CaminhoNoDisco(string caminhoRelativo)
             => Path.Combine(_environment.ContentRootPath,
@@ -457,20 +467,5 @@ namespace ConnectVeiculos.Infrastructure.Services.Stories
 
         private static StoryPublicacaoResultado Falha(string mensagem)
             => new() { Sucesso = false, Mensagem = mensagem };
-
-        private static string? NormalizeBaseUrl(string? raw)
-        {
-            if (string.IsNullOrWhiteSpace(raw)) return null;
-            var trimmed = raw.Trim().TrimEnd('/');
-            if (!Uri.TryCreate(trimmed, UriKind.Absolute, out var uri))
-            {
-                if (!Uri.TryCreate("https://" + trimmed, UriKind.Absolute, out uri))
-                    return null;
-            }
-            if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) return null;
-            if (string.IsNullOrWhiteSpace(uri.Host)) return null;
-            var port = uri.IsDefaultPort ? "" : ":" + uri.Port;
-            return $"{uri.Scheme}://{uri.Host}{port}";
-        }
     }
 }

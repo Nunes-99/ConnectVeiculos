@@ -11,7 +11,7 @@ import { AuthService, ToastService } from '../services';
  */
 const AVISO_NA_TELA = [
   '/api/contratos', '/api/assinar/', '/api/nfe', '/api/renave', '/api/certificado-digital',
-  '/api/integracoes/webmotors', '/api/integracoes/credere',
+  '/api/integracoes/webmotors', '/api/integracoes/credere', '/api/integracoes/redes/previa-arte',
   '/api/financiamento/fichas', '/api/financiamento/bancos-loja', '/api/financiamento/estimativa'
 ];
 
