@@ -150,7 +150,41 @@ export interface StoryConfigInput {
   aoVender: boolean;
   /** Imagens por story de carro novo / botão manual (1 a 3). */
   quantidadeImagens: number;
+  /** Layout da arte com o preço (1 a 10, ver RedesPersonalizacao.layouts). */
+  layout: number;
 }
+
+/** Variável que a loja pode usar no modelo de legenda, como {preco}. */
+export interface VariavelLegenda {
+  nome: string;
+  descricao: string;
+  exemplo: string;
+}
+
+/** Um dos 10 modelos de montagem da arte do story. */
+export interface LayoutStory {
+  id: number;
+  nome: string;
+  descricao: string;
+  /** Quantas fotos do carro o layout monta na arte. */
+  fotos: number;
+}
+
+/** Legenda e capa (primeira imagem) dos posts e stories. Vazio = padrão. */
+export interface RedesPersonalizacao {
+  legendaInstagram: string;
+  legendaFacebook: string;
+  legendaPadraoInstagram: string;
+  legendaPadraoFacebook: string;
+  capaPost?: string | null;
+  capaStory?: string | null;
+  tamanhoMaximoLegenda: number;
+  variaveis: VariavelLegenda[];
+  layouts: LayoutStory[];
+}
+
+export type RedeSocial = 'instagram' | 'facebook';
+export type TipoArte = 'post' | 'story';
 
 export interface StoryConfigInfo extends StoryConfigInput {
   instagramConectado: boolean;
@@ -404,14 +438,57 @@ export class IntegracaoService {
     return this.http.post<TestIntegracaoResult>(`${this.baseUrl}/integracoes/instagram/test`, {});
   }
 
-  publicarVeiculoInstagram(veiculoId: number): Observable<{ externoId: string; url: string; mensagem: string }> {
+  /** Sem legenda (ou igual ao modelo da loja) o post usa o modelo da loja. */
+  publicarVeiculoInstagram(veiculoId: number, legenda?: string): Observable<{ externoId: string; url: string; mensagem: string }> {
     return this.http.post<{ externoId: string; url: string; mensagem: string }>(
-      `${this.baseUrl}/integracoes/instagram/publicar/${veiculoId}`, {});
+      `${this.baseUrl}/integracoes/instagram/publicar/${veiculoId}`, { legenda: legenda ?? null });
   }
 
-  publicarVeiculoFacebookPage(veiculoId: number): Observable<{ externoId: string; url: string; mensagem: string }> {
+  publicarVeiculoFacebookPage(veiculoId: number, legenda?: string): Observable<{ externoId: string; url: string; mensagem: string }> {
     return this.http.post<{ externoId: string; url: string; mensagem: string }>(
-      `${this.baseUrl}/integracoes/facebook/page-publicar/${veiculoId}`, {});
+      `${this.baseUrl}/integracoes/facebook/page-publicar/${veiculoId}`, { legenda: legenda ?? null });
+  }
+
+  // Personalização dos posts e stories
+  getPersonalizacaoRedes(): Observable<RedesPersonalizacao> {
+    return this.http.get<RedesPersonalizacao>(`${this.baseUrl}/integracoes/redes/personalizacao`);
+  }
+
+  salvarLegendasRedes(legendaInstagram: string, legendaFacebook: string): Observable<RedesPersonalizacao> {
+    return this.http.put<RedesPersonalizacao>(`${this.baseUrl}/integracoes/redes/legendas`, { legendaInstagram, legendaFacebook });
+  }
+
+  /** Modelo da loja (texto editável) e como ele fica preenchido para o carro. */
+  getLegendaVeiculo(veiculoId: number, rede: RedeSocial): Observable<{ modelo: string; texto: string }> {
+    return this.http.get<{ modelo: string; texto: string }>(
+      `${this.baseUrl}/integracoes/redes/legenda/${veiculoId}`, { params: { rede } });
+  }
+
+  /** Preenche um modelo. Sem veículo, usa o carro mais recente da loja. */
+  previaLegenda(rede: RedeSocial, modelo: string, veiculoId?: number): Observable<{ texto: string }> {
+    return this.http.post<{ texto: string }>(`${this.baseUrl}/integracoes/redes/legenda/previa`,
+      { rede, modelo, veiculoId: veiculoId ?? null });
+  }
+
+  enviarCapaRedes(tipo: TipoArte, arquivo: File): Observable<{ caminho: string }> {
+    const form = new FormData();
+    form.append('arquivo', arquivo);
+    return this.http.post<{ caminho: string }>(`${this.baseUrl}/integracoes/redes/capa`, form, { params: { tipo } });
+  }
+
+  removerCapaRedes(tipo: TipoArte): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/integracoes/redes/capa`, { params: { tipo } });
+  }
+
+  /**
+   * Prévia em JPEG: post = capa do feed; story com layout = arte do layout;
+   * story sem layout = capa do story.
+   */
+  previaArteRedes(tipo: TipoArte, layout?: number, veiculoId?: number): Observable<Blob> {
+    const params: Record<string, string> = { tipo };
+    if (layout) params['layout'] = String(layout);
+    if (veiculoId) params['veiculoId'] = String(veiculoId);
+    return this.http.get(`${this.baseUrl}/integracoes/redes/previa-arte`, { params, responseType: 'blob' });
   }
 
   // Stories (Instagram + Facebook Page)
@@ -423,9 +500,10 @@ export class IntegracaoService {
     return this.http.post<StoryConfigInfo>(`${this.baseUrl}/integracoes/stories/config`, config);
   }
 
-  publicarStory(veiculoId: number): Observable<{ sucesso: boolean; mensagem: string }> {
+  /** Sem layout usa o da loja (Integrações). */
+  publicarStory(veiculoId: number, layout?: number): Observable<{ sucesso: boolean; mensagem: string }> {
     return this.http.post<{ sucesso: boolean; mensagem: string }>(
-      `${this.baseUrl}/integracoes/stories/publicar/${veiculoId}`, {});
+      `${this.baseUrl}/integracoes/stories/publicar/${veiculoId}`, { layout: layout ?? null });
   }
 }
 

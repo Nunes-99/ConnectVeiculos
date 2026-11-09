@@ -42,7 +42,8 @@ namespace ConnectVeiculos.Tests.Publicacoes
             public string ProximaFoto() => $"{{\"id\":\"foto{++_foto}\"}}";
         }
 
-        private static (FacebookPagePostService Service, GraphFalso Graph) Criar(int qtdFotos)
+        private static (FacebookPagePostService Service, GraphFalso Graph) Criar(int qtdFotos,
+            ConnectVeiculos.Core.Interfaces.Services.IRedesPersonalizacaoService? personalizacao = null)
         {
             var graph = new GraphFalso();
             var config = new Mock<IConfiguracaoSistemaRepository>();
@@ -64,7 +65,7 @@ namespace ConnectVeiculos.Tests.Publicacoes
             var service = new FacebookPagePostService(new HttpClient(graph),
                 Options.Create(new MetaSettings { ApiVersion = "v18.0", PublicSiteUrl = "https://connectveiculos.dev.br" }),
                 config.Object, protector.Object, veiculos.Object, imagens.Object, lojas.Object,
-                NullLogger<FacebookPagePostService>.Instance, tenant.Object);
+                NullLogger<FacebookPagePostService>.Instance, tenant.Object, personalizacao);
             return (service, graph);
         }
 
@@ -102,6 +103,38 @@ namespace ConnectVeiculos.Tests.Publicacoes
             feed.GetProperty("message").GetString().Should().Contain("Gol");
             feed.GetProperty("attached_media").EnumerateArray().Select(m => m.GetProperty("media_fbid").GetString())
                 .Should().Equal("foto1", "foto2", "foto3");
+        }
+
+        [Fact]
+        public async Task Capa_Entra_Primeiro_E_A_Legenda_Segue_O_Modelo_Da_Loja()
+        {
+            var personalizacao = new Mock<ConnectVeiculos.Core.Interfaces.Services.IRedesPersonalizacaoService>();
+            personalizacao.Setup(x => x.CapaDoPostAsync(VeiculoId, It.IsAny<string>()))
+                          .ReturnsAsync("https://connectveiculos.dev.br/api/imagens/file?path=capa.jpg");
+            personalizacao.Setup(x => x.ModeloLegendaAsync("facebook")).ReturnsAsync("Oferta: {modelo} por {preco}");
+            var (service, graph) = Criar(14, personalizacao.Object);
+            graph.Responder = (url, _) => url.EndsWith("/feed") ? (HttpStatusCode.OK, "{\"id\":\"123_42\"}") : (HttpStatusCode.OK, graph.ProximaFoto());
+
+            await service.PublicarManualAsync(VeiculoId);
+
+            var fotos = graph.Chamadas.Where(c => c.Url.EndsWith("/photos")).ToList();
+            fotos.Should().HaveCount(10, "a capa ocupa um dos 10 lugares");
+            fotos[0].Corpo.GetProperty("url").GetString().Should().Contain("capa.jpg");
+            graph.Chamadas.Single(c => c.Url.EndsWith("/feed")).Corpo.GetProperty("message").GetString()
+                 .Should().Be("Oferta: Gol por R$ 31.900,00");
+        }
+
+        [Fact]
+        public async Task Legenda_Editada_Na_Hora_Vale_So_Para_Este_Post()
+        {
+            var personalizacao = new Mock<ConnectVeiculos.Core.Interfaces.Services.IRedesPersonalizacaoService>();
+            personalizacao.Setup(x => x.ModeloLegendaAsync("facebook")).ReturnsAsync("Modelo da loja");
+            var (service, graph) = Criar(1, personalizacao.Object);
+            graph.Responder = (_, _) => (HttpStatusCode.OK, "{\"id\":\"foto1\",\"post_id\":\"123_9\"}");
+
+            await service.PublicarManualAsync(VeiculoId, "Só hoje: {marca} {modelo}");
+
+            graph.Chamadas[0].Corpo.GetProperty("message").GetString().Should().Be("Só hoje: VW Gol");
         }
 
         [Fact]

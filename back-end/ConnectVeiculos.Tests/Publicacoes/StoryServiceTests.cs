@@ -397,6 +397,126 @@ namespace ConnectVeiculos.Tests.Publicacoes
             arte.Height.Should().Be(1920);
         }
 
+        public static IEnumerable<object[]> TodosOsLayouts()
+            => Enumerable.Range(1, 10).SelectMany(l => new[] { new object[] { l, 1 }, new object[] { l, 4 } });
+
+        [Theory]
+        [MemberData(nameof(TodosOsLayouts))]
+        public void TodoLayoutSaiEm9por16MesmoComMenosFotosDoQuePede(int layout, int fotos)
+        {
+            var imagens = Enumerable.Range(0, fotos).Select(_ => (Image)new Image<Rgba32>(1600, 1200, Color.DarkRed)).ToList();
+            try
+            {
+                var dados = StoryService.MontarDados(Veiculo("D", 89900m), Loja(null), EventoStory.PrecoBaixou, 95000m);
+
+                using var arte = Image.Load(StoryArte.GerarLayout(layout, imagens, dados));
+
+                arte.Width.Should().Be(1080);
+                arte.Height.Should().Be(1920);
+            }
+            finally { imagens.ForEach(i => i.Dispose()); }
+        }
+
+        [Theory]
+        [InlineData(6, 4, 6)]
+        [InlineData(6, 3, 5)]   // mosaico sem 4 fotos vira trio
+        [InlineData(6, 2, 4)]   // ...ou dupla
+        [InlineData(10, 1, 1)]  // com uma foto so, o classico
+        [InlineData(99, 5, 1)]  // layout inexistente cai no padrao
+        public void LayoutQuePedeMaisFotosDoQueOCarroTemMudaDeModelo(int layout, int fotos, int esperado)
+            => StoryArte.LayoutEfetivo(layout, fotos).Should().Be(esperado);
+
+        [Fact]
+        public void VendidoNoLayoutPrecoEmDestaqueNaoQuebraSemPreco()
+        {
+            using var foto = new Image<Rgba32>(1600, 1200, Color.Gray);
+            var dados = StoryService.MontarDados(Veiculo("V", 89900m), Loja(null), EventoStory.Vendido, null);
+
+            var acao = () => StoryArte.GerarLayout(8, new[] { (Image)foto }, dados);
+
+            acao.Should().NotThrow();
+        }
+
+        [Theory]
+        [InlineData(1600, 1200)]
+        [InlineData(1080, 1920)]
+        [InlineData(1000, 1000)]
+        public void ArteDoFeedECapaSaemNoTamanhoDaPublicacao(int largura, int altura)
+        {
+            using var foto = new Image<Rgba32>(largura, altura, Color.Navy);
+            var dados = StoryService.MontarDados(Veiculo("D", 89900m), Loja(null), EventoStory.Manual, null);
+
+            using var feed = Image.Load(StoryArte.GerarFeed(foto, dados));
+            using var capaFeed = Image.Load(StoryArte.GerarCapa(foto, 1080, 1350));
+            using var capaStory = Image.Load(StoryArte.GerarCapa(foto, 1080, 1920));
+
+            (feed.Width, feed.Height).Should().Be((1080, 1350));
+            (capaFeed.Width, capaFeed.Height).Should().Be((1080, 1350));
+            (capaStory.Width, capaStory.Height).Should().Be((1080, 1920));
+        }
+
+        [Fact]
+        public async Task LayoutComVariasFotosNaoRepeteAsFotosNasExtras()
+        {
+            // Dupla monta as fotos 1 e 2 na arte; as extras comecam da 3.
+            Ligar(StoryService.KEY_NO_INSTAGRAM);
+            ComFotos(5);
+            _config[StoryService.KEY_LAYOUT] = "4";
+
+            await Criar().PublicarManualAsync(VeiculoId);
+
+            // Arte + 2 extras (quantidade padrao 3).
+            _instagram.Verify(x => x.PublicarStoryAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Exactly(3));
+        }
+
+        [Fact]
+        public async Task LayoutEscolhidoNaHoraValeSoParaAquelaPublicacao()
+        {
+            Ligar(StoryService.KEY_NO_INSTAGRAM);
+            ComFotos(2);
+            _config[StoryService.KEY_QTD_IMAGENS] = "3";
+
+            // Dupla usa as duas fotos: nao sobra extra.
+            await Criar().PublicarManualAsync(VeiculoId, layout: 4);
+
+            _instagram.Verify(x => x.PublicarStoryAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Once);
+            _config.Should().NotContainKey(StoryService.KEY_LAYOUT);
+        }
+
+        [Fact]
+        public async Task CapaDaLojaAbreASequenciaDoCarroNovo()
+        {
+            Ligar(StoryService.KEY_NO_INSTAGRAM, StoryService.KEY_AO_CHEGAR, StoryService.KEY_AO_VENDER);
+            _config[StoryService.KEY_QTD_IMAGENS] = "1";
+            var pasta = Path.Combine(_raiz, "uploads", "_redes");
+            Directory.CreateDirectory(pasta);
+            using (var capa = new Image<Rgba32>(1080, 1920, Color.Gold))
+                capa.SaveAsJpeg(Path.Combine(pasta, "capa-story.jpg"));
+            _config[RedesPersonalizacaoService.KEY_CAPA_STORY] = "/uploads/_redes/capa-story.jpg";
+            var servico = Criar();
+
+            await servico.PublicarAutomaticoAsync(VeiculoId, EventoStory.Novo);
+            _instagram.Verify(x => x.PublicarStoryAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Exactly(2),
+                "capa da loja + arte com preco");
+
+            // Venda e' um recado de uma arte so: sem a capa.
+            _historico.Clear();
+            _instagram.Invocations.Clear();
+            await servico.PublicarAutomaticoAsync(VeiculoId, EventoStory.Vendido);
+            _instagram.Verify(x => x.PublicarStoryAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task LayoutGravadoVoltaNaConfig()
+        {
+            var servico = Criar();
+            await servico.SalvarConfigAsync(new StoryConfigInput { Layout = 7 });
+            (await servico.GetConfigAsync()).Layout.Should().Be(7);
+
+            await servico.SalvarConfigAsync(new StoryConfigInput { Layout = 42 });
+            (await servico.GetConfigAsync()).Layout.Should().Be(1);
+        }
+
         /// <summary>A foto principal do construtor mais (quantidade - 1) fotos.</summary>
         private void ComFotos(int quantidade)
         {

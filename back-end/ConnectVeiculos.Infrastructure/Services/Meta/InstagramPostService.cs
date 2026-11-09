@@ -52,6 +52,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
         private readonly ILojaRepository _lojaRepository;
         private readonly IVeiculoPublicacaoRepository _publicacaoRepository;
         private readonly ILogger<InstagramPostService> _logger;
+        private readonly IRedesPersonalizacaoService? _personalizacao;
 
         public InstagramPostService(
             HttpClient httpClient,
@@ -62,7 +63,8 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             IVeiculoImagemRepository imagemRepository,
             ILojaRepository lojaRepository,
             IVeiculoPublicacaoRepository publicacaoRepository,
-            ILogger<InstagramPostService> logger)
+            ILogger<InstagramPostService> logger,
+            IRedesPersonalizacaoService? personalizacao = null)
         {
             _httpClient = httpClient;
             _settings = settings.Value;
@@ -73,6 +75,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             _lojaRepository = lojaRepository;
             _publicacaoRepository = publicacaoRepository;
             _logger = logger;
+            _personalizacao = personalizacao;
         }
 
         public async Task<bool> IsConfiguredAsync()
@@ -183,15 +186,15 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
                 _logger.LogDebug("Instagram auto-post desabilitado, pulando veiculo {VeiculoId}", veiculoId);
                 return null;
             }
-            return await PublicarInternoAsync(veiculoId, ignorarAutoPost: false);
+            return await PublicarInternoAsync(veiculoId, null);
         }
 
         // Publica mesmo com auto-post desabilitado. Usado pelo endpoint
         // "Publicar agora" manual no card do veiculo.
-        public async Task<PublicacaoResult?> PublicarManualAsync(int veiculoId)
-            => await PublicarInternoAsync(veiculoId, ignorarAutoPost: true);
+        public async Task<PublicacaoResult?> PublicarManualAsync(int veiculoId, string? modeloLegenda = null)
+            => await PublicarInternoAsync(veiculoId, modeloLegenda);
 
-        private async Task<PublicacaoResult?> PublicarInternoAsync(int veiculoId, bool ignorarAutoPost)
+        private async Task<PublicacaoResult?> PublicarInternoAsync(int veiculoId, string? modeloLegenda)
         {
             var (token, igId) = await ResolveAsync();
             if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(igId))
@@ -239,14 +242,18 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
                 return null;
             }
 
-            var slug = loja?.LojSlug ?? veiculo.R_LojId.ToString();
+            // A primeira imagem e' a capa: a arte que a loja enviou ou a nossa
+            // arte padrao com foto, preco e loja, ja em 4:5. Sem ela, so as fotos.
+            var capa = _personalizacao == null ? null : await _personalizacao.CapaDoPostAsync(veiculoId, baseUrl);
+
             // ?max=1440 invoca o resize on-the-fly do ImagensController (IG aceita
             // ate 1440px lado, JPEG <= 8MB). Sem o param, imagem original pode falhar.
             // ?ratio normaliza a proporcao — sem isso o container e' recusado.
             var imageUrls = imagens
-                .Take(MaxImagensCarrossel)
+                .Take(capa == null ? MaxImagensCarrossel : MaxImagensCarrossel - 1)
                 .Select(i => $"{baseUrl}/api/imagens/file?path={Uri.EscapeDataString(i.ImgCaminho)}&max=1440&format=jpeg&ratio={ProporcaoFeed}")
                 .ToList();
+            if (capa != null) imageUrls.Insert(0, $"{capa}&max=1440&format=jpeg&ratio={ProporcaoFeed}");
 
             // Aquece o cache em disco de cada variante antes de entregar as URLs a
             // Meta. O downloader dela desiste por volta de 10s ("O download da midia
@@ -254,7 +261,11 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             // perto disso numa VM de 1 OCPU.
             await AquecerImagensAsync(imageUrls);
 
-            var legenda = MontarLegenda(veiculo, loja, baseUrl, slug);
+            // O servico resolve o link do catalogo (precisa do tenant). Sem ele
+            // (testes antigos) vale a legenda padrao, sem link.
+            var legenda = _personalizacao != null
+                ? await _personalizacao.MontarLegendaAsync(veiculoId, LegendaPost.Instagram, modeloLegenda)
+                : LegendaPost.Montar(modeloLegenda, LegendaPost.Instagram, veiculo, loja, null);
 
             try
             {
@@ -526,46 +537,6 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
                 return doc.RootElement.TryGetProperty("permalink", out var p) ? p.GetString() : null;
             }
             catch { return null; }
-        }
-
-        // Legenda IG: similar ao FB mas sem link clicavel (IG nao permite links em
-        // captions do feed). Substitui por "link na bio" + nome do veiculo.
-        private static string MontarLegenda(Veiculo veiculo, Loja? loja, string baseUrl, string slug)
-        {
-            var sb = new StringBuilder();
-            sb.Append("🚗 ").Append(veiculo.VeiMarca).Append(' ').Append(veiculo.VeiModelo)
-              .Append(' ').Append(veiculo.VeiAno).Append('\n');
-            sb.Append("💰 R$ ").Append(veiculo.VeiPreco.ToString("N2", new CultureInfo("pt-BR"))).Append('\n');
-            if (veiculo.VeiKm > 0)
-                sb.Append("📊 ").Append(veiculo.VeiKm.ToString("N0", new CultureInfo("pt-BR"))).Append(" km\n");
-            if (!string.IsNullOrWhiteSpace(veiculo.VeiCor))
-                sb.Append("🎨 ").Append(veiculo.VeiCor).Append('\n');
-            if (!string.IsNullOrWhiteSpace(veiculo.VeiOpcionais))
-            {
-                sb.Append("✨ ").Append(veiculo.VeiOpcionais.Replace(",", " · ").TrimEnd(' ', '·')).Append('\n');
-            }
-            sb.Append('\n');
-            sb.Append("👉 Link na bio para mais detalhes!").Append('\n');
-            if (loja != null && !string.IsNullOrWhiteSpace(loja.LojWhatsApp))
-                sb.Append("📲 WhatsApp: ").Append(loja.LojWhatsApp).Append('\n');
-            sb.Append('\n');
-            sb.Append("#").Append(SanitizeTag(veiculo.VeiMarca)).Append(' ');
-            sb.Append("#").Append(SanitizeTag(veiculo.VeiMarca + veiculo.VeiModelo)).Append(' ');
-            sb.Append("#carros #usados #seminovos #carrosanovenda");
-            if (loja != null && !string.IsNullOrWhiteSpace(loja.LojCidade))
-                sb.Append(" #").Append(SanitizeTag(loja.LojCidade)).Append(" #").Append(SanitizeTag("carros" + loja.LojCidade));
-            return sb.ToString();
-        }
-
-        private static string SanitizeTag(string raw)
-        {
-            if (string.IsNullOrWhiteSpace(raw)) return "carros";
-            var sb = new StringBuilder();
-            foreach (var c in raw)
-            {
-                if (char.IsLetterOrDigit(c)) sb.Append(c);
-            }
-            return sb.Length == 0 ? "carros" : sb.ToString();
         }
 
         private async Task<bool> AutoPostHabilitadoAsync()

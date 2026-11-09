@@ -31,6 +31,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
         private readonly ILogger<FacebookPagePostService> _logger;
 
         private readonly ITenantContext _tenantContext;
+        private readonly IRedesPersonalizacaoService? _personalizacao;
 
         public FacebookPagePostService(
             HttpClient httpClient,
@@ -41,7 +42,8 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             IVeiculoImagemRepository imagemRepository,
             ILojaRepository lojaRepository,
             ILogger<FacebookPagePostService> logger,
-            ITenantContext tenantContext)
+            ITenantContext tenantContext,
+            IRedesPersonalizacaoService? personalizacao = null)
         {
             _httpClient = httpClient;
             _settings = settings.Value;
@@ -52,6 +54,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             _lojaRepository = lojaRepository;
             _logger = logger;
             _tenantContext = tenantContext;
+            _personalizacao = personalizacao;
         }
 
         public async Task<bool> IsConfiguredAsync()
@@ -113,13 +116,13 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
                 _logger.LogDebug("Facebook auto-post desabilitado, pulando veiculo {VeiculoId}", veiculoId);
                 return null;
             }
-            return await PublicarInternoAsync(veiculoId);
+            return await PublicarInternoAsync(veiculoId, null);
         }
 
-        public async Task<PublicacaoResult?> PublicarManualAsync(int veiculoId)
-            => await PublicarInternoAsync(veiculoId);
+        public async Task<PublicacaoResult?> PublicarManualAsync(int veiculoId, string? modeloLegenda = null)
+            => await PublicarInternoAsync(veiculoId, modeloLegenda);
 
-        private async Task<PublicacaoResult?> PublicarInternoAsync(int veiculoId)
+        private async Task<PublicacaoResult?> PublicarInternoAsync(int veiculoId, string? modeloLegenda)
         {
             var (token, pageId) = await ResolvePageCredentialsAsync();
             if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(pageId))
@@ -142,12 +145,16 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
 
             var slug = _tenantContext.IsResolved ? _tenantContext.TenantSlug : null;
             var linkVeiculo = CatalogoUrl.Veiculo(baseUrl, slug, veiculoId);
+            // A primeira imagem e' a capa: a arte que a loja enviou ou a nossa
+            // arte padrao com foto, preco e loja. Sem ela, so as fotos.
+            var capa = _personalizacao == null ? null : await _personalizacao.CapaDoPostAsync(veiculoId, baseUrl);
             var fotos = imagens.Where(i => i.ImgSts).OrderBy(i => i.ImgOrdem)
-                .Take(MaxFotosPorPost)
+                .Take(capa == null ? MaxFotosPorPost : MaxFotosPorPost - 1)
                 .Select(i => $"{baseUrl}/api/imagens/file?path={Uri.EscapeDataString(i.ImgCaminho)}&max=1440&format=jpeg")
                 .ToList();
+            if (capa != null) fotos.Insert(0, capa);
 
-            var legenda = MontarLegenda(veiculo, loja, linkVeiculo);
+            var legenda = LegendaPost.Montar(modeloLegenda ?? await ModeloDaLojaAsync(), LegendaPost.Facebook, veiculo, loja, linkVeiculo);
 
             try
             {
@@ -245,7 +252,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             return postDoc.RootElement.TryGetProperty("id", out var postId) ? postId.GetString() : null;
         }
 
-        public async Task<bool> AtualizarLegendaDoPostAsync(string postId, int veiculoId, string statusVeiculo)
+        public async Task<bool> AtualizarLegendaDoPostAsync(string postId, int veiculoId, string statusVeiculo, string? modeloLegenda = null)
         {
             if (string.IsNullOrWhiteSpace(postId)) return false;
 
@@ -267,7 +274,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
 
             // Mantem a legenda original abaixo do selo: quem ja viu o post
             // reconhece o anuncio, e quem chega depois entende que acabou.
-            var textoBase = MontarLegenda(veiculo, loja, linkVeiculo);
+            var textoBase = LegendaPost.Montar(modeloLegenda ?? await ModeloDaLojaAsync(), LegendaPost.Facebook, veiculo, loja, linkVeiculo);
             var legenda = selo.Length == 0 ? textoBase : selo + "\n\n" + textoBase;
 
             try
@@ -369,45 +376,9 @@ namespace ConnectVeiculos.Infrastructure.Services.Meta
             _ => "⛔ INDISPONÍVEL"
         };
 
-        // Legenda otimizada pra engajamento no Facebook: emoji + titulo + dados + link + hashtags.
-        // Fica em torno de 400-500 chars (FB tolera ate 63K).
-        private static string MontarLegenda(Veiculo veiculo, Loja? loja, string linkVeiculo)
-        {
-            var sb = new StringBuilder();
-            sb.Append("🚗 ").Append(veiculo.VeiMarca).Append(' ').Append(veiculo.VeiModelo)
-              .Append(' ').Append(veiculo.VeiAno).Append('\n');
-            sb.Append("💰 R$ ").Append(veiculo.VeiPreco.ToString("N2", new CultureInfo("pt-BR"))).Append('\n');
-            if (veiculo.VeiKm > 0)
-                sb.Append("📊 ").Append(veiculo.VeiKm.ToString("N0", new CultureInfo("pt-BR"))).Append(" km\n");
-            if (!string.IsNullOrWhiteSpace(veiculo.VeiCor))
-                sb.Append("🎨 Cor: ").Append(veiculo.VeiCor).Append('\n');
-            if (!string.IsNullOrWhiteSpace(veiculo.VeiOpcionais))
-            {
-                sb.Append("✨ ").Append(veiculo.VeiOpcionais.Replace(",", " · ").TrimEnd(' ', '·')).Append('\n');
-            }
-            sb.Append('\n');
-            sb.Append("📞 Entre em contato pelo link: ").Append(linkVeiculo).Append('\n');
-            if (loja != null && !string.IsNullOrWhiteSpace(loja.LojWhatsApp))
-                sb.Append("📲 WhatsApp: ").Append(loja.LojWhatsApp).Append('\n');
-            sb.Append('\n');
-            sb.Append("#").Append(SanitizeTag(veiculo.VeiMarca)).Append(' ');
-            sb.Append("#").Append(SanitizeTag(veiculo.VeiMarca + veiculo.VeiModelo)).Append(' ');
-            sb.Append("#carros #usados #seminovos");
-            if (loja != null && !string.IsNullOrWhiteSpace(loja.LojCidade))
-                sb.Append(" #").Append(SanitizeTag(loja.LojCidade));
-            return sb.ToString();
-        }
-
-        private static string SanitizeTag(string raw)
-        {
-            if (string.IsNullOrWhiteSpace(raw)) return "carros";
-            var sb = new StringBuilder();
-            foreach (var c in raw)
-            {
-                if (char.IsLetterOrDigit(c)) sb.Append(c);
-            }
-            return sb.Length == 0 ? "carros" : sb.ToString();
-        }
+        // Sem o servico (testes antigos) vale a legenda padrao.
+        private async Task<string?> ModeloDaLojaAsync()
+            => _personalizacao == null ? null : await _personalizacao.ModeloLegendaAsync(LegendaPost.Facebook);
 
         private async Task<bool> AutoPostHabilitadoAsync()
         {

@@ -389,6 +389,7 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.AddHttpClient<Core.Interfaces.Services.IInstagramPostService, Services.Meta.InstagramPostService>()
                 .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(30));
             services.AddScoped<Core.Interfaces.Services.IStoryService, Services.Stories.StoryService>();
+            services.AddScoped<Core.Interfaces.Services.IRedesPersonalizacaoService, Services.Meta.RedesPersonalizacaoService>();
 
             // Worker que avisa por e-mail antes de a conexao com o ML cair. Sem
             // refresh_token o token dura 6h, e a loja descobria a queda pela
@@ -765,6 +766,8 @@ namespace ConnectVeiculos.Infrastructure.IoC
                       PubUrl TEXT,
                       PubDtPublicacao TEXT,
                       PubDtRemocao TEXT");
+                // Legenda editada na hora de publicar (Instagram / Facebook).
+                AddColumnIfNotExists(connection, "VeiculoPublicacao", "PubLegenda", "TEXT");
 
                 // Contratos e assinatura eletronica
                 CreateTableIfNotExists(connection, "ModeloContrato",

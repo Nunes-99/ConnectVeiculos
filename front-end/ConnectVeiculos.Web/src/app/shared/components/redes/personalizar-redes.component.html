@@ -1,0 +1,135 @@
+@if (info) {
+  <!-- Legenda -->
+  <section class="bloco">
+    <h5><span class="material-icons">notes</span> Legenda dos posts</h5>
+    <p class="ajuda">
+      Escreva o texto que acompanha o post do carro. As palavras entre chaves, como
+      <code>{{ '{' }}preco{{ '}' }}</code>, são trocadas pelos dados de cada veículo. Uma linha
+      cuja informação está vazia (carro sem opcionais, por exemplo) some sozinha. Na hora de
+      publicar pela lista de veículos dá para ajustar a legenda só daquele carro.
+    </p>
+
+    <div class="abas" role="tablist">
+      <button type="button" role="tab" [class.ativa]="rede === 'instagram'" [attr.aria-selected]="rede === 'instagram'"
+              (click)="trocarRede('instagram')">Instagram</button>
+      <button type="button" role="tab" [class.ativa]="rede === 'facebook'" [attr.aria-selected]="rede === 'facebook'"
+              (click)="trocarRede('facebook')">Facebook</button>
+    </div>
+
+    <div class="legenda-grade">
+      <div class="legenda-editor">
+        <textarea #campoLegenda class="form-control" rows="12" [maxlength]="info.tamanhoMaximoLegenda"
+                  [(ngModel)]="textos[rede]" (ngModelChange)="aoDigitar()"
+                  [attr.aria-label]="'Modelo da legenda do ' + (rede === 'instagram' ? 'Instagram' : 'Facebook')"></textarea>
+        <div class="legenda-rodape">
+          <small [class.limite]="tamanho > info.tamanhoMaximoLegenda - 100">{{ tamanho }} / {{ info.tamanhoMaximoLegenda }}</small>
+          @if (!ehPadrao) {
+            <button type="button" class="link" (click)="voltarAoPadrao()">Voltar à legenda padrão</button>
+          } @else {
+            <small class="padrao">Legenda padrão do sistema</small>
+          }
+        </div>
+        <div class="variaveis">
+          @for (v of info.variaveis; track v.nome) {
+            <button type="button" class="chip" [title]="v.descricao + ' — ex.: ' + v.exemplo" (click)="inserirVariavel(v.nome)">
+              {{ '{' + v.nome + '}' }}
+            </button>
+          }
+        </div>
+        @if (rede === 'instagram') {
+          <small class="ajuda">No Instagram o link não fica clicável na legenda — por isso o padrão diz "link na bio".</small>
+        }
+      </div>
+
+      <div class="legenda-previa">
+        <span class="rotulo">Como fica num carro da loja</span>
+        <pre>{{ previaTexto || '…' }}</pre>
+      </div>
+    </div>
+
+    <div class="acoes">
+      <button type="button" class="btn-primary" (click)="salvarLegendas()" [disabled]="!alterado || salvandoLegendas">
+        {{ salvandoLegendas ? 'Salvando…' : 'Salvar legendas' }}
+      </button>
+      @if (alterado) { <small class="pendente">Alterações não salvas</small> }
+    </div>
+  </section>
+
+  <!-- Capas -->
+  <section class="bloco">
+    <h5><span class="material-icons">wallpaper</span> Primeira imagem (capa)</h5>
+    <p class="ajuda">
+      A capa é a primeira imagem que aparece. Sem uma imagem sua, usamos a nossa arte padrão
+      (foto do carro, preço e o nome da loja nas cores da loja). A sua capa é igual para todos os
+      carros: serve para um banner da loja ou de uma promoção.
+    </p>
+
+    <div class="capas">
+      @for (tipo of tiposCapa; track tipo) {
+        <div class="capa" [class.story]="tipo === 'story'">
+          <div class="capa-titulo">
+            <strong>{{ tipo === 'post' ? 'Post do feed' : 'Story' }}</strong>
+            <span class="selo" [class.propria]="temCapa(tipo)">{{ temCapa(tipo) ? 'Sua imagem' : 'Padrão' }}</span>
+          </div>
+          <div class="capa-imagem" [class.retrato]="tipo === 'story'">
+            @if (carregandoImagem[tipo]) {
+              <span class="carregando">Gerando prévia…</span>
+            } @else if (imagem[tipo]) {
+              <img [src]="imagem[tipo]" [alt]="'Prévia da capa do ' + tipo" />
+            } @else if (tipo === 'story') {
+              <span class="vazio">Sem capa própria: a sequência começa direto pela arte do layout abaixo.</span>
+            } @else {
+              <span class="vazio">Cadastre um veículo com foto para ver a arte padrão.</span>
+            }
+          </div>
+          <small class="ajuda">
+            {{ tipo === 'post'
+              ? 'Ideal 1080 × 1350 (4:5). Outros formatos são encaixados sem cortar.'
+              : 'Ideal 1080 × 1920 (9:16). Entra antes da arte do carro, no carro novo e no botão da lista.' }}
+          </small>
+          <div class="capa-acoes">
+            <label class="btn-secondary" [class.desabilitado]="enviando[tipo]">
+              <span class="material-icons">upload</span>
+              {{ enviando[tipo] ? 'Enviando…' : (temCapa(tipo) ? 'Trocar imagem' : 'Enviar imagem') }}
+              <input type="file" accept="image/jpeg,image/png,image/webp" hidden
+                     [disabled]="enviando[tipo]" (change)="escolherCapa(tipo, $event)" />
+            </label>
+            @if (temCapa(tipo)) {
+              <button type="button" class="link perigo" (click)="removerCapa(tipo)" [disabled]="enviando[tipo]">
+                Usar a arte padrão
+              </button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- Layout do story -->
+  <section class="bloco">
+    <h5><span class="material-icons">dashboard</span> Layout da arte do story</h5>
+    <p class="ajuda">
+      Escolha como as fotos do carro são montadas na arte com o preço. Vale para os stories
+      automáticos e é o que vem marcado no botão da lista (lá dá para trocar só para aquele carro).
+      Se o carro tiver menos fotos do que o layout pede, usamos o mais próximo.
+    </p>
+    <div class="layout-grade">
+      <app-layout-story-picker [layouts]="info.layouts" [selecionado]="layout" [cor]="cor"
+                               (selecionar)="escolherLayout($event)" />
+      <div class="layout-previa">
+        <div class="capa-imagem retrato">
+          @if (carregandoImagem.layout) {
+            <span class="carregando">Gerando prévia…</span>
+          } @else if (imagem.layout) {
+            <img [src]="imagem.layout" [alt]="'Prévia do layout ' + (layoutAtual?.nome || '')" />
+          } @else {
+            <span class="vazio">Cadastre um veículo com foto para ver a prévia.</span>
+          }
+        </div>
+        @if (layoutAtual) { <small class="ajuda"><strong>{{ layoutAtual.nome }}:</strong> {{ layoutAtual.descricao }}</small> }
+      </div>
+    </div>
+  </section>
+} @else {
+  <p class="ajuda">Carregando personalização…</p>
+}
