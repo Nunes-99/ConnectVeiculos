@@ -1612,6 +1612,39 @@
   .status-indicator { background: var(--cat-realce, rgba(255, 255, 255, 0.15)); }
 }
 
+// O rodape nasceu azul-marinho fixo com texto branco e ficava de fora do tema:
+// num catalogo claro era o unico bloco escuro da pagina. Passa a usar a mesma
+// superficie da navbar, com os realces translucidos invertendo junto.
+.catalogo-container {
+  .catalogo-footer {
+    background: var(--cat-superficie, #202020);
+    border-top: 1px solid var(--cat-borda, #2f2f2f);
+    color: var(--cat-texto-suave, #b0b0b0);
+
+    .footer-content { border-bottom-color: var(--cat-borda, #2f2f2f); }
+
+    .footer-info h3 { color: var(--cat-texto, #fafafa); }
+
+    .footer-contato .footer-link {
+      background: var(--cat-realce, rgba(255, 255, 255, 0.08));
+      color: var(--cat-texto, #fafafa);
+      .material-icons { color: var(--cat-destaque, #1a237e); }
+      &:hover { background: var(--cat-realce-forte, rgba(255, 255, 255, 0.15)); }
+      // No fundo claro o verde do WhatsApp (#25d366) nao da contraste como texto.
+      &.whatsapp:hover { background: rgba(37, 211, 102, 0.18); color: var(--cat-texto, #fafafa); }
+    }
+
+    .footer-social .footer-social-link {
+      background: var(--cat-realce, rgba(255, 255, 255, 0.1));
+      color: var(--cat-texto-suave, #b0b0b0);
+      &:hover {
+        background: var(--cat-destaque, #1a237e);
+        color: var(--cat-destaque-texto, #fff);
+      }
+    }
+  }
+}
+
 /* Aviso de veiculo que saiu do catalogo. Usa as cores do tema da loja pra nao
    parecer erro do site — o carro acabou, a loja continua aberta. */
 .aviso-indisponivel {
