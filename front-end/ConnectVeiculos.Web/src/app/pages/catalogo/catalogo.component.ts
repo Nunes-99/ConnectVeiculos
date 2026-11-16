@@ -390,7 +390,25 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     return this.veiculosFiltrados;
   }
 
+  // Favoritos que ainda estao no catalogo. O navegador guarda o id de carros
+  // que ja foram vendidos ou excluidos: contar todos mostrava "Favoritos (2)"
+  // com o catalogo vazio.
+  get totalFavoritosNoCatalogo(): number {
+    return this.veiculos.reduce((n, v) => n + (this.favoritos.has(v.veiId) ? 1 : 0), 0);
+  }
+
+  alternarFavoritos(): void {
+    this.showFavoritosOnly = !this.showFavoritosOnly;
+    this.filtrarPorTexto();
+  }
+
   filtrarPorTexto(): void {
+    // O botao some quando nenhum favorito esta no catalogo; sem isto o filtro
+    // ficaria ligado sem ter como desligar.
+    if (this.showFavoritosOnly && this.totalFavoritosNoCatalogo === 0) {
+      this.showFavoritosOnly = false;
+    }
+
     let resultado = this.showFavoritosOnly
       ? this.veiculos.filter(v => this.favoritos.has(v.veiId))
       : [...this.veiculos];
@@ -693,6 +711,8 @@ export class CatalogoComponent implements OnInit, OnDestroy {
         this.favoritos.delete(veiId);
         this.saveFavoritosLocal();
         this.favoritoService.desfavoritar(this.favoritoEmail, veiId, this.favoritoChave()).subscribe();
+        // Com o filtro de favoritos ligado, o carro desmarcado sai da lista.
+        if (this.showFavoritosOnly) this.filtrarPorTexto();
       } else {
         this.favoritos.add(veiId);
         this.saveFavoritosLocal();

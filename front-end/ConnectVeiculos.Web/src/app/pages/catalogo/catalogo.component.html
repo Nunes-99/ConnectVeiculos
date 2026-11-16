@@ -114,10 +114,10 @@
     <!-- Toolbar -->
     <div class="catalogo-toolbar cat-resultados">
       <div class="toolbar-left">
-        @if (favoritos.size > 0) {
-          <button class="toolbar-btn" (click)="showFavoritosOnly = !showFavoritosOnly" [class.active]="showFavoritosOnly">
+        @if (totalFavoritosNoCatalogo > 0) {
+          <button class="toolbar-btn" (click)="alternarFavoritos()" [class.active]="showFavoritosOnly">
             <span class="material-icons">{{ showFavoritosOnly ? 'favorite' : 'favorite_border' }}</span>
-            Favoritos ({{ favoritos.size }})
+            Favoritos ({{ totalFavoritosNoCatalogo }})
           </button>
         }
         @if (comparando.length >= 2) {
