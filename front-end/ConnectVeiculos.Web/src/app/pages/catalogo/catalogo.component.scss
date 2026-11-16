@@ -16,7 +16,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 1.5rem;
-  height: 60px;
+  height: 72px;
 }
 
 .cat-navbar-actions {
@@ -30,10 +30,11 @@
   align-items: center;
   gap: 12px;
 
+  // Altura fixa e largura livre: logo de loja costuma ser deitado (simbolo +
+  // nome). No quadrado de 38px com "cover" ele ficava minusculo ou cortado.
   .cat-navbar-logo {
-    width: 38px; height: 38px; border-radius: 10px;
-    object-fit: cover; border: 2px solid rgba(255,255,255,0.2);
-    background: rgba(255,255,255,0.1);
+    height: 56px; width: auto; max-width: 180px; border-radius: 8px;
+    object-fit: contain;
   }
 
   .cat-navbar-logo-icon {
@@ -937,7 +938,8 @@
   }
   .cat-navbar-brand {
     gap: 8px;
-    .cat-navbar-logo, .cat-navbar-logo-icon { width: 32px; height: 32px; border-radius: 8px; }
+    .cat-navbar-logo-icon { width: 32px; height: 32px; border-radius: 8px; }
+    .cat-navbar-logo { height: 40px; max-width: 110px; }
     .cat-navbar-title {
       h1 { font-size: 1rem; }
       small { font-size: 0.65rem; }

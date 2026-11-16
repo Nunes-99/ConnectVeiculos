@@ -59,6 +59,7 @@ builder.Services.AddControllers(options =>
 {
     options.Filters.Add<ValidationFilter>();
      options.Filters.Add<ConnectVeiculos.API.Filters.LimitePlanoExceptionFilter>();
+     options.Filters.Add<ConnectVeiculos.API.Filters.ErroEmTextoFilter>();
 });
 
 // Upload acima do limite estoura durante o model binding do multipart, entao o

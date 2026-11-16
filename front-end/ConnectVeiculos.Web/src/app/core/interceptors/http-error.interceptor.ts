@@ -56,7 +56,12 @@ export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
       // O nginx responde com pagina HTML quando o backend demora (504) ou caiu
       // (502/503). O Angular tentava ler isso como JSON e o usuario via
       // "Unexpected token '<' ... is not valid JSON".
+      // Com withFetch o Angular entrega o proprio SyntaxError em error.error e
+      // descarta o corpo. Em 5xx isso e' a pagina do nginx; em 4xx e' um motivo
+      // em texto puro que se perdeu (tratado logo abaixo).
+      const corpoIlegivel = error.error instanceof SyntaxError;
       const respostaHtml = error.error?.error instanceof SyntaxError
+        || (corpoIlegivel && error.status >= 500)
         || (typeof error.error === 'string' && error.error.trimStart().startsWith('<'));
 
        // Limite de plano (403 do LimitePlanoExceptionFilter): mensagem amigavel
@@ -65,6 +70,12 @@ export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
          errorMessage = 'O servidor demorou para responder, mas a operação pode ter terminado mesmo assim. Confira o resultado antes de tentar de novo.';
        } else if (respostaHtml) {
          errorMessage = 'O servidor está indisponível no momento. Tente de novo em instantes.';
+       } else if (corpoIlegivel) {
+         // Nunca mostrar o erro de leitura do JSON ("Unexpected token..."): o
+         // motivo real nao chegou, entao vale a mensagem pelo status.
+         errorMessage = error.status === 404
+           ? 'Recurso não encontrado'
+           : 'O servidor recusou a operação. Confira os dados e tente de novo.';
        } else
        if (error.status === 403 && error.error?.error === 'limite_plano') {
          const e = error.error;
