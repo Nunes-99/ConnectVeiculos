@@ -342,12 +342,23 @@ export class LojasComponent implements OnInit {
 
   private enviarImagensDaLoja(lojaId: number, data: Record<string, unknown>): void {
     const envios: Promise<void>[] = [];
+    // Imagens que nao subiram. Antes a falha era engolida e o modal fechava
+    // como se tudo tivesse sido salvo — a loja ficava sem banner/icone e
+    // ninguem era avisado.
+    const falhas: string[] = [];
 
     if (this.bannerFile) {
       envios.push(new Promise<void>((resolve) => {
         this.imagemService.uploadLoja(lojaId, this.bannerFile as File, 'banner').subscribe({
-          next: (r) => { data['lojBannerImg'] = r.caminho; resolve(); },
-          error: () => resolve()
+          next: (r) => {
+            data['lojBannerImg'] = r.caminho;
+            // O caminho volta pro formulario e o arquivo sai da fila: se a outra
+            // imagem falhar, salvar de novo nao reenvia nem apaga esta.
+            this.form.patchValue({ lojBannerImg: r.caminho });
+            this.bannerFile = null;
+            resolve();
+          },
+          error: () => { falhas.push('o banner'); resolve(); }
         });
       }));
     }
@@ -355,8 +366,13 @@ export class LojasComponent implements OnInit {
     if (this.faviconFile) {
       envios.push(new Promise<void>((resolve) => {
         this.imagemService.uploadLoja(lojaId, this.faviconFile as File, 'favicon').subscribe({
-          next: (r) => { data['lojFavicon'] = r.caminho; resolve(); },
-          error: () => resolve()
+          next: (r) => {
+            data['lojFavicon'] = r.caminho;
+            this.form.patchValue({ lojFavicon: r.caminho });
+            this.faviconFile = null;
+            resolve();
+          },
+          error: () => { falhas.push('o ícone do catálogo'); resolve(); }
         });
       }));
     }
@@ -366,6 +382,19 @@ export class LojasComponent implements OnInit {
         next: () => {
           this.salvando = false;
           this.loadData();
+
+          if (falhas.length) {
+            // Loja criada agora passa a ser edicao: salvar de novo nao pode
+            // cadastrar uma segunda loja.
+            this.editMode = true;
+            this.editId = lojaId;
+            this.toast.error(
+              `Os dados da loja foram salvos, mas ${falhas.join(' e ')} não ${falhas.length > 1 ? 'foram enviados' : 'foi enviado'}. ` +
+              'Confira o arquivo e clique em Salvar para tentar de novo.'
+            );
+            return;
+          }
+
           this.closeModal();
         },
         error: () => { this.salvando = false; }
