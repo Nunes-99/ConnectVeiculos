@@ -25,16 +25,23 @@ namespace ConnectVeiculos.Infrastructure.Email
         private const string KEY_SENDER_NAME = "SMTP_SENDER_NAME";
         private const string KEY_ENABLE_SSL = "SMTP_ENABLE_SSL";
 
+        private readonly EmailPlataformaSettings _plataforma;
+        private readonly Core.Interfaces.Tenancy.ITenantContext? _tenant;
+
         public SmtpEmailService(
             IOptions<EmailSettings> settings,
             IConfiguracaoSistemaRepository configRepository,
             Core.Interfaces.Database.Repositories.Lojas.ILojaRepository lojaRepository,
-            ILogger<SmtpEmailService> logger)
+            ILogger<SmtpEmailService> logger,
+            IOptions<EmailPlataformaSettings>? plataforma = null,
+            Core.Interfaces.Tenancy.ITenantContext? tenant = null)
         {
             _settings = settings.Value;
             _configRepository = configRepository;
             _lojaRepository = lojaRepository;
             _logger = logger;
+            _plataforma = plataforma?.Value ?? new EmailPlataformaSettings();
+            _tenant = tenant;
         }
 
         /// <summary>
@@ -116,6 +123,19 @@ namespace ConnectVeiculos.Infrastructure.Email
                     return false;
                 }
 
+                return await EnviarAsync(s, to, subject, body, anexos);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao enviar email para {To}: {Subject}", to, subject);
+                return false;
+            }
+        }
+
+        private async Task<bool> EnviarAsync(EmailSettings s, string to, string subject, string body, IReadOnlyList<EmailAnexo> anexos)
+        {
+            try
+            {
                 using var client = new SmtpClient(s.SmtpServer, s.SmtpPort)
                 {
                     Credentials = new NetworkCredential(s.Username, s.Password),
@@ -257,7 +277,21 @@ namespace ConnectVeiculos.Infrastructure.Email
         public async Task<bool> SendRecuperacaoSenhaAsync(string to, string usuarioNome, string token)
         {
             var subject = "Redefinição de senha - ConnectVeículos";
-            var body = GetRecuperacaoSenhaTemplate(usuarioNome, token, await ResolverUrlBaseAsync());
+            var urlBase = await ResolverUrlBaseAsync();
+            if (string.IsNullOrEmpty(urlBase)) urlBase = (_plataforma.PublicSiteUrl ?? "").Trim().TrimEnd('/');
+
+            // A tela de redefinicao nao tem login: e' o link que diz de qual
+            // conta e' o token. Sem isto ele era procurado so na conta padrao.
+            var conta = _tenant is { IsResolved: true } ? _tenant.TenantSlug : null;
+            var body = GetRecuperacaoSenhaTemplate(usuarioNome, token, urlBase, conta);
+
+            // E-mail da conta de quem usa o sistema: quem envia e' a plataforma.
+            // Pela conta da loja ele nao saia justamente para quem mais precisa
+            // (loja recem-criada, sem e-mail cadastrado, e sem como entrar para
+            // cadastrar). Sem remetente da plataforma, vale o da loja.
+            if (_plataforma.Configurado)
+                return await EnviarAsync(_plataforma, to, subject, body, Array.Empty<EmailAnexo>());
+
             return await SendEmailAsync(to, subject, body);
         }
 
@@ -386,14 +420,15 @@ namespace ConnectVeiculos.Infrastructure.Email
             return MontarEmail("Bem-vindo ao ConnectVeículos", AzulMarca, conteudo);
         }
 
-        private static string GetRecuperacaoSenhaTemplate(string usuarioNome, string token, string urlBase)
+        private static string GetRecuperacaoSenhaTemplate(string usuarioNome, string token, string urlBase, string? conta = null)
         {
             // O e-mail mandava o token cru e pedia pro usuario "utilizar o codigo",
             // sem dizer onde. A tela /redefinir-senha ja aceita ?token=, entao o
             // link leva direto pros campos de senha nova e confirmacao.
             var linkRedefinir = string.IsNullOrEmpty(urlBase)
                 ? ""
-                : $"{urlBase}/redefinir-senha?token={Uri.EscapeDataString(token)}";
+                : $"{urlBase}/redefinir-senha?token={Uri.EscapeDataString(token)}"
+                  + (string.IsNullOrEmpty(conta) ? "" : $"&tenant={Uri.EscapeDataString(conta)}");
 
             // Sem link montado (loja sem URL de catalogo), o codigo volta a ser a
             // saida — melhor que um e-mail sem acao nenhuma.

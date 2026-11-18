@@ -19,6 +19,8 @@ export class RedefinirSenhaComponent implements OnInit {
   token = '';
   /// Token veio pela URL (link do e-mail). Nesse caso o campo fica oculto.
   tokenVeioDaUrl = false;
+  /// Conta (loja) dona do token, vinda no link do e-mail.
+  conta = '';
   novaSenha = '';
   confirmarSenha = '';
   loading = false;
@@ -33,6 +35,7 @@ export class RedefinirSenhaComponent implements OnInit {
         this.token = params['token'];
         this.tokenVeioDaUrl = true;
       }
+      this.conta = params['tenant'] || '';
     });
   }
 
@@ -56,7 +59,7 @@ export class RedefinirSenhaComponent implements OnInit {
 
     this.loading = true;
 
-    this.authService.redefinirSenha(this.token, this.novaSenha, this.confirmarSenha).subscribe({
+    this.authService.redefinirSenha(this.token, this.novaSenha, this.confirmarSenha, this.conta).subscribe({
       next: (response) => {
         this.loading = false;
         this.sucesso = true;

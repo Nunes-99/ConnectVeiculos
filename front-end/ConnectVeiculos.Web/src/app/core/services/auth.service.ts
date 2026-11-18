@@ -246,8 +246,13 @@ export class AuthService extends ApiService {
     return this.post<{ mensagem: string; token: string }>('auth/recuperar-senha', { email });
   }
 
-  redefinirSenha(token: string, novaSenha: string, confirmarSenha: string): Observable<{ mensagem: string }> {
-    return this.post<{ mensagem: string }>('auth/redefinir-senha', {
+  /**
+   * @param conta conta (loja) dona do token, vinda no link do e-mail. Sem ela o
+   * servidor procura o token so na conta do endereco aberto.
+   */
+  redefinirSenha(token: string, novaSenha: string, confirmarSenha: string, conta = ''): Observable<{ mensagem: string }> {
+    const destino = conta ? `auth/redefinir-senha?tenant=${encodeURIComponent(conta)}` : 'auth/redefinir-senha';
+    return this.post<{ mensagem: string }>(destino, {
       token,
       novaSenha,
       confirmarSenha

@@ -537,7 +537,10 @@ namespace ConnectVeiculos.API.Controllers
         /// Solicita recuperacao de senha (envia email com token)
         /// </summary>
         /// <param name="useCase">Use case de solicitacao injetado</param>
+        /// <param name="master">Cadastro central, que diz de qual conta o e-mail e'</param>
+        /// <param name="scopeFactory">Abre o escopo da conta dona do e-mail</param>
         /// <param name="input">Email do usuario</param>
+        /// <param name="ct">Cancelamento da requisicao</param>
         /// <returns>Mensagem de sucesso</returns>
         /// <response code="200">Solicitacao processada</response>
         /// <response code="400">Dados de entrada invalidos</response>
@@ -549,18 +552,40 @@ namespace ConnectVeiculos.API.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> SolicitarRecuperacao(
             [FromServices] ISolicitarRecuperacaoSenhaUseCase useCase,
-            [FromBody] SolicitarRecuperacaoInputModel input)
+            [FromServices] MasterDbContext master,
+            [FromServices] IServiceScopeFactory scopeFactory,
+            [FromBody] SolicitarRecuperacaoInputModel input,
+            CancellationToken ct)
         {
             if (input == null || string.IsNullOrEmpty(input.Email))
                 return BadRequest(new { message = "E-mail é obrigatório." });
 
             try
             {
+                // Quem esqueceu a senha esta no endereco geral do sistema, que
+                // aponta para a conta padrao: o e-mail era procurado so nela e o
+                // usuario de qualquer outra loja nunca recebia nada. O cadastro
+                // central diz de qual conta o e-mail e'.
+                var email = input.Email.Trim().ToLowerInvariant();
+                var conta = await master.UserEmailMaps.AsNoTracking()
+                    .Where(u => u.Email == email)
+                    .Join(master.Tenants.AsNoTracking().Where(t => t.TenStatus == TenantStatus.Active),
+                        u => u.TenantId, t => t.TenId, (u, t) => t)
+                    .FirstOrDefaultAsync(ct);
+
                 // O token NAO volta na resposta. Ele voltava "pra teste" e nunca
                 // foi removido: qualquer pessoa podia postar o e-mail de outra e
                 // receber o token pra trocar a senha dela, sem acesso a caixa de
                 // entrada. O token so existe no e-mail enviado.
-                await useCase.ExecutarAsync(input);
+                if (conta != null)
+                {
+                    using var escopo = new Infrastructure.Tenancy.TenantScope(scopeFactory, conta);
+                    await escopo.Services.GetRequiredService<ISolicitarRecuperacaoSenhaUseCase>().ExecutarAsync(input);
+                }
+                else
+                {
+                    await useCase.ExecutarAsync(input);
+                }
 
                 // Sempre retorna sucesso por seguranca (nao revela se e-mail existe)
                 return Ok(new
