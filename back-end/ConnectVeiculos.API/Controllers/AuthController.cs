@@ -537,7 +537,10 @@ namespace ConnectVeiculos.API.Controllers
         /// Solicita recuperacao de senha (envia email com token)
         /// </summary>
         /// <param name="useCase">Use case de solicitacao injetado</param>
+        /// <param name="master">Cadastro central, que diz de qual conta o e-mail e'</param>
+        /// <param name="scopeFactory">Abre o escopo da conta dona do e-mail</param>
         /// <param name="input">Email do usuario</param>
+        /// <param name="ct">Cancelamento da requisicao</param>
         /// <returns>Mensagem de sucesso</returns>
         /// <response code="200">Solicitacao processada</response>
         /// <response code="400">Dados de entrada invalidos</response>
