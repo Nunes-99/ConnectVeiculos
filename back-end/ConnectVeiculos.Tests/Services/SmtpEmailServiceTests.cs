@@ -91,7 +91,37 @@ namespace ConnectVeiculos.Tests.Services
             _smtp.Dispose();
         }
 
-        private SmtpEmailService Servico(EmailSettings? appsettings = null)
+        private sealed class ContaFixa : ConnectVeiculos.Core.Interfaces.Tenancy.ITenantContext
+        {
+            public bool IsResolved => true;
+            public int TenantId => 7;
+            public string TenantSlug => "auto-giro";
+            public string DatabaseFile => "auto-giro.db";
+            public void Resolve(int tenantId, string slug, string databaseFile) { }
+        }
+
+        private EmailPlataformaSettings Plataforma() => new()
+        {
+            SmtpServer = "127.0.0.1", SmtpPort = _smtp.Porta, EnableSsl = false,
+            SenderEmail = "nao-responda@connectveiculos.dev.br", SenderName = "ConnectVeiculos",
+            PublicSiteUrl = "https://connectveiculos.dev.br/"
+        };
+
+        /// <summary>Corpo da mensagem como texto (o .NET manda em base64 ou quoted-printable).</summary>
+        private static string Corpo(string mensagem)
+        {
+            var linhas = mensagem.Split('\n').Select(l => l.TrimEnd('\r')).ToList();
+            var resto = linhas.Skip(linhas.FindIndex(l => l.Length == 0) + 1).ToList();
+            try { return Encoding.UTF8.GetString(Convert.FromBase64String(string.Concat(resto))); }
+            catch (FormatException)
+            {
+                // quoted-printable: "=" no fim da linha e' quebra suave.
+                var qp = string.Concat(resto.Select(l => l.EndsWith('=') ? l[..^1] : l + "\n"));
+                return qp.Replace("=3D", "=").Replace("=26", "&");
+            }
+        }
+
+        private SmtpEmailService Servico(EmailSettings? appsettings = null, EmailPlataformaSettings? plataforma = null)
         {
             var loja = new Loja();
             typeof(Loja).GetProperty(nameof(Loja.LojId))!.SetValue(loja, 1);
@@ -99,7 +129,8 @@ namespace ConnectVeiculos.Tests.Services
             typeof(Loja).GetProperty(nameof(Loja.LojEmail))!.SetValue(loja, "contato@diamanteveiculos.com.br");
             var lojas = new Mock<ILojaRepository>();
             lojas.Setup(l => l.GetAllAsync()).ReturnsAsync(new[] { loja });
-            return new SmtpEmailService(Options.Create(appsettings ?? new EmailSettings()), _config, lojas.Object, NullLogger<SmtpEmailService>.Instance);
+            return new SmtpEmailService(Options.Create(appsettings ?? new EmailSettings()), _config, lojas.Object, NullLogger<SmtpEmailService>.Instance,
+                plataforma == null ? null : Options.Create(plataforma), new ContaFixa());
         }
 
         private void SmtpDaLoja(string? nome = null)
@@ -161,6 +192,48 @@ namespace ConnectVeiculos.Tests.Services
             ok.Should().BeFalse();
             _smtp.Mensagens.Should().BeEmpty();
             config.Configurado.Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task Redefinicao_de_senha_sai_pela_plataforma_mesmo_sem_email_da_loja()
+        {
+            var ok = await Servico(plataforma: Plataforma()).SendRecuperacaoSenhaAsync("dono@lojanova.com.br", "João", "abc123");
+
+            ok.Should().BeTrue();
+            var msg = _smtp.Mensagens.Single();
+            msg.Should().Contain("From: \"ConnectVeiculos\" <nao-responda@connectveiculos.dev.br>");
+            // Loja sem site proprio: o link usa o endereco do sistema e leva a conta.
+            Corpo(msg).Should().Contain("https://connectveiculos.dev.br/redefinir-senha?token=abc123&tenant=auto-giro");
+        }
+
+        [Fact]
+        public async Task Redefinicao_de_senha_sai_pela_plataforma_mesmo_com_email_da_loja()
+        {
+            SmtpDaLoja("Diamante");
+
+            await Servico(plataforma: Plataforma()).SendRecuperacaoSenhaAsync("dono@lojanova.com.br", "João", "abc123");
+
+            _smtp.Mensagens.Single().Should().Contain("<nao-responda@connectveiculos.dev.br>");
+        }
+
+        [Fact]
+        public async Task Sem_remetente_da_plataforma_a_redefinicao_sai_pela_loja()
+        {
+            SmtpDaLoja("Diamante");
+
+            var ok = await Servico().SendRecuperacaoSenhaAsync("dono@lojanova.com.br", "João", "abc123");
+
+            ok.Should().BeTrue();
+            _smtp.Mensagens.Single().Should().Contain("From: \"Diamante\" <vendas@diamanteveiculos.com.br>");
+        }
+
+        [Fact]
+        public async Task Remetente_da_plataforma_nao_envia_os_avisos_da_loja()
+        {
+            var ok = await Servico(plataforma: Plataforma()).SendEmailAsync("cliente@exemplo.com", "Preço caiu", "<p>oi</p>");
+
+            ok.Should().BeFalse();
+            _smtp.Mensagens.Should().BeEmpty();
         }
     }
 

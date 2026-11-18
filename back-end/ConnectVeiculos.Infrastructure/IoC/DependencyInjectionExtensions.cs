@@ -115,6 +115,8 @@ namespace ConnectVeiculos.Infrastructure.IoC
 
             // Email Service
             services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
+            // Remetente da plataforma: so para e-mails da conta (redefinicao de senha).
+            services.Configure<EmailPlataformaSettings>(configuration.GetSection("EmailPlataforma"));
             services.AddTransient<IEmailService, SmtpEmailService>();
             services.AddTransient<Core.Interfaces.Services.IFavoritoNotificacaoService, Services.Notificacao.FavoritoNotificacaoService>();
             services.AddTransient<Core.Interfaces.Services.ITestDriveNotificacaoService, Services.Notificacao.TestDriveNotificacaoService>();
