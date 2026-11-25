@@ -681,6 +681,22 @@ namespace ConnectVeiculos.Tests.Services
         }
 
         [Fact]
+        public async Task Duas_importacoes_juntas_do_mesmo_anuncio_criam_um_carro_so()
+        {
+            await ConectarAsync();
+            AnunciosNoNapista();
+            _napista.Atraso = TimeSpan.FromMilliseconds(100);
+            NapistaImportarPedido Pedido() => new() { LojaId = 1, CategoriaId = 2, Itens = { new() { AnuncioId = "of-pajero" } } };
+            var antes = _veiculos.Count;
+
+            var r = await Task.WhenAll(Task.Run(() => _service.ImportarAnunciosAsync(Pedido())), Task.Run(() => _service.ImportarAnunciosAsync(Pedido())));
+
+            _veiculos.Should().HaveCount(antes + 1);
+            r.Sum(x => x.Criados).Should().Be(1);
+            r.SelectMany(x => x.Detalhes).Select(d => d.Acao).Should().BeEquivalentTo(new[] { "criado", "ignorado" });
+        }
+
+        [Fact]
         public async Task Placa_escondida_pede_a_placa_e_confere_o_final()
         {
             await ConectarAsync();
