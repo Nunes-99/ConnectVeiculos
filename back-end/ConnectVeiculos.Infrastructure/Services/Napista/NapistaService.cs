@@ -24,7 +24,7 @@ using Microsoft.Extensions.Options;
 namespace ConnectVeiculos.Infrastructure.Services.Napista
 {
     /// <inheritdoc cref="INapistaService"/>
-    public class NapistaService : INapistaService
+    public partial class NapistaService : INapistaService
     {
         public const string ChaveToken = "NAPISTA_TOKEN";
         public const string ChaveConta = "NAPISTA_CONTA";
@@ -40,6 +40,9 @@ namespace ConnectVeiculos.Infrastructure.Services.Napista
         // O catalogo e' igual para todas as lojas do mesmo ambiente.
         private static readonly ConcurrentDictionary<string, (object Valor, DateTime Expira)> Catalogo = new();
 
+        /// <summary>Para os testes: cada um simula o seu catalogo.</summary>
+        public static void LimparCatalogoEmCache() => Catalogo.Clear();
+
         private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
         private readonly HttpClient _http;
@@ -54,12 +57,17 @@ namespace ConnectVeiculos.Infrastructure.Services.Napista
         private readonly IVeiculoNapistaRepository _anuncios;
         private readonly ConnectVeiculosDbContext _db;
         private readonly ILogger<NapistaService> _logger;
+        private readonly ILimiteService _limites;
+        private readonly string _pastaRaiz;
 
         public NapistaService(HttpClient http, IOptions<NapistaSettings> settings, IConfiguracaoSistemaRepository config,
             ITokenProtector protector, IOAuthStateProtector state, ITenantContext tenant, IVeiculoRepository veiculos,
             IVeiculoImagemRepository imagens, ILojaRepository lojas, IVeiculoNapistaRepository anuncios,
-            ConnectVeiculosDbContext db, ILogger<NapistaService> logger)
+            ConnectVeiculosDbContext db, ILogger<NapistaService> logger, ILimiteService limites,
+            Microsoft.Extensions.Hosting.IHostEnvironment ambiente)
         {
+            _limites = limites;
+            _pastaRaiz = ambiente.ContentRootPath;
             _http = http;
             _settings = settings.Value;
             _config = config;

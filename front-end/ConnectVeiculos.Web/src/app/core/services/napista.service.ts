@@ -57,6 +57,38 @@ export interface NapistaVeiculoInfo {
   sugestao: boolean;
 }
 
+/** Anuncio que ja esta no NaPista, para importar como veiculo. */
+export interface NapistaAnuncioExistente {
+  anuncioId: string;
+  titulo: string;
+  status: string;
+  anoModelo: number | null;
+  anoFabricacao: number | null;
+  km: number;
+  preco: number;
+  placa: string | null;
+  placaEscondida: boolean;
+  cor: string | null;
+  fotos: number;
+  fotoCapa: string | null;
+  veiculoVinculadoId: number | null;
+  veiculoMesmaPlacaId: number | null;
+  veiculoDescricao: string | null;
+}
+
+export interface NapistaImportarPedido {
+  lojaId: number;
+  categoriaId: number;
+  itens: { anuncioId: string; placa?: string | null }[];
+}
+
+export interface NapistaImportacaoResultado {
+  criados: number;
+  vinculados: number;
+  erros: number;
+  detalhes: { anuncioId: string; titulo: string; sucesso: boolean; acao: string; veiculoId: number | null; fotos: number; mensagem: string }[];
+}
+
 export interface NapistaLeadsResultado { encontrados: number; importados: number; jaExistiam: number; }
 
 @Injectable({ providedIn: 'root' })
@@ -114,6 +146,14 @@ export class NapistaService {
 
   pausar(veiculoId: number): Observable<NapistaVeiculoInfo> {
     return this.http.post<NapistaVeiculoInfo>(`${this.url}/veiculos/${veiculoId}/pausar`, {});
+  }
+
+  anunciosExistentes(): Observable<NapistaAnuncioExistente[]> {
+    return this.http.get<NapistaAnuncioExistente[]>(`${this.url}/anuncios-existentes`);
+  }
+
+  importarAnuncios(pedido: NapistaImportarPedido): Observable<NapistaImportacaoResultado> {
+    return this.http.post<NapistaImportacaoResultado>(`${this.url}/anuncios-existentes/importar`, pedido);
   }
 
   importarLeads(dias = 30): Observable<NapistaLeadsResultado> {

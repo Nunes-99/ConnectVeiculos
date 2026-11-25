@@ -4,16 +4,18 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../core/services/toast.service';
 import { NapistaService, NapistaStatus, erroNapista } from '../../../core/services/napista.service';
+import { NapistaImportarComponent } from './napista-importar.component';
 
 /**
  * Corpo do cartao "NaPista" em Integracoes: conectar a conta da loja no
  * NaPista (mesmo usuario e senha de la), escolher a loja e trazer os leads.
- * Os anuncios ficam na janela de cada veiculo (Veiculos -> menu -> NaPista).
+ * Os anuncios ficam na janela de cada veiculo (Veiculos -> menu -> NaPista);
+ * os que a loja ja tinha no NaPista entram por NapistaImportarComponent.
  */
 @Component({
   selector: 'app-napista-config',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, NapistaImportarComponent],
   template: `
     <p class="np-texto">
       Anuncia os veículos da loja no <strong>NaPista</strong> e traz os leads de lá para a lista de Leads.
@@ -84,6 +86,8 @@ import { NapistaService, NapistaStatus, erroNapista } from '../../../core/servic
         <p class="np-texto np-anuncios">
           Para anunciar: <a routerLink="/veiculos">Veículos</a> → menu <span class="material-icons np-ico">more_vert</span> do carro → <strong>Anunciar no NaPista</strong>.
         </p>
+
+        <app-napista-importar />
       }
 
       <div class="np-acoes">

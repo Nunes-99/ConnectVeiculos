@@ -41,6 +41,9 @@ namespace ConnectVeiculos.Tests.Services
             /// <summary>Resposta pelo inicio de "METODO url"; a mais longa que casar vence.</summary>
             public readonly Dictionary<string, Queue<(HttpStatusCode, string)>> Rotas = new();
 
+            /// <summary>Fotos servidas por URL exata (para a importacao baixar).</summary>
+            public readonly Dictionary<string, byte[]> Arquivos = new();
+
             public void Responder(string rota, HttpStatusCode status, string corpo)
             {
                 if (!Rotas.TryGetValue(rota, out var fila)) Rotas[rota] = fila = new();
@@ -52,6 +55,8 @@ namespace ConnectVeiculos.Tests.Services
                 var chave = request.Method.Method + " " + request.RequestUri;
                 var corpo = request.Content == null ? null : await request.Content.ReadAsStringAsync(ct);
                 Chamadas.Add((request.Method.Method, request.RequestUri!.ToString(), corpo, request.Headers.Authorization?.Parameter));
+                if (Arquivos.TryGetValue(request.RequestUri!.ToString(), out var bytes))
+                    return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(bytes) };
                 var rota = Rotas.Keys.Where(k => chave.StartsWith(k, StringComparison.Ordinal)).OrderByDescending(k => k.Length).FirstOrDefault();
                 if (rota == null) return new HttpResponseMessage(HttpStatusCode.NotFound) { Content = new StringContent("{\"message\":\"rota nao simulada\"}") };
                 var fila = Rotas[rota];
@@ -72,6 +77,8 @@ namespace ConnectVeiculos.Tests.Services
             public readonly Dictionary<int, VeiculoNapista> Itens = new();
             public Task<VeiculoNapista?> GetByVeiculoIdAsync(int veiculoId) => Task.FromResult(Itens.TryGetValue(veiculoId, out var a) ? a : null);
             public Task SalvarAsync(VeiculoNapista anuncio) { Itens[anuncio.R_VeiId] = anuncio; return Task.CompletedTask; }
+            public Task<Dictionary<string, int>> VeiculosPorAnuncioAsync(IReadOnlyCollection<string> ids) =>
+                Task.FromResult(Itens.Values.Where(a => ids.Contains(a.VnpAnuncioId)).ToDictionary(a => a.VnpAnuncioId, a => a.R_VeiId));
         }
 
         private sealed class StateFalso : IOAuthStateProtector
@@ -90,6 +97,7 @@ namespace ConnectVeiculos.Tests.Services
         private readonly SqliteConnection _conexao;
         private readonly ConnectVeiculosDbContext _db;
         private readonly NapistaService _service;
+        private readonly string _pasta = Path.Combine(Path.GetTempPath(), "napista-testes-" + Guid.NewGuid().ToString("N"));
 
         public NapistaServiceTests()
         {
@@ -101,10 +109,18 @@ namespace ConnectVeiculos.Tests.Services
             var veiculos = new Mock<IVeiculoRepository>();
             veiculos.Setup(v => v.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => _veiculos.FirstOrDefault(x => x.VeiId == id)!);
             veiculos.Setup(v => v.GetAllAsync()).ReturnsAsync(() => _veiculos.ToList());
+            veiculos.Setup(v => v.CreateAsync(It.IsAny<Veiculo>())).ReturnsAsync((Veiculo v) =>
+            {
+                var id = _veiculos.Max(x => x.VeiId) + 1;
+                _veiculos.Add(new Veiculo(id, v.R_LojId, v.R_CatId, v.VeiMarca, v.VeiModelo, v.VeiAno, v.VeiPlaca, v.VeiChassi, v.VeiCor,
+                    v.VeiKm, v.VeiPreco, v.VeiDtEntrada, v.VeiSts, v.VeiSitSts, v.VeiPrecoCompra, v.VeiObservacao, veiOpcionais: v.VeiOpcionais));
+                return id;
+            });
             var imagens = new Mock<IVeiculoImagemRepository>();
-            imagens.Setup(i => i.GetByVeiculoIdAsync(It.IsAny<int>())).ReturnsAsync(() => _fotos.ToList());
+            imagens.Setup(i => i.GetByVeiculoIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => _fotos.Where(f => f.R_VeiId == id).ToList());
+            imagens.Setup(i => i.CreateAsync(It.IsAny<VeiculoImagem>())).ReturnsAsync((VeiculoImagem f) => { _fotos.Add(f); return _fotos.Count; });
             var lojas = new Mock<ILojaRepository>();
-            lojas.Setup(l => l.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((Loja)null!);
+            lojas.Setup(l => l.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => id == 1 ? new Loja() : null!);
             lojas.Setup(l => l.GetAllAsync()).ReturnsAsync(Array.Empty<Loja>());
             var protector = new Mock<ITokenProtector>();
             protector.Setup(p => p.Protect(It.IsAny<string>())).Returns((string s) => "x" + s);
@@ -117,16 +133,25 @@ namespace ConnectVeiculos.Tests.Services
             _conexao.Open();
             _db = new ConnectVeiculosDbContext(new DbContextOptionsBuilder<ConnectVeiculosDbContext>().UseSqlite(_conexao).Options);
             _db.Database.EnsureCreated();
+            _db.Categorias.Add(new ConnectVeiculos.Core.Entities.Categorias.Categoria(2, "Hatch", "", true));
+            _db.SaveChanges();
+
+            var ambiente = new Mock<Microsoft.Extensions.Hosting.IHostEnvironment>();
+            ambiente.SetupGet(a => a.ContentRootPath).Returns(_pasta);
+            NapistaService.EnderecoDeFotoPermitido = (_, _) => Task.FromResult(true);
+            NapistaService.LimparCatalogoEmCache();
 
             _service = new NapistaService(new HttpClient(_napista), Options.Create(new NapistaSettings { ClientId = "connectveiculos" }),
                 _config, protector.Object, new StateFalso(), tenant.Object, veiculos.Object, imagens.Object, lojas.Object,
-                _anuncios, _db, NullLogger<NapistaService>.Instance);
+                _anuncios, _db, NullLogger<NapistaService>.Instance, new Mock<ConnectVeiculos.Core.Interfaces.Services.ILimiteService>().Object,
+                ambiente.Object);
         }
 
         public void Dispose()
         {
             _db.Dispose();
             _conexao.Dispose();
+            if (Directory.Exists(_pasta)) Directory.Delete(_pasta, true);
         }
 
         private static string Token(string access = "acesso-1", int expira = 300, int refreshExpira = 1800) =>
@@ -429,6 +454,195 @@ namespace ConnectVeiculos.Tests.Services
             a.Opcionais.Should().ContainSingle(c => c.Id == "CAR_1_AIRBAG");
             a.Cambios.Select(c => c.Id).Should().Equal("MANUAL", "AUTOMATIC");
         }
+
+        // ---------------- Importar anuncios que ja estao no NaPista ----------------
+
+        private const string FotoNapista = "https://marketplace.development.bvia.zflow.com.br/static/photos/of-pajero_1";
+
+        private static byte[] Png()
+        {
+            using var img = new SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(40, 30);
+            using var ms = new MemoryStream();
+            SixLabors.ImageSharp.ImageExtensions.SaveAsPng(img, ms);
+            return ms.ToArray();
+        }
+
+        /// <summary>Tres anuncios no formato do exemplo da documentacao (Buscar Anuncios por Loja e Status).</summary>
+        private void AnunciosNoNapista()
+        {
+            _napista.Responder($"GET {Api}/seller/{Seller}/offers?status=PUBLISHED&page=0", HttpStatusCode.OK, $$"""
+                {"pageNumber":0,"pageSize":50,"totalElements":3,"totalPages":1,"pageData":[
+                  {"id":"of-pajero","versionId":"2000019066041201","description":"Veículo com todas as manutenções em dia.",
+                   "modelYear":2013,"manufacturedYear":2013,"mileage":100000,"armoured":false,"price":53000,"plate":"PJR1A23",
+                   "fuelType":"FLEX","color":"SILVER","transmissionType":"AUTOMATIC","equipments":["CAR_1_AIRBAG","CAR_1_ALARME"],
+                   "status":"PUBLISHED","title":"MITSUBISHI PAJERO TR4 2.0 FLEX 16V 4X2 AUT.","createdDate":"2023-09-06T20:16:32Z",
+                   "photos":[{"id":"f2","url":"r/1092324/v/23312112/yMt4kg92GGM.jpg","order":1},{"id":"f1","url":"{{FotoNapista}}","order":0}],
+                   "numberOfDoors":4},
+                  {"id":"of-gol","versionId":"75630682016","modelYear":2020,"manufacturedYear":2020,"mileage":45000,"price":52990,
+                   "plate":"ABC1D23","fuelType":"FLEX","color":"SILVER","transmissionType":"MANUAL","status":"PUBLISHED",
+                   "title":"VOLKSWAGEN GOL 1.0 MPI","photos":[]},
+                  {"id":"of-escondida","versionId":"20000190660412016","modelYear":2014,"manufacturedYear":2013,"mileage":99999,
+                   "price":162900,"plate":"******4","fuelType":"DIESEL","color":"WHITE","transmissionType":"MANUAL","status":"PUBLISHED",
+                   "title":"IVECO DAILY CHASSI 70C16 2P (DIESEL)","photos":[],"numberOfDoors":2}
+                ]}
+                """);
+            _napista.Responder($"GET {Api}/catalog/makes/CAR", HttpStatusCode.OK,
+                """[{"id":"MITSUBISHI","name":"MITSUBISHI"},{"id":"VOLKSWAGEN","name":"VOLKSWAGEN"},{"id":"MG","name":"MG"}]""");
+            _napista.Responder($"GET {Api}/catalog/makes/MOTORCYCLE", HttpStatusCode.OK, "[]");
+            _napista.Responder($"GET {Api}/catalog/makes/TRUCK", HttpStatusCode.OK, """[{"id":"IVECO","name":"IVECO"}]""");
+            _napista.Responder($"GET {Api}/catalog/CAR/make/MITSUBISHI/models", HttpStatusCode.OK,
+                """[{"id":"PAJERO","name":"Pajero"},{"id":"PAJERO TR4","name":"Pajero TR4"}]""");
+            _napista.Responder($"GET {Api}/catalog/TRUCK/make/IVECO/models", HttpStatusCode.OK, """[{"id":"DAILY","name":"Daily"}]""");
+            _napista.Responder($"GET {Api}/catalog/attributes?category=", HttpStatusCode.OK,
+                """{"colors":{"items":[{"id":"SILVER","name":"Prata"},{"id":"WHITE","name":"Branco"}]},"equipments":{"items":[{"id":"CAR_1_AIRBAG","name":"Airbag"},{"id":"CAR_1_ALARME","name":"Alarme"}]}}""");
+            _napista.Arquivos[FotoNapista] = Png();
+        }
+
+        [Fact]
+        public async Task Lista_os_anuncios_do_napista_marcando_os_ja_ligados_e_os_de_placa_conhecida()
+        {
+            await ConectarAsync();
+            AnunciosNoNapista();
+            var ligado = new VeiculoNapista(99, "{}");
+            ligado.Publicado("of-escondida");
+            _anuncios.Itens[99] = ligado;
+
+            var lista = await _service.ListarAnunciosExistentesAsync();
+
+            lista.Select(a => a.AnuncioId).Should().Equal("of-pajero", "of-gol", "of-escondida");
+            var pajero = lista[0];
+            pajero.VeiculoVinculadoId.Should().BeNull();
+            pajero.VeiculoMesmaPlacaId.Should().BeNull();
+            pajero.Cor.Should().Be("Prata");
+            pajero.Fotos.Should().Be(2);
+            pajero.FotoCapa.Should().Be(FotoNapista, "a capa é a foto de ordem 0 com endereço completo");
+            lista[1].VeiculoMesmaPlacaId.Should().Be(7, "ABC1D23 é a placa do Gol já cadastrado (ABC-1D23)");
+            lista[2].PlacaEscondida.Should().BeTrue();
+            lista[2].VeiculoVinculadoId.Should().Be(99);
+        }
+
+        [Fact]
+        public async Task Importar_cria_o_veiculo_com_fotos_e_liga_ao_anuncio_sem_criar_outro_no_napista()
+        {
+            await ConectarAsync();
+            AnunciosNoNapista();
+
+            var r = await _service.ImportarAnunciosAsync(new NapistaImportarPedido
+            {
+                LojaId = 1, CategoriaId = 2, Itens = { new NapistaImportarItem { AnuncioId = "of-pajero" } }
+            });
+
+            r.Criados.Should().Be(1);
+            var d = r.Detalhes.Single();
+            d.Acao.Should().Be("criado");
+            d.Fotos.Should().Be(1);
+            d.Mensagem.Should().Contain("1 foto(s) do NaPista não puderam ser baixadas", "a de endereço relativo fica de fora");
+
+            var v = _veiculos.Single(x => x.VeiId == d.VeiculoId);
+            v.VeiMarca.Should().Be("Mitsubishi");
+            v.VeiModelo.Should().Be("PAJERO TR4 2.0 FLEX 16V 4X2 AUT.");
+            v.VeiAno.Should().Be(2013);
+            v.VeiPlaca.Should().Be("PJR1A23");
+            v.VeiKm.Should().Be(100000);
+            v.VeiPreco.Should().Be(53000);
+            v.VeiCor.Should().Be("Prata");
+            v.VeiSts.Should().Be("D");
+            v.VeiOpcionais.Should().Be("Airbag,Alarme");
+            v.VeiObservacao.Should().Be("Veículo com todas as manutenções em dia.");
+            v.R_LojId.Should().Be(1);
+            v.R_CatId.Should().Be(2);
+
+            var foto = _fotos.Single(f => f.R_VeiId == v.VeiId);
+            foto.ImgCaminho.Should().StartWith($"/uploads/veiculos/{v.VeiId}/").And.EndWith(".jpg");
+            File.Exists(Path.Combine(_pasta, foto.ImgCaminho.TrimStart('/'))).Should().BeTrue();
+
+            var anuncio = _anuncios.Itens[v.VeiId];
+            anuncio.VnpAnuncioId.Should().Be("of-pajero");
+            anuncio.EstaPublicado.Should().BeTrue();
+            var dados = JsonSerializer.Deserialize<NapistaAnuncioDados>(anuncio.VnpDadosJson, new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+            dados.MarcaId.Should().Be("MITSUBISHI");
+            dados.ModeloId.Should().Be("PAJERO TR4", "o maior nome de modelo que abre o título");
+            dados.VersaoId.Should().Be("2000019066041201");
+            dados.Cambio.Should().Be("AUTOMATIC");
+            _napista.Chamadas.Should().NotContain(c => c.Metodo == "POST" && c.Url.EndsWith("/offer"), "o anúncio já existe");
+
+            // Dali em diante e' o fluxo normal: editar atualiza o MESMO anuncio, sem reenviar as fotos.
+            _napista.Responder($"PATCH {Api}/seller/{Seller}/offer/of-pajero", HttpStatusCode.OK, """{"id":"of-pajero","status":"PUBLISHED"}""");
+            _napista.Chamadas.Clear();
+            await _service.SincronizarVeiculoAsync(v.VeiId);
+            _napista.Chamadas.Select(c => c.Metodo + " " + c.Url.Replace(Api, "")).Should().Equal($"PATCH /seller/{Seller}/offer/of-pajero");
+        }
+
+        [Fact]
+        public async Task Placa_ja_cadastrada_so_liga_e_anuncio_ja_ligado_e_ignorado()
+        {
+            await ConectarAsync();
+            AnunciosNoNapista();
+            var antes = _veiculos.Count;
+
+            var r = await _service.ImportarAnunciosAsync(new NapistaImportarPedido
+            {
+                LojaId = 1, CategoriaId = 2, Itens = { new NapistaImportarItem { AnuncioId = "of-gol" } }
+            });
+            var deNovo = await _service.ImportarAnunciosAsync(new NapistaImportarPedido
+            {
+                LojaId = 1, CategoriaId = 2, Itens = { new NapistaImportarItem { AnuncioId = "of-gol" } }
+            });
+
+            r.Vinculados.Should().Be(1);
+            r.Detalhes.Single().VeiculoId.Should().Be(7);
+            _veiculos.Should().HaveCount(antes, "não cria veículo repetido");
+            _anuncios.Itens[7].VnpAnuncioId.Should().Be("of-gol");
+            _anuncios.Itens[7].VnpFotos.Should().Be(2, "as fotos do cadastro contam como enviadas: não troca as do NaPista na hora");
+            deNovo.Detalhes.Single().Acao.Should().Be("ignorado");
+        }
+
+        [Fact]
+        public async Task Placa_escondida_pede_a_placa_e_confere_o_final()
+        {
+            await ConectarAsync();
+            AnunciosNoNapista();
+            NapistaImportarPedido Pedido(string? placa) => new()
+            {
+                LojaId = 1, CategoriaId = 2, Itens = { new NapistaImportarItem { AnuncioId = "of-escondida", Placa = placa } }
+            };
+
+            (await _service.ImportarAnunciosAsync(Pedido(null))).Detalhes.Single().Mensagem.Should().Contain("Digite a placa");
+            (await _service.ImportarAnunciosAsync(Pedido("ABC1D23"))).Detalhes.Single().Mensagem.Should().Contain("termina em 4");
+            var ok = await _service.ImportarAnunciosAsync(Pedido("ivc-1d24"));
+
+            ok.Criados.Should().Be(1);
+            var v = _veiculos.Single(x => x.VeiId == ok.Detalhes.Single().VeiculoId);
+            v.VeiPlaca.Should().Be("IVC1D24");
+            v.VeiMarca.Should().Be("Iveco", "não é carro: a marca sai do catálogo de caminhões");
+            v.VeiModelo.Should().Be("DAILY CHASSI 70C16 2P (DIESEL)");
+            JsonSerializer.Deserialize<NapistaAnuncioDados>(_anuncios.Itens[v.VeiId].VnpDadosJson, new JsonSerializerOptions(JsonSerializerDefaults.Web))!
+                .Categoria.Should().Be("TRUCK");
+        }
+
+        [Fact]
+        public async Task Importar_exige_loja_categoria_e_anuncio_ainda_publicado()
+        {
+            await ConectarAsync();
+            AnunciosNoNapista();
+
+            var semLoja = () => _service.ImportarAnunciosAsync(new NapistaImportarPedido { LojaId = 5, CategoriaId = 2, Itens = { new() { AnuncioId = "of-pajero" } } });
+            var semCategoria = () => _service.ImportarAnunciosAsync(new NapistaImportarPedido { LojaId = 1, CategoriaId = 9, Itens = { new() { AnuncioId = "of-pajero" } } });
+            await semLoja.Should().ThrowAsync<NapistaException>().WithMessage("*loja*");
+            await semCategoria.Should().ThrowAsync<NapistaException>().WithMessage("*categoria*");
+
+            var sumiu = await _service.ImportarAnunciosAsync(new NapistaImportarPedido { LojaId = 1, CategoriaId = 2, Itens = { new() { AnuncioId = "of-x" } } });
+            sumiu.Erros.Should().Be(1);
+            sumiu.Detalhes.Single().Mensagem.Should().Contain("não está mais publicado");
+        }
+
+        [Theory]
+        [InlineData("ABC1D23", null, "ABC1D23")]
+        [InlineData("abc-1d23", "XYZ9Z99", "ABC1D23")]
+        [InlineData("******4", "IVC1D24", "IVC1D24")]
+        [InlineData("***-*D24", "ivc1d24", "IVC1D24")]
+        public void Placa_do_pedido(string? noNapista, string? digitada, string esperada)
+            => NapistaService.PlacaDoPedido(noNapista, digitada).Should().Be(esperada);
 
         // ---------------- Leads ----------------
 
