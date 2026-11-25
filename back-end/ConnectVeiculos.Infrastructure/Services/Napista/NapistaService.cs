@@ -37,6 +37,10 @@ namespace ConnectVeiculos.Infrastructure.Services.Napista
 
         // Renovar o token cancela o refresh anterior: uma renovacao por loja de cada vez.
         private static readonly ConcurrentDictionary<string, SemaphoreSlim> TravasToken = new();
+        // Um envio por veiculo de cada vez. Teste real (25/11/2026): duas edicoes
+        // juntas mandaram as fotos em paralelo e o anuncio ficou com 8 em vez de 4
+        // (o "substitui as anteriores" do NaPista nao vale para envios simultaneos).
+        private static readonly ConcurrentDictionary<string, SemaphoreSlim> TravasVeiculo = new();
         // O catalogo e' igual para todas as lojas do mesmo ambiente.
         private static readonly ConcurrentDictionary<string, (object Valor, DateTime Expira)> Catalogo = new();
 
@@ -301,7 +305,24 @@ namespace ConnectVeiculos.Infrastructure.Services.Napista
             return Info(anuncio, await SugerirAsync(veiculo, ct), true);
         }
 
-        public async Task<NapistaVeiculoInfo> PublicarAsync(int veiculoId, NapistaAnuncioDados dados, CancellationToken ct = default)
+        public Task<NapistaVeiculoInfo> PublicarAsync(int veiculoId, NapistaAnuncioDados dados, CancellationToken ct = default)
+            => UmPorVeiculoAsync(veiculoId, () => PublicarSemTravaAsync(veiculoId, dados, ct), ct);
+
+        public Task<NapistaVeiculoInfo> PausarAsync(int veiculoId, CancellationToken ct = default)
+            => UmPorVeiculoAsync(veiculoId, () => PausarSemTravaAsync(veiculoId, ct), ct);
+
+        public Task SincronizarVeiculoAsync(int veiculoId)
+            => UmPorVeiculoAsync(veiculoId, async () => { await SincronizarSemTravaAsync(veiculoId); return true; }, CancellationToken.None);
+
+        private async Task<T> UmPorVeiculoAsync<T>(int veiculoId, Func<Task<T>> acao, CancellationToken ct)
+        {
+            var trava = TravasVeiculo.GetOrAdd($"{_tenant.TenantSlug}:{veiculoId}", _ => new SemaphoreSlim(1, 1));
+            await trava.WaitAsync(ct);
+            try { return await acao(); }
+            finally { trava.Release(); }
+        }
+
+        private async Task<NapistaVeiculoInfo> PublicarSemTravaAsync(int veiculoId, NapistaAnuncioDados dados, CancellationToken ct)
         {
             var conta = await ContaObrigatoriaAsync();
             var veiculo = await _veiculos.GetByIdAsync(veiculoId) ?? throw new NapistaException("Veículo não encontrado.");
@@ -329,7 +350,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Napista
             return Info(anuncio, dados, false);
         }
 
-        public async Task<NapistaVeiculoInfo> PausarAsync(int veiculoId, CancellationToken ct = default)
+        private async Task<NapistaVeiculoInfo> PausarSemTravaAsync(int veiculoId, CancellationToken ct)
         {
             var conta = await ContaObrigatoriaAsync();
             var anuncio = await _anuncios.GetByVeiculoIdAsync(veiculoId);
@@ -340,7 +361,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Napista
             return Info(anuncio, Dados(anuncio), false);
         }
 
-        public async Task SincronizarVeiculoAsync(int veiculoId)
+        private async Task SincronizarSemTravaAsync(int veiculoId)
         {
             var anuncio = await _anuncios.GetByVeiculoIdAsync(veiculoId);
             if (anuncio == null || string.IsNullOrEmpty(anuncio.VnpDadosJson) || anuncio.Pausado) return;
