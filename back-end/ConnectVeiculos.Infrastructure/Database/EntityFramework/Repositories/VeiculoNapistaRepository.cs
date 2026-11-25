@@ -16,6 +16,15 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework.Repositories
         public async Task<VeiculoNapista?> GetByVeiculoIdAsync(int veiculoId) =>
             await _context.VeiculosNapista.FirstOrDefaultAsync(a => a.R_VeiId == veiculoId);
 
+        public async Task<Dictionary<string, int>> VeiculosPorAnuncioAsync(IReadOnlyCollection<string> anuncioIds)
+        {
+            if (anuncioIds.Count == 0) return new();
+            return (await _context.VeiculosNapista.AsNoTracking()
+                    .Where(a => anuncioIds.Contains(a.VnpAnuncioId))
+                    .Select(a => new { a.VnpAnuncioId, a.R_VeiId }).ToListAsync())
+                .GroupBy(a => a.VnpAnuncioId).ToDictionary(g => g.Key, g => g.First().R_VeiId);
+        }
+
         public async Task SalvarAsync(VeiculoNapista anuncio)
         {
             if (anuncio.VnpId == 0 && _context.Entry(anuncio).State == EntityState.Detached)

@@ -37,6 +37,16 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         /// </summary>
         Task SincronizarVeiculoAsync(int veiculoId);
 
+        /// <summary>Anuncios publicados da loja no NaPista, marcando os que ja estao no ConnectVeiculos.</summary>
+        Task<List<NapistaAnuncioExistente>> ListarAnunciosExistentesAsync(CancellationToken ct = default);
+
+        /// <summary>
+        /// Cria os veiculos (com fotos) a partir de anuncios que ja estao no
+        /// NaPista e liga cada um ao anuncio, sem criar outro la. Se ja existe
+        /// veiculo com a mesma placa, so liga.
+        /// </summary>
+        Task<NapistaImportacaoResultado> ImportarAnunciosAsync(NapistaImportarPedido pedido, CancellationToken ct = default);
+
         /// <summary>Traz os leads do NaPista para a lista de Leads (sem duplicar).</summary>
         Task<NapistaLeadsResultado> ImportarLeadsAsync(int dias, CancellationToken ct = default);
     }

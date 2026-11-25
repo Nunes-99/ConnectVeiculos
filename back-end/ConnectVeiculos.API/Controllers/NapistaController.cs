@@ -123,6 +123,16 @@ namespace ConnectVeiculos.API.Controllers
         public Task<IActionResult> Pausar(int veiculoId, CancellationToken ct)
             => Executar(() => _napista.PausarAsync(veiculoId, ct));
 
+        // ---------------- Importar anuncios que ja estao no NaPista ----------------
+
+        [HttpGet("anuncios-existentes")]
+        public Task<IActionResult> AnunciosExistentes(CancellationToken ct)
+            => Executar(() => _napista.ListarAnunciosExistentesAsync(ct));
+
+        [HttpPost("anuncios-existentes/importar")]
+        public Task<IActionResult> ImportarAnuncios([FromBody] NapistaImportarPedido pedido, CancellationToken ct)
+            => Executar(() => _napista.ImportarAnunciosAsync(pedido, ct));
+
         // ---------------- Leads ----------------
 
         [HttpPost("leads/importar")]

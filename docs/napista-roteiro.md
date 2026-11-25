@@ -26,6 +26,14 @@ integrador@napista.com.br / parceiros@napista.com.br.
   volta clicando em Anunciar.
 - Trocar a versão ou os anos de um anúncio cria outro (a API não deixa mudar
   esses campos) e o antigo é removido.
+- **Loja que já anunciava no NaPista**: Integrações → NaPista → *Ver anúncios
+  do NaPista* lista os publicados (`GET /seller/{id}/offers?status=PUBLISHED`).
+  Importar cria o veículo (marca e modelo pelo catálogo, a partir do título;
+  cor, opcionais, km, preço, descrição e fotos do anúncio) já ligado ao
+  anúncio, sem criar outro lá. Placa já cadastrada só liga. O NaPista pode
+  esconder a placa (`******4`): a pessoa digita e o final tem de bater. Foto
+  com endereço relativo (`r/1092324/...jpg`, aparece no exemplo da
+  documentação) não dá para baixar e fica de fora, com aviso.
 
 ## Testado
 
@@ -35,7 +43,12 @@ integrador@napista.com.br / parceiros@napista.com.br.
 - Telas, com um NaPista falso local (04/11/2026): conectar, escolher loja,
   buscar leads (aparece em Leads), sugestão completa no Golf GTI, anunciar
   (corpo, foto por URL) e tirar do ar.
-- **Ainda não** contra o NaPista de verdade: falta o `client_id`.
+- Contra o NaPista de desenvolvimento (25/11/2026, client_id `connect-veiculos`):
+  conectar, loja, leads, catálogo, anunciar com fotos, editar (PATCH), vendido
+  (SOLD), reservado/inativo (UNPUBLISHED), volta a disponível, pausa que não
+  volta sozinha, troca de versão (DELETE + POST) e recusas. Achados corrigidos:
+  503 do login deles desconectava a loja (#28); alteração recusada ficava
+  gravada (#29).
 
 ## Para ligar (desenvolvimento do NaPista)
 
