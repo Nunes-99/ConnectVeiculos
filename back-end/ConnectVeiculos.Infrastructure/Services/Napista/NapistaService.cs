@@ -314,6 +314,46 @@ namespace ConnectVeiculos.Infrastructure.Services.Napista
         public Task SincronizarVeiculoAsync(int veiculoId)
             => UmPorVeiculoAsync(veiculoId, async () => { await SincronizarSemTravaAsync(veiculoId); return true; }, CancellationToken.None);
 
+        /// <summary>Espera antes de mandar fotos novas: a tela sobe uma foto por vez.</summary>
+        public static TimeSpan EsperaFotos { get; set; } = TimeSpan.FromSeconds(15);
+        private static readonly ConcurrentDictionary<string, long> PedidosFotos = new();
+
+        /// <summary>
+        /// A tela de edicao salva o veiculo e so depois sobe as fotos, uma por
+        /// vez: a sincronizacao da edicao ja tinha mandado a lista antiga.
+        /// Teste real (25/11/2026): cadastro com 5 fotos, NaPista com 4.
+        /// Cada upload/exclusao/troca de principal chama isto; so o ultimo
+        /// pedido de cada veiculo (depois de EsperaFotos) envia.
+        /// </summary>
+        public async Task FotosMudaramAsync(int veiculoId)
+        {
+            var chave = $"{_tenant.TenantSlug}:{veiculoId}";
+            var meu = PedidosFotos.AddOrUpdate(chave, 1, (_, n) => n + 1);
+            if (EsperaFotos > TimeSpan.Zero) await Task.Delay(EsperaFotos);
+            if (PedidosFotos.TryGetValue(chave, out var ultimo) && ultimo != meu) return;
+            await UmPorVeiculoAsync(veiculoId, async () => { await AtualizarFotosSemTravaAsync(veiculoId); return true; }, CancellationToken.None);
+        }
+
+        private async Task AtualizarFotosSemTravaAsync(int veiculoId)
+        {
+            var anuncio = await _anuncios.GetByVeiculoIdAsync(veiculoId);
+            if (anuncio == null || !anuncio.EstaPublicado) return;
+            if (!_settings.Configurado || await TokenAsync() == null) return;
+            var conta = await ContaAsync();
+            var veiculo = await _veiculos.GetByIdAsync(veiculoId);
+            if (conta?.SellerId == null || veiculo == null || veiculo.VeiSts != "D") return;
+            try
+            {
+                await EnviarFotosAsync(conta.SellerId, veiculo, anuncio, CancellationToken.None);
+            }
+            catch (NapistaException ex)
+            {
+                _logger.LogWarning("NaPista: fotos do veiculo {VeiculoId} nao atualizadas: {Erro}", veiculoId, ex.Message);
+                anuncio.Falhou("As fotos novas não foram para o NaPista: " + ex.Message);
+                await _anuncios.SalvarAsync(anuncio);
+            }
+        }
+
         private async Task<T> UmPorVeiculoAsync<T>(int veiculoId, Func<Task<T>> acao, CancellationToken ct)
         {
             var trava = TravasVeiculo.GetOrAdd($"{_tenant.TenantSlug}:{veiculoId}", _ => new SemaphoreSlim(1, 1));

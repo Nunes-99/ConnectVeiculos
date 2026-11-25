@@ -152,6 +152,7 @@ namespace ConnectVeiculos.Tests.Services
             ambiente.SetupGet(a => a.ContentRootPath).Returns(_pasta);
             NapistaService.EnderecoDeFotoPermitido = (_, _) => Task.FromResult(true);
             NapistaService.LimparCatalogoEmCache();
+            NapistaService.EsperaFotos = TimeSpan.Zero;
 
             _service = new NapistaService(new HttpClient(_napista), Options.Create(new NapistaSettings { ClientId = "connectveiculos" }),
                 _config, protector.Object, new StateFalso(), tenant.Object, veiculos.Object, imagens.Object, lojas.Object,
@@ -363,6 +364,54 @@ namespace ConnectVeiculos.Tests.Services
 
             _napista.Chamadas.Count(c => c.Url.EndsWith("/photos/url")).Should().Be(3, "1 na criação + 1 por edição");
             _napista.MaximoFotosSimultaneas.Should().Be(1);
+        }
+
+        [Fact]
+        public async Task Foto_nova_subida_depois_de_salvar_chega_ao_napista_e_pedidos_seguidos_viram_um_envio()
+        {
+            // Teste real (25/11/2026): a tela salva o carro e depois sobe as fotos;
+            // a sincronizacao da edicao mandava a lista antiga (cadastro 5, NaPista 4).
+            await ConectarAsync();
+            _napista.Responder($"POST {Api}/seller/{Seller}/offer", HttpStatusCode.Created, """{"id":"of-1","status":"PUBLISHED"}""");
+            _napista.Responder($"POST {Api}/seller/{Seller}/offer/of-1/photos/url", HttpStatusCode.OK, "{}");
+            await _service.PublicarAsync(7, Dados);
+            _napista.Chamadas.Clear();
+            _fotos.Add(new VeiculoImagem(3, 7, "uploads/veiculos/7/traseira.jpg", 2, true));
+            NapistaService.EsperaFotos = TimeSpan.FromMilliseconds(200);
+            try
+            {
+                await Task.WhenAll(_service.FotosMudaramAsync(7), _service.FotosMudaramAsync(7), _service.FotosMudaramAsync(7));
+            }
+            finally { NapistaService.EsperaFotos = TimeSpan.Zero; }
+
+            var envio = _napista.Chamadas.Single(c => c.Url.EndsWith("/photos/url"));
+            JsonDocument.Parse(envio.Corpo!).RootElement.GetProperty("list").GetArrayLength().Should().Be(3);
+            _napista.Chamadas.Should().NotContain(c => c.Metodo == "PATCH", "só as fotos mudaram");
+
+            _napista.Chamadas.Clear();
+            await _service.FotosMudaramAsync(7);
+            _napista.Chamadas.Should().BeEmpty("a lista já é a que está no NaPista");
+        }
+
+        [Fact]
+        public async Task Fotos_de_carro_fora_do_ar_ou_nunca_anunciado_nao_vao_ao_napista()
+        {
+            await ConectarAsync();
+            NapistaService.EsperaFotos = TimeSpan.Zero;
+            await _service.FotosMudaramAsync(7);
+            _napista.Chamadas.Should().BeEmpty("nunca foi anunciado");
+
+            _napista.Responder($"POST {Api}/seller/{Seller}/offer", HttpStatusCode.Created, """{"id":"of-1","status":"PUBLISHED"}""");
+            _napista.Responder($"POST {Api}/seller/{Seller}/offer/of-1/photos/url", HttpStatusCode.OK, "{}");
+            _napista.Responder($"PUT {Api}/seller/{Seller}/offer/of-1/", HttpStatusCode.OK, "{}");
+            await _service.PublicarAsync(7, Dados);
+            await _service.PausarAsync(7);
+            _napista.Chamadas.Clear();
+            _fotos.Add(new VeiculoImagem(3, 7, "uploads/veiculos/7/traseira.jpg", 2, true));
+
+            await _service.FotosMudaramAsync(7);
+
+            _napista.Chamadas.Should().BeEmpty("tirado do ar pela loja");
         }
 
         [Fact]
@@ -629,6 +678,22 @@ namespace ConnectVeiculos.Tests.Services
             _anuncios.Itens[7].VnpAnuncioId.Should().Be("of-gol");
             _anuncios.Itens[7].VnpFotos.Should().Be(2, "as fotos do cadastro contam como enviadas: não troca as do NaPista na hora");
             deNovo.Detalhes.Single().Acao.Should().Be("ignorado");
+        }
+
+        [Fact]
+        public async Task Duas_importacoes_juntas_do_mesmo_anuncio_criam_um_carro_so()
+        {
+            await ConectarAsync();
+            AnunciosNoNapista();
+            _napista.Atraso = TimeSpan.FromMilliseconds(100);
+            NapistaImportarPedido Pedido() => new() { LojaId = 1, CategoriaId = 2, Itens = { new() { AnuncioId = "of-pajero" } } };
+            var antes = _veiculos.Count;
+
+            var r = await Task.WhenAll(Task.Run(() => _service.ImportarAnunciosAsync(Pedido())), Task.Run(() => _service.ImportarAnunciosAsync(Pedido())));
+
+            _veiculos.Should().HaveCount(antes + 1);
+            r.Sum(x => x.Criados).Should().Be(1);
+            r.SelectMany(x => x.Detalhes).Select(d => d.Acao).Should().BeEquivalentTo(new[] { "criado", "ignorado" });
         }
 
         [Fact]

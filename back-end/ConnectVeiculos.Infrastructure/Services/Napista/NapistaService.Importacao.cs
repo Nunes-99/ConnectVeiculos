@@ -102,7 +102,19 @@ namespace ConnectVeiculos.Infrastructure.Services.Napista
             }).ToList();
         }
 
+        // Uma importacao por loja de cada vez: duas juntas (duplo clique, duas
+        // pessoas) viam o mesmo anuncio sem vinculo e criavam o carro duas vezes.
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> TravasImportacao = new();
+
         public async Task<NapistaImportacaoResultado> ImportarAnunciosAsync(NapistaImportarPedido pedido, CancellationToken ct = default)
+        {
+            var trava = TravasImportacao.GetOrAdd(_tenant.TenantSlug ?? "", _ => new SemaphoreSlim(1, 1));
+            await trava.WaitAsync(ct);
+            try { return await ImportarSemTravaAsync(pedido, ct); }
+            finally { trava.Release(); }
+        }
+
+        private async Task<NapistaImportacaoResultado> ImportarSemTravaAsync(NapistaImportarPedido pedido, CancellationToken ct)
         {
             var conta = await ContaObrigatoriaAsync();
             var itens = (pedido.Itens ?? new()).Where(i => !string.IsNullOrWhiteSpace(i.AnuncioId))

@@ -37,6 +37,12 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         /// </summary>
         Task SincronizarVeiculoAsync(int veiculoId);
 
+        /// <summary>
+        /// Fotos do veiculo mudaram (upload, exclusao, principal): manda a lista
+        /// nova para o anuncio no ar. Espera um pouco e junta pedidos seguidos.
+        /// </summary>
+        Task FotosMudaramAsync(int veiculoId);
+
         /// <summary>Anuncios publicados da loja no NaPista, marcando os que ja estao no ConnectVeiculos.</summary>
         Task<List<NapistaAnuncioExistente>> ListarAnunciosExistentesAsync(CancellationToken ct = default);
 
