@@ -66,7 +66,8 @@ interface Linha extends NapistaAnuncioExistente {
           <li [class.np-feito]="!!a.veiculoVinculadoId">
             <input type="checkbox" [(ngModel)]="a.marcado" [disabled]="ocupado || !!a.veiculoVinculadoId" [attr.aria-label]="'Importar ' + a.titulo">
             @if (a.fotoCapa) {
-              <img [src]="a.fotoCapa" alt="" loading="lazy" referrerpolicy="no-referrer">
+              <!-- O desenvolvimento do NaPista responde 403 nas fotos: sem miniatura, fica o icone. -->
+              <img [src]="a.fotoCapa" alt="" loading="lazy" referrerpolicy="no-referrer" (error)="a.fotoCapa = null">
             } @else {
               <span class="np-semfoto material-icons">directions_car</span>
             }
