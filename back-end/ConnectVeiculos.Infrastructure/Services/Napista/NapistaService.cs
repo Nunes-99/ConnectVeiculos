@@ -90,6 +90,16 @@ namespace ConnectVeiculos.Infrastructure.Services.Napista
             public string? LojaNome { get; set; }
         }
 
+        /// <summary>
+        /// Login do NaPista fora do ar (5xx, 429, rede). Visto no desenvolvimento
+        /// deles em 25/11/2026: um 503 passageiro desconectava a loja.
+        /// </summary>
+        private sealed class FalhaTemporariaNoLogin : NapistaException
+        {
+            public FalhaTemporariaNoLogin()
+                : base("O login do NaPista está fora do ar agora. Tente de novo em alguns minutos; a conexão da loja continua valendo.") { }
+        }
+
         // ================================================================
         // Conexao (OAuth / Keycloak)
         // ================================================================
@@ -692,9 +702,10 @@ namespace ConnectVeiculos.Infrastructure.Services.Napista
                     await SalvarTokenAsync(novo);
                     return novo.AccessToken;
                 }
-                catch (NapistaException)
+                catch (NapistaException ex) when (ex is not FalhaTemporariaNoLogin)
                 {
                     // Refresh vencido: a loja precisa entrar de novo. Limpa para a tela mostrar "Conectar".
+                    // Queda do login do NaPista (5xx, rede) nao entra aqui: o token continua valido.
                     await _config.SetValorAsync(ChaveToken, "");
                     throw new NapistaException("A conexão com o NaPista venceu. Conecte de novo em Integrações → NaPista.");
                 }
@@ -715,7 +726,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Napista
             try { resp = await _http.SendAsync(req, ct); }
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
             {
-                throw new NapistaException("Não foi possível falar com o NaPista agora. Tente de novo em instantes.");
+                throw new FalhaTemporariaNoLogin();
             }
             using (resp)
             {
@@ -723,6 +734,8 @@ namespace ConnectVeiculos.Infrastructure.Services.Napista
                 if (!resp.IsSuccessStatusCode)
                 {
                     _logger.LogWarning("NaPista: token recusado ({Status}) {Corpo}", (int)resp.StatusCode, texto.Length > 300 ? texto[..300] : texto);
+                    if ((int)resp.StatusCode >= 500 || resp.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+                        throw new FalhaTemporariaNoLogin();
                     throw new NapistaException("O NaPista recusou a autorização. Conecte de novo em Integrações.");
                 }
                 using var doc = JsonDocument.Parse(texto);
