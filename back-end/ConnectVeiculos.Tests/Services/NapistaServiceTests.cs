@@ -318,8 +318,10 @@ namespace ConnectVeiculos.Tests.Services
         }
 
         [Fact]
-        public async Task Atualizar_usa_patch_e_nao_reenvia_fotos_iguais()
+        public async Task Atualizar_usa_patch_e_reenvia_as_fotos_que_o_patch_do_napista_apaga()
         {
+            // Teste real (25/11/2026): depois de um PATCH o anuncio ficava com 0 fotos,
+            // embora a documentacao diga que ele ignora as fotos.
             await ConectarAsync();
             _napista.Responder($"POST {Api}/seller/{Seller}/offer", HttpStatusCode.Created, """{"id":"of-1","status":"PUBLISHED"}""");
             _napista.Responder($"POST {Api}/seller/{Seller}/offer/of-1/photos/url", HttpStatusCode.OK, "{}");
@@ -330,7 +332,8 @@ namespace ConnectVeiculos.Tests.Services
             await _service.SincronizarVeiculoAsync(7);
 
             _napista.Chamadas.Select(c => c.Metodo + " " + c.Url.Replace(Api, ""))
-                .Should().Equal($"PATCH /seller/{Seller}/offer/of-1");
+                .Should().Equal($"PATCH /seller/{Seller}/offer/of-1", $"POST /seller/{Seller}/offer/of-1/photos/url");
+            JsonDocument.Parse(_napista.Chamadas[1].Corpo!).RootElement.GetProperty("list").GetArrayLength().Should().Be(2);
         }
 
         [Fact]
@@ -566,11 +569,13 @@ namespace ConnectVeiculos.Tests.Services
             dados.Cambio.Should().Be("AUTOMATIC");
             _napista.Chamadas.Should().NotContain(c => c.Metodo == "POST" && c.Url.EndsWith("/offer"), "o anúncio já existe");
 
-            // Dali em diante e' o fluxo normal: editar atualiza o MESMO anuncio, sem reenviar as fotos.
+            // Dali em diante e' o fluxo normal: editar atualiza o MESMO anuncio (e reenvia as fotos do cadastro).
             _napista.Responder($"PATCH {Api}/seller/{Seller}/offer/of-pajero", HttpStatusCode.OK, """{"id":"of-pajero","status":"PUBLISHED"}""");
+            _napista.Responder($"POST {Api}/seller/{Seller}/offer/of-pajero/photos/url", HttpStatusCode.OK, "{}");
             _napista.Chamadas.Clear();
             await _service.SincronizarVeiculoAsync(v.VeiId);
-            _napista.Chamadas.Select(c => c.Metodo + " " + c.Url.Replace(Api, "")).Should().Equal($"PATCH /seller/{Seller}/offer/of-pajero");
+            _napista.Chamadas.Select(c => c.Metodo + " " + c.Url.Replace(Api, ""))
+                .Should().Equal($"PATCH /seller/{Seller}/offer/of-pajero", $"POST /seller/{Seller}/offer/of-pajero/photos/url");
         }
 
         [Fact]

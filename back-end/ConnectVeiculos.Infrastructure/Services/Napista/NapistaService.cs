@@ -398,6 +398,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Napista
                 status = "PUBLISHED"
             };
 
+            var reenviarFotos = false;
             try
             {
                 // Versao e anos nao mudam num anuncio existente (documentacao):
@@ -423,6 +424,11 @@ namespace ConnectVeiculos.Infrastructure.Services.Napista
                     else
                     {
                         (id, statusNoNapista) = (anuncio.VnpAnuncioId, Texto(doc.RootElement, "status"));
+                        // A documentacao diz que o PATCH ignora as fotos, mas no teste real
+                        // (desenvolvimento, 25/11/2026) toda alteracao deixava o anuncio sem
+                        // nenhuma foto. O envio por URL substitui as anteriores: reenviar
+                        // depois de cada alteracao nao duplica.
+                        reenviarFotos = true;
                     }
                 }
                 else
@@ -448,7 +454,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Napista
 
             try
             {
-                await EnviarFotosAsync(sellerId, veiculo, anuncio, ct);
+                await EnviarFotosAsync(sellerId, veiculo, anuncio, ct, reenviarFotos);
             }
             catch (NapistaException ex)
             {
@@ -460,14 +466,15 @@ namespace ConnectVeiculos.Infrastructure.Services.Napista
 
         /// <summary>
         /// Fotos por URL publica, na ordem do cadastro. O NaPista substitui as
-        /// anteriores a cada envio, entao so manda quando a lista mudou.
+        /// anteriores a cada envio, entao so manda quando a lista mudou ou
+        /// quando um PATCH acabou de apagar as de la (forcar).
         /// </summary>
-        private async Task EnviarFotosAsync(string sellerId, Veiculo veiculo, VeiculoNapista anuncio, CancellationToken ct)
+        private async Task EnviarFotosAsync(string sellerId, Veiculo veiculo, VeiculoNapista anuncio, CancellationToken ct, bool forcar = false)
         {
             var fotos = (await _imagens.GetByVeiculoIdAsync(veiculo.VeiId))
                 .Where(i => i.ImgSts).OrderBy(i => i.ImgOrdem).Take(MaximoFotos).ToList();
             var assinatura = string.Join("|", fotos.Select(f => f.ImgCaminho));
-            if (fotos.Count == 0 || assinatura == (anuncio.VnpFotosAssinatura ?? "")) return;
+            if (fotos.Count == 0 || (!forcar && assinatura == (anuncio.VnpFotosAssinatura ?? ""))) return;
 
             var urlBase = await UrlPublicaAsync(veiculo.R_LojId);
             var lista = fotos.Select((f, i) => new
