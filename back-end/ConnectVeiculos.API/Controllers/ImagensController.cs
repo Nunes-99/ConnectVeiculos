@@ -127,6 +127,7 @@ namespace ConnectVeiculos.API.Controllers
             }
 
             var imagem = await uploadImagemUseCase.Execute(veiculoId, caminhoRelativo);
+            AvisarNapista(veiculoId);
             return CreatedAtAction(nameof(ConsultarImagens), new { veiculoId }, imagem);
         }
 
@@ -222,19 +223,37 @@ namespace ConnectVeiculos.API.Controllers
         [HttpPut("{imagemId}/principal")]
         public async Task<IActionResult> DefinirPrincipal(
             [FromServices] IDefinirImagemPrincipalUseCase definirPrincipalUseCase,
+            [FromServices] ConnectVeiculos.Core.Interfaces.Database.Repositories.VeiculosImagens.IVeiculoImagemRepository imagens,
             int imagemId)
         {
+            var veiculoId = (await imagens.GetByIdAsync(imagemId))?.R_VeiId;
             await definirPrincipalUseCase.Execute(imagemId);
+            if (veiculoId.HasValue) AvisarNapista(veiculoId.Value);
             return NoContent();
         }
 
         [HttpDelete("{imagemId}")]
         public async Task<IActionResult> ExcluirImagem(
             [FromServices] IExcluirImagemVeiculoUseCase excluirImagemUseCase,
+            [FromServices] ConnectVeiculos.Core.Interfaces.Database.Repositories.VeiculosImagens.IVeiculoImagemRepository imagens,
             int imagemId)
         {
+            var veiculoId = (await imagens.GetByIdAsync(imagemId))?.R_VeiId;
             await excluirImagemUseCase.Execute(imagemId);
+            if (veiculoId.HasValue) AvisarNapista(veiculoId.Value);
             return NoContent();
+        }
+
+        /// <summary>
+        /// A tela salva o veiculo antes de subir as fotos: sem este aviso, as
+        /// fotos novas so chegavam ao NaPista na edicao seguinte.
+        /// </summary>
+        private void AvisarNapista(int veiculoId)
+        {
+            var runner = HttpContext?.RequestServices.GetService(typeof(ConnectVeiculos.Core.Interfaces.Tenancy.ITenantBackgroundRunner))
+                as ConnectVeiculos.Core.Interfaces.Tenancy.ITenantBackgroundRunner;
+            runner?.Enqueue<ConnectVeiculos.Core.Interfaces.Services.INapistaService>(
+                s => s.FotosMudaramAsync(veiculoId), $"fotos do veiculo {veiculoId} no NaPista");
         }
 
         [AllowAnonymous]
