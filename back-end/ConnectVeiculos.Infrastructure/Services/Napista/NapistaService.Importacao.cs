@@ -244,7 +244,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Napista
 
         private static string PlacaDoPedido(Oferta o, string? digitada) => PlacaDoPedido(o.Placa, digitada);
 
-        /// <summary>Ja existe veiculo com a placa: so liga ao anuncio. As fotos do NaPista ficam como estao.</summary>
+        /// <summary>Ja existe veiculo com a placa: so liga ao anuncio. As fotos do NaPista ficam ate a primeira alteracao.</summary>
         private async Task VincularAsync(Oferta o, Veiculo veiculo, CancellationToken ct)
         {
             if (veiculo.VeiSts != "D")
@@ -257,7 +257,8 @@ namespace ConnectVeiculos.Infrastructure.Services.Napista
             anuncio ??= new VeiculoNapista(veiculo.VeiId, "");
             anuncio.SalvarDados(JsonSerializer.Serialize(dados.Dados, Json));
             anuncio.Publicado(o.Id);
-            // Fotos do cadastro contam como enviadas: so uma troca futura substitui as do NaPista.
+            // Fotos do cadastro contam como enviadas: as do NaPista ficam ate a
+            // primeira alteracao, que reenvia as do cadastro (o PATCH apaga as de la).
             var fotos = (await _imagens.GetByVeiculoIdAsync(veiculo.VeiId)).Where(i => i.ImgSts).OrderBy(i => i.ImgOrdem).Take(MaximoFotos).ToList();
             anuncio.FotosEnviadas(string.Join("|", fotos.Select(f => f.ImgCaminho)), fotos.Count);
             await _anuncios.SalvarAsync(anuncio);
