@@ -41,6 +41,12 @@ namespace ConnectVeiculos.Tests.Services
             /// <summary>Resposta pelo inicio de "METODO url"; a mais longa que casar vence.</summary>
             public readonly Dictionary<string, Queue<(HttpStatusCode, string)>> Rotas = new();
 
+            /// <summary>Atraso de cada resposta, para simular chamadas que se sobrepoem.</summary>
+            public TimeSpan Atraso = TimeSpan.Zero;
+            private int _emAndamento;
+            /// <summary>Maior numero de envios de fotos ao mesmo tempo.</summary>
+            public int MaximoFotosSimultaneas;
+
             /// <summary>Fotos servidas por URL exata (para a importacao baixar).</summary>
             public readonly Dictionary<string, byte[]> Arquivos = new();
 
@@ -55,6 +61,12 @@ namespace ConnectVeiculos.Tests.Services
                 var chave = request.Method.Method + " " + request.RequestUri;
                 var corpo = request.Content == null ? null : await request.Content.ReadAsStringAsync(ct);
                 Chamadas.Add((request.Method.Method, request.RequestUri!.ToString(), corpo, request.Headers.Authorization?.Parameter));
+                if (request.RequestUri!.ToString().EndsWith("/photos/url"))
+                {
+                    var agora = Interlocked.Increment(ref _emAndamento);
+                    lock (Chamadas) MaximoFotosSimultaneas = Math.Max(MaximoFotosSimultaneas, agora);
+                    try { await Task.Delay(Atraso, ct); } finally { Interlocked.Decrement(ref _emAndamento); }
+                }
                 if (Arquivos.TryGetValue(request.RequestUri!.ToString(), out var bytes))
                     return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(bytes) };
                 var rota = Rotas.Keys.Where(k => chave.StartsWith(k, StringComparison.Ordinal)).OrderByDescending(k => k.Length).FirstOrDefault();
@@ -334,6 +346,23 @@ namespace ConnectVeiculos.Tests.Services
             _napista.Chamadas.Select(c => c.Metodo + " " + c.Url.Replace(Api, ""))
                 .Should().Equal($"PATCH /seller/{Seller}/offer/of-1", $"POST /seller/{Seller}/offer/of-1/photos/url");
             JsonDocument.Parse(_napista.Chamadas[1].Corpo!).RootElement.GetProperty("list").GetArrayLength().Should().Be(2);
+        }
+
+        [Fact]
+        public async Task Duas_edicoes_juntas_do_mesmo_carro_mandam_as_fotos_uma_de_cada_vez()
+        {
+            await ConectarAsync();
+            _napista.Responder($"POST {Api}/seller/{Seller}/offer", HttpStatusCode.Created, """{"id":"of-1","status":"PUBLISHED"}""");
+            _napista.Responder($"POST {Api}/seller/{Seller}/offer/of-1/photos/url", HttpStatusCode.OK, "{}");
+            _napista.Responder($"PATCH {Api}/seller/{Seller}/offer/of-1", HttpStatusCode.OK, """{"id":"of-1","status":"PUBLISHED"}""");
+            await _service.PublicarAsync(7, Dados);
+            _napista.Atraso = TimeSpan.FromMilliseconds(150);
+            _napista.MaximoFotosSimultaneas = 0;
+
+            await Task.WhenAll(Task.Run(() => _service.SincronizarVeiculoAsync(7)), Task.Run(() => _service.SincronizarVeiculoAsync(7)));
+
+            _napista.Chamadas.Count(c => c.Url.EndsWith("/photos/url")).Should().Be(3, "1 na criação + 1 por edição");
+            _napista.MaximoFotosSimultaneas.Should().Be(1);
         }
 
         [Fact]
