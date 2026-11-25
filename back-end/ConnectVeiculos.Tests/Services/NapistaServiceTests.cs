@@ -235,6 +235,25 @@ namespace ConnectVeiculos.Tests.Services
             _config.Valores[NapistaService.ChaveToken].Should().BeEmpty();
         }
 
+        [Theory]
+        [InlineData(HttpStatusCode.ServiceUnavailable)]
+        [InlineData(HttpStatusCode.TooManyRequests)]
+        public async Task Login_do_napista_fora_do_ar_nao_desconecta_a_loja(HttpStatusCode falha)
+        {
+            await ConectarAsync();
+            var tokenSalvo = _config.Valores[NapistaService.ChaveToken];
+            _napista.Rotas.Remove($"GET {Api}/seller/access");
+            _napista.Responder($"GET {Api}/seller/access", HttpStatusCode.Unauthorized, "");
+            _napista.Rotas.Remove($"POST {Auth}/token");
+            _napista.Responder($"POST {Auth}/token", falha, "upstream connect error");
+
+            var status = await _service.StatusAsync();
+
+            status.Erro.Should().Contain("fora do ar");
+            status.Conectado.Should().BeTrue();
+            _config.Valores[NapistaService.ChaveToken].Should().Be(tokenSalvo, "queda passageira não apaga a conexão");
+        }
+
         // ---------------- Anuncio ----------------
 
         [Fact]
