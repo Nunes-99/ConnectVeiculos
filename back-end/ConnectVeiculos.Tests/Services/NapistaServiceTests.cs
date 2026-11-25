@@ -367,6 +367,31 @@ namespace ConnectVeiculos.Tests.Services
         }
 
         [Fact]
+        public async Task Alteracao_recusada_mantem_os_dados_aceitos_e_a_edicao_seguinte_nao_reenvia_o_valor_ruim()
+        {
+            await ConectarAsync();
+            _napista.Responder($"POST {Api}/seller/{Seller}/offer", HttpStatusCode.Created, """{"id":"of-1","status":"PUBLISHED"}""");
+            _napista.Responder($"POST {Api}/seller/{Seller}/offer/of-1/photos/url", HttpStatusCode.OK, "{}");
+            await _service.PublicarAsync(7, Dados);
+            _napista.Responder($"PATCH {Api}/seller/{Seller}/offer/of-1", HttpStatusCode.BadRequest,
+                """{"type":"about:blank","title":"Bad Request","status":400,"detail":"Failed to read request"}""");
+
+            var ruim = JsonSerializer.Deserialize<NapistaAnuncioDados>(JsonSerializer.Serialize(Dados))!;
+            ruim.Cor = "XPTO";
+            var acao = () => _service.PublicarAsync(7, ruim);
+
+            await acao.Should().ThrowAsync<NapistaException>().WithMessage("*algum valor não é aceito*");
+            _anuncios.Itens[7].EstaPublicado.Should().BeTrue("o anúncio antigo continua no ar");
+            _anuncios.Itens[7].VnpDadosJson.Should().NotContain("XPTO");
+
+            _napista.Rotas.Remove($"PATCH {Api}/seller/{Seller}/offer/of-1");
+            _napista.Responder($"PATCH {Api}/seller/{Seller}/offer/of-1", HttpStatusCode.OK, """{"id":"of-1","status":"PUBLISHED"}""");
+            _napista.Chamadas.Clear();
+            await _service.SincronizarVeiculoAsync(7);
+            _napista.Chamadas.Single(c => c.Metodo == "PATCH").Corpo.Should().Contain("\"SILVER\"");
+        }
+
+        [Fact]
         public void Validacao_aponta_tudo_o_que_falta()
         {
             var acao = () => NapistaService.Validar(_veiculos[0], new NapistaAnuncioDados { AnoModelo = 2020, AnoFabricacao = 2020 });

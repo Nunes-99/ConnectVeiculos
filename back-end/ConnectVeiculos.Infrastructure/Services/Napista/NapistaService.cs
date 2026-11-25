@@ -303,8 +303,21 @@ namespace ConnectVeiculos.Infrastructure.Services.Napista
 
             var anuncio = await _anuncios.GetByVeiculoIdAsync(veiculoId) ?? new VeiculoNapista(veiculoId, "");
             var anterior = string.IsNullOrEmpty(anuncio.VnpDadosJson) ? null : Dados(anuncio);
+            var jaEstavaNoAr = anuncio.EstaPublicado;
             anuncio.SalvarDados(JsonSerializer.Serialize(dados, Json));
-            await EnviarAsync(conta, veiculo, anuncio, dados, anterior, ct);
+            try
+            {
+                await EnviarAsync(conta, veiculo, anuncio, dados, anterior, ct);
+            }
+            catch (NapistaException) when (anterior != null && jaEstavaNoAr)
+            {
+                // Recusado: fica valendo o que o NaPista ja aceitou. Sem isso,
+                // cada edicao do carro reenviava o valor recusado e falhava
+                // em segundo plano. O erro continua no anuncio para a tela.
+                anuncio.SalvarDados(JsonSerializer.Serialize(anterior, Json));
+                await _anuncios.SalvarAsync(anuncio);
+                throw;
+            }
             return Info(anuncio, dados, false);
         }
 
@@ -671,6 +684,9 @@ namespace ConnectVeiculos.Infrastructure.Services.Napista
                 }
             }
             catch (JsonException) { }
+            // Resposta do NaPista (Spring) quando um valor nao bate com o enum deles.
+            if (string.Equals(detalhe, "Failed to read request", StringComparison.OrdinalIgnoreCase))
+                detalhe = "algum valor não é aceito (cor, combustível, câmbio ou opcionais). Escolha de novo na lista.";
             if ((int)status >= 500)
                 return "O NaPista está com instabilidade. Tente de novo em alguns minutos.";
             return !string.IsNullOrWhiteSpace(detalhe)
