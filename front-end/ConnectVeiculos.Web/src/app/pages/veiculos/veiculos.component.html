@@ -99,6 +99,12 @@
                 <span class="badge" [class.active]="veiculo.veiSts === 'D'" [class.inactive]="veiculo.veiSts === 'V'">
                   {{ getStatusLabel(veiculo.veiSts) }}
                 </span>
+                @if (paradoPorVeiculo.get(veiculo.veiId); as parado) {
+                  <button type="button" class="parado-chip" [class.critico]="parado.faixa === 'critico'" (click)="openModal(veiculo)"
+                          [title]="parado.dias + ' dias em estoque. ' + parado.motivo">
+                    <span class="material-icons">schedule</span>{{ parado.dias }}d
+                  </button>
+                }
                 <!-- Onde o carro esta no ar: cada selo abre o post/anuncio. -->
                 @if (veiculo.publicacaoInstagramUrl || veiculo.publicacaoFacebookUrl || veiculo.publicacaoMercadoLivreUrl || veiculo.mercadoLivreAguardandoPagamento || veiculo.napistaNoAr || veiculo.olxNoAr) {
                   <div class="redes-no-ar">
@@ -343,6 +349,30 @@
               }
             </div>
           </div>
+          @if (editMode && sugestaoPreco) {
+            <!-- Sugestao pelo tempo de estoque, FIPE e custo (compra + despesas); calculada com o preco salvo. -->
+            <div class="sugestao-preco-box" [class.critico]="sugestaoPreco.faixa === 'critico'" [class.atencao]="sugestaoPreco.faixa === 'atencao'">
+              <span class="material-icons">lightbulb</span>
+              <div>
+                <strong>
+                  {{ sugestaoPreco.dias }} dias em estoque
+                  @if (sugestaoPreco.mudar) { · sugestão: {{ sugestaoPreco.precoSugerido | currency:'BRL':'symbol':'1.0-0' }} }
+                </strong>
+                <small>{{ sugestaoPreco.motivo }}</small>
+                <small>
+                  @if (sugestaoPreco.fipe) { FIPE {{ sugestaoPreco.fipe | currency:'BRL':'symbol':'1.0-0' }} · }
+                  @if (sugestaoPreco.custo > 0) {
+                    Custo {{ sugestaoPreco.custo | currency:'BRL':'symbol':'1.0-0' }}
+                    @if (sugestaoPreco.despesas > 0) { (com {{ sugestaoPreco.despesas | currency:'BRL':'symbol':'1.0-0' }} de despesas) }
+                    · mínimo com margem {{ sugestaoPreco.precoMinimo | currency:'BRL':'symbol':'1.0-0' }}
+                  } @else { Sem preço de compra: a sugestão usa só a FIPE e o tempo. }
+                </small>
+              </div>
+              @if (sugestaoPreco.mudar) {
+                <button type="button" class="btn-secondary" (click)="usarPrecoSugerido()">Usar este preço</button>
+              }
+            </div>
+          }
           <div class="form-row">
             <div class="form-group">
               <label>
