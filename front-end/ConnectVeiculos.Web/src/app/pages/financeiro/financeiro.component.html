@@ -92,6 +92,7 @@
                   </td>
                   @if (gestao) {
                     <td data-label="Ações" class="acoes">
+                      <div class="acoes-linha">
                       @if (!l.pagoEm) {
                         <button class="btn-secondary btn-sm" (click)="pagar(l, true)">{{ l.tipo === 'R' ? 'Recebi' : 'Paguei' }}</button>
                       } @else {
@@ -102,6 +103,7 @@
                               [title]="excluirId === l.id ? 'Clique de novo para excluir' : 'Excluir'">
                         <span class="material-icons">{{ excluirId === l.id ? 'delete_forever' : 'delete' }}</span>
                       </button>
+                      </div>
                     </td>
                   }
                 </tr>

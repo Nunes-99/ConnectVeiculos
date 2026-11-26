@@ -94,6 +94,7 @@
   display: inline-block;
   margin-right: 6px;
   padding: 1px 8px;
+  white-space: nowrap;
   border-radius: 4px;
   font-size: 11px;
   background: var(--status-error-bg);
@@ -114,7 +115,10 @@ tr.previsto { opacity: 0.65; }
   &.aberto { background: var(--bg-tertiary); color: var(--text-secondary); }
 }
 
-.acoes { white-space: nowrap; .btn-sm { padding: 6px 12px; font-size: 13px; } }
+.acoes {
+  .acoes-linha { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+  .btn-sm { padding: 6px 12px; font-size: 13px; white-space: nowrap; }
+}
 
 .categorias {
   margin-bottom: 16px;
@@ -153,7 +157,7 @@ tr.previsto { opacity: 0.65; }
     .mes { justify-content: space-between; strong { min-width: 0; } }
     select { min-width: 0; width: 100%; }
   }
-  .resumo { grid-template-columns: 1fr 1fr; }
+  // Valores grandes (R$ 110.000,00) nao podem estourar o cartao.
+  .resumo { grid-template-columns: repeat(2, minmax(0, 1fr)); .card { padding: 12px 14px; strong { font-size: 1.05rem; white-space: nowrap; } } }
   .categorias .barra { grid-template-columns: 1fr; gap: 2px; }
-  .acoes { white-space: normal; }
 }
