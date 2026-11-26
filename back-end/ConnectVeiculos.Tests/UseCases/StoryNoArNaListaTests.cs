@@ -63,7 +63,17 @@ namespace ConnectVeiculos.Tests.UseCases
             return p;
         }
 
-        private static async Task<List<Application.ViewModels.Veiculos.VeiculoViewModel>> ConsultarCom(params VeiculoPublicacao[] publicacoes)
+        [Fact]
+        public async Task Selo_np_so_para_veiculo_com_anuncio_no_ar_no_napista()
+        {
+            (await ConsultarCom(new HashSet<int> { VeiculoId })).Single().NapistaNoAr.Should().BeTrue();
+            (await ConsultarCom(new HashSet<int> { 99 })).Single().NapistaNoAr.Should().BeFalse();
+        }
+
+        private static Task<List<Application.ViewModels.Veiculos.VeiculoViewModel>> ConsultarCom(params VeiculoPublicacao[] publicacoes)
+            => ConsultarCom(new HashSet<int>(), publicacoes);
+
+        private static async Task<List<Application.ViewModels.Veiculos.VeiculoViewModel>> ConsultarCom(HashSet<int> noNapista, params VeiculoPublicacao[] publicacoes)
         {
             dynamic linha = new ExpandoObject();
             linha.VeiId = (long)VeiculoId;
@@ -100,7 +110,10 @@ namespace ConnectVeiculos.Tests.UseCases
             var publicacaoRepo = new Mock<IVeiculoPublicacaoRepository>();
             publicacaoRepo.Setup(r => r.GetAtivasAsync()).ReturnsAsync(publicacoes);
 
-            return await new ConsultarVeiculosUseCase(operations.Object, publicacaoRepo.Object)
+            var napista = new Mock<ConnectVeiculos.Core.Interfaces.Database.Repositories.Integracoes.IVeiculoNapistaRepository>();
+            napista.Setup(r => r.VeiculosNoArAsync()).ReturnsAsync(noNapista);
+
+            return await new ConsultarVeiculosUseCase(operations.Object, publicacaoRepo.Object, napista.Object)
                 .Execute(null!, null, null!, null!);
         }
     }

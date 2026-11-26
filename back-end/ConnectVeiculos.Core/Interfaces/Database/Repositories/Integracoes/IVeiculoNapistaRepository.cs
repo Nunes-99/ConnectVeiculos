@@ -9,5 +9,8 @@ namespace ConnectVeiculos.Core.Interfaces.Database.Repositories.Integracoes
 
         /// <summary>anuncioId do NaPista → veiculo ja ligado a ele (qualquer situacao).</summary>
         Task<Dictionary<string, int>> VeiculosPorAnuncioAsync(IReadOnlyCollection<string> anuncioIds);
+
+        /// <summary>Veiculos com anuncio no ar no NaPista (selo "NP" na lista).</summary>
+        Task<HashSet<int>> VeiculosNoArAsync();
     }
 }

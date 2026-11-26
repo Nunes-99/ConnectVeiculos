@@ -100,7 +100,7 @@
                   {{ getStatusLabel(veiculo.veiSts) }}
                 </span>
                 <!-- Onde o carro esta no ar: cada selo abre o post/anuncio. -->
-                @if (veiculo.publicacaoInstagramUrl || veiculo.publicacaoFacebookUrl || veiculo.publicacaoMercadoLivreUrl || veiculo.mercadoLivreAguardandoPagamento) {
+                @if (veiculo.publicacaoInstagramUrl || veiculo.publicacaoFacebookUrl || veiculo.publicacaoMercadoLivreUrl || veiculo.mercadoLivreAguardandoPagamento || veiculo.napistaNoAr) {
                   <div class="redes-no-ar">
                     @if (veiculo.publicacaoInstagramUrl) {
                       <a class="rede ig" [href]="veiculo.publicacaoInstagramUrl" target="_blank" rel="noopener" [title]="tituloInstagram(veiculo)">IG</a>
@@ -112,6 +112,10 @@
                       <span class="rede ml pendente" [title]="tituloMercadoLivre(veiculo)">ML</span>
                     } @else if (veiculo.publicacaoMercadoLivreUrl) {
                       <a class="rede ml" [href]="veiculo.publicacaoMercadoLivreUrl" target="_blank" rel="noopener" [title]="tituloMercadoLivre(veiculo)">ML</a>
+                    }
+                    @if (veiculo.napistaNoAr) {
+                      <!-- O NaPista nao devolve o link publico do anuncio: o selo abre a janela do NaPista. -->
+                      <button type="button" class="rede np" (click)="napistaVeiculo = veiculo" title="Anunciado no NaPista — clique para ver ou alterar o anúncio">NP</button>
                     }
                   </div>
                 }
@@ -702,7 +706,7 @@
 }
 
 @if (napistaVeiculo) {
-  <app-napista-veiculo [veiculo]="napistaVeiculo" (fechar)="napistaVeiculo = null"></app-napista-veiculo>
+  <app-napista-veiculo [veiculo]="napistaVeiculo" (fechar)="fecharNapista()"></app-napista-veiculo>
 }
 
 @if (nfeVeiculo) {

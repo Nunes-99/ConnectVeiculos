@@ -1,13 +1,22 @@
 # NaPista: do client_id à produção
 
 Integração de estoque e leads com o NaPista (portal do banco BV). Sem custo
-para o integrador. A loja conecta a **conta dela no NaPista** (mesmo usuário e
-senha de lá) por OAuth; o ConnectVeiculos é o integrador, com `client_id`
-próprio e **sem segredo** (cliente público).
+para o integrador (o custo do anúncio, se houver, é do plano da loja no
+NaPista — perguntado em 26/11/2026). A loja conecta a **conta dela no NaPista**
+(mesmo usuário e senha de lá) por OAuth; o ConnectVeiculos é o integrador, com
+`client_id` próprio e **sem segredo** (cliente público).
 
 Documentação (com senha, no e-mail do Renan Queiroz, 04/11/2026):
 https://developers.napista.com.br/reference/boas-vindas — contato:
-integrador@napista.com.br / parceiros@napista.com.br.
+renan.freitas@napista.com.br / integrador@napista.com.br.
+
+## Situação (26/11/2026)
+
+- Desenvolvimento do NaPista: client_id **`connect-veiculos`** liberado em
+  24/11/2026, redirect_uri só `https://connectveiculos.dev.br/integracoes/napista`
+  (localhost **não** é aceito). Testes concluídos em 25/11/2026 (abaixo).
+- E-mail ao Renan pedindo produção enviado em 26/11/2026, com as perguntas da
+  seção "Perguntas em aberto". **Próximo passo: a resposta dele.**
 
 ## Como funciona
 
@@ -19,76 +28,110 @@ integrador@napista.com.br / parceiros@napista.com.br.
 - **Veículos → menu ⋮ → Anunciar no NaPista**: o sistema sugere marca, modelo,
   versão, câmbio, combustível, cor e portas a partir do cadastro (FIPE); a
   pessoa confere e anuncia. Preço, km, placa, observação e até 20 fotos vêm do
-  cadastro.
-- Depois é automático: editar atualiza o anúncio (fotos só quando mudam);
-  vender marca **vendido** (SOLD); inativar/reservar tira do ar (UNPUBLISHED);
-  estornar/voltar a disponível republica. *Tirar do ar* pela janela pausa: só
-  volta clicando em Anunciar.
+  cadastro. Carro novo **não** vai sozinho (a versão do catálogo tem de ser
+  confirmada uma vez); depois disso tudo é automático.
+- Na lista de **Veículos**, o selo azul **NP** marca os carros no ar no NaPista
+  (abre a janela do anúncio; o NaPista não devolve o link público).
+- Depois é automático: editar atualiza o anúncio; vender marca **vendido**
+  (SOLD); inativar/reservar tira do ar (UNPUBLISHED); estornar/voltar a
+  disponível republica. *Tirar do ar* pela janela pausa: só volta clicando em
+  Anunciar. Subir, excluir ou trocar a foto principal manda as fotos ~15 s
+  depois (junta várias fotos num envio só).
 - Trocar a versão ou os anos de um anúncio cria outro (a API não deixa mudar
   esses campos) e o antigo é removido.
 - **Loja que já anunciava no NaPista**: Integrações → NaPista → *Ver anúncios
   do NaPista* lista os publicados (`GET /seller/{id}/offers?status=PUBLISHED`).
   Importar cria o veículo (marca e modelo pelo catálogo, a partir do título;
   cor, opcionais, km, preço, descrição e fotos do anúncio) já ligado ao
-  anúncio, sem criar outro lá. Placa já cadastrada só liga. O NaPista pode
-  esconder a placa (`******4`): a pessoa digita e o final tem de bater. Foto
-  com endereço relativo (`r/1092324/...jpg`, aparece no exemplo da
-  documentação) não dá para baixar e fica de fora, com aviso.
+  anúncio, sem criar outro lá e sem postar nas redes. Placa já cadastrada só
+  liga. O NaPista pode esconder a placa (`******4`): a pessoa digita e o final
+  tem de bater. Foto que não baixa (endereço relativo ou 403) fica de fora,
+  com aviso.
+
+## Comportamentos do NaPista que a documentação não conta
+
+Descobertos no desenvolvimento deles em 25/11/2026; o código já trata:
+
+- **O PATCH do anúncio apaga as fotos** (a doc diz "Photos are ignored"). O
+  sistema reenvia as fotos por `/photos/url` depois de toda alteração (#31).
+- **`/photos/url` substitui as anteriores, mas dois envios simultâneos somam**
+  (ficou com 8 fotos em vez de 4). Um envio por veículo de cada vez (#32).
+- **DELETE é exclusão lógica**: um PATCH com `status: PUBLISHED` num anúncio
+  apagado o publica de novo (não volta 404).
+- **PATCH com versão diferente da do anúncio** volta 400 "Request has field
+  cannot be changed!" — por isso a troca de versão apaga e cria outro.
+- **Valor fora do enum** (cor, combustível...) volta 400 "Failed to read
+  request" sem dizer o campo. O sistema traduz e mantém os dados já aceitos (#29).
+- **Fotos devolvidas pela API** (`marketplace.development.napista.com.br/static/photos/...`)
+  respondem **403** fora do NaPista no desenvolvimento: a miniatura não abre e
+  a importação não baixa as fotos. Perguntado se em produção são públicas.
+- O login (Keycloak) de desenvolvimento cai às vezes (503): não desconecta mais
+  a loja (#28). A tela de login deles expira se ficar aberta muito tempo
+  ("Ops, ocorreu um problema no carregamento"): é só clicar em Conectar de novo.
+- Com a conexão desfeita, edições do carro não dão erro nem vão ao NaPista; ao
+  reconectar, o anúncio continua ligado e só a próxima edição o atualiza.
 
 ## Testado
 
-- `NapistaServiceTests` (15 testes, NaPista simulado no formato da documentação):
-  conexão, renovação do token, anúncio, fotos, vendido/estorno/pausa, troca de
-  versão, recusa, sugestão, leads.
-- Telas, com um NaPista falso local (04/11/2026): conectar, escolher loja,
-  buscar leads (aparece em Leads), sugestão completa no Golf GTI, anunciar
-  (corpo, foto por URL) e tirar do ar.
-- Contra o NaPista de desenvolvimento (25/11/2026, client_id `connect-veiculos`):
-  conectar, loja, leads, catálogo, anunciar com fotos, editar (PATCH), vendido
-  (SOLD), reservado/inativo (UNPUBLISHED), volta a disponível, pausa que não
-  volta sozinha, troca de versão (DELETE + POST) e recusas. Achados corrigidos:
-  503 do login deles desconectava a loja (#28); alteração recusada ficava
-  gravada (#29).
-
-## Para ligar (desenvolvimento do NaPista)
-
-1. O NaPista cadastra o `client_id` com as redirect URIs:
-   - `https://connectveiculos.dev.br/integracoes/napista`
-   - `http://localhost:4200/integracoes/napista`
-2. Gravar no servidor (Git Bash): `bash scripts/trocar-chaves.sh` → cole só
-   `NAPISTA_CLIENT_ID` (Enter nas outras). Ver `docs/trocar-chaves.md`.
-3. Juntar a branch `feature/napista` no master e publicar.
-4. Entrar em https://connectveiculos.dev.br com a loja de teste →
-   Integrações → NaPista → Conectar, com o usuário de teste que o NaPista der.
-5. Anunciar um carro de teste e buscar leads. Mandar prints/erros ao Claude.
+- `NapistaServiceTests` (NaPista simulado no formato da documentação): conexão,
+  renovação e queda do login, anúncio, fotos (reenvio após PATCH, um envio por
+  veículo, fotos mudadas pela tela), vendido/estorno/pausa, troca de versão,
+  recusa, sugestão, leads, importação (lista, criar, ligar pela placa, placa
+  escondida, importação dupla).
+- Contra o NaPista de desenvolvimento (25/11/2026), na loja `empresa-teste`, com
+  o Ford Ka TST0E05: conectar/reconectar, loja, leads, catálogo (carro, moto,
+  caminhão), anunciar com fotos, editar preço/km, vendido por edição e por
+  **venda + estorno**, reservado, **inativar e reativar**, tirar do ar e
+  anunciar de novo, troca de versão, recusas, edições simultâneas, subir/excluir
+  foto e trocar a principal, anúncio apagado no NaPista, importar (ligar pela
+  placa e criar do zero) e desconectado (tudo pede "Conecte", editar não dá
+  erro).
+- **Não deu para testar no desenvolvimento**: leads com dados (a conta de teste
+  não tem) e fotos baixadas na importação (403). Ficam para o primeiro uso em
+  produção.
+- Atenção ao testar status na loja de teste: com o Mercado Livre conectado, cada
+  volta a "disponível" cria um anúncio novo no ML ("aguardando pagamento").
+  Desconecte o ML antes (só a `empresa-teste` usa).
 
 ## Para produção
 
-No `.env` do servidor (pelo `trocar-chaves.sh`):
+1. O NaPista libera o client em produção e informa os endereços.
+2. No `.env` do servidor (pelo `bash scripts/trocar-chaves.sh`, ver
+   `docs/trocar-chaves.md`):
+   - `NAPISTA_CLIENT_ID` de produção (se for outro);
+   - `NAPISTA_AUTH_URL=https://auth.napista.com.br/realms/marketplace-dealer/protocol/openid-connect`
+     (confirmar);
+   - `NAPISTA_API_URL=` o endereço de produção da API (a documentação só mostra
+     o de desenvolvimento: `https://api.development.napista.com.br/seller-inventory-api`).
+3. **Antes de virar**: na `empresa-teste`, desconectar o NaPista e apagar as
+   linhas de `VeiculoNapista` (apontam para anúncios do desenvolvimento, que não
+   existem em produção).
+4. Com uma loja de verdade: conectar com a conta dela, importar os anúncios que
+   ela já tem (conferir que as fotos vêm), anunciar um carro e conferir no
+   **napista.com.br**, editar, vender/estornar, buscar leads.
 
-- `NAPISTA_CLIENT_ID` de produção (se for outro);
-- `NAPISTA_AUTH_URL=https://auth.napista.com.br/realms/marketplace-dealer/protocol/openid-connect`
-- `NAPISTA_API_URL=` o endereço de produção da API (a documentação só mostra o
-  de desenvolvimento: `https://api.development.napista.com.br/seller-inventory-api`).
+## Perguntas em aberto para o NaPista (e-mail de 26/11/2026)
 
-## Perguntas em aberto para o NaPista
-
-1. Endereço de produção da API de estoque (`seller-inventory-api`).
-2. Existe processo de homologação antes de liberar produção? Quem aprova?
-3. O refresh token vence em quanto tempo? Dá para liberar `offline_access` no
-   nosso client? Sem isso a loja precisa conectar de novo quando vence (a tela
-   mostra "vale até").
-4. Limite de fotos por anúncio e de chamadas por minuto.
-5. A resposta de criar anúncio vem com `status`? (Se não vier, o sistema chama o
-   endpoint de status para publicar.)
-6. Há webhook/aviso de lead novo, ou só a consulta?
+1. Endereços de produção (auth e `seller-inventory-api`) e se o client_id muda.
+2. Validade do refresh token; dá para liberar `offline_access`? Sem isso a loja
+   precisa conectar de novo quando vence (a tela mostra "vale até").
+3. Limite de fotos por anúncio e de chamadas por minuto.
+4. Webhook/aviso de lead novo, ou só a consulta?
+5. Custo para a loja por anúncio publicado via integração / limite pelo plano.
+6. O PATCH apagar as fotos é o esperado?
+7. As URLs das fotos são públicas em produção?
+8. Um lead e um anúncio criado direto no portal na conta de teste, para testar
+   esses dois fluxos.
 
 ## Onde está o código
 
 - Backend: `Infrastructure/Services/Napista/` (`NapistaService`,
-  `NapistaSugestao`, `NapistaSettings`), `API/Controllers/NapistaController.cs`
-  (`/api/integracoes/napista`), tabela `VeiculoNapista`, `Lead.LeaExternoId`.
-- Gatilhos: `PublicacaoAutomaticaService` (venda, inativação, estorno) e
-  `AtualizarVeiculoUseCase` (edição), junto com a Webmotors.
-- Telas: `shared/components/napista/` (cartão e janela do veículo),
-  `pages/integracoes/napista-retorno.component.ts` (volta do login).
+  `NapistaService.Importacao`, `NapistaSugestao`, `NapistaSettings`),
+  `API/Controllers/NapistaController.cs` (`/api/integracoes/napista`), tabela
+  `VeiculoNapista`, `Lead.LeaExternoId`.
+- Gatilhos: `PublicacaoAutomaticaService` (venda, inativação, estorno),
+  `AtualizarVeiculoUseCase` (edição), `ImagensController` (fotos), junto com a
+  Webmotors. Selo da lista: `ConsultarVeiculosUseCase.NapistaNoAr`.
+- Telas: `shared/components/napista/` (cartão, janela do veículo e
+  importação), `pages/integracoes/napista-retorno.component.ts` (volta do
+  login).

@@ -189,6 +189,12 @@ export class VeiculosComponent implements OnInit, OnDestroy {
   webmotorsVeiculo: Veiculo | null = null;
   // NaPista: mesma regra (a API so atende Administrador e Gerente).
   napistaVeiculo: Veiculo | null = null;
+
+  /** Anunciar ou tirar do ar pela janela muda o selo "NP" da lista. */
+  fecharNapista(): void {
+    this.napistaVeiculo = null;
+    this.loadData();
+  }
   get podeWebmotors(): boolean { return this.auth.isGerente(); }
   detranLink: DetranLink = { uf: '', nome: '', url: '' };
 

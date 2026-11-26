@@ -25,6 +25,8 @@ namespace ConnectVeiculos.Application.ViewModels.Veiculos
         public DateTime? PublicacaoMercadoLivreEm { get; set; }
         /// <summary>Anuncio criado no ML mas invisivel ate a loja pagar a taxa.</summary>
         public bool MercadoLivreAguardandoPagamento { get; set; }
+        /// <summary>Anuncio no ar no NaPista (VeiculoNapista ATIVO).</summary>
+        public bool NapistaNoAr { get; set; }
         /// <summary>Quando o ultimo story do veiculo some (UTC); nulo se nao ha story no ar.</summary>
         public DateTime? StoryNoArAte { get; set; }
         public string VeiCor { get; set; }

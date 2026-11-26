@@ -967,7 +967,7 @@ textarea {
   .acoes-menu-separador { height: 1px; background: var(--border-light, #eee); margin: 4px 0; }
 }
 
-// Selos de onde o carro esta no ar (Instagram, Facebook, Mercado Livre).
+// Selos de onde o carro esta no ar (Instagram, Facebook, Mercado Livre, NaPista).
 .redes-no-ar {
   display: flex;
   gap: 4px;
@@ -986,6 +986,7 @@ textarea {
     &.ig { background: #E1306C; }
     &.fb { background: #1877F2; }
     &.ml { background: #FFE600; color: #2d3277; }
+    &.np { background: #0f2bff; border: 0; font-family: inherit; }
     // Criado no ML mas invisivel ate pagar a taxa.
     &.ml.pendente { background: var(--status-warning-bg, #fff8e1); color: var(--status-warning, #8d6e00); border: 1px dashed currentColor; cursor: help; }
   }

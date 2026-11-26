@@ -3,6 +3,7 @@ using ConnectVeiculos.Application.Interfaces.Veiculos;
 using ConnectVeiculos.Application.ViewModels.Veiculos;
 using ConnectVeiculos.Core.Interfaces.Database.Operations.Veiculos;
 using ConnectVeiculos.Core.Entities.Publicacoes;
+using ConnectVeiculos.Core.Interfaces.Database.Repositories.Integracoes;
 using ConnectVeiculos.Core.Interfaces.Database.Repositories.Publicacoes;
 
 namespace ConnectVeiculos.Application.UseCases.Veiculos
@@ -11,15 +12,18 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
     {
         private readonly IVeiculoOperations _veiculoOperations;
         private readonly IVeiculoPublicacaoRepository _publicacaoRepository;
+        private readonly IVeiculoNapistaRepository _napistaRepository;
 
         private const int DuracaoStoryHoras = 24;
 
         public ConsultarVeiculosUseCase(
             IVeiculoOperations veiculoOperations,
-            IVeiculoPublicacaoRepository publicacaoRepository)
+            IVeiculoPublicacaoRepository publicacaoRepository,
+            IVeiculoNapistaRepository napistaRepository)
         {
             _veiculoOperations = veiculoOperations;
             _publicacaoRepository = publicacaoRepository;
+            _napistaRepository = napistaRepository;
         }
 
         public async Task<List<VeiculoViewModel>> Execute(string pesquisa, int? lojaId, string inicio, string intervalo)
@@ -35,6 +39,8 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             var publicacoes = (await _publicacaoRepository.GetAtivasAsync())
                 .GroupBy(p => p.R_VeiId)
                 .ToDictionary(g => g.Key, g => g.ToList());
+            // NaPista guarda o anuncio em tabela propria (VeiculoNapista), nao em VeiculoPublicacao.
+            var noNapista = await _napistaRepository.VeiculosNoArAsync();
 
             var veiculos = ((IEnumerable<dynamic>)result).Select(v => new VeiculoViewModel
             {
@@ -69,6 +75,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
 
             foreach (var veiculo in veiculos)
             {
+                veiculo.NapistaNoAr = noNapista.Contains(veiculo.VeiId);
                 if (!publicacoes.TryGetValue(veiculo.VeiId, out var doVeiculo)) continue;
 
                 var ig = doVeiculo.FirstOrDefault(p => p.PubPlataforma == "Instagram");

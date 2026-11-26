@@ -25,6 +25,12 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework.Repositories
                 .GroupBy(a => a.VnpAnuncioId).ToDictionary(g => g.Key, g => g.First().R_VeiId);
         }
 
+        public async Task<HashSet<int>> VeiculosNoArAsync() =>
+            (await _context.VeiculosNapista.AsNoTracking()
+                .Where(a => a.VnpStatus == VeiculoNapista.StatusAtivo && a.VnpAnuncioId != null && a.VnpAnuncioId != "")
+                .Select(a => a.R_VeiId).ToListAsync())
+            .ToHashSet();
+
         public async Task SalvarAsync(VeiculoNapista anuncio)
         {
             if (anuncio.VnpId == 0 && _context.Entry(anuncio).State == EntityState.Detached)
