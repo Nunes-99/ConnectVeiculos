@@ -83,7 +83,7 @@ h2 { font-size: 1.1rem; color: var(--text-primary); margin: 24px 0 12px; }
     background: var(--bg-primary);
     color: var(--text-primary);
   }
-  button { display: inline-flex; align-items: center; gap: 6px; }
+  button { display: inline-flex; align-items: center; gap: 6px; &:disabled { opacity: 0.5; cursor: default; } }
 }
 
 .badge.pendente { background: var(--status-warning-bg); color: var(--status-warning); }
@@ -134,7 +134,7 @@ h2 { font-size: 1.1rem; color: var(--text-primary); margin: 24px 0 12px; }
     align-items: stretch;
     .filtro-grupo { justify-content: space-between; input, select { min-width: 0; flex: 1; } }
   }
-  .resumo { grid-template-columns: 1fr 1fr; }
+  .resumo { grid-template-columns: repeat(2, minmax(0, 1fr)); .card { padding: 12px 14px; strong { font-size: 1.05rem; white-space: nowrap; } } }
   .regra-linha { &.padrao strong, .check { min-width: 0; width: 100%; } }
   .acoes-pagamento > * { flex: 1 1 100%; justify-content: center; }
 }
