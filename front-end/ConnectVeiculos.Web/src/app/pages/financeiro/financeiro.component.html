@@ -1,0 +1,220 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Financeiro</h1>
+    @if (gestao) {
+      <div class="botoes">
+        <button class="btn-secondary" (click)="novo('R')"><span class="material-icons">south_west</span> A receber</button>
+        <button class="btn-primary" (click)="novo('P')"><span class="material-icons">north_east</span> A pagar</button>
+      </div>
+    }
+  </div>
+
+  <div class="filtros">
+    <div class="mes">
+      <button class="btn-icon" (click)="mudarMes(-1)" aria-label="Mês anterior"><span class="material-icons">chevron_left</span></button>
+      <strong>{{ tituloMes }}</strong>
+      <button class="btn-icon" (click)="mudarMes(1)" aria-label="Próximo mês"><span class="material-icons">chevron_right</span></button>
+    </div>
+    @if (lojas.length > 1) {
+      <select [(ngModel)]="lojaId" (change)="carregar()">
+        <option [ngValue]="null">Todas as lojas</option>
+        @for (l of lojas; track l.lojId) { <option [ngValue]="l.lojId">{{ l.lojNome }}</option> }
+      </select>
+    }
+  </div>
+
+  @if (carregando && !dados) {
+    <div class="loading">Carregando...</div>
+  } @else if (dados) {
+    <div class="resumo">
+      <div class="card entrada">
+        <span>Entradas</span>
+        <strong>{{ moeda(dados.entradasRealizadas) }}</strong>
+        @if (dados.entradasPrevistas) { <small>+ {{ moeda(dados.entradasPrevistas) }} a receber</small> }
+      </div>
+      <div class="card saida">
+        <span>Saídas</span>
+        <strong>{{ moeda(dados.saidasRealizadas) }}</strong>
+        @if (dados.saidasPrevistas) { <small>+ {{ moeda(dados.saidasPrevistas) }} a pagar</small> }
+      </div>
+      <div class="card" [class.negativo]="dados.saldoRealizado < 0">
+        <span>Saldo do mês</span>
+        <strong>{{ moeda(dados.saldoRealizado) }}</strong>
+        <small>previsto: {{ moeda(dados.saldoPrevisto) }}</small>
+      </div>
+      @if (dados.atrasadas || dados.vencemEmBreve) {
+        <div class="card alerta">
+          <span>Atenção</span>
+          @if (dados.atrasadas) { <strong>{{ dados.atrasadas }} atrasada(s)</strong> }
+          @if (dados.valorAtrasado) { <small>{{ moeda(dados.valorAtrasado) }} a pagar vencido</small> }
+          @if (dados.vencemEmBreve) { <small>{{ dados.vencemEmBreve }} conta(s) vencem nos próximos 7 dias</small> }
+        </div>
+      }
+    </div>
+
+    <div class="abas">
+      <button [class.ativa]="aba === 'contas'" (click)="aba = 'contas'">Contas a pagar e receber</button>
+      <button [class.ativa]="aba === 'fluxo'" (click)="aba = 'fluxo'">Fluxo de caixa</button>
+    </div>
+
+    @if (aba === 'contas') {
+      <div class="filtro-contas">
+        @for (f of [{ id: 'todas', nome: 'Todas' }, { id: 'abertas', nome: 'Em aberto' }, { id: 'P', nome: 'A pagar' }, { id: 'R', nome: 'A receber' }]; track f.id) {
+          <button [class.ativa]="filtroContas === f.id" (click)="filtroContas = $any(f.id)">{{ f.nome }}</button>
+        }
+      </div>
+      @if (contasFiltradas.length === 0) {
+        <p class="texto">
+          Nenhuma conta neste mês. Lance aqui o que não passa pelos carros: aluguel, salários, impostos, internet, marketing...
+          Contas marcadas como <strong>mensais</strong> se repetem sozinhas.
+        </p>
+      } @else {
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr><th>Vencimento</th><th>Descrição</th><th>Categoria</th><th>Valor</th><th>Situação</th>@if (gestao) { <th>Ações</th> }</tr>
+            </thead>
+            <tbody>
+              @for (l of contasFiltradas; track l.id) {
+                <tr [class.atrasada]="l.situacao === 'atrasado'">
+                  <td data-label="Vencimento">{{ l.vencimento | date:'dd/MM/yyyy' }}</td>
+                  <td data-label="Descrição">
+                    <span class="tipo" [class.receber]="l.tipo === 'R'">{{ l.tipo === 'R' ? 'Receber' : 'Pagar' }}</span>
+                    <strong>{{ l.descricao }}</strong>
+                    @if (l.recorrente) { <span class="material-icons recorrente" title="Mensal">autorenew</span> }
+                    @if (l.observacao) { <br /><span class="text-muted">{{ l.observacao }}</span> }
+                  </td>
+                  <td data-label="Categoria">{{ l.categoria }}</td>
+                  <td data-label="Valor" [class.valor-receber]="l.tipo === 'R'"><strong>{{ moeda(l.valor) }}</strong></td>
+                  <td data-label="Situação">
+                    <span class="badge" [class]="'badge ' + l.situacao">{{ situacaoTexto(l) }}</span>
+                    @if (l.pagoEm) { <br /><span class="text-muted">em {{ l.pagoEm | date:'dd/MM/yyyy' }}</span> }
+                  </td>
+                  @if (gestao) {
+                    <td data-label="Ações" class="acoes">
+                      @if (!l.pagoEm) {
+                        <button class="btn-secondary btn-sm" (click)="pagar(l, true)">{{ l.tipo === 'R' ? 'Recebi' : 'Paguei' }}</button>
+                      } @else {
+                        <button class="btn-icon" (click)="pagar(l, false)" title="Voltar para em aberto"><span class="material-icons">undo</span></button>
+                      }
+                      <button class="btn-icon" (click)="editar(l)" title="Editar"><span class="material-icons">edit</span></button>
+                      <button class="btn-icon" [class.confirmar]="excluirId === l.id" (click)="excluir(l)"
+                              [title]="excluirId === l.id ? 'Clique de novo para excluir' : 'Excluir'">
+                        <span class="material-icons">{{ excluirId === l.id ? 'delete_forever' : 'delete' }}</span>
+                      </button>
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    } @else {
+      <p class="texto">
+        Vendas, compras de carros (preço de compra na data de entrada), despesas dos carros e comissões pagas entram sozinhas.
+        Previsto = conta em aberto no vencimento.
+      </p>
+      @if (categoriasSaida.length) {
+        <div class="categorias">
+          <h3>Para onde foi o dinheiro</h3>
+          @for (c of categoriasSaida; track c.nome) {
+            <div class="barra">
+              <span class="nome">{{ c.nome }}</span>
+              <span class="trilho"><span class="preenchido" [style.width.%]="c.pct"></span></span>
+              <span class="valor">{{ moeda(c.valor) }} · {{ c.pct }}%</span>
+            </div>
+          }
+        </div>
+      }
+      <div class="table-container">
+        <table>
+          <thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Entrada</th><th>Saída</th></tr></thead>
+          <tbody>
+            @for (m of dados.movimentos; track $index) {
+              <tr [class.previsto]="!m.realizado">
+                <td data-label="Data">{{ m.data | date:'dd/MM' }}</td>
+                <td data-label="Descrição">
+                  {{ m.descricao }}
+                  @if (!m.realizado) { <span class="text-muted">(previsto)</span> }
+                </td>
+                <td data-label="Categoria">{{ m.categoria }}</td>
+                <td data-label="Entrada" class="valor-receber">{{ m.sentido === 'entrada' ? moeda(m.valor) : '' }}</td>
+                <td data-label="Saída" class="valor-pagar">{{ m.sentido === 'saida' ? moeda(m.valor) : '' }}</td>
+              </tr>
+            } @empty {
+              <tr><td colspan="5">Nenhum movimento neste mês.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</div>
+
+@if (editando) {
+  <div class="modal-overlay" (click)="editando = null">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>{{ editando.id ? 'Editar' : 'Nova' }} conta a {{ editando.tipo === 'R' ? 'receber' : 'pagar' }}</h2>
+        <button class="btn-close" (click)="editando = null"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body form-lancamento">
+        <div class="form-group">
+          <label>Tipo</label>
+          <select [(ngModel)]="editando.tipo">
+            <option value="P">A pagar (saída)</option>
+            <option value="R">A receber (entrada)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="required">Descrição</label>
+          <input type="text" maxlength="200" [(ngModel)]="editando.descricao" placeholder="Ex.: Aluguel do galpão" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Categoria</label>
+            <select [(ngModel)]="editando.categoria">
+              <option [ngValue]="null">Escolha...</option>
+              @for (c of categorias; track c) { <option [ngValue]="c">{{ c }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="required">Valor (R$)</label>
+            <input type="number" min="0" step="0.01" [(ngModel)]="editando.valor" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="required">Vencimento</label>
+            <input type="date" [(ngModel)]="editando.vencimento" />
+          </div>
+          @if (lojas.length > 1) {
+            <div class="form-group">
+              <label>Loja</label>
+              <select [(ngModel)]="editando.lojaId">
+                <option [ngValue]="null">Geral (todas)</option>
+                @for (l of lojas; track l.lojId) { <option [ngValue]="l.lojId">{{ l.lojNome }}</option> }
+              </select>
+            </div>
+          }
+        </div>
+        <label class="check"><input type="checkbox" [(ngModel)]="editando.recorrente" /> Repete todo mês (ao pagar, o do mês seguinte é lançado)</label>
+        @if (!editando.id) {
+          <label class="check">
+            <input type="checkbox" [ngModel]="!!editando.pagoEm" (ngModelChange)="editando.pagoEm = $event ? editando.vencimento : null" />
+            Já foi {{ editando.tipo === 'R' ? 'recebido' : 'pago' }}
+          </label>
+        }
+        <div class="form-group">
+          <label>Observação</label>
+          <textarea rows="2" [(ngModel)]="editando.observacao"></textarea>
+        </div>
+        <div class="modal-acoes">
+          <button class="btn-secondary" (click)="editando = null">Cancelar</button>
+          <button class="btn-primary" (click)="salvar()" [disabled]="salvando">{{ salvando ? 'Salvando...' : 'Salvar' }}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+}

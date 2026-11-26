@@ -192,6 +192,7 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.AddTransient<IImagemService, ImagemService>();
             services.AddTransient<IFinanciamentoService, FinanciamentoService>();
             services.AddTransient<IFichaFinanciamentoService, FichaFinanciamentoService>();
+            services.AddTransient<IFinanceiroService, Services.Financeiro.FinanceiroService>();
             services.AddHttpClient<IFipeService, FipeService>();
             services.AddHttpClient<IWebhookService, WebhookService>();
             services.AddScoped<Core.Interfaces.Services.IContratoService, Services.Contratos.ContratoService>();
@@ -674,6 +675,26 @@ namespace ConnectVeiculos.Infrastructure.IoC
                       BflFaixasJson TEXT NOT NULL DEFAULT '[]',
                       BflObservacao TEXT,
                       BflAtualizadoEm TEXT NOT NULL");
+
+                // Financeiro: contas a pagar e a receber da loja
+                CreateTableIfNotExists(connection, "LancamentoFinanceiro",
+                    @"LfiId INTEGER PRIMARY KEY AUTOINCREMENT,
+                      LfiTipo TEXT NOT NULL,
+                      LfiDescricao TEXT NOT NULL,
+                      LfiCategoria TEXT,
+                      LfiValor TEXT NOT NULL,
+                      LfiVencimento TEXT NOT NULL,
+                      LfiPagoEm TEXT,
+                      R_LojId INTEGER,
+                      LfiObservacao TEXT,
+                      LfiRecorrente INTEGER NOT NULL DEFAULT 0,
+                      R_UsuId INTEGER NOT NULL,
+                      LfiCriadoEm TEXT NOT NULL");
+                using (var idxFin = connection.CreateCommand())
+                {
+                    idxFin.CommandText = "CREATE INDEX IF NOT EXISTS IX_LancamentoFinanceiro_LfiVencimento ON LancamentoFinanceiro(LfiVencimento)";
+                    idxFin.ExecuteNonQuery();
+                }
 
                 CreateTableIfNotExists(connection, "FichaFinanciamento",
                     @"FifId INTEGER PRIMARY KEY AUTOINCREMENT,
