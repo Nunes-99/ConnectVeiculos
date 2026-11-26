@@ -63,6 +63,12 @@ services:
       - OlxSettings__ClientId=${OLX_CLIENT_ID:-}
       - OlxSettings__ClientSecret=${OLX_CLIENT_SECRET:-}
       - OlxSettings__RedirectUri=${OLX_REDIRECT_URI:-https://connectveiculos.dev.br/integracoes/olx}
+      # ZapCar: consulta por placa paga com creditos das lojas. zc_test_ = dados
+      # ficticios (placas TST0001..); zc_live_ = consulta real (carteira ZapCar).
+      - ZapCarSettings__ApiKey=${ZAPCAR_API_KEY:-}
+      - ZapCarSettings__PrecoCompleta=${ZAPCAR_PRECO_COMPLETA:-60}
+      - ZapCarSettings__PrecoSimples=${ZAPCAR_PRECO_SIMPLES:-15}
+      - ZapCarSettings__Pacotes=${ZAPCAR_PACOTES:-60;180;300}
       - WHATSAPP_ACCESS_TOKEN=${WHATSAPP_ACCESS_TOKEN:-}
       - WHATSAPP_PHONE_ID=${WHATSAPP_PHONE_ID:-}
       - WHATSAPP_VERIFY_TOKEN=${WHATSAPP_VERIFY_TOKEN:-}

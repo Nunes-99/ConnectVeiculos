@@ -179,6 +179,22 @@ namespace ConnectVeiculos.Infrastructure.Tenancy
             EnsureColumn(conn, "Tenants", "TenPixUltimoPagamentoEm", "TEXT NULL");
             EnsureColumn(conn, "Tenants", "TenAssinaturaInicio", "TEXT NULL");
 
+            // Creditos de consulta por placa (ZapCar), em centavos.
+            using (var crcCmd = conn.CreateCommand())
+            {
+                crcCmd.CommandText = @"CREATE TABLE IF NOT EXISTS CreditoConsulta (
+                    CrcId INTEGER PRIMARY KEY AUTOINCREMENT,
+                    TenId INTEGER NOT NULL,
+                    CrcCentavos INTEGER NOT NULL,
+                    CrcTipo TEXT NOT NULL,
+                    CrcReferencia TEXT NULL UNIQUE,
+                    CrcDescricao TEXT NULL,
+                    CrcCriadoEm TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS IX_CreditoConsulta_TenId ON CreditoConsulta(TenId);";
+                crcCmd.ExecuteNonQuery();
+            }
+
              // Seed dos planos default. UPSERT manual (insere se o nome ainda nao
              // existe). Permite atualizar limites ajustando a config aqui — basta
              // mudar nome ou apagar e recriar; tenants existentes mantem o

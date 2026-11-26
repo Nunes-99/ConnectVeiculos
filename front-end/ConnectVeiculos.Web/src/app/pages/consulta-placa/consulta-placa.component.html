@@ -1,0 +1,249 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Consulta de placa</h1>
+    @if (gestao && painel?.disponivel) {
+      <button class="btn-secondary" (click)="mostrarCompra = !mostrarCompra">
+        <span class="material-icons">add_card</span> {{ mostrarCompra ? 'Fechar' : 'Comprar créditos' }}
+      </button>
+    }
+  </div>
+
+  @if (carregando) {
+    <div class="loading">Carregando...</div>
+  } @else if (painel) {
+    @if (!painel.disponivel) {
+      <div class="aviso-box">
+        <span class="material-icons">info</span>
+        <div>A consulta por placa ainda não está disponível. Em breve você poderá consultar gravame, leilão, sinistro, roubo e débitos antes de comprar um carro.</div>
+      </div>
+    } @else {
+      @if (painel.teste) {
+        <div class="aviso-box teste">
+          <span class="material-icons">science</span>
+          <div>
+            <strong>Ambiente de teste:</strong> os dados são fictícios e nada é cobrado da base. Use as placas:
+            <span class="placas-teste">
+              @for (t of placasTeste; track t.placa) {
+                <button type="button" (click)="usarPlacaTeste(t.placa)">{{ t.placa }} <small>{{ t.texto }}</small></button>
+              }
+            </span>
+          </div>
+        </div>
+      }
+
+      <div class="resumo">
+        <div class="card" [class.baixo]="semSaldo">
+          <span>Créditos da loja</span>
+          <strong>{{ painel.saldo | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong>
+          @if (painel.extrato.length) {
+            <button type="button" class="link" (click)="mostrarExtrato = !mostrarExtrato">{{ mostrarExtrato ? 'Esconder extrato' : 'Ver extrato' }}</button>
+          }
+        </div>
+        @for (s of painel.servicos; track s.id) {
+          <div class="card">
+            <span>{{ s.nome }}</span>
+            <strong>{{ s.preco | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong>
+          </div>
+        }
+      </div>
+
+      @if (mostrarExtrato) {
+        <div class="table-container extrato">
+          <table>
+            <thead><tr><th>Data</th><th>Movimento</th><th>Descrição</th><th class="num">Valor</th></tr></thead>
+            <tbody>
+              @for (m of painel.extrato; track $index) {
+                <tr>
+                  <td data-label="Data">{{ m.data | date:'dd/MM/yy HH:mm':'':'pt-BR' }}</td>
+                  <td data-label="Movimento">{{ nomeMovimento(m.tipo) }}</td>
+                  <td data-label="Descrição">{{ m.descricao }}</td>
+                  <td data-label="Valor" class="num" [class.entrada]="m.valor > 0" [class.saida]="m.valor < 0">
+                    {{ m.valor | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      @if (mostrarCompra && gestao) {
+        <section class="painel-box">
+          <h2>Comprar créditos</h2>
+          @if (!pix) {
+            <p class="texto">Pague por Pix e os créditos entram assim que o pagamento for aprovado. Cada consulta desconta o valor dela; se a base não trouxer resultado, o valor volta.</p>
+            <div class="pacotes">
+              @for (v of painel.pacotes; track v) {
+                <button type="button" class="pacote" [class.ativo]="pacote === v" (click)="pacote = v">
+                  <strong>{{ v | currency:'BRL':'symbol':'1.0-0':'pt-BR' }}</strong>
+                  @if (painel.servicos[0]) {
+                    <small>{{ v / painel.servicos[0].preco | number:'1.0-0' }} {{ v / painel.servicos[0].preco >= 2 ? 'consultas completas' : 'consulta completa' }}</small>
+                  }
+                </button>
+              }
+            </div>
+            <div class="form-group email">
+              <label for="email-pix">E-mail de quem paga</label>
+              <input id="email-pix" type="email" [(ngModel)]="email" />
+            </div>
+            <button class="btn-primary" [disabled]="!pacote || !email || gerandoPix" (click)="gerarPix()">
+              <span class="material-icons">pix</span> {{ gerandoPix ? 'Gerando...' : 'Gerar Pix' }}
+            </button>
+          } @else {
+            <div class="pix-box">
+              <h4>Pague com Pix: {{ pix.valor | currency:'BRL':'symbol':'1.2-2':'pt-BR' }} em créditos</h4>
+              @if (pix.qrCodeBase64) {
+                <img [src]="'data:image/png;base64,' + pix.qrCodeBase64" alt="QR Code do Pix" width="220" height="220" />
+              }
+              <label for="pix-codigo">Pix copia e cola</label>
+              <textarea id="pix-codigo" readonly rows="3">{{ pix.codigo }}</textarea>
+              <div class="pix-acoes">
+                <button class="btn-primary" (click)="copiarPix()"><span class="material-icons">content_copy</span> Copiar código</button>
+                <button class="btn-secondary" (click)="fecharPix()">Fechar</button>
+              </div>
+              <small><span class="material-icons spin">autorenew</span> Aguardando o pagamento. Os créditos entram sozinhos. O código vale até {{ pix.expiraEm | date:'dd/MM HH:mm':'':'pt-BR' }}.</small>
+            </div>
+          }
+        </section>
+      }
+
+      @if (podeConsultar) {
+        <section class="painel-box">
+          <h2>Nova consulta</h2>
+          <div class="consulta-form">
+            <div class="form-group placa">
+              <label for="placa">Placa</label>
+              <input id="placa" type="text" maxlength="8" placeholder="ABC1D23" autocomplete="off"
+                     [ngModel]="placa" (ngModelChange)="placa = ($event || '').toUpperCase()" (keyup.enter)="consultar()" />
+            </div>
+            <div class="servicos">
+              @for (s of painel.servicos; track s.id) {
+                <label class="servico" [class.ativo]="servico === s.id">
+                  <input type="radio" name="servico" [value]="s.id" [(ngModel)]="servico" />
+                  <span class="servico-topo">
+                    <strong>{{ s.nome }}</strong>
+                    @if (s.recomendado) { <em>recomendada</em> }
+                    <b>{{ s.preco | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</b>
+                  </span>
+                  <small>{{ s.descricao }}</small>
+                </label>
+              }
+            </div>
+          </div>
+          <div class="consulta-acoes">
+            <button class="btn-primary" [disabled]="!placaValida || consultando || semSaldo" (click)="consultar()">
+              <span class="material-icons">search</span>
+              {{ consultando ? 'Enviando...' : 'Consultar' + (escolhido ? ' (' + (escolhido.preco | currency:'BRL':'symbol':'1.2-2':'pt-BR') + ')' : '') }}
+            </button>
+            @if (semSaldo) {
+              <small class="sem-saldo">Créditos insuficientes.{{ gestao ? ' Use "Comprar créditos" no topo.' : ' Peça ao gerente para comprar créditos.' }}</small>
+            } @else if (placa && !placaValida) {
+              <small class="sem-saldo">Placa no formato ABC1234 ou ABC1D23.</small>
+            }
+          </div>
+        </section>
+      }
+
+      @if (atual) {
+        <section class="painel-box resultado" id="resultado">
+          <div class="resultado-topo">
+            <h2>{{ atual.placa }} <small>{{ atual.servicoNome }} · {{ atual.criadoEm | date:'dd/MM/yy HH:mm':'':'pt-BR' }}</small></h2>
+            <button type="button" class="btn-icon" title="Fechar" (click)="atual = null"><span class="material-icons">close</span></button>
+          </div>
+
+          @if (atual.status === 'PROCESSANDO') {
+            <div class="veredito processando">
+              <span class="material-icons spin">autorenew</span>
+              <div><strong>Consultando as bases...</strong><small>Costuma levar poucos minutos. Pode sair desta tela: o resultado fica no histórico.</small></div>
+            </div>
+          } @else if (atual.status === 'ERRO') {
+            <div class="veredito erro">
+              <span class="material-icons">error_outline</span>
+              <div><strong>{{ atual.erro || 'A consulta não teve resultado.' }}</strong>
+                @if (atual.estornada) { <small>O valor voltou para os créditos da loja.</small> }</div>
+            </div>
+          } @else {
+            @if (atual.nadaConsta) {
+              <div class="veredito ok">
+                <span class="material-icons">verified</span>
+                <div><strong>Nada consta</strong><small>Nenhuma restrição, leilão, sinistro ou débito encontrado nas bases consultadas.</small></div>
+              </div>
+            } @else {
+              <div class="veredito" [class.grave]="classeResultado(atual) === 'grave'" [class.aviso]="classeResultado(atual) === 'aviso'">
+                <span class="material-icons">{{ classeResultado(atual) === 'grave' ? 'report' : 'warning_amber' }}</span>
+                <div>
+                  <strong>{{ classeResultado(atual) === 'grave' ? 'Atenção antes de comprar' : 'Pontos de atenção' }}</strong>
+                  <ul>
+                    @for (a of atual.alertas; track $index) { <li [class.grave]="a.grave">{{ a.texto }}</li> }
+                  </ul>
+                </div>
+              </div>
+            }
+
+            @if (atual.veiculo; as v) {
+              <dl class="dados">
+                <div><dt>Veículo</dt><dd>{{ v.marca }} {{ v.modelo }}</dd></div>
+                <div><dt>Ano</dt><dd>{{ v.ano_fabricacao }}/{{ v.ano_modelo }}</dd></div>
+                <div><dt>Cor</dt><dd>{{ v.cor || '—' }}</dd></div>
+                <div><dt>Combustível</dt><dd>{{ v.combustivel || '—' }}</dd></div>
+                <div><dt>Chassi</dt><dd>{{ v.chassi || '—' }}</dd></div>
+                <div><dt>Renavam</dt><dd>{{ v.renavam || '—' }}</dd></div>
+                <div><dt>Cidade</dt><dd>{{ v.municipio ? v.municipio + '/' + v.uf : '—' }}</dd></div>
+                <div><dt>Situação</dt><dd>{{ v.situacao || '—' }}</dd></div>
+                <div><dt>Último licenciamento</dt><dd>{{ v.ultimo_licenciamento || '—' }}</dd></div>
+                <div><dt>Leilão</dt><dd>{{ v.leilao === null || v.leilao === undefined ? 'não verificado' : (v.leilao.consta ? 'consta' : 'nada consta') }}</dd></div>
+                <div><dt>Sinistro</dt><dd>{{ v.sinistro === null || v.sinistro === undefined ? 'não verificado' : (v.sinistro ? 'consta' : 'nada consta') }}</dd></div>
+                @if (v.proprietario?.nome) {
+                  <div><dt>Proprietário</dt><dd>{{ v.proprietario?.nome }}</dd></div>
+                }
+              </dl>
+
+              @if (v.debitos?.length) {
+                <h3>Débitos</h3>
+                <ul class="debitos">
+                  @for (d of v.debitos; track $index) {
+                    <li>
+                      <span>{{ nomeDebito(d.tipo) }}{{ d.descricao ? ' — ' + d.descricao : '' }}</span>
+                      <b>{{ d.valor_informado === false ? 'valor não informado' : (reais(d.valor_centavos) | currency:'BRL':'symbol':'1.2-2':'pt-BR') }}</b>
+                    </li>
+                  }
+                </ul>
+              }
+            }
+
+            <div class="resultado-acoes">
+              <button class="btn-secondary" [disabled]="baixando" (click)="baixarDocumento(atual)">
+                <span class="material-icons">picture_as_pdf</span> {{ baixando ? 'Abrindo...' : 'Laudo em PDF' }}
+              </button>
+              <small>Consulta feita por {{ atual.usuario || '—' }}. Guarde o laudo junto com a documentação do carro.</small>
+            </div>
+          }
+        </section>
+      }
+
+      <h2>Histórico</h2>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr><th>Data</th><th>Placa</th><th>Tipo</th><th>Resultado</th><th class="num">Valor</th><th>Por</th><th></th></tr>
+          </thead>
+          <tbody>
+            @for (c of painel.consultas; track c.id) {
+              <tr (click)="abrir(c)" class="clicavel" [class.selecionada]="atual?.id === c.id">
+                <td data-label="Data">{{ c.criadoEm | date:'dd/MM/yy HH:mm':'':'pt-BR' }}</td>
+                <td data-label="Placa"><strong>{{ c.placa }}</strong>@if (c.teste) { <small class="tag-teste">teste</small> }</td>
+                <td data-label="Tipo">{{ c.servicoNome }}</td>
+                <td data-label="Resultado"><span class="resultado-tag" [ngClass]="classeResultado(c)">{{ resultadoCurto(c) }}</span></td>
+                <td data-label="Valor" class="num">{{ c.valor | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+                <td data-label="Por">{{ c.usuario || '—' }}</td>
+                <td class="acao"><span class="material-icons">chevron_right</span></td>
+              </tr>
+            } @empty {
+              <tr><td colspan="7" class="empty">Nenhuma consulta ainda.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</div>
