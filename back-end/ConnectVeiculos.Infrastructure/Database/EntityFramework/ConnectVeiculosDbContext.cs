@@ -59,6 +59,7 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
         public DbSet<RecuperacaoSenha> RecuperacoesSenha { get; set; }
         public DbSet<TestDrive> TestDrives { get; set; }
         public DbSet<VeiculoDespesa> VeiculosDespesas { get; set; }
+        public DbSet<Core.Entities.Financeiro.LancamentoFinanceiro> LancamentosFinanceiros { get; set; }
         public DbSet<Lead> Leads { get; set; }
         public DbSet<Favorito> Favoritos { get; set; }
         public DbSet<Negociacao> Negociacoes { get; set; }
@@ -409,6 +410,21 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
             modelBuilder.Entity<TestDrive>(entity => { entity.ToTable("TestDrive"); entity.HasKey(e => e.TdrId); entity.Property(e => e.TdrId).ValueGeneratedOnAdd(); entity.Property(e => e.TdrNomeCliente).HasMaxLength(200).IsRequired(); entity.Property(e => e.TdrTelefone).HasMaxLength(20); entity.Property(e => e.TdrWhatsApp).HasMaxLength(20); entity.Property(e => e.TdrEmail).HasMaxLength(255); entity.Property(e => e.TdrHorario).HasMaxLength(10); entity.Property(e => e.TdrObservacao).HasMaxLength(1000); entity.Property(e => e.TdrStatus).HasMaxLength(1); });
 
             // VeiculoDespesa
+            // Financeiro: contas a pagar e a receber da loja
+            modelBuilder.Entity<Core.Entities.Financeiro.LancamentoFinanceiro>(entity =>
+            {
+                entity.ToTable("LancamentoFinanceiro");
+                entity.HasKey(e => e.LfiId);
+                entity.Property(e => e.LfiId).ValueGeneratedOnAdd();
+                entity.Property(e => e.LfiTipo).HasMaxLength(1).IsRequired();
+                entity.Property(e => e.LfiDescricao).HasMaxLength(200).IsRequired();
+                entity.Property(e => e.LfiCategoria).HasMaxLength(60);
+                entity.Property(e => e.LfiValor).HasPrecision(12, 2);
+                entity.Property(e => e.LfiObservacao).HasMaxLength(1000);
+                entity.HasIndex(e => e.LfiVencimento);
+                entity.Ignore(e => e.EmAberto);
+            });
+
             modelBuilder.Entity<VeiculoDespesa>(entity => { entity.ToTable("VeiculoDespesa"); entity.HasKey(e => e.DesId); entity.Property(e => e.DesId).ValueGeneratedOnAdd(); entity.Property(e => e.DesTipo).HasMaxLength(50).IsRequired(); entity.Property(e => e.DesDescricao).HasMaxLength(500); entity.Property(e => e.DesValor).HasPrecision(10, 2); });
 
             // Lead

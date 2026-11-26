@@ -137,6 +137,13 @@ export const routes: Routes = [
         data: { roles: ['Administrador', 'Gerente'] }
       },
       {
+        // Caixa da loja: so gestao (Visualizador so consulta; a API bloqueia escrita).
+        path: 'financeiro',
+        loadComponent: () => import('./pages/financeiro/financeiro.component').then(m => m.FinanceiroComponent),
+        canActivate: [roleGuard],
+        data: { roles: ['Administrador', 'Gerente', 'Visualizador'] }
+      },
+      {
         path: 'relatorios',
         loadComponent: () => import('./pages/relatorios/relatorios.component').then(m => m.RelatoriosComponent),
         canActivate: [roleGuard],

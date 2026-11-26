@@ -1,0 +1,124 @@
+.botoes { display: flex; gap: 8px; flex-wrap: wrap; button { display: inline-flex; align-items: center; gap: 6px; } }
+
+.texto { opacity: 0.8; margin: 8px 0 12px; }
+.text-muted { opacity: 0.65; font-size: 0.85em; }
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+
+  .mes { display: flex; align-items: center; gap: 8px; strong { min-width: 170px; text-align: center; text-transform: capitalize; } }
+  select { padding: 8px 10px; border: 1px solid var(--border-color, #ddd); border-radius: 6px; }
+}
+
+.btn-icon {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  color: inherit;
+  padding: 4px;
+  display: inline-flex;
+  &.confirmar { color: #c62828; }
+}
+
+.resumo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+
+  .card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px;
+    border-radius: 10px;
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--border-color, #e5e7eb);
+
+    span { font-size: 13px; opacity: 0.7; }
+    strong { font-size: 1.3rem; }
+    small { font-size: 12px; opacity: 0.75; }
+    &.entrada strong { color: #2e7d32; }
+    &.saida strong { color: #c62828; }
+    &.negativo strong { color: #c62828; }
+    &.alerta { border-color: #ffb74d; background: #fff8e1; color: #6d4c00; strong { font-size: 1.05rem; } }
+  }
+}
+
+.abas, .filtro-contas {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+
+  button {
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border-color, #ddd);
+    background: none;
+    color: inherit;
+    cursor: pointer;
+    &.ativa { background: #1a237e; color: #fff; border-color: #1a237e; }
+  }
+}
+
+.abas button { border-radius: 8px; font-weight: 600; }
+
+.tipo {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  background: #ffebee;
+  color: #c62828;
+  &.receber { background: #e8f5e9; color: #2e7d32; }
+}
+
+.recorrente { font-size: 15px; vertical-align: middle; opacity: 0.6; }
+.valor-receber { color: #2e7d32; }
+.valor-pagar { color: #c62828; }
+tr.atrasada td { background: rgba(198, 40, 40, 0.05); }
+tr.previsto { opacity: 0.65; }
+
+.badge {
+  &.pago { background: #e8f5e9; color: #2e7d32; }
+  &.atrasado { background: #ffebee; color: #c62828; }
+  &.vence_hoje { background: #fff3e0; color: #e65100; }
+  &.aberto { background: #eceff1; color: #455a64; }
+}
+
+.acoes { white-space: nowrap; .btn-sm { padding: 4px 10px; font-size: 12px; } }
+
+.categorias {
+  margin-bottom: 16px;
+  h3 { font-size: 1rem; margin: 0 0 8px; }
+
+  .barra {
+    display: grid;
+    grid-template-columns: minmax(120px, 200px) 1fr auto;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+    font-size: 13px;
+  }
+  .trilho { height: 8px; border-radius: 4px; background: var(--border-color, #eee); overflow: hidden; }
+  .preenchido { display: block; height: 100%; background: #c62828; }
+  .valor { white-space: nowrap; opacity: 0.8; }
+}
+
+.form-lancamento {
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .check { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 14px; }
+  .modal-acoes { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+}
+
+@media (max-width: 600px) {
+  .form-lancamento .form-row { grid-template-columns: 1fr; }
+  .categorias .barra { grid-template-columns: 1fr; gap: 2px; }
+}

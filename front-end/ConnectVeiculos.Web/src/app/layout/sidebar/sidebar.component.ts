@@ -183,6 +183,7 @@ export class SidebarComponent implements AfterViewInit, OnDestroy {
       items: [
         { label: 'Usuários', icon: 'people', route: '/usuarios', roles: ADMIN },
         { label: 'Categorias', icon: 'category', route: '/categorias' },
+        { label: 'Financeiro', icon: 'account_balance_wallet', route: '/financeiro', roles: AuthService.PAPEIS_PAINEL },
         { label: 'Relatórios', icon: 'assessment', route: '/relatorios', roles: GESTAO },
       ]
     },
