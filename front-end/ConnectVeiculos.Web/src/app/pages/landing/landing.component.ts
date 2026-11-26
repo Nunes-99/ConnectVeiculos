@@ -126,48 +126,49 @@ export class LandingComponent implements OnInit {
        cta: 'Começar grátis'
      },
      {
-       nome: 'Basic',
-       preco: 'R$ 49,99',
+       nome: 'Essencial',
+       preco: 'R$ 199',
        periodo: '/mês',
        destaque: false,
        recursos: [
-         'Até 50 veículos',
-         '1 loja, até 3 usuários',
-         '200 leads por mês',
+         'Até 30 veículos',
+         '1 loja, até 2 usuários',
+         '300 leads por mês',
          'Todas as integrações e recursos',
          'Cartão ou Pix, cancele quando quiser',
          '7 dias para desistir com reembolso total'
        ],
-       cta: 'Assinar Basic'
+       cta: 'Assinar Essencial'
      },
      {
-       nome: 'Pro',
-       preco: 'R$ 99,99',
+       nome: 'Profissional',
+       preco: 'R$ 399',
        periodo: '/mês',
        destaque: true,
        recursos: [
-         'Até 500 veículos',
-         'Até 3 lojas, até 10 usuários',
-         '2.000 leads por mês',
+         'Até 100 veículos',
+         'Até 2 lojas, até 5 usuários',
+         '1.000 leads por mês',
          'Todas as integrações e recursos',
          'Cartão ou Pix, cancele quando quiser',
          '7 dias para desistir com reembolso total'
        ],
-       cta: 'Assinar Pro'
+       cta: 'Assinar Profissional'
      },
      {
-       nome: 'Enterprise',
-       preco: 'R$ 199,99',
+       nome: 'Premium',
+       preco: 'R$ 699',
        periodo: '/mês',
        destaque: false,
        recursos: [
-         'Veículos, lojas e usuários ilimitados',
+         'Até 200 veículos',
+         'Até 5 lojas, até 15 usuários',
          'Leads ilimitados',
          'Todas as integrações e recursos',
          'Cartão ou Pix, cancele quando quiser',
          '7 dias para desistir com reembolso total'
        ],
-       cta: 'Assinar Enterprise'
+       cta: 'Assinar Premium'
      }
    ];
 
