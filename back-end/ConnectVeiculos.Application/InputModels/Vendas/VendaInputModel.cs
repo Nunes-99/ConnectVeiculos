@@ -9,6 +9,12 @@ namespace ConnectVeiculos.Application.InputModels.Vendas
         public decimal VenValor { get; set; }
         public decimal VenComissaoPorc { get; set; }
 
+        /// <summary>
+        /// Valor da comissao em R$, quando a regra nao e' % da venda (valor fixo,
+        /// % do lucro). Preenchido, vale ele e o % e' recalculado sobre a venda.
+        /// </summary>
+        public decimal? VenComissaoValor { get; set; }
+
         // Dados do Comprador
         public string VenCompradorNome { get; set; }
         public string VenCompradorCpf { get; set; }

@@ -98,8 +98,14 @@ namespace ConnectVeiculos.Application.UseCases.Vendas
             if (inputModel.VenComissaoPorc < 0) inputModel.VenComissaoPorc = 0;
             if (inputModel.VenComissaoPorc > 100) inputModel.VenComissaoPorc = 100;
 
-            // Calcular valor da comissao
+            // Calcular valor da comissao. Regra em R$ (valor fixo, % do lucro):
+            // vale o valor e o % guardado e' o equivalente sobre a venda.
             var comissaoValor = inputModel.VenValor * (inputModel.VenComissaoPorc / 100);
+            if (inputModel.VenComissaoValor is { } valorInformado && valorInformado >= 0)
+            {
+                comissaoValor = Math.Round(Math.Min(valorInformado, Math.Max(inputModel.VenValor, 0)), 2);
+                inputModel.VenComissaoPorc = inputModel.VenValor > 0 ? Math.Round(comissaoValor / inputModel.VenValor * 100, 2) : 0;
+            }
 
             var venda = new Venda(
                 0,

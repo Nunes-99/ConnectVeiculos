@@ -174,6 +174,7 @@ export class SidebarComponent implements AfterViewInit, OnDestroy {
         { label: 'Documentos', icon: 'description', route: '/documentos' },
         { label: 'Contratos', icon: 'draw', route: '/contratos', roles: ['Administrador', 'Gerente', 'Vendedor'] },
         { label: 'Vendas', icon: 'point_of_sale', route: '/vendas' },
+        { label: 'Comissões', icon: 'payments', route: '/comissoes' },
         { label: 'Notas fiscais', icon: 'receipt_long', route: '/notas-fiscais', roles: GESTAO },
         { label: 'Financiamento', icon: 'account_balance', route: '/financiamentos' },
       ]

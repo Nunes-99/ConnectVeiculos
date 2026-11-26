@@ -269,6 +269,7 @@ namespace ConnectVeiculos.Infrastructure.IoC
 
             // UseCases - Dashboard
             services.AddTransient<IConsultarDashboardUseCase, ConsultarDashboardUseCase>();
+            services.AddTransient<ConnectVeiculos.Application.UseCases.Comissoes.IComissoesUseCase, ConnectVeiculos.Application.UseCases.Comissoes.ComissoesUseCase>();
             services.AddTransient<ConnectVeiculos.Application.Interfaces.Estoque.IEstoqueParadoUseCase, ConnectVeiculos.Application.UseCases.Estoque.EstoqueParadoUseCase>();
             services.AddTransient<IConsultarVendasPorPeriodoUseCase, ConsultarVendasPorPeriodoUseCase>();
             services.AddTransient<IConsultarFaturamentoMensalUseCase, ConsultarFaturamentoMensalUseCase>();
@@ -510,6 +511,8 @@ namespace ConnectVeiculos.Infrastructure.IoC
 
                 // Adicionar colunas de status de postagem no Veiculo
                 AddColumnIfNotExists(connection, "Veiculo", "VeiRenavam", "TEXT");
+                // Comissao paga ao vendedor (tela Comissoes); nulo = a pagar.
+                AddColumnIfNotExists(connection, "Venda", "VenComissaoPagaEm", "TEXT");
                 AddColumnIfNotExists(connection, "Veiculo", "VeiPostadoInsta", "INTEGER DEFAULT 0");
                 AddColumnIfNotExists(connection, "Veiculo", "VeiPostadoFace", "INTEGER DEFAULT 0");
                 AddColumnIfNotExists(connection, "Veiculo", "VeiDtPostagemInsta", "TEXT");

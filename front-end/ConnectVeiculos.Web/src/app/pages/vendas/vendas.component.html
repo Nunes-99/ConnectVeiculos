@@ -108,7 +108,7 @@
           </div>
           <div class="form-group">
             <label class="required">Vendedor</label>
-            <select formControlName="r_UsuId" [attr.disabled]="editId ? true : null" [class.invalid]="hasError('r_UsuId', 'min')">
+            <select formControlName="r_UsuId" [attr.disabled]="editId ? true : null" [class.invalid]="hasError('r_UsuId', 'min')" (change)="atualizarComissao()">
               <option [value]="0">Selecione um vendedor...</option>
               @for (usuario of usuarios; track usuario.usuId) {
                 <option [value]="usuario.usuId">{{ usuario.usuNome }}</option>
@@ -128,14 +128,14 @@
           <div class="form-row">
             <div class="form-group">
               <label class="required">Valor da Venda</label>
-              <input formControlName="venValor" appCurrencyMask [readonly]="editId !== null" [class.invalid]="hasError('venValor', 'required')" />
+              <input formControlName="venValor" appCurrencyMask [readonly]="editId !== null" [class.invalid]="hasError('venValor', 'required')" (blur)="atualizarComissao()" />
               @if (hasError('venValor', 'required')) {
                 <span class="error-message">Valor é obrigatório</span>
               }
             </div>
             <div class="form-group">
               <label class="required">Comissão (%)</label>
-              <input type="tel" formControlName="venComissaoPorc" [readonly]="editId !== null"
+              <input type="tel" formControlName="venComissaoPorc" [readonly]="editId !== null" (input)="comissaoManual()"
                      [class.invalid]="hasError('venComissaoPorc', 'required')" />
               @if (hasError('venComissaoPorc', 'required')) {
                 <span class="error-message">Comissão é obrigatória</span>
@@ -145,6 +145,12 @@
           <div class="comissao-preview">
             <span>Valor da Comissão:</span>
             <strong>{{ formatarPreco(calcularComissao()) }}</strong>
+            @if (comissaoSugerida && editId === null) {
+              <small class="comissao-regra">
+                Pela regra {{ comissaoSugerida.regraDoVendedor ? 'do vendedor' : 'da loja' }}: {{ comissaoSugerida.regra }}.
+                Mudar o % vale só para esta venda.
+              </small>
+            }
           </div>
 
           <h3 class="section-title">Dados do Comprador</h3>

@@ -7,6 +7,7 @@ import { VendaService, VeiculoService, UsuarioService, ToastService, AuthService
 import { Venda, Veiculo, Usuario } from '../../core/models';
 import { MaskDirective, CurrencyMaskDirective, SalvandoDirective } from '../../shared/directives';
 import { PaginationComponent, ConfirmModalComponent } from '../../shared/components';
+import { ComissaoService, ComissaoSugerida } from '../../core/services/comissao.service';
 
 @Component({
   selector: 'app-vendas',
@@ -26,6 +27,40 @@ export class VendasComponent implements OnInit {
   private fb = inject(FormBuilder);
   private http = inject(HttpClient);
   private toast = inject(ToastService);
+  private comissaoService = inject(ComissaoService);
+
+  /** Regra de comissao do vendedor escolhido (Comissoes -> Regras). */
+  comissaoSugerida: ComissaoSugerida | null = null;
+  /**
+   * Comissao em R$ quando a regra nao e' % da venda (fixo, % do lucro). Vai
+   * para a API como venComissaoValor. Digitar o % a mao desfaz.
+   */
+  comissaoEmReais: number | null = null;
+
+  /** Pede a comissao pela regra ao escolher vendedor, veiculo ou valor. */
+  atualizarComissao(): void {
+    if (this.editId !== null) return;
+    const vendedorId = Number(this.form.get('r_UsuId')?.value);
+    const veiculoId = Number(this.form.get('r_VeiId')?.value);
+    const valor = Number(this.form.get('venValor')?.value) || 0;
+    if (!vendedorId || !veiculoId || valor <= 0) return;
+    this.comissaoService.sugestao(vendedorId, veiculoId, valor).subscribe({
+      next: s => {
+        // 204 (loja sem regras): fica o % digitado.
+        if (!s) { this.comissaoSugerida = null; this.comissaoEmReais = null; return; }
+        this.comissaoSugerida = s;
+        this.comissaoEmReais = s.tipo === 'PERCENTUAL_VENDA' ? null : s.valor;
+        this.form.patchValue({ venComissaoPorc: s.percentual }, { emitEvent: false });
+      },
+      error: () => { this.comissaoSugerida = null; }
+    });
+  }
+
+  /** O % foi digitado: vale ele, nao a regra. */
+  comissaoManual(): void {
+    this.comissaoEmReais = null;
+    this.comissaoSugerida = null;
+  }
 
   vendas: Venda[] = [];
   vendasPaginadas: Venda[] = [];
@@ -120,6 +155,8 @@ export class VendasComponent implements OnInit {
   }
 
   openModal(): void {
+    this.comissaoSugerida = null;
+    this.comissaoEmReais = null;
     this.form.reset({
       r_VeiId: 0,
       r_UsuId: 0,
@@ -206,9 +243,11 @@ export class VendasComponent implements OnInit {
     if (veiculo) {
       this.form.patchValue({ venValor: veiculo.veiPreco });
     }
+    this.atualizarComissao();
   }
 
   calcularComissao(): number {
+    if (this.comissaoEmReais !== null) return this.comissaoEmReais;
     const valor = this.form.get('venValor')?.value || 0;
     const porc = this.form.get('venComissaoPorc')?.value || 0;
     return valor * (porc / 100);
@@ -225,7 +264,9 @@ export class VendasComponent implements OnInit {
     const data = {
       ...formValue,
       venCompradorEndereco: partes.join(', '),
-      venDtVenda: new Date(formValue.venDtVenda)
+      venDtVenda: new Date(formValue.venDtVenda),
+      // Regra em R$ (valor fixo, % do lucro): vale o valor; a API recalcula o %.
+      ...(this.comissaoEmReais !== null && this.editId === null ? { venComissaoValor: this.comissaoEmReais } : {})
     };
     delete data.cep;
     delete data.logradouro;
