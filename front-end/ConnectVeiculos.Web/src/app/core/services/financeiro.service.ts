@@ -29,7 +29,7 @@ export interface MovimentoCaixa {
   descricao: string;
   categoria: string;
   valor: number;
-  origem: 'lancamento' | 'venda' | 'compra' | 'despesa';
+  origem: 'lancamento' | 'venda' | 'compra' | 'despesa' | 'comissao';
   realizado: boolean;
   lancamentoId: number | null;
   veiculoId: number | null;

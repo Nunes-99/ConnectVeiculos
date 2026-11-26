@@ -61,7 +61,7 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         public string Descricao { get; set; } = "";
         public string Categoria { get; set; } = "";
         public decimal Valor { get; set; }
-        /// <summary>"lancamento", "venda", "compra", "despesa".</summary>
+        /// <summary>"lancamento", "venda", "compra", "despesa", "comissao".</summary>
         public string Origem { get; set; } = "lancamento";
         /// <summary>Realizado (pago/recebido) ou previsto (em aberto).</summary>
         public bool Realizado { get; set; }

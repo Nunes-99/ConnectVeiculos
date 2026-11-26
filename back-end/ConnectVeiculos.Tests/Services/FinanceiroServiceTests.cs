@@ -80,6 +80,20 @@ namespace ConnectVeiculos.Tests.Services
         }
 
         [Fact]
+        public async Task Comissao_paga_entra_como_saida_na_data_do_pagamento()
+        {
+            var venda = await _db.Vendas.FirstAsync();
+            venda.MarcarComissaoPaga(new DateTime(2026, 12, 5));
+            await _db.SaveChangesAsync();
+
+            (await _service.MesAsync(2026, 11, null)).Movimentos.Should().NotContain(m => m.Origem == "comissao");
+            var dezembro = await _service.MesAsync(2026, 12, null);
+            var comissao = dezembro.Movimentos.Single(m => m.Origem == "comissao");
+            (comissao.Valor, comissao.Categoria, comissao.Sentido).Should().Be((1160m, "Comissões", "saida"));
+            comissao.Descricao.Should().Contain("Ana");
+        }
+
+        [Fact]
         public async Task Filtro_por_loja()
         {
             await Lancar("P", "Aluguel da filial", 2000m, new DateTime(2026, 11, 10), pagoEm: new DateTime(2026, 11, 10), loja: 2);

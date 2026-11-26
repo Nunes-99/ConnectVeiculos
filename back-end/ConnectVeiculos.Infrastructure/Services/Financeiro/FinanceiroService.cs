@@ -96,6 +96,23 @@ namespace ConnectVeiculos.Infrastructure.Services.Financeiro
                     VeiculoId = v.VeiId
                 }));
 
+            // Comissoes pagas no mes (tela Comissoes): saida na data do pagamento.
+            var comissoes = await _db.Vendas.AsNoTracking()
+                .Where(v => v.VenStatus != "E" && v.VenComissaoPagaEm != null && v.VenComissaoPagaEm >= inicio && v.VenComissaoPagaEm < fim)
+                .Select(v => new { v.R_VeiId, v.VenComissaoPagaEm, v.VenComissaoValor, Vendedor = v.Vendedor.UsuNome })
+                .ToListAsync();
+            movimentos.AddRange(comissoes.Where(c => c.VenComissaoValor > 0 && DaLoja(c.R_VeiId)).Select(c => new MovimentoCaixa
+            {
+                Data = c.VenComissaoPagaEm!.Value.Date,
+                Sentido = "saida",
+                Descricao = $"Comissão{(string.IsNullOrWhiteSpace(c.Vendedor) ? "" : " de " + c.Vendedor)}: {Carro(c.R_VeiId)}",
+                Categoria = "Comissões",
+                Valor = c.VenComissaoValor,
+                Origem = "comissao",
+                Realizado = true,
+                VeiculoId = c.R_VeiId
+            }));
+
             // Despesas dos carros no mes: saida.
             var despesas = await _db.VeiculosDespesas.AsNoTracking()
                 .Where(d => d.DesDtDespesa >= inicio && d.DesDtDespesa < fim)
