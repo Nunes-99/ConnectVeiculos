@@ -161,12 +161,12 @@ export class SeoService {
       'description': description,
       'applicationCategory': 'BusinessApplication',
       'operatingSystem': 'Web',
-      // Free ate o Enterprise (mensal). Manter igual aos planos do backend.
+      // Free ate o Premium (mensal). Manter igual aos planos do backend.
       'offers': {
         '@type': 'AggregateOffer',
         'priceCurrency': 'BRL',
         'lowPrice': '0',
-        'highPrice': '199.99',
+        'highPrice': '699',
         'offerCount': 4
       }
     };

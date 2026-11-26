@@ -13,8 +13,10 @@ import { CredereConfigComponent } from '../../shared/components/credere/credere-
 import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal.component';
 import { WebmotorsConfigComponent } from '../../shared/components/webmotors/webmotors-config.component';
 import { NapistaConfigComponent } from '../../shared/components/napista/napista-config.component';
+import { OlxConfigComponent } from '../../shared/components/olx/olx-config.component';
 import { WebmotorsService } from '../../core/services/webmotors.service';
 import { NapistaService } from '../../core/services/napista.service';
+import { OlxService } from '../../core/services/olx.service';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
@@ -38,7 +40,7 @@ interface ItemIntegracao {
 @Component({
   selector: 'app-integracoes',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, ConfirmModalComponent, WebmotorsConfigComponent, NapistaConfigComponent, RenaveConfigComponent, CredereConfigComponent, PersonalizarRedesComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, ConfirmModalComponent, WebmotorsConfigComponent, NapistaConfigComponent, OlxConfigComponent, RenaveConfigComponent, CredereConfigComponent, PersonalizarRedesComponent],
   templateUrl: './integracoes.component.html',
   styleUrl: './integracoes.component.scss'
 })
@@ -48,6 +50,7 @@ export class IntegracoesComponent implements OnInit {
   private credereApi = inject(CredereService);
   private webmotorsApi = inject(WebmotorsService);
   private napistaApi = inject(NapistaService);
+  private olxApi = inject(OlxService);
   private router = inject(Router);
 
   // ---------- Catalogo ----------
@@ -79,6 +82,13 @@ export class IntegracoesComponent implements OnInit {
       visivel: () => true,
       status: () => this.napistaConectado ? { texto: 'Conectado', classe: 'connected' } : { texto: 'Desconectado', classe: 'disconnected' },
       conectada: () => this.napistaConectado
+    },
+    {
+      id: 'olx', nome: 'OLX', descricao: 'Anuncia os carros na OLX (a loja precisa de plano profissional da OLX).',
+      categoria: 'Portais e marketplaces', icone: 'olx-icon', sigla: 'OLX', palavras: 'portal anuncio olx classificados',
+      visivel: () => true,
+      status: () => this.olxConectada ? { texto: 'Conectado', classe: 'connected' } : { texto: 'Desconectado', classe: 'disconnected' },
+      conectada: () => this.olxConectada
     },
     {
       id: 'renave', nome: 'Renave', descricao: 'Entrada e saída dos veículos no estoque eletrônico (Senatran).',
@@ -271,6 +281,7 @@ Te esperamos na {{6}}. Até breve!`;
   mlConectado = false;
   wmConectado = false;
   napistaConectado = false;
+  olxConectada = false;
   // Quanto falta pro token do ML vencer. Ver MercadoLivreStatus.
   mlMinutosRestantes: number | null = null;
   mlExpirando = false;
@@ -413,6 +424,7 @@ Te esperamos na {{6}}. Até breve!`;
       this.credereApi.status().subscribe({ next: s => this.credereConectada = s.conectado, error: () => {} });
     this.webmotorsApi.status().subscribe({ next: s => this.wmConectado = s.conectado && !s.erro, error: () => {} });
     this.napistaApi.status().subscribe({ next: s => this.napistaConectado = s.conectado && !!s.sellerId, error: () => {} });
+    this.olxApi.status().subscribe({ next: s => this.olxConectada = s.conectado, error: () => {} });
     this.route.queryParamMap.subscribe(p => {
       const abrir = p.get('abrir');
       this.integracaoAberta = abrir && this.catalogo.some(i => i.id === abrir) ? abrir : null;

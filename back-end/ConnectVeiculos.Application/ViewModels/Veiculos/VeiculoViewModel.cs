@@ -27,6 +27,8 @@ namespace ConnectVeiculos.Application.ViewModels.Veiculos
         public bool MercadoLivreAguardandoPagamento { get; set; }
         /// <summary>Anuncio no ar no NaPista (VeiculoNapista ATIVO).</summary>
         public bool NapistaNoAr { get; set; }
+        /// <summary>Anuncio enviado a OLX e nao recusado (VeiculoOlx ATIVO).</summary>
+        public bool OlxNoAr { get; set; }
         /// <summary>Quando o ultimo story do veiculo some (UTC); nulo se nao ha story no ar.</summary>
         public DateTime? StoryNoArAte { get; set; }
         public string VeiCor { get; set; }

@@ -1,0 +1,178 @@
+<div class="modal-overlay" (click)="fechar.emit()">
+  <div class="modal modal-lg" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2><span class="np-logo olx-logo">OLX</span> OLX · {{ veiculo.veiPlaca || veiculo.veiChassi || 'sem placa' }}</h2>
+      <button class="btn-close" (click)="fechar.emit()"><span class="material-icons">close</span></button>
+    </div>
+
+    <div class="modal-body">
+      <p class="np-texto">{{ veiculo.veiMarca }} {{ veiculo.veiModelo }} {{ veiculo.veiAno }} · {{ veiculo.veiCor }} · {{ veiculo.veiPreco | currency:'BRL' }}</p>
+
+      @if (erroCarga) {
+        <div class="np-erro"><span class="material-icons">error</span> {{ erroCarga }}</div>
+      } @else if (!info || !dados) {
+        <p class="np-texto">Carregando o catálogo da OLX...</p>
+      } @else {
+        @if (info.publicado) {
+          <div [class]="info.situacao === 'refused' || info.situacao === 'error' ? 'np-aviso' : 'np-ok'">
+            <span class="material-icons">{{ info.situacao === 'accepted' ? 'check_circle' : 'schedule' }}</span>
+            <div>
+              <strong>{{ situacao || 'Enviado para a OLX' }}</strong>
+              <small>
+                {{ info.fotos }} foto(s) · enviado em {{ info.atualizadoEm | date:'dd/MM/yyyy HH:mm' }}.
+                Mudanças no cadastro atualizam o anúncio sozinhas; vender tira da OLX.
+              </small>
+              @if (info.url) { <small><a [href]="info.url" target="_blank" rel="noopener">Ver o anúncio na OLX</a></small> }
+            </div>
+          </div>
+        } @else if (info.status === 'PAUSADO') {
+          <div class="np-aviso"><span class="material-icons">visibility_off</span> Tirado do ar pela loja. Só volta clicando em <strong>Anunciar</strong>.</div>
+        } @else if (info.status === 'REMOVIDO' && info.publicadoEm) {
+          <div class="np-aviso"><span class="material-icons">visibility_off</span> Fora do ar (veículo vendido ou indisponível). Volta sozinho se ficar disponível de novo.</div>
+        }
+        @if (info.erro) {
+          <div class="np-erro"><span class="material-icons">error</span> {{ info.erro }}</div>
+        }
+        @if (info.pendencias.length) {
+          <div class="np-aviso">
+            <span class="material-icons">checklist</span>
+            <div>
+              <strong>Antes de anunciar na OLX:</strong>
+              @for (p of info.pendencias; track p) { <small>• {{ p }}</small> }
+            </div>
+          </div>
+        }
+        @if (info.sugestao) {
+          <div class="np-aviso">
+            <span class="material-icons">auto_fix_high</span>
+            <div>Preenchido a partir do cadastro do veículo. <strong>Confira</strong>, principalmente a versão, antes de anunciar.</div>
+          </div>
+        }
+        @if (!disponivel) {
+          <div class="np-aviso"><span class="material-icons">info</span> Só veículo <strong>disponível</strong> pode ser anunciado.</div>
+        }
+
+        <div class="np-grid">
+          <div class="form-group">
+            <label>Marca</label>
+            <select [(ngModel)]="dados.marcaId" (ngModelChange)="marcaMudou()">
+              <option [ngValue]="null">Escolha...</option>
+              @for (m of marcas; track m.id) { <option [ngValue]="m.id">{{ m.nome }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Modelo</label>
+            <select [(ngModel)]="dados.modeloId" (ngModelChange)="modeloMudou()" [disabled]="!dados.marcaId">
+              <option [ngValue]="null">Escolha...</option>
+              @for (m of modelos; track m.id) { <option [ngValue]="m.id">{{ m.nome }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Ano do modelo</label>
+            <input type="number" [(ngModel)]="dados.ano" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Versão</label>
+          <select [(ngModel)]="dados.versaoId" (ngModelChange)="versaoMudou()" [disabled]="!dados.modeloId">
+            <option [ngValue]="null">{{ versoes.length ? 'Escolha...' : 'Escolha o modelo' }}</option>
+            @for (v of versoes; track v.id) { <option [ngValue]="v.id">{{ v.nome }}</option> }
+          </select>
+        </div>
+
+        <div class="np-grid">
+          <div class="form-group">
+            <label>Câmbio</label>
+            <select [(ngModel)]="dados.cambio">
+              <option [ngValue]="null">Escolha...</option>
+              @for (c of atributos.cambios; track c.id) { <option [ngValue]="c.id">{{ c.nome }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Combustível</label>
+            <select [(ngModel)]="dados.combustivel">
+              <option [ngValue]="null">Escolha...</option>
+              @for (c of atributos.combustiveis; track c.id) { <option [ngValue]="c.id">{{ c.nome }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Cor</label>
+            <select [(ngModel)]="dados.cor">
+              <option [ngValue]="null">Escolha...</option>
+              @for (c of atributos.cores; track c.id) { <option [ngValue]="c.id">{{ c.nome }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Portas</label>
+            <select [(ngModel)]="dados.portas">
+              <option [ngValue]="null">—</option>
+              @for (p of atributos.portas; track p.id) { <option [ngValue]="p.id">{{ p.nome }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Tipo</label>
+            <select [(ngModel)]="dados.tipo">
+              <option [ngValue]="null">—</option>
+              @for (t of atributos.tipos; track t.id) { <option [ngValue]="t.id">{{ t.nome }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Motor</label>
+            <select [(ngModel)]="dados.potencia">
+              <option [ngValue]="null">—</option>
+              @for (p of atributos.potencias; track p.id) { <option [ngValue]="p.id">{{ p.nome }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Direção</label>
+            <select [(ngModel)]="dados.direcao">
+              <option [ngValue]="null">—</option>
+              @for (d of atributos.direcoes; track d.id) { <option [ngValue]="d.id">{{ d.nome }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Aceita troca</label>
+            <select [(ngModel)]="dados.aceitaTroca">
+              <option [ngValue]="null">—</option>
+              <option [ngValue]="true">Sim</option>
+              <option [ngValue]="false">Não</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Único dono</label>
+            <select [(ngModel)]="dados.unicoDono">
+              <option [ngValue]="null">—</option>
+              <option [ngValue]="true">Sim</option>
+              <option [ngValue]="false">Não</option>
+            </select>
+          </div>
+        </div>
+
+        <h4>Opcionais <small>({{ dados.opcionais.length }} marcados)</small></h4>
+        <div class="np-checks np-opcionais">
+          @for (o of atributos.opcionais; track o.id) {
+            <label><input type="checkbox" [checked]="temOpcional(o.id)" (change)="alternarOpcional(o.id)" /> {{ o.nome }}</label>
+          }
+        </div>
+
+        <p class="np-dica">
+          Preço, quilometragem, placa, observação e fotos (até 20, na ordem do cadastro) vêm do veículo; telefone e CEP, do cadastro da loja.
+          Cada anúncio usa um do saldo do plano da OLX da loja.
+        </p>
+
+        <div class="np-acoes">
+          <button class="btn-primary" (click)="publicar()" [disabled]="ocupado || !disponivel || info.pendencias.length > 0">
+            <span class="material-icons">{{ info.publicado ? 'sync' : 'publish' }}</span>
+            {{ ocupado ? 'Enviando...' : (info.publicado ? 'Salvar e atualizar anúncio' : 'Anunciar na OLX') }}
+          </button>
+          @if (info.publicado) {
+            <button class="btn-secondary" (click)="pausar()" [disabled]="ocupado">
+              <span class="material-icons">visibility_off</span> {{ confirmarPausa ? 'Confirmar: tirar do ar' : 'Tirar do ar' }}
+            </button>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>
