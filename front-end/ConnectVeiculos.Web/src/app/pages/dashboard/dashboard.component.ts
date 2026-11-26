@@ -10,6 +10,7 @@ import {
 } from '../../core/models';
 import { Chart, registerables } from 'chart.js';
 import { forkJoin } from 'rxjs';
+import { PrimeirosPassosComponent } from '../../shared/components/primeiros-passos/primeiros-passos.component';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -23,7 +24,7 @@ Chart.register(...registerables);
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PrimeirosPassosComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss'
 })
