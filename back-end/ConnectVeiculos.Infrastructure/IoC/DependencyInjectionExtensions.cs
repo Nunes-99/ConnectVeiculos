@@ -269,6 +269,7 @@ namespace ConnectVeiculos.Infrastructure.IoC
 
             // UseCases - Dashboard
             services.AddTransient<IConsultarDashboardUseCase, ConsultarDashboardUseCase>();
+            services.AddTransient<ConnectVeiculos.Application.Interfaces.Estoque.IEstoqueParadoUseCase, ConnectVeiculos.Application.UseCases.Estoque.EstoqueParadoUseCase>();
             services.AddTransient<IConsultarVendasPorPeriodoUseCase, ConsultarVendasPorPeriodoUseCase>();
             services.AddTransient<IConsultarFaturamentoMensalUseCase, ConsultarFaturamentoMensalUseCase>();
             services.AddTransient<IConsultarTopVeiculosUseCase, ConsultarTopVeiculosUseCase>();

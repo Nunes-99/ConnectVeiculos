@@ -100,7 +100,7 @@
         </div>
         <div class="stat-info">
           <span class="stat-value">{{ veiculosParados30Dias }}</span>
-          <span class="stat-label">Veículos parados há +30 dias</span>
+          <span class="stat-label">Veículos parados há +{{ estoqueParado?.config?.diasAtencao ?? 45 }} dias</span>
 
         </div>
       </div>
@@ -161,43 +161,93 @@
       </div>
     </div>
 
-    <!-- Alerta de Estoque -->
-    @if (alertasEstoque.length > 0) {
+    <!-- Estoque parado: prazos e margem da loja; sugestao de preco pela FIPE, custo e tempo -->
+    @if (estoqueParado && (alertasEstoque.length > 0 || editandoConfigEstoque)) {
       <div class="section-title">
         <h2>
           <span class="material-icons section-icon alerta-icon">notification_important</span>
-          Alerta de Estoque
+          Estoque parado
         </h2>
-        <span class="alerta-badge">{{ alertasEstoque.length }} veículos</span>
+        <span class="alerta-badge">{{ estoqueParado.critico }} crítico(s) · {{ estoqueParado.atencao }} em atenção</span>
+        @if (podeConfigurarEstoque) {
+          <button type="button" class="btn-link-config" (click)="editandoConfigEstoque = !editandoConfigEstoque">
+            <span class="material-icons">tune</span> Prazos
+          </button>
+        }
       </div>
+      <p class="section-hint estoque-resumo">
+        Atenção a partir de {{ estoqueParado.config.diasAtencao }} dias, crítico a partir de {{ estoqueParado.config.diasCritico }}.
+        Média do estoque: {{ estoqueParado.mediaDias }} dias.
+        @if (estoqueParado.custoParado > 0) { Dinheiro parado (custo): {{ formatarPreco(estoqueParado.custoParado) }}. }
+      </p>
+      @if (editandoConfigEstoque && configEstoque) {
+        <div class="estoque-config">
+          <label>Atenção (dias) <input type="number" min="1" [(ngModel)]="configEstoque.diasAtencao" /></label>
+          <label>Crítico (dias) <input type="number" min="2" [(ngModel)]="configEstoque.diasCritico" /></label>
+          <label>Margem mínima sobre o custo (%) <input type="number" min="0" step="0.5" [(ngModel)]="configEstoque.margemMinima" /></label>
+          <button type="button" class="btn-primary" (click)="salvarConfigEstoque()" [disabled]="salvandoConfigEstoque">
+            {{ salvandoConfigEstoque ? 'Salvando...' : 'Salvar' }}
+          </button>
+          <small>A sugestão de preço nunca fica abaixo do custo (compra + despesas) mais a margem mínima.</small>
+        </div>
+      }
+    }
+    @if (alertasEstoque.length > 0) {
       <div class="alertas-estoque">
         <div class="alertas-list">
           <table>
             <thead>
               <tr>
                 <th>Veículo</th>
-                <th>Ano</th>
                 <th>Loja</th>
+                <th>Dias</th>
                 <th>Preço</th>
-                <th>Entrada</th>
-                <th>Dias em Estoque</th>
+                <th>FIPE</th>
+                <th>Margem</th>
+                <th>Sugestão</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               @for (veiculo of alertasPaginados; track veiculo.veiId) {
                 <tr>
                   <td data-label="Veículo">
-                    <strong>{{ veiculo.modelo }}</strong>
-                    <span class="text-muted">{{ veiculo.marca }}</span>
+                    <strong>{{ veiculo.descricao }}</strong>
+                    @if (veiculo.placa) { <span class="text-muted">{{ veiculo.placa }}</span> }
                   </td>
-                  <td data-label="Ano">{{ veiculo.ano }}</td>
                   <td data-label="Loja">{{ veiculo.loja }}</td>
-                  <td data-label="Preço">{{ formatarPreco(veiculo.preco) }}</td>
-                  <td data-label="Entrada">{{ veiculo.dtEntrada | date:'dd/MM/yyyy' }}</td>
-                  <td data-label="Dias em Estoque">
-                    <span class="dias-estoque-badge" [class]="getDiasEstoqueClass(veiculo.diasEmEstoque)">
-                      {{ veiculo.diasEmEstoque }} dias
+                  <td data-label="Dias">
+                    <span class="dias-estoque-badge" [class]="getDiasEstoqueClass(veiculo.faixa)" [title]="'Entrada em ' + (veiculo.entrada | date:'dd/MM/yyyy')">
+                      {{ veiculo.dias }} dias
                     </span>
+                  </td>
+                  <td data-label="Preço">{{ formatarPreco(veiculo.preco) }}</td>
+                  <td data-label="FIPE">
+                    @if (veiculo.diferencaFipe !== null) {
+                      <span [class.text-acima]="veiculo.diferencaFipe > 0">{{ veiculo.diferencaFipe > 0 ? '+' : '' }}{{ veiculo.diferencaFipe | number:'1.0-1' }}%</span>
+                    } @else {
+                      <span class="text-muted">—</span>
+                    }
+                  </td>
+                  <td data-label="Margem">
+                    @if (veiculo.margemAtual !== null) {
+                      {{ veiculo.margemAtual | number:'1.0-1' }}%
+                    } @else {
+                      <span class="text-muted" title="Sem preço de compra">—</span>
+                    }
+                  </td>
+                  <td data-label="Sugestão">
+                    @if (veiculo.mudar) {
+                      <strong class="sugestao-preco">{{ formatarPreco(veiculo.precoSugerido) }}</strong>
+                    } @else {
+                      <span class="text-muted">manter</span>
+                    }
+                    <span class="sugestao-motivo">{{ veiculo.motivo }}</span>
+                  </td>
+                  <td data-label="">
+                    <button type="button" class="btn-ajustar" (click)="ajustarPreco(veiculo)" title="Abrir o cadastro do veículo">
+                      <span class="material-icons">edit</span>
+                    </button>
                   </td>
                 </tr>
               }
