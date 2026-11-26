@@ -20,6 +20,8 @@ export interface Veiculo {
   publicacaoMercadoLivreEm?: string;
   /** Anuncio criado no ML mas invisivel ate a loja pagar a taxa. */
   mercadoLivreAguardandoPagamento?: boolean;
+  /** Anuncio no ar no NaPista. */
+  napistaNoAr?: boolean;
   // Quando o ultimo story some (24h depois de publicado); ausente se nao ha story no ar.
   storyNoArAte?: string;
   veiCor: string;

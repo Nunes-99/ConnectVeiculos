@@ -89,6 +89,8 @@ namespace ConnectVeiculos.Tests.Services
             public readonly Dictionary<int, VeiculoNapista> Itens = new();
             public Task<VeiculoNapista?> GetByVeiculoIdAsync(int veiculoId) => Task.FromResult(Itens.TryGetValue(veiculoId, out var a) ? a : null);
             public Task SalvarAsync(VeiculoNapista anuncio) { Itens[anuncio.R_VeiId] = anuncio; return Task.CompletedTask; }
+            public Task<HashSet<int>> VeiculosNoArAsync() =>
+                Task.FromResult(Itens.Values.Where(a => a.EstaPublicado).Select(a => a.R_VeiId).ToHashSet());
             public Task<Dictionary<string, int>> VeiculosPorAnuncioAsync(IReadOnlyCollection<string> ids) =>
                 Task.FromResult(Itens.Values.Where(a => ids.Contains(a.VnpAnuncioId)).ToDictionary(a => a.VnpAnuncioId, a => a.R_VeiId));
         }
