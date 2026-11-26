@@ -32,7 +32,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Napista
 
         private static readonly TimeSpan RenovarAntes = TimeSpan.FromSeconds(60);
         private static readonly TimeSpan DuracaoCatalogo = TimeSpan.FromHours(12);
-        private const int MaximoFotos = 20;
+        private const int MaximoFotos = 30; // limite do NaPista (Renan, 25/11/2026)
         private static readonly string[] Categorias = { "CAR", "MOTORCYCLE", "TRUCK" };
 
         // Renovar o token cancela o refresh anterior: uma renovacao por loja de cada vez.

@@ -1,8 +1,7 @@
 # NaPista: do client_id à produção
 
 Integração de estoque e leads com o NaPista (portal do banco BV). Sem custo
-para o integrador (o custo do anúncio, se houver, é do plano da loja no
-NaPista — perguntado em 26/11/2026). A loja conecta a **conta dela no NaPista**
+para o integrador (confirmado pelo NaPista em 25/11/2026). A loja conecta a **conta dela no NaPista**
 (mesmo usuário e senha de lá) por OAuth; o ConnectVeiculos é o integrador, com
 `client_id` próprio e **sem segredo** (cliente público).
 
@@ -15,8 +14,14 @@ renan.freitas@napista.com.br / integrador@napista.com.br.
 - Desenvolvimento do NaPista: client_id **`connect-veiculos`** liberado em
   24/11/2026, redirect_uri só `https://connectveiculos.dev.br/integracoes/napista`
   (localhost **não** é aceito). Testes concluídos em 25/11/2026 (abaixo).
-- E-mail ao Renan pedindo produção enviado em 26/11/2026, com as perguntas da
-  seção "Perguntas em aberto". **Próximo passo: a resposta dele.**
+- **Produção liberada em 25/11/2026** (mesmo client_id `connect-veiculos`):
+  auth `https://auth.napista.com.br/realms/marketplace-dealer/protocol/openid-connect`,
+  API `https://api.napista.com.br/seller-inventory-api`. O refresh token **não
+  expira** (a loja conecta uma vez só), até **30 fotos** por anúncio, rate limit
+  recomendado de **100 requisições/min**, **sem webhook** (leads só pela
+  consulta) e **sem custo** para o integrador. Leads indisponíveis no
+  desenvolvimento por enquanto; as fotos (PATCH apagando, 403) o Renan ainda
+  vai verificar.
 
 ## Como funciona
 
@@ -27,7 +32,7 @@ renan.freitas@napista.com.br / integrador@napista.com.br.
   duplica).
 - **Veículos → menu ⋮ → Anunciar no NaPista**: o sistema sugere marca, modelo,
   versão, câmbio, combustível, cor e portas a partir do cadastro (FIPE); a
-  pessoa confere e anuncia. Preço, km, placa, observação e até 20 fotos vêm do
+  pessoa confere e anuncia. Preço, km, placa, observação e até 30 fotos vêm do
   cadastro. Carro novo **não** vai sozinho (a versão do catálogo tem de ser
   confirmada uma vez); depois disso tudo é automático.
 - Na lista de **Veículos**, o selo azul **NP** marca os carros no ar no NaPista
@@ -97,12 +102,9 @@ Descobertos no desenvolvimento deles em 25/11/2026; o código já trata:
 
 1. O NaPista libera o client em produção e informa os endereços.
 2. No `.env` do servidor (pelo `bash scripts/trocar-chaves.sh`, ver
-   `docs/trocar-chaves.md`):
-   - `NAPISTA_CLIENT_ID` de produção (se for outro);
+   `docs/trocar-chaves.md`); o client_id continua `connect-veiculos`:
    - `NAPISTA_AUTH_URL=https://auth.napista.com.br/realms/marketplace-dealer/protocol/openid-connect`
-     (confirmar);
-   - `NAPISTA_API_URL=` o endereço de produção da API (a documentação só mostra
-     o de desenvolvimento: `https://api.development.napista.com.br/seller-inventory-api`).
+   - `NAPISTA_API_URL=https://api.napista.com.br/seller-inventory-api`
 3. **Antes de virar**: na `empresa-teste`, desconectar o NaPista e apagar as
    linhas de `VeiculoNapista` (apontam para anúncios do desenvolvimento, que não
    existem em produção).
@@ -110,18 +112,12 @@ Descobertos no desenvolvimento deles em 25/11/2026; o código já trata:
    ela já tem (conferir que as fotos vêm), anunciar um carro e conferir no
    **napista.com.br**, editar, vender/estornar, buscar leads.
 
-## Perguntas em aberto para o NaPista (e-mail de 26/11/2026)
+## Perguntas ao NaPista (e-mail de 26/11/2026)
 
-1. Endereços de produção (auth e `seller-inventory-api`) e se o client_id muda.
-2. Validade do refresh token; dá para liberar `offline_access`? Sem isso a loja
-   precisa conectar de novo quando vence (a tela mostra "vale até").
-3. Limite de fotos por anúncio e de chamadas por minuto.
-4. Webhook/aviso de lead novo, ou só a consulta?
-5. Custo para a loja por anúncio publicado via integração / limite pelo plano.
-6. O PATCH apagar as fotos é o esperado?
-7. As URLs das fotos são públicas em produção?
-8. Um lead e um anúncio criado direto no portal na conta de teste, para testar
-   esses dois fluxos.
+Respondidas em 25/11/2026: endereços de produção, client_id (o mesmo), refresh
+token (não expira), limites (30 fotos, 100 req/min), webhook (não tem), custo
+(nenhum). **Em aberto**: o PATCH apagar as fotos, se as URLs das fotos são
+públicas em produção, e leads no desenvolvimento (indisponível por enquanto).
 
 ## Onde está o código
 
