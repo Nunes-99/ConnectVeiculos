@@ -987,6 +987,7 @@ textarea {
     &.fb { background: #1877F2; }
     &.ml { background: #FFE600; color: #2d3277; }
     &.np { background: #0f2bff; border: 0; font-family: inherit; }
+    &.olx { background: #6e0ad6; border: 0; font-family: inherit; cursor: pointer; }
     // Criado no ML mas invisivel ate pagar a taxa.
     &.ml.pendente { background: var(--status-warning-bg, #fff8e1); color: var(--status-warning, #8d6e00); border: 1px dashed currentColor; cursor: help; }
   }

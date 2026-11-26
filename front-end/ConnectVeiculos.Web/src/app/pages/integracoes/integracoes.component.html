@@ -213,6 +213,31 @@
   </div>
   }
 
+  <!-- OLX (OAuth com o usuario da loja na OLX; API de importacao de anuncios) -->
+  @if (integracaoAberta === 'olx') {
+  <div class="integracao-card">
+    <div class="card-header">
+      <div class="platform-info">
+        <span class="platform-icon olx-icon">OLX</span>
+        <div>
+          <h3>OLX</h3>
+          <p>Anúncios de carros na OLX</p>
+        </div>
+      </div>
+      <span class="status-badge" [class.connected]="olxConectada" [class.disconnected]="!olxConectada">
+        {{ olxConectada ? 'Conectado' : 'Desconectado' }}
+      </span>
+    </div>
+    <div class="card-body">
+      <app-olx-config (conectadoChange)="olxConectada = $event"></app-olx-config>
+    </div>
+    <div class="card-footer">
+      <span class="material-icons">info</span>
+      <small>Custo: o plano profissional da loja na OLX (cada anúncio usa o saldo dele). A integração não cobra nada a mais.</small>
+    </div>
+  </div>
+  }
+
   <!-- WhatsApp Business -->
   @if (integracaoAberta === 'whatsapp') {
   <div class="integracao-card">

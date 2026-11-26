@@ -31,6 +31,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Publicacoes
         private readonly IStoryService _storyService;
         private readonly IWebmotorsService _webmotorsService;
         private readonly INapistaService _napistaService;
+        private readonly IOlxService _olxService;
         private readonly ILogger<PublicacaoAutomaticaService> _logger;
 
         private readonly int _tentativas;
@@ -49,10 +50,11 @@ namespace ConnectVeiculos.Infrastructure.Services.Publicacoes
             IStoryService storyService,
             IWebmotorsService webmotorsService,
             INapistaService napistaService,
+            IOlxService olxService,
             ILogger<PublicacaoAutomaticaService> logger)
             : this(veiculoRepository, imagemRepository, publicacaoRepository, mercadoLivreService,
                    facebookCatalogService, facebookPagePostService, instagramPostService,
-                   googleService, storyService, webmotorsService, napistaService, logger,
+                   googleService, storyService, webmotorsService, napistaService, olxService, logger,
                    TentativasPadrao, IntervaloPadraoMs, LeiturasEstaveisPadrao)
         {
         }
@@ -70,6 +72,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Publicacoes
             IStoryService storyService,
             IWebmotorsService webmotorsService,
             INapistaService napistaService,
+            IOlxService olxService,
             ILogger<PublicacaoAutomaticaService> logger,
             int tentativas,
             int intervaloMs,
@@ -86,6 +89,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Publicacoes
             _storyService = storyService;
             _webmotorsService = webmotorsService;
             _napistaService = napistaService;
+            _olxService = olxService;
             _logger = logger;
             _tentativas = tentativas;
             _intervaloMs = intervaloMs;
@@ -168,6 +172,10 @@ namespace ConnectVeiculos.Infrastructure.Services.Publicacoes
             try { await _napistaService.SincronizarVeiculoAsync(veiculoId); }
             catch (Exception ex) { _logger.LogError(ex, "Erro ao tirar veiculo {VeiculoId} do NaPista", veiculoId); }
 
+            // OLX: vendido/inativo/reservado sai do ar (a OLX nao tem "vendido").
+            try { await _olxService.SincronizarVeiculoAsync(veiculoId); }
+            catch (Exception ex) { _logger.LogError(ex, "Erro ao tirar veiculo {VeiculoId} da OLX", veiculoId); }
+
             // Post da Page: reescreve a legenda com o selo em vez de apagar —
             // apagar levaria junto os comentarios e o alcance ja conquistados.
             try
@@ -242,6 +250,10 @@ namespace ConnectVeiculos.Infrastructure.Services.Publicacoes
             // NaPista: so volta se ja tinha sido anunciado (versao e valores ficaram salvos).
             try { await _napistaService.SincronizarVeiculoAsync(veiculoId); }
             catch (Exception ex) { _logger.LogError(ex, "Erro ao reanunciar veiculo {VeiculoId} no NaPista", veiculoId); }
+
+            // OLX: so volta se ja tinha sido anunciado (os codigos ficaram salvos).
+            try { await _olxService.SincronizarVeiculoAsync(veiculoId); }
+            catch (Exception ex) { _logger.LogError(ex, "Erro ao reanunciar veiculo {VeiculoId} na OLX", veiculoId); }
 
             // Facebook Page: o post continua la, so carimbado. Tirar o carimbo e
             // melhor que publicar de novo — mantem curtidas, comentarios e alcance.

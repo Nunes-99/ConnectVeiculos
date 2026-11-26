@@ -296,6 +296,7 @@ namespace ConnectVeiculos.Infrastructure.IoC
              services.AddTransient<Core.Interfaces.Database.Repositories.Integracoes.IIntegracaoLogRepository, Database.EntityFramework.Repositories.IntegracaoLogRepository>();
              services.AddTransient<Core.Interfaces.Database.Repositories.Integracoes.IVeiculoWebmotorsRepository, Database.EntityFramework.Repositories.VeiculoWebmotorsRepository>();
              services.AddTransient<Core.Interfaces.Database.Repositories.Integracoes.IVeiculoNapistaRepository, Database.EntityFramework.Repositories.VeiculoNapistaRepository>();
+             services.AddTransient<Core.Interfaces.Database.Repositories.Integracoes.IVeiculoOlxRepository, Database.EntityFramework.Repositories.VeiculoOlxRepository>();
 
              // Repositories - Tenants/Planos (billing camada 1)
              services.AddTransient<Core.Interfaces.Database.Repositories.Tenants.IPlanoRepository, Database.EntityFramework.Repositories.PlanoRepository>();
@@ -344,6 +345,11 @@ namespace ConnectVeiculos.Infrastructure.IoC
             // NaPista: OAuth (Keycloak) por loja + API REST de estoque e leads.
             services.Configure<Services.Napista.NapistaSettings>(configuration.GetSection("NapistaSettings"));
             services.AddHttpClient<Core.Interfaces.Services.INapistaService, Services.Napista.NapistaService>()
+                .ConfigureHttpClient(client => client.Timeout = TimeSpan.FromSeconds(60));
+
+            // OLX: OAuth por loja + API de importacao de anuncios (autoupload).
+            services.Configure<Services.Olx.OlxSettings>(configuration.GetSection("OlxSettings"));
+            services.AddHttpClient<Core.Interfaces.Services.IOlxService, Services.Olx.OlxService>()
                 .ConfigureHttpClient(client => client.Timeout = TimeSpan.FromSeconds(60));
 
             services.AddTransient<Core.Interfaces.Services.IFeedService, Services.Feed.FeedService>();
@@ -703,6 +709,23 @@ namespace ConnectVeiculos.Infrastructure.IoC
                       VnpPublicadoEm TEXT,
                       VnpAtualizadoEm TEXT,
                       VnpRemovidoEm TEXT");
+
+                // OLX: anuncio de cada veiculo (codigos escolhidos e resultado do ultimo envio)
+                CreateTableIfNotExists(connection, "VeiculoOlx",
+                    @"VolId INTEGER PRIMARY KEY AUTOINCREMENT,
+                      R_VeiId INTEGER NOT NULL UNIQUE,
+                      VolStatus TEXT,
+                      VolDadosJson TEXT,
+                      VolToken TEXT,
+                      VolSituacao TEXT,
+                      VolListId TEXT,
+                      VolUrl TEXT,
+                      VolAssinatura TEXT,
+                      VolFotos INTEGER NOT NULL DEFAULT 0,
+                      VolErro TEXT,
+                      VolPublicadoEm TEXT,
+                      VolAtualizadoEm TEXT,
+                      VolRemovidoEm TEXT");
 
                 CreateTableIfNotExists(connection, "IntegracaoLog",
                     @"IlgId INTEGER PRIMARY KEY AUTOINCREMENT,

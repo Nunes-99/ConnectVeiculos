@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } 
 import { VeiculoService, LojaService, CategoriaService, ImagemService, VeiculoImagem, ToastService, FipeService, FipeMarca, FipeModelo, AuthService } from '../../core/services';
 import { WebmotorsVeiculoComponent } from '../../shared/components/webmotors/webmotors-veiculo.component';
 import { NapistaVeiculoComponent } from '../../shared/components/napista/napista-veiculo.component';
+import { OlxVeiculoComponent } from '../../shared/components/olx/olx-veiculo.component';
 import { RenaveVeiculoComponent } from '../../shared/components/renave/renave-veiculo.component';
 import { NfeVeiculoComponent } from '../../shared/components/renave/nfe-veiculo.component';
 import { IntegracaoService, MetaFeatureFlags } from '../../core/services/integracao.service';
@@ -21,7 +22,7 @@ import * as XLSX from 'xlsx';
 @Component({
   selector: 'app-veiculos',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaskDirective, CurrencyMaskDirective, PaginationComponent, ConfirmModalComponent, ScannerDocumentoComponent, SalvandoDirective, RenaveVeiculoComponent, NfeVeiculoComponent, ContratoVeiculoComponent, WebmotorsVeiculoComponent, NapistaVeiculoComponent, PublicarPostModalComponent, PublicarStoryModalComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaskDirective, CurrencyMaskDirective, PaginationComponent, ConfirmModalComponent, ScannerDocumentoComponent, SalvandoDirective, RenaveVeiculoComponent, NfeVeiculoComponent, ContratoVeiculoComponent, WebmotorsVeiculoComponent, NapistaVeiculoComponent, OlxVeiculoComponent, PublicarPostModalComponent, PublicarStoryModalComponent],
   templateUrl: './veiculos.component.html',
   styleUrl: './veiculos.component.scss'
 })
@@ -193,6 +194,15 @@ export class VeiculosComponent implements OnInit, OnDestroy {
   /** Anunciar ou tirar do ar pela janela muda o selo "NP" da lista. */
   fecharNapista(): void {
     this.napistaVeiculo = null;
+    this.loadData();
+  }
+
+  // OLX: mesma regra (a API so atende Administrador e Gerente).
+  olxVeiculo: Veiculo | null = null;
+
+  /** Anunciar ou tirar do ar pela janela muda o selo "OLX" da lista. */
+  fecharOlx(): void {
+    this.olxVeiculo = null;
     this.loadData();
   }
   get podeWebmotors(): boolean { return this.auth.isGerente(); }
