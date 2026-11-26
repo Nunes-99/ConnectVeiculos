@@ -31,6 +31,9 @@ namespace ConnectVeiculos.Core.Entities.Vendas
         public string VenStatus { get; private set; } // A = Ativa, E = Estornada
         public DateTime? VenDtEstorno { get; private set; }
 
+        /// <summary>Quando a comissao foi paga ao vendedor; nulo = a pagar.</summary>
+        public DateTime? VenComissaoPagaEm { get; private set; }
+
         // Navigation Properties
         public Veiculo Veiculo { get; private set; }
         public Usuario Vendedor { get; private set; }
@@ -90,6 +93,14 @@ namespace ConnectVeiculos.Core.Entities.Vendas
 
             VenStatus = "E";
             VenDtEstorno = DateTime.Now;
+        }
+
+        /// <summary>Marca a comissao como paga (data) ou volta para "a pagar" (nulo).</summary>
+        public void MarcarComissaoPaga(DateTime? pagaEm)
+        {
+            if (pagaEm != null && VenStatus == "E")
+                throw new DomainException("Venda estornada não tem comissão a pagar.");
+            VenComissaoPagaEm = pagaEm;
         }
 
         /// <summary>

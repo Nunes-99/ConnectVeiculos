@@ -1,0 +1,80 @@
+h2 { font-size: 1.1rem; margin: 24px 0 12px; }
+
+.texto { opacity: 0.8; margin: 0 0 12px; }
+.text-muted { opacity: 0.65; font-size: 0.85em; }
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+
+  label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+  input, select { padding: 8px 10px; border: 1px solid var(--border-color, #ddd); border-radius: 6px; min-width: 180px; }
+}
+
+.resumo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+
+  .card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px;
+    border-radius: 10px;
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--border-color, #e5e7eb);
+
+    span { font-size: 13px; opacity: 0.7; }
+    strong { font-size: 1.3rem; }
+    &.pago strong { color: #2e7d32; }
+    &.apagar strong { color: #e65100; }
+  }
+}
+
+.acoes-pagamento {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  margin-bottom: 12px;
+
+  label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+  input { padding: 7px 10px; border: 1px solid var(--border-color, #ddd); border-radius: 6px; }
+  button { display: inline-flex; align-items: center; gap: 6px; }
+}
+
+.badge.pendente { background: #fff3e0; color: #e65100; }
+
+.regras {
+  padding: 16px;
+  margin-bottom: 20px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  background: var(--card-bg, #fff);
+
+  h2 { margin-top: 0; }
+  > button { margin-top: 12px; }
+}
+
+.regra-linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-color, #eee);
+
+  &.padrao strong { min-width: 220px; }
+  .check { display: flex; align-items: center; gap: 6px; min-width: 220px; }
+  select { padding: 6px 8px; border: 1px solid var(--border-color, #ddd); border-radius: 6px; }
+  .valor {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    input { width: 90px; padding: 6px 8px; border: 1px solid var(--border-color, #ddd); border-radius: 6px; }
+  }
+  .usa-padrao { opacity: 0.6; }
+}

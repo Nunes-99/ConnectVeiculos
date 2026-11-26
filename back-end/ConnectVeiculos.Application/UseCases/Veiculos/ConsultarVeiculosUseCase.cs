@@ -13,17 +13,20 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
         private readonly IVeiculoOperations _veiculoOperations;
         private readonly IVeiculoPublicacaoRepository _publicacaoRepository;
         private readonly IVeiculoNapistaRepository _napistaRepository;
+        private readonly IVeiculoOlxRepository? _olxRepository;
 
         private const int DuracaoStoryHoras = 24;
 
         public ConsultarVeiculosUseCase(
             IVeiculoOperations veiculoOperations,
             IVeiculoPublicacaoRepository publicacaoRepository,
-            IVeiculoNapistaRepository napistaRepository)
+            IVeiculoNapistaRepository napistaRepository,
+            IVeiculoOlxRepository? olxRepository = null)
         {
             _veiculoOperations = veiculoOperations;
             _publicacaoRepository = publicacaoRepository;
             _napistaRepository = napistaRepository;
+            _olxRepository = olxRepository;
         }
 
         public async Task<List<VeiculoViewModel>> Execute(string pesquisa, int? lojaId, string inicio, string intervalo)
@@ -41,6 +44,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                 .ToDictionary(g => g.Key, g => g.ToList());
             // NaPista guarda o anuncio em tabela propria (VeiculoNapista), nao em VeiculoPublicacao.
             var noNapista = await _napistaRepository.VeiculosNoArAsync();
+            var naOlx = _olxRepository == null ? new HashSet<int>() : await _olxRepository.VeiculosNoArAsync();
 
             var veiculos = ((IEnumerable<dynamic>)result).Select(v => new VeiculoViewModel
             {
@@ -76,6 +80,7 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
             foreach (var veiculo in veiculos)
             {
                 veiculo.NapistaNoAr = noNapista.Contains(veiculo.VeiId);
+                veiculo.OlxNoAr = naOlx.Contains(veiculo.VeiId);
                 if (!publicacoes.TryGetValue(veiculo.VeiId, out var doVeiculo)) continue;
 
                 var ig = doVeiculo.FirstOrDefault(p => p.PubPlataforma == "Instagram");

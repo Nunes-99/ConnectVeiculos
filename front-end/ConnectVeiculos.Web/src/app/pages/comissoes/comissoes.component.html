@@ -1,0 +1,150 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Comissões</h1>
+    @if (gestao) {
+      <button class="btn-secondary" (click)="abrirRegras()">
+        <span class="material-icons">tune</span> {{ mostrarRegras ? 'Fechar regras' : 'Regras de comissão' }}
+      </button>
+    }
+  </div>
+
+  @if (mostrarRegras) {
+    <div class="regras">
+      <h2>Regras de comissão</h2>
+      <p class="texto">
+        Ao registrar a venda, a comissão já vem preenchida pela regra do vendedor (ou pela padrão da loja). O % ainda pode
+        ser mudado na venda. As regras valem para as <strong>próximas</strong> vendas; as já registradas não mudam.
+      </p>
+      <div class="regra-linha padrao">
+        <strong>Padrão da loja</strong>
+        <select [(ngModel)]="regraPadrao.tipo">
+          @for (t of tipos; track t.id) { <option [ngValue]="t.id">{{ t.nome }}</option> }
+        </select>
+        <label class="valor">
+          <span>{{ unidade(regraPadrao.tipo) }}</span>
+          <input type="number" min="0" step="0.5" [(ngModel)]="regraPadrao.valor" />
+        </label>
+      </div>
+      @for (l of linhasRegra; track l.usuario.usuId) {
+        <div class="regra-linha">
+          <label class="check">
+            <input type="checkbox" [(ngModel)]="l.propria" />
+            {{ l.usuario.usuNome }} <small>({{ l.usuario.usuFuncao }})</small>
+          </label>
+          @if (l.propria) {
+            <select [(ngModel)]="l.regra.tipo">
+              @for (t of tipos; track t.id) { <option [ngValue]="t.id">{{ t.nome }}</option> }
+            </select>
+            <label class="valor">
+              <span>{{ unidade(l.regra.tipo) }}</span>
+              <input type="number" min="0" step="0.5" [(ngModel)]="l.regra.valor" />
+            </label>
+          } @else {
+            <small class="usa-padrao">usa a padrão da loja</small>
+          }
+        </div>
+      }
+      <button class="btn-primary" (click)="salvarRegras()" [disabled]="salvandoRegras">
+        {{ salvandoRegras ? 'Salvando...' : 'Salvar regras' }}
+      </button>
+    </div>
+  }
+
+  <div class="filtros">
+    <label>Mês <input type="month" [(ngModel)]="mes" (change)="carregar()" /></label>
+    @if (gestao) {
+      <label>Vendedor
+        <select [(ngModel)]="vendedorId" (change)="carregar()">
+          <option [ngValue]="null">Todos</option>
+          @for (u of usuarios; track u.usuId) { <option [ngValue]="u.usuId">{{ u.usuNome }}</option> }
+        </select>
+      </label>
+    }
+  </div>
+
+  @if (carregando && !extrato) {
+    <div class="loading">Carregando...</div>
+  } @else if (extrato) {
+    <div class="resumo">
+      <div class="card"><span>Vendido</span><strong>{{ moeda(extrato.totalVendido) }}</strong></div>
+      <div class="card"><span>Comissões</span><strong>{{ moeda(extrato.totalComissao) }}</strong></div>
+      <div class="card pago"><span>Pago</span><strong>{{ moeda(extrato.totalPago) }}</strong></div>
+      <div class="card apagar"><span>A pagar</span><strong>{{ moeda(extrato.totalAPagar) }}</strong></div>
+    </div>
+
+    @if (gestao && extrato.vendedores.length > 1) {
+      <h2>Por vendedor</h2>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr><th>Vendedor</th><th>Vendas</th><th>Vendido</th><th>Comissão</th><th>Pago</th><th>A pagar</th></tr>
+          </thead>
+          <tbody>
+            @for (v of extrato.vendedores; track v.vendedorId) {
+              <tr>
+                <td data-label="Vendedor"><strong>{{ v.nome }}</strong></td>
+                <td data-label="Vendas">{{ v.vendas }}</td>
+                <td data-label="Vendido">{{ moeda(v.vendido) }}</td>
+                <td data-label="Comissão">{{ moeda(v.comissao) }}</td>
+                <td data-label="Pago">{{ moeda(v.pago) }}</td>
+                <td data-label="A pagar"><strong>{{ moeda(v.aPagar) }}</strong></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <h2>Vendas do mês</h2>
+    @if (extrato.vendas.length === 0) {
+      <p class="texto">Nenhuma venda neste mês.</p>
+    } @else {
+      @if (gestao) {
+        <div class="acoes-pagamento">
+          <button class="btn-secondary" (click)="selecionarAPagar()">Selecionar todas a pagar</button>
+          <label>Pago em <input type="date" [(ngModel)]="dataPagamento" /></label>
+          <button class="btn-primary" (click)="marcar(true)" [disabled]="pagando || selecionadas.size === 0">
+            <span class="material-icons">paid</span>
+            Marcar {{ selecionadas.size }} como paga(s){{ selecionadas.size ? ' · ' + moeda(totalSelecionado) : '' }}
+          </button>
+          <button class="btn-secondary" (click)="marcar(false)" [disabled]="pagando || selecionadas.size === 0">Voltar para a pagar</button>
+        </div>
+      }
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              @if (gestao) { <th></th> }
+              <th>Data</th><th>Vendedor</th><th>Veículo</th><th>Valor</th><th>%</th><th>Comissão</th><th>Situação</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (v of extrato.vendas; track v.venId) {
+              <tr>
+                @if (gestao) {
+                  <td data-label=""><input type="checkbox" [checked]="selecionadas.has(v.venId)" (change)="alternar(v)" [attr.aria-label]="'Selecionar venda ' + v.venId" /></td>
+                }
+                <td data-label="Data">{{ v.data | date:'dd/MM/yyyy' }}</td>
+                <td data-label="Vendedor">{{ v.vendedor }}</td>
+                <td data-label="Veículo">
+                  <strong>{{ v.veiculo }}</strong>
+                  @if (v.comprador) { <br /><span class="text-muted">{{ v.comprador }}</span> }
+                </td>
+                <td data-label="Valor">{{ moeda(v.valor) }}</td>
+                <td data-label="%">{{ v.percentual | number:'1.0-2' }}%</td>
+                <td data-label="Comissão"><strong>{{ moeda(v.comissao) }}</strong></td>
+                <td data-label="Situação">
+                  @if (v.pagaEm) {
+                    <span class="badge active">Paga em {{ v.pagaEm | date:'dd/MM/yyyy' }}</span>
+                  } @else {
+                    <span class="badge pendente">A pagar</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</div>

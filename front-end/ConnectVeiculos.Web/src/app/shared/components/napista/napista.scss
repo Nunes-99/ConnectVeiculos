@@ -162,3 +162,6 @@ h4 {
 .np-selo-ok { background: var(--status-success-bg, #e8f5e9); color: var(--status-success, #2e7d32); }
 
 .np-placa { max-width: 220px; text-transform: uppercase; padding: 0.3rem 0.5rem; font-size: 0.85rem; }
+
+// Janela da OLX usa os mesmos estilos (np-*), com a cor da OLX no selo.
+.np-logo.olx-logo { background: #6e0ad6; width: 34px; }

@@ -81,6 +81,11 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/integracoes/napista-retorno.component').then(m => m.NapistaRetornoComponent)
   },
   {
+    // Volta do login da OLX: mesmo motivo (fora do layout logado).
+    path: 'integracoes/olx',
+    loadComponent: () => import('./pages/integracoes/olx-retorno.component').then(m => m.OlxRetornoComponent)
+  },
+  {
     // Link publico que o cliente abre para assinar um contrato (sem login).
     path: 'assinar/:tenantSlug/:token',
     loadComponent: () => import('./pages/assinar/assinar.component').then(m => m.AssinarComponent)
@@ -125,6 +130,11 @@ export const routes: Routes = [
       {
         path: 'vendas',
         loadComponent: () => import('./pages/vendas/vendas.component').then(m => m.VendasComponent)
+      },
+      {
+        // Todos entram: o vendedor ve so as proprias comissoes (a API filtra).
+        path: 'comissoes',
+        loadComponent: () => import('./pages/comissoes/comissoes.component').then(m => m.ComissoesComponent)
       },
       {
         path: 'financiamentos',

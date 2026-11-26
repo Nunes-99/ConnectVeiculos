@@ -967,6 +967,45 @@ textarea {
   .acoes-menu-separador { height: 1px; background: var(--border-light, #eee); margin: 4px 0; }
 }
 
+// Estoque parado: dias na lista (abre o cadastro com a sugestao de preco).
+.parado-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 4px;
+  padding: 1px 6px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff3e0;
+  color: #e65100;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  vertical-align: middle;
+
+  .material-icons { font-size: 13px; }
+  &.critico { background: #ffebee; color: #b71c1c; }
+}
+
+.sugestao-preco-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: -4px 0 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #e8f5e9;
+  color: #1b5e20;
+
+  &.atencao { background: #fff3e0; color: #8a3b00; }
+  &.critico { background: #ffebee; color: #8e1c1c; }
+
+  > div { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  small { opacity: 0.85; }
+  button { white-space: nowrap; }
+}
+
 // Selos de onde o carro esta no ar (Instagram, Facebook, Mercado Livre, NaPista).
 .redes-no-ar {
   display: flex;
@@ -987,6 +1026,7 @@ textarea {
     &.fb { background: #1877F2; }
     &.ml { background: #FFE600; color: #2d3277; }
     &.np { background: #0f2bff; border: 0; font-family: inherit; }
+    &.olx { background: #6e0ad6; border: 0; font-family: inherit; cursor: pointer; }
     // Criado no ML mas invisivel ate pagar a taxa.
     &.ml.pendente { background: var(--status-warning-bg, #fff8e1); color: var(--status-warning, #8d6e00); border: 1px dashed currentColor; cursor: help; }
   }

@@ -253,6 +253,11 @@ namespace ConnectVeiculos.Application.UseCases.Veiculos
                     _backgroundRunner.Enqueue<INapistaService>(
                         s => s.SincronizarVeiculoAsync(idWebmotors),
                         $"atualizar anuncio do NaPista do veiculo {idWebmotors}");
+
+                    // OLX: reenvia so se o anuncio mudou (preco, km, fotos).
+                    _backgroundRunner.Enqueue<IOlxService>(
+                        s => s.SincronizarVeiculoAsync(idWebmotors),
+                        $"atualizar anuncio da OLX do veiculo {idWebmotors}");
                 }
             }
             catch

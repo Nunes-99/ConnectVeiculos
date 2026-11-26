@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } 
 import { VeiculoService, LojaService, CategoriaService, ImagemService, VeiculoImagem, ToastService, FipeService, FipeMarca, FipeModelo, AuthService } from '../../core/services';
 import { WebmotorsVeiculoComponent } from '../../shared/components/webmotors/webmotors-veiculo.component';
 import { NapistaVeiculoComponent } from '../../shared/components/napista/napista-veiculo.component';
+import { OlxVeiculoComponent } from '../../shared/components/olx/olx-veiculo.component';
 import { RenaveVeiculoComponent } from '../../shared/components/renave/renave-veiculo.component';
 import { NfeVeiculoComponent } from '../../shared/components/renave/nfe-veiculo.component';
 import { IntegracaoService, MetaFeatureFlags } from '../../core/services/integracao.service';
@@ -17,11 +18,13 @@ import { ContratoVeiculoComponent } from '../../shared/components/contratos/cont
 import { PublicarPostModalComponent } from '../../shared/components/redes/publicar-post-modal.component';
 import { PublicarStoryModalComponent } from '../../shared/components/redes/publicar-story-modal.component';
 import * as XLSX from 'xlsx';
+import { ActivatedRoute, Router } from '@angular/router';
+import { EstoqueParadoItem, EstoqueParadoService } from '../../core/services/estoque-parado.service';
 
 @Component({
   selector: 'app-veiculos',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaskDirective, CurrencyMaskDirective, PaginationComponent, ConfirmModalComponent, ScannerDocumentoComponent, SalvandoDirective, RenaveVeiculoComponent, NfeVeiculoComponent, ContratoVeiculoComponent, WebmotorsVeiculoComponent, NapistaVeiculoComponent, PublicarPostModalComponent, PublicarStoryModalComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaskDirective, CurrencyMaskDirective, PaginationComponent, ConfirmModalComponent, ScannerDocumentoComponent, SalvandoDirective, RenaveVeiculoComponent, NfeVeiculoComponent, ContratoVeiculoComponent, WebmotorsVeiculoComponent, NapistaVeiculoComponent, OlxVeiculoComponent, PublicarPostModalComponent, PublicarStoryModalComponent],
   templateUrl: './veiculos.component.html',
   styleUrl: './veiculos.component.scss'
 })
@@ -36,6 +39,9 @@ export class VeiculosComponent implements OnInit, OnDestroy {
   private integracaoService = inject(IntegracaoService);
   private compartilharInstagram = inject(CompartilharInstagramService);
   private auth = inject(AuthService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private estoqueParadoService = inject(EstoqueParadoService);
 
   // Flag global que controla se botoes "publicar via API" aparecem (FB Page + IG).
   // Vem do backend (MetaSettings__InstagramEnabled). Default false: botoes ocultos
@@ -195,6 +201,15 @@ export class VeiculosComponent implements OnInit, OnDestroy {
     this.napistaVeiculo = null;
     this.loadData();
   }
+
+  // OLX: mesma regra (a API so atende Administrador e Gerente).
+  olxVeiculo: Veiculo | null = null;
+
+  /** Anunciar ou tirar do ar pela janela muda o selo "OLX" da lista. */
+  fecharOlx(): void {
+    this.olxVeiculo = null;
+    this.loadData();
+  }
   get podeWebmotors(): boolean { return this.auth.isGerente(); }
   detranLink: DetranLink = { uf: '', nome: '', url: '' };
 
@@ -303,7 +318,20 @@ export class VeiculosComponent implements OnInit, OnDestroy {
     this.form.patchValue({ veiOpcionais: Array.from(this.opcionaisSelecionados).join(',') });
   }
 
+  // Estoque parado: selo de dias na lista e sugestao de preco no cadastro
+  // (so quem ve custo: Administrador, Gerente e Visualizador).
+  paradoPorVeiculo = new Map<number, EstoqueParadoItem>();
+  sugestaoPreco: EstoqueParadoItem | null = null;
+  /** ?editar=ID (vindo do painel "Estoque parado"): abre o cadastro quando a lista chegar. */
+  private editarAoCarregar: number | null = null;
+
+  usarPrecoSugerido(): void {
+    if (this.sugestaoPreco) this.form.patchValue({ veiPreco: this.sugestaoPreco.precoSugerido });
+  }
+
   ngOnInit(): void {
+    const editar = Number(this.route.snapshot.queryParamMap.get('editar'));
+    this.editarAoCarregar = editar > 0 ? editar : null;
     this.loadData();
     this.fipeService.getMarcas().subscribe({
       next: (marcas) => this.marcasFipe = marcas
@@ -480,9 +508,22 @@ export class VeiculosComponent implements OnInit, OnDestroy {
         this.totalItems = data.length;
         this.updatePaginatedVeiculos();
         this.loading = false;
+        if (this.editarAoCarregar) {
+          const alvo = data.find(v => v.veiId === this.editarAoCarregar);
+          this.editarAoCarregar = null;
+          this.router.navigate([], { queryParams: {}, replaceUrl: true });
+          if (alvo) this.openModal(alvo);
+        }
       },
       error: () => this.loading = false
     });
+
+    if (this.veCusto) {
+      this.estoqueParadoService.consultar().subscribe({
+        next: r => this.paradoPorVeiculo = new Map(r.veiculos.map(v => [v.veiId, v])),
+        error: () => { /* o selo e' so um aviso */ }
+      });
+    }
 
     this.lojaService.getAll().subscribe({
       next: (data) => this.lojas = data
@@ -497,6 +538,13 @@ export class VeiculosComponent implements OnInit, OnDestroy {
     this.editMode = !!veiculo;
     this.imagensPreview = [];
     this.imagens = [];
+    this.sugestaoPreco = null;
+    if (veiculo && this.veCusto && veiculo.veiSts === 'D') {
+      this.estoqueParadoService.sugestao(veiculo.veiId).subscribe({
+        next: s => { if (this.editId === veiculo.veiId) this.sugestaoPreco = s; },
+        error: () => {}
+      });
+    }
     if (veiculo) {
       this.editId = veiculo.veiId;
       this.form.patchValue({

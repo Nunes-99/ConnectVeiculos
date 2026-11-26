@@ -295,5 +295,22 @@ namespace ConnectVeiculos.Tests.UseCases.Vendas
             vendaCriada.Should().NotBeNull();
             vendaCriada.VenComissaoValor.Should().Be(5000.00m); // 5% de 100000
         }
+
+        [Fact]
+        public async Task Execute_ComComissaoEmReais_GuardaOValorEOPercentualEquivalente()
+        {
+            // Regra de valor fixo ou % do lucro: a tela manda o valor em R$.
+            _veiculoRepositoryMock.Setup(x => x.GetByIdAsync(1)).ReturnsAsync(VeiculoDeTeste());
+            Venda? vendaCriada = null;
+            _vendaRepositoryMock.Setup(x => x.CreateAsync(It.IsAny<Venda>())).Callback<Venda>(v => vendaCriada = v).ReturnsAsync(1);
+            var input = NovaVenda(120000m);
+            input.VenComissaoPorc = 3;
+            input.VenComissaoValor = 600m;
+
+            await _useCase.Execute(input);
+
+            vendaCriada!.VenComissaoValor.Should().Be(600m);
+            vendaCriada.VenComissaoPorc.Should().Be(0.5m);
+        }
     }
 }

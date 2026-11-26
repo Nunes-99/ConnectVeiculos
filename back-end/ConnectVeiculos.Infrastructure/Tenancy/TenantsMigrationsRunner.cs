@@ -183,17 +183,18 @@ namespace ConnectVeiculos.Infrastructure.Tenancy
              // existe). Permite atualizar limites ajustando a config aqui — basta
              // mudar nome ou apagar e recriar; tenants existentes mantem o
              // TenPlaId que ja tinham.
-             SeedPlanoSeNaoExistir(conn, "Free",       0,    5,   1,  1,   20, 1);
-             SeedPlanoSeNaoExistir(conn, "Basic",  49.99m,   50,   1,  3,  200, 2);
-             SeedPlanoSeNaoExistir(conn, "Pro",    99.99m,  500,   3, 10, 2000, 3);
-             SeedPlanoSeNaoExistir(conn, "Enterprise", 199.99m, null, null, null, null, 4);
+             // Planos de 26/11/2026 (pesquisa de mercado): Basic/Pro/Enterprise
+             // viram Essencial/Profissional/Premium com precos e limites novos.
+             // Roda uma vez so (depois o nome antigo nao existe mais); o PlaId
+             // continua o mesmo, entao lojas e assinaturas nao mudam de plano.
+             RenomearPlano(conn, "Basic",      "Essencial",    199m,  30,   1,  2,  300);
+             RenomearPlano(conn, "Pro",        "Profissional", 399m, 100,   2,  5, 1000);
+             RenomearPlano(conn, "Enterprise", "Premium",      699m, 200,   5, 15, null);
 
-             // Precos de 30/10/2026 (cobranca mensal no cartao). So troca se o
-             // plano ainda estiver com o preco antigo: um ajuste feito depois no
-             // banco nao e' desfeito a cada reinicio.
-             AtualizarPrecoSeAinda(conn, "Basic", 99m, 49.99m);
-             AtualizarPrecoSeAinda(conn, "Pro", 299m, 99.99m);
-             AtualizarPrecoSeAinda(conn, "Enterprise", 0m, 199.99m);
+             SeedPlanoSeNaoExistir(conn, "Free",           0,   5,   1,  1,   20, 1);
+             SeedPlanoSeNaoExistir(conn, "Essencial",    199m,  30,   1,  2,  300, 2);
+             SeedPlanoSeNaoExistir(conn, "Profissional", 399m, 100,   2,  5, 1000, 3);
+             SeedPlanoSeNaoExistir(conn, "Premium",      699m, 200,   5, 15, null, 4);
 
              // Tenants sem plano atribuido -> Free, com trial 30 dias a partir do
              // momento que essa migration roda (idempotente: so atribui se TenPlaId IS NULL).
@@ -223,14 +224,20 @@ namespace ConnectVeiculos.Infrastructure.Tenancy
              ins.ExecuteNonQuery();
          }
 
-         private static void AtualizarPrecoSeAinda(System.Data.Common.DbConnection conn, string nome, decimal antigo, decimal novo)
+         private static void RenomearPlano(System.Data.Common.DbConnection conn, string antigo, string novo,
+             decimal preco, int? maxVei, int? maxLojas, int? maxUsu, int? maxLeads)
          {
-             // PlaPreco e' gravado como texto ("99", "0") pelo seed e decimal pelo EF.
              using var upd = conn.CreateCommand();
-             upd.CommandText = "UPDATE Planos SET PlaPreco=$novo WHERE PlaNome=$nome AND CAST(PlaPreco AS REAL)=$antigo";
-             AddParam(upd, "$novo", novo.ToString(System.Globalization.CultureInfo.InvariantCulture));
-             AddParam(upd, "$nome", nome);
-             AddParam(upd, "$antigo", (double)antigo);
+             upd.CommandText = @"UPDATE Planos SET PlaNome=$novo, PlaPreco=$preco, PlaMaxVeiculos=$mv,
+                 PlaMaxLojas=$ml, PlaMaxUsuarios=$mu, PlaMaxLeadsMes=$mle
+                 WHERE PlaNome=$antigo AND NOT EXISTS (SELECT 1 FROM Planos WHERE PlaNome=$novo)";
+             AddParam(upd, "$novo", novo);
+             AddParam(upd, "$antigo", antigo);
+             AddParam(upd, "$preco", preco.ToString(System.Globalization.CultureInfo.InvariantCulture));
+             AddParam(upd, "$mv", (object?)maxVei ?? DBNull.Value);
+             AddParam(upd, "$ml", (object?)maxLojas ?? DBNull.Value);
+             AddParam(upd, "$mu", (object?)maxUsu ?? DBNull.Value);
+             AddParam(upd, "$mle", (object?)maxLeads ?? DBNull.Value);
              upd.ExecuteNonQuery();
          }
 

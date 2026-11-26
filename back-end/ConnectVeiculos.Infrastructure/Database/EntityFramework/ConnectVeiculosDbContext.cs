@@ -66,6 +66,7 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
         public DbSet<VeiculoPublicacao> VeiculoPublicacoes { get; set; }
         public DbSet<VeiculoWebmotors> VeiculosWebmotors { get; set; }
         public DbSet<VeiculoNapista> VeiculosNapista { get; set; }
+        public DbSet<VeiculoOlx> VeiculosOlx { get; set; }
         public DbSet<ConfiguracaoSistema> Configuracoes { get; set; }
         public DbSet<VeiculoDocumento> VeiculosDocumentos { get; set; }
         public DbSet<ModeloContrato> ModelosContrato { get; set; }
@@ -302,6 +303,18 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
                 entity.Property(e => e.VnpStatus).HasMaxLength(20);
                 entity.Property(e => e.VnpErro).HasMaxLength(1000);
                 entity.Ignore(e => e.TemAnuncio);
+                entity.Ignore(e => e.EstaPublicado);
+                entity.Ignore(e => e.Pausado);
+            });
+
+            modelBuilder.Entity<VeiculoOlx>(entity =>
+            {
+                entity.ToTable("VeiculoOlx");
+                entity.HasKey(e => e.VolId);
+                entity.Property(e => e.VolId).ValueGeneratedOnAdd();
+                entity.HasIndex(e => e.R_VeiId).IsUnique();
+                entity.Property(e => e.VolStatus).HasMaxLength(20);
+                entity.Property(e => e.VolErro).HasMaxLength(1000);
                 entity.Ignore(e => e.EstaPublicado);
                 entity.Ignore(e => e.Pausado);
             });

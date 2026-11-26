@@ -10,20 +10,15 @@ import {
 } from '../../core/models';
 import { Chart, registerables } from 'chart.js';
 import { forkJoin } from 'rxjs';
+import { Router } from '@angular/router';
+import { AuthService } from '../../core/services/auth.service';
+import { ToastService } from '../../core/services/toast.service';
+import {
+  EstoqueParado, EstoqueParadoConfig, EstoqueParadoItem, EstoqueParadoService
+} from '../../core/services/estoque-parado.service';
 
 // Registrar todos os componentes do Chart.js
 Chart.register(...registerables);
-
-export interface VeiculoAlertaEstoque {
-  veiId: number;
-  marca: string;
-  modelo: string;
-  ano: number;
-  preco: number;
-  loja: string;
-  diasEmEstoque: number;
-  dtEntrada: Date;
-}
 
 @Component({
   selector: 'app-dashboard',
@@ -38,6 +33,17 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   private testDriveService = inject(TestDriveService);
   private veiculoService = inject(VeiculoService);
   private vendaService = inject(VendaService);
+  private estoqueParadoService = inject(EstoqueParadoService);
+  private router = inject(Router);
+  private auth = inject(AuthService);
+  private toast = inject(ToastService);
+
+  /** Carros parados e sugestao de preco (prazos e margem configuraveis pela loja). */
+  estoqueParado: EstoqueParado | null = null;
+  configEstoque: EstoqueParadoConfig | null = null;
+  editandoConfigEstoque = false;
+  salvandoConfigEstoque = false;
+  get podeConfigurarEstoque(): boolean { return this.auth.isGerente(); }
 
   @ViewChild('chartCategorias') chartCategoriasCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('chartLojas') chartLojasCanvas!: ElementRef<HTMLCanvasElement>;
@@ -67,7 +73,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   veiculosParados30Dias: number = 0;
   tempoMedioVendaDias: number = 0;
   margemLucroMedia: number = 0;
-  alertasEstoque: VeiculoAlertaEstoque[] = [];
+  alertasEstoque: EstoqueParadoItem[] = [];
 
   // Paginação das tabelas (mobile)
   readonly pageSize = 7;
@@ -75,7 +81,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   topVeiculosPage = 1;
   recentesPage = 1;
 
-  get alertasPaginados(): VeiculoAlertaEstoque[] {
+  get alertasPaginados(): EstoqueParadoItem[] {
     const start = (this.alertasPage - 1) * this.pageSize;
     return this.alertasEstoque.slice(start, start + this.pageSize);
   }
@@ -609,6 +615,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Novas estatisticas
   private loadNovasEstatisticas(): void {
+    this.carregarEstoqueParado();
     forkJoin({
       leads: this.leadService.listar(),
       testDrives: this.testDriveService.listar(),
@@ -618,7 +625,6 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       next: ({ leads, testDrives, veiculos, vendas }) => {
         this.calcularLeadsEsteMes(leads);
         this.calcularTestDrivesPendentes(testDrives);
-        this.calcularVeiculosParados(veiculos);
         this.calcularTempoMedioVenda(veiculos, vendas);
         this.calcularMargemLucroMedia(vendas, veiculos);
       },
@@ -644,38 +650,40 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     ).length;
   }
 
-  private calcularVeiculosParados(veiculos: Veiculo[]): void {
-    const agora = new Date();
-    const limiar30Dias = new Date();
-    limiar30Dias.setDate(agora.getDate() - 30);
+  /** Carros parados vem do backend: prazos da loja, custo com despesas e sugestao de preco. */
+  carregarEstoqueParado(): void {
+    this.estoqueParadoService.consultar().subscribe({
+      next: r => {
+        this.estoqueParado = r;
+        this.configEstoque = { ...r.config };
+        this.alertasEstoque = r.veiculos;
+        this.alertasPage = 1;
+        this.veiculosParados30Dias = r.atencao + r.critico;
+      },
+      error: err => console.error('Erro ao carregar o estoque parado', err)
+    });
+  }
 
-    const disponiveis = veiculos.filter(v =>
-      v.veiSts === 'D' || v.veiSts?.toUpperCase() === 'DISPONIVEL'
-    );
+  salvarConfigEstoque(): void {
+    if (!this.configEstoque) return;
+    this.salvandoConfigEstoque = true;
+    this.estoqueParadoService.salvarConfig(this.configEstoque).subscribe({
+      next: () => {
+        this.salvandoConfigEstoque = false;
+        this.editandoConfigEstoque = false;
+        this.toast.success('Prazos do estoque parado salvos.');
+        this.carregarEstoqueParado();
+      },
+      error: err => {
+        this.salvandoConfigEstoque = false;
+        this.toast.error(err?.error?.error || 'Não foi possível salvar.');
+      }
+    });
+  }
 
-    this.alertasEstoque = disponiveis
-      .filter(v => {
-        const dtEntrada = this.dataEntrada(v);
-        return !!dtEntrada && dtEntrada <= limiar30Dias;
-      })
-      .map(v => {
-        const dtEntrada = this.dataEntrada(v)!;
-        const diffMs = agora.getTime() - dtEntrada.getTime();
-        const diasEmEstoque = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-        return {
-          veiId: v.veiId,
-          marca: v.veiMarca,
-          modelo: v.veiModelo,
-          ano: v.veiAno,
-          preco: v.veiPreco,
-          loja: v.lojaNome || '',
-          diasEmEstoque,
-          dtEntrada
-        };
-      })
-      .sort((a, b) => b.diasEmEstoque - a.diasEmEstoque);
-
-    this.veiculosParados30Dias = this.alertasEstoque.length;
+  /** Abre o cadastro do veiculo (com a sugestao ao lado do preco) para ajustar. */
+  ajustarPreco(v: EstoqueParadoItem): void {
+    this.router.navigate(['/veiculos'], { queryParams: { editar: v.veiId } });
   }
 
   // Veiculo sem data de entrada chega como 0001-01-01 (DateTime vazio do .NET):
@@ -737,9 +745,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     this.margemLucroMedia = count > 0 ? Math.round(totalMargem / count * 10) / 10 : 0;
   }
 
-  getDiasEstoqueClass(dias: number): string {
-    if (dias > 90) return 'critico';
-    if (dias > 60) return 'alerta';
-    return 'atencao';
+  getDiasEstoqueClass(faixa: string): string {
+    return faixa === 'critico' ? 'critico' : 'atencao';
   }
 }
