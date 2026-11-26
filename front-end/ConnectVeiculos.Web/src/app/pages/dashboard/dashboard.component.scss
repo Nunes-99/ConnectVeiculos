@@ -831,6 +831,18 @@
   label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
   input { width: 140px; padding: 6px 8px; border: 1px solid var(--border-color, #ddd); border-radius: 6px; }
   small { flex-basis: 100%; opacity: 0.75; }
+
+  .btn-salvar-config {
+    padding: 7px 18px;
+    border: 0;
+    border-radius: 6px;
+    background: #1a237e;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:disabled { opacity: 0.6; cursor: default; }
+  }
 }
 
 .sugestao-preco { display: block; color: #2e7d32; }

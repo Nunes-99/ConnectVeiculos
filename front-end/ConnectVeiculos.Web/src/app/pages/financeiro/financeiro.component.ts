@@ -42,7 +42,7 @@ export class FinanceiroComponent implements OnInit {
 
   readonly meses = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 
-  get tituloMes(): string { return `${this.meses[this.mes - 1]} de ${this.ano}`; }
+  get tituloMes(): string { const m = this.meses[this.mes - 1]; return `${m[0].toUpperCase()}${m.slice(1)} de ${this.ano}`; }
 
   get categorias(): string[] {
     return this.editando?.tipo === 'R' ? CATEGORIAS_RECEBER : CATEGORIAS_PAGAR;

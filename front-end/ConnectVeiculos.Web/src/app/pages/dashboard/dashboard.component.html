@@ -162,7 +162,8 @@
     </div>
 
     <!-- Estoque parado: prazos e margem da loja; sugestao de preco pela FIPE, custo e tempo -->
-    @if (estoqueParado && (alertasEstoque.length > 0 || editandoConfigEstoque)) {
+    <!-- Sempre visivel (com estoque): sem carro parado, o botao Prazos tem de continuar ao alcance. -->
+    @if (estoqueParado && estoqueParado.disponiveis > 0) {
       <div class="section-title">
         <h2>
           <span class="material-icons section-icon alerta-icon">notification_important</span>
@@ -179,13 +180,14 @@
         Atenção a partir de {{ estoqueParado.config.diasAtencao }} dias, crítico a partir de {{ estoqueParado.config.diasCritico }}.
         Média do estoque: {{ estoqueParado.mediaDias }} dias.
         @if (estoqueParado.custoParado > 0) { Dinheiro parado (custo): {{ formatarPreco(estoqueParado.custoParado) }}. }
+        @if (alertasEstoque.length === 0) { Nenhum carro parado: o estoque está girando. }
       </p>
       @if (editandoConfigEstoque && configEstoque) {
         <div class="estoque-config">
           <label>Atenção (dias) <input type="number" min="1" [(ngModel)]="configEstoque.diasAtencao" /></label>
           <label>Crítico (dias) <input type="number" min="2" [(ngModel)]="configEstoque.diasCritico" /></label>
           <label>Margem mínima sobre o custo (%) <input type="number" min="0" step="0.5" [(ngModel)]="configEstoque.margemMinima" /></label>
-          <button type="button" class="btn-primary" (click)="salvarConfigEstoque()" [disabled]="salvandoConfigEstoque">
+          <button type="button" class="btn-salvar-config" (click)="salvarConfigEstoque()" [disabled]="salvandoConfigEstoque">
             {{ salvandoConfigEstoque ? 'Salvando...' : 'Salvar' }}
           </button>
           <small>A sugestão de preço nunca fica abaixo do custo (compra + despesas) mais a margem mínima.</small>

@@ -50,15 +50,17 @@
     </div>
   }
 
-  <div class="filtros">
-    <label>Mês <input type="month" [(ngModel)]="mes" (change)="carregar()" /></label>
+  <div class="filtros-container">
+    <label class="filtro-grupo">Mês
+      <input type="month" [(ngModel)]="mes" (ngModelChange)="carregar()" aria-label="Mês" />
+    </label>
     @if (gestao) {
-      <label>Vendedor
-        <select [(ngModel)]="vendedorId" (change)="carregar()">
-          <option [ngValue]="null">Todos</option>
+      <div class="filtro-grupo">
+        <select [(ngModel)]="vendedorId" (ngModelChange)="carregar()" aria-label="Filtrar por vendedor">
+          <option [ngValue]="null">Todos os vendedores</option>
           @for (u of usuarios; track u.usuId) { <option [ngValue]="u.usuId">{{ u.usuNome }}</option> }
         </select>
-      </label>
+      </div>
     }
   </div>
 

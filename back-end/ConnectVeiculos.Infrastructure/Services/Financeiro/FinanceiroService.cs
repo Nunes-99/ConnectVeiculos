@@ -36,10 +36,11 @@ namespace ConnectVeiculos.Infrastructure.Services.Financeiro
                 .ToList();
 
             var veiculos = (await _db.Veiculos.AsNoTracking()
-                    .Select(v => new { v.VeiId, v.R_LojId, v.VeiMarca, v.VeiModelo, v.VeiAno, v.VeiPlaca, v.VeiPrecoCompra, v.VeiDtEntrada })
+                    .Select(v => new { v.VeiId, v.R_LojId, v.VeiMarca, v.VeiModelo, v.VeiAno, v.VeiPlaca, v.VeiPrecoCompra, v.VeiDtEntrada, v.VeiSts })
                     .ToListAsync())
                 .ToDictionary(v => v.VeiId);
-            bool DaLoja(int veiculoId) => lojaId == null || (veiculos.TryGetValue(veiculoId, out var v) && v.R_LojId == lojaId);
+            // Carro inativado = excluido do sistema (cadastro errado): nao entra no caixa.
+            bool DaLoja(int veiculoId) => veiculos.TryGetValue(veiculoId, out var v) && v.VeiSts != "I" && (lojaId == null || v.R_LojId == lojaId);
             string Carro(int veiculoId) => veiculos.TryGetValue(veiculoId, out var v)
                 ? $"{(v.VeiMarca ?? "").Split(" - ").Last()} {v.VeiModelo} {v.VeiAno}".Trim() + (string.IsNullOrWhiteSpace(v.VeiPlaca) ? "" : $" ({v.VeiPlaca})")
                 : $"veículo #{veiculoId}";
@@ -83,7 +84,7 @@ namespace ConnectVeiculos.Infrastructure.Services.Financeiro
 
             // Carros que entraram no mes: saida (preco de compra).
             movimentos.AddRange(veiculos.Values
-                .Where(v => v.VeiPrecoCompra > 0 && v.VeiDtEntrada >= inicio && v.VeiDtEntrada < fim && (lojaId == null || v.R_LojId == lojaId))
+                .Where(v => v.VeiSts != "I" && v.VeiPrecoCompra > 0 && v.VeiDtEntrada >= inicio && v.VeiDtEntrada < fim && (lojaId == null || v.R_LojId == lojaId))
                 .Select(v => new MovimentoCaixa
                 {
                     Data = v.VeiDtEntrada.Date,
