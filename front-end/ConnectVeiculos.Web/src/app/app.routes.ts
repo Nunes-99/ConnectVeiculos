@@ -127,6 +127,11 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/vendas/vendas.component').then(m => m.VendasComponent)
       },
       {
+        // Todos entram: o vendedor ve so as proprias comissoes (a API filtra).
+        path: 'comissoes',
+        loadComponent: () => import('./pages/comissoes/comissoes.component').then(m => m.ComissoesComponent)
+      },
+      {
         path: 'financiamentos',
         loadComponent: () => import('./pages/financiamentos/financiamentos.component').then(m => m.FinanciamentosComponent)
       },
