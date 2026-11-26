@@ -254,6 +254,8 @@ namespace ConnectVeiculos.API.Controllers
                 as ConnectVeiculos.Core.Interfaces.Tenancy.ITenantBackgroundRunner;
             runner?.Enqueue<ConnectVeiculos.Core.Interfaces.Services.INapistaService>(
                 s => s.FotosMudaramAsync(veiculoId), $"fotos do veiculo {veiculoId} no NaPista");
+            runner?.Enqueue<ConnectVeiculos.Core.Interfaces.Services.IOlxService>(
+                s => s.FotosMudaramAsync(veiculoId), $"fotos do veiculo {veiculoId} na OLX");
         }
 
         [AllowAnonymous]

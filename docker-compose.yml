@@ -58,6 +58,11 @@ services:
       - NapistaSettings__ApiUrl=${NAPISTA_API_URL:-https://api.development.napista.com.br/seller-inventory-api}
       - NapistaSettings__RedirectUri=${NAPISTA_REDIRECT_URI:-https://connectveiculos.dev.br/integracoes/napista}
       - NapistaSettings__Escopos=${NAPISTA_ESCOPOS:-openid}
+      # OLX: client_id/secret do cadastro de integrador (suporteintegrador@olxbr.com).
+      # Sem os dois, o cartao da OLX mostra "em liberacao".
+      - OlxSettings__ClientId=${OLX_CLIENT_ID:-}
+      - OlxSettings__ClientSecret=${OLX_CLIENT_SECRET:-}
+      - OlxSettings__RedirectUri=${OLX_REDIRECT_URI:-https://connectveiculos.dev.br/integracoes/olx}
       - WHATSAPP_ACCESS_TOKEN=${WHATSAPP_ACCESS_TOKEN:-}
       - WHATSAPP_PHONE_ID=${WHATSAPP_PHONE_ID:-}
       - WHATSAPP_VERIFY_TOKEN=${WHATSAPP_VERIFY_TOKEN:-}

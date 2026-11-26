@@ -22,6 +22,8 @@ export interface Veiculo {
   mercadoLivreAguardandoPagamento?: boolean;
   /** Anuncio no ar no NaPista. */
   napistaNoAr?: boolean;
+  /** Anuncio enviado a OLX e nao recusado. */
+  olxNoAr?: boolean;
   // Quando o ultimo story some (24h depois de publicado); ausente se nao ha story no ar.
   storyNoArAte?: string;
   veiCor: string;
