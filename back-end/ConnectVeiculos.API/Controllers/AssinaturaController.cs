@@ -122,7 +122,12 @@ namespace ConnectVeiculos.API.Controllers
             // tratado: o conteudo e' relido na API com o nosso token e cada
             // pagamento so conta uma vez, entao o pior que um aviso falso faz e'
             // uma releitura. Assinatura presente e errada, porem, e' recusada.
-            var assinatura = Request.Headers["x-signature"].FirstOrDefault();
+            // O formato antigo ("MercadoPago Feed v2.0": ?topic=payment&id=...) nao
+            // usa a assinatura secreta dos Webhooks: conferir recusava todos (401)
+            // e o Mercado Pago repetia o aviso por semanas. Vale o mesmo que sem
+            // assinatura: o pagamento e' relido na API.
+            var formatoAntigo = Request.Query.ContainsKey("topic") && !Request.Query.ContainsKey("data.id");
+            var assinatura = formatoAntigo ? null : Request.Headers["x-signature"].FirstOrDefault();
             if (assinatura == null)
                 _logger.LogInformation("Aviso do Mercado Pago sem x-signature ({Tipo} {Id}): relendo na API", tipo, id);
             else if (!MercadoPagoAssinaturaService.AvisoAutentico(
