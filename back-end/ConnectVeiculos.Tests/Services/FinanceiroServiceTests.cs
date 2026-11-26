@@ -80,6 +80,22 @@ namespace ConnectVeiculos.Tests.Services
         }
 
         [Fact]
+        public async Task Carro_inativado_nao_conta_compra_nem_despesa()
+        {
+            // Inativar = excluir do sistema (cadastro errado): visto no teste das telas em 26/11/2026.
+            _db.Veiculos.Add(new Veiculo(3, 1, 1, "FIAT", "TESTE", 2022, "TST9Z99", "", "Preto", 0, 50000m,
+                new DateTime(2026, 11, 4), "I", "A", 45000m));
+            _db.SaveChanges();
+            _db.VeiculosDespesas.Add(new VeiculoDespesa(0, 3, "Outros", "Teste", 100m, new DateTime(2026, 11, 6)));
+            _db.SaveChanges();
+
+            var r = await _service.MesAsync(2026, 11, null);
+
+            r.Movimentos.Should().NotContain(m => m.VeiculoId == 3);
+            r.SaidasRealizadas.Should().Be(45000m + 1200m + 300m);
+        }
+
+        [Fact]
         public async Task Comissao_paga_entra_como_saida_na_data_do_pagamento()
         {
             var venda = await _db.Vendas.FirstAsync();

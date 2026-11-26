@@ -9,14 +9,14 @@
     }
   </div>
 
-  <div class="filtros">
+  <div class="filtros-container">
     <div class="mes">
       <button class="btn-icon" (click)="mudarMes(-1)" aria-label="Mês anterior"><span class="material-icons">chevron_left</span></button>
       <strong>{{ tituloMes }}</strong>
       <button class="btn-icon" (click)="mudarMes(1)" aria-label="Próximo mês"><span class="material-icons">chevron_right</span></button>
     </div>
     @if (lojas.length > 1) {
-      <select [(ngModel)]="lojaId" (change)="carregar()">
+      <select [(ngModel)]="lojaId" (ngModelChange)="carregar()">
         <option [ngValue]="null">Todas as lojas</option>
         @for (l of lojas; track l.lojId) { <option [ngValue]="l.lojId">{{ l.lojNome }}</option> }
       </select>

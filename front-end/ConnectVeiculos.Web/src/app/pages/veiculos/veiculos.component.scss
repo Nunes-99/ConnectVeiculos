@@ -976,8 +976,8 @@ textarea {
   padding: 1px 6px;
   border: 0;
   border-radius: 999px;
-  background: #fff3e0;
-  color: #e65100;
+  background: var(--status-warning-bg);
+  color: var(--status-warning);
   font-size: 11px;
   font-weight: 600;
   font-family: inherit;
@@ -985,7 +985,7 @@ textarea {
   vertical-align: middle;
 
   .material-icons { font-size: 13px; }
-  &.critico { background: #ffebee; color: #b71c1c; }
+  &.critico { background: var(--status-error-bg); color: var(--status-error); }
 }
 
 .sugestao-preco-box {
@@ -995,11 +995,11 @@ textarea {
   margin: -4px 0 12px;
   padding: 10px 12px;
   border-radius: 8px;
-  background: #e8f5e9;
-  color: #1b5e20;
+  background: var(--status-success-bg);
+  color: var(--status-success);
 
-  &.atencao { background: #fff3e0; color: #8a3b00; }
-  &.critico { background: #ffebee; color: #8e1c1c; }
+  &.atencao { background: var(--status-warning-bg); color: var(--status-warning); }
+  &.critico { background: var(--status-error-bg); color: var(--status-error); }
 
   > div { flex: 1; display: flex; flex-direction: column; gap: 2px; }
   small { opacity: 0.85; }
