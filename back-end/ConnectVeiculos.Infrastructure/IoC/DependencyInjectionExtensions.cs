@@ -193,6 +193,7 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.AddTransient<IFinanciamentoService, FinanciamentoService>();
             services.AddTransient<IFichaFinanciamentoService, FichaFinanciamentoService>();
             services.AddTransient<IFinanceiroService, Services.Financeiro.FinanceiroService>();
+            services.AddTransient<Services.PrimeirosPassos.PrimeirosPassosService>();
             services.AddHttpClient<IFipeService, FipeService>();
             services.AddHttpClient<IWebhookService, WebhookService>();
             services.AddScoped<Core.Interfaces.Services.IContratoService, Services.Contratos.ContratoService>();
