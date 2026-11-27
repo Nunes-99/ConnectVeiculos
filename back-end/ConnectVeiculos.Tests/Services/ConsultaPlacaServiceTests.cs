@@ -145,6 +145,17 @@ namespace ConnectVeiculos.Tests.Services
         }
 
         [Fact]
+        public void Precos_iniciais_da_planilha_sao_de_servicos_e_planos_validos()
+        {
+            var planos = new[] { "Free", "Essencial", "Profissional", "Premium" };
+            PrecosConsultaIniciais.Valores.Should().NotBeEmpty();
+            PrecosConsultaIniciais.Valores.Should().OnlyContain(v =>
+                ZapCarClient.Suportados.Contains(v.Servico) && planos.Contains(v.Plano) && v.Preco > 0);
+            PrecosConsultaIniciais.Valores.Select(v => (v.Servico, v.Plano)).Should().OnlyHaveUniqueItems();
+            PrecosConsultaIniciais.Valores.Should().Contain(("consulta-completa", "Premium", 39.90m));
+        }
+
+        [Fact]
         public async Task Preco_depende_do_plano_e_o_valor_fixo_vence_o_acrescimo()
         {
             var (free, plano) = await _service.ServicosAsync(_loja);
