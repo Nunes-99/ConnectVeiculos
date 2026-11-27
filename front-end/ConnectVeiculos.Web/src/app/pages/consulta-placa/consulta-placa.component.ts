@@ -4,18 +4,22 @@ import { FormsModule } from '@angular/forms';
 import { AuthService, ToastService } from '../../core/services';
 import { PixGerado } from '../../core/services/plano.service';
 import {
-  ConsultaItem, ConsultaPlacaPainel, ConsultaPlacaService, ServicoConsulta
+  AvisoAtpve, CategoriaConsulta, ConsultaItem, ConsultaPlacaPainel, ConsultaPlacaService, PedidoConsulta, ServicoConsulta
 } from '../../core/services/consulta-placa.service';
+import { DadosConsultaComponent } from './dados-consulta.component';
+
+interface Aba { id: CategoriaConsulta; nome: string; icone: string; }
 
 /**
- * Consulta veicular por placa (ZapCar), paga com os creditos da loja:
- * gravame, leilao, sinistro, roubo e furto, restricoes e debitos antes de
- * comprar ou pegar um carro na troca. A gestao compra creditos por Pix.
+ * Consultas da ZapCar pagas com os creditos da loja: veiculo (gravame,
+ * leilao, sinistro, debitos...), documentos (CRLV, ATPV-e, codigo de
+ * seguranca, NF-e) e pessoa/empresa (credito, cadastro, CNH) com a
+ * finalidade exigida pela LGPD. O catalogo e os precos vem da API.
  */
 @Component({
   selector: 'app-consulta-placa',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, DadosConsultaComponent],
   templateUrl: './consulta-placa.component.html',
   styleUrl: './consulta-placa.component.scss'
 })
@@ -23,6 +27,12 @@ export class ConsultaPlacaComponent implements OnInit, OnDestroy {
   private api = inject(ConsultaPlacaService);
   private auth = inject(AuthService);
   private toast = inject(ToastService);
+
+  readonly abas: Aba[] = [
+    { id: 'CONSULTAS', nome: 'Veículo', icone: 'directions_car' },
+    { id: 'DOCUMENTOS', nome: 'Documentos', icone: 'description' },
+    { id: 'ANALISE_PESSOA', nome: 'Pessoa e empresa', icone: 'badge' }
+  ];
 
   readonly placasTeste = [
     { placa: 'TST0001', texto: 'nada consta' },
@@ -33,11 +43,24 @@ export class ConsultaPlacaComponent implements OnInit, OnDestroy {
     { placa: 'TST0404', texto: 'não encontrada' }
   ];
 
+  readonly finalidades = [
+    { id: 'NEGOCIACAO_VEICULO', nome: 'Negociação de veículo (compra, venda ou troca)' },
+    { id: 'ANALISE_CREDITO', nome: 'Análise de crédito (financiamento)' },
+    { id: 'VERIFICACAO_CADASTRAL', nome: 'Verificação cadastral' },
+    { id: 'OUTRA', nome: 'Outra' }
+  ];
+
+  readonly ufs = ['AC', 'AL', 'AM', 'AP', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MG', 'MS', 'MT', 'PA', 'PB', 'PE', 'PI',
+    'PR', 'RJ', 'RN', 'RO', 'RR', 'RS', 'SC', 'SE', 'SP', 'TO'];
+
   painel: ConsultaPlacaPainel | null = null;
   carregando = true;
 
-  placa = '';
-  servico = 'consulta-completa';
+  aba: CategoriaConsulta = 'CONSULTAS';
+  servicoId = 'consulta-completa';
+  form: PedidoConsulta = { servico: 'consulta-completa' };
+  aviso: AvisoAtpve | null = null;
+  aceiteAtpve = false;
   consultando = false;
   atual: ConsultaItem | null = null;
   baixando = false;
@@ -55,20 +78,64 @@ export class ConsultaPlacaComponent implements OnInit, OnDestroy {
   get gestao(): boolean { return this.auth.isGerente(); }
   get podeConsultar(): boolean { return this.auth.isVendedor(); }
 
+  get servicosDaAba(): ServicoConsulta[] {
+    return (this.painel?.servicos ?? []).filter(s => s.categoria === this.aba);
+  }
+
   get escolhido(): ServicoConsulta | undefined {
-    return this.painel?.servicos.find(s => s.id === this.servico);
+    return this.painel?.servicos.find(s => s.id === this.servicoId);
+  }
+
+  /** Campos exigidos, incluindo os do estado no CRLV. */
+  get campos(): Set<string> {
+    const s = this.escolhido;
+    const set = new Set(s?.requer ?? []);
+    const uf = s?.precosUf.find(u => u.uf === this.form.uf);
+    uf?.requer.forEach(r => set.add(r));
+    return set;
+  }
+
+  get precoAtual(): number | null {
+    const s = this.escolhido;
+    if (!s) return null;
+    if (s.precosUf.length) return s.precosUf.find(u => u.uf === this.form.uf)?.preco ?? null;
+    return s.preco;
   }
 
   get semSaldo(): boolean {
-    return !!this.painel && !!this.escolhido && this.painel.saldo < this.escolhido.preco;
+    return !!this.painel && this.precoAtual !== null && this.painel.saldo < this.precoAtual;
+  }
+
+  get documentoRotulo(): string {
+    const id = this.servicoId;
+    if (id.endsWith('-cnpj')) return 'CNPJ';
+    if (id.endsWith('-cpf') || id === 'situacao-cpf' || id === 'cnh-nacional') return 'CPF';
+    return 'CPF ou CNPJ';
+  }
+
+  get prontoParaConsultar(): boolean {
+    const s = this.escolhido;
+    if (!s || this.precoAtual === null) return false;
+    const f = this.form;
+    const c = this.campos;
+    const digitos = (v?: string) => (v || '').replace(/\D/g, '');
+    if (c.has('placa') && !/^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/.test(this.placaNormalizada)) return false;
+    if (c.has('uf') && !f.uf) return false;
+    if (c.has('renavam') && digitos(f.renavam).length < 9) return false;
+    if (c.has('cpf') && ![11, 14].includes(digitos(f.cpf).length)) return false;
+    if (c.has('chassi') && (f.chassi || '').replace(/[^A-Za-z0-9]/g, '').length !== 17) return false;
+    if (c.has('motor') && (f.motor || '').trim().length < 5) return false;
+    if (c.has('documento') && ![11, 14].includes(digitos(f.documento).length)) return false;
+    if (c.has('cnh') && digitos(f.cnh).length < 9) return false;
+    if (c.has('chave') && digitos(f.chave).length !== 44) return false;
+    if (c.has('data_nascimento') && !f.dataNascimento) return false;
+    if (s.exigeFinalidade && (!f.finalidade || !f.declaracaoFinalidade)) return false;
+    if (s.id === 'atpve' && (!this.aviso || !this.aceiteAtpve)) return false;
+    return true;
   }
 
   get placaNormalizada(): string {
-    return (this.placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-  }
-
-  get placaValida(): boolean {
-    return /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/.test(this.placaNormalizada);
+    return (this.form.placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
   }
 
   ngOnInit(): void {
@@ -87,24 +154,51 @@ export class ConsultaPlacaComponent implements OnInit, OnDestroy {
         this.painel = p;
         this.carregando = false;
         if (!this.pacote && p.pacotes.length) this.pacote = p.pacotes[Math.min(1, p.pacotes.length - 1)];
+        if (!p.servicos.some(s => s.id === this.servicoId) && p.servicos.length) this.escolher(p.servicos[0]);
       },
       error: err => {
         this.carregando = false;
-        this.toast.error(err?.error?.error || 'Não foi possível carregar a consulta por placa.');
+        this.toast.error(err?.error?.error || 'Não foi possível carregar as consultas.');
       }
     });
   }
 
+  trocarAba(aba: CategoriaConsulta): void {
+    this.aba = aba;
+    const primeiro = this.servicosDaAba.find(s => s.recomendado) ?? this.servicosDaAba[0];
+    if (primeiro) this.escolher(primeiro);
+  }
+
+  escolher(s: ServicoConsulta): void {
+    this.servicoId = s.id;
+    this.aba = s.categoria;
+    // Mantem placa/documento ao trocar de servico; limpa o que e' especifico.
+    this.form = { servico: s.id, placa: this.form.placa, documento: this.form.documento, uf: s.precosUf.length ? undefined : this.form.uf };
+    this.aceiteAtpve = false;
+    this.aviso = null;
+    if (s.id === 'atpve') {
+      this.api.avisoAtpve().subscribe({
+        next: a => this.aviso = a,
+        error: err => this.toast.error(err?.error?.error || 'Não consegui carregar o aviso do ATPV-e.')
+      });
+    }
+  }
+
   consultar(): void {
-    if (!this.placaValida || !this.escolhido || this.consultando) return;
+    if (!this.prontoParaConsultar || this.consultando) return;
+    const pedido: PedidoConsulta = { ...this.form, servico: this.servicoId };
+    if (this.campos.has('placa')) pedido.placa = this.placaNormalizada;
+    if (this.servicoId === 'atpve' && this.aviso) pedido.aceiteAtpveVersao = this.aviso.versao;
     this.consultando = true;
-    this.api.consultar(this.placaNormalizada, this.servico).subscribe({
+    this.api.consultar(pedido).subscribe({
       next: c => {
         this.consultando = false;
         this.atual = c;
-        this.placa = '';
+        this.form = { servico: this.servicoId, uf: this.form.uf };
+        this.aceiteAtpve = false;
         this.carregar();
         this.acompanhar(c);
+        setTimeout(() => document.getElementById('resultado')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
       },
       error: err => {
         this.consultando = false;
@@ -157,7 +251,7 @@ export class ConsultaPlacaComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.baixando = false;
-        this.toast.error(c.teste ? 'No ambiente de teste não há laudo em PDF.' : 'O laudo desta consulta não está disponível.');
+        this.toast.error(c.teste ? 'No ambiente de teste não há documento em PDF.' : 'O documento desta consulta não está disponível.');
       }
     });
   }
@@ -217,7 +311,14 @@ export class ConsultaPlacaComponent implements OnInit, OnDestroy {
   }
 
   usarPlacaTeste(placa: string): void {
-    this.placa = placa;
+    this.form.placa = placa;
+  }
+
+  quantasCabem(valor: number): string {
+    const s = this.painel?.servicos.find(x => x.recomendado) ?? this.painel?.servicos[0];
+    if (!s?.preco) return '';
+    const n = Math.floor(valor / s.preco);
+    return n >= 1 ? `${n} ${n === 1 ? 'consulta completa' : 'consultas completas'}` : '';
   }
 
   reais(centavos: number | null | undefined): number {
@@ -232,9 +333,14 @@ export class ConsultaPlacaComponent implements OnInit, OnDestroy {
     return ({ COMPRA: 'Compra', CONSUMO: 'Consulta', ESTORNO: 'Devolução', AJUSTE: 'Ajuste' } as Record<string, string>)[tipo] || tipo;
   }
 
+  alvo(c: ConsultaItem): string {
+    return c.placa || c.identificador || '—';
+  }
+
   resultadoCurto(c: ConsultaItem): string {
     if (c.status === 'PROCESSANDO') return 'Consultando...';
     if (c.status === 'ERRO') return c.estornada ? 'Sem resultado (devolvido)' : 'Sem resultado';
+    if (!c.veiculo) return 'Concluída';
     if (c.nadaConsta) return 'Nada consta';
     const graves = c.alertas.filter(a => a.grave).length;
     return graves ? `${graves} ${graves === 1 ? 'alerta grave' : 'alertas graves'}` : `${c.alertas.length} ${c.alertas.length === 1 ? 'aviso' : 'avisos'}`;
@@ -243,7 +349,7 @@ export class ConsultaPlacaComponent implements OnInit, OnDestroy {
   classeResultado(c: ConsultaItem): string {
     if (c.status === 'PROCESSANDO') return 'processando';
     if (c.status === 'ERRO') return 'erro';
-    if (c.nadaConsta) return 'ok';
+    if (!c.veiculo || c.nadaConsta) return 'ok';
     return c.alertas.some(a => a.grave) ? 'grave' : 'aviso';
   }
 }

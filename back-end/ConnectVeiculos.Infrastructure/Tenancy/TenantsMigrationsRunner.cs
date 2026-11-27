@@ -191,7 +191,15 @@ namespace ConnectVeiculos.Infrastructure.Tenancy
                     CrcDescricao TEXT NULL,
                     CrcCriadoEm TEXT NOT NULL
                 );
-                CREATE INDEX IF NOT EXISTS IX_CreditoConsulta_TenId ON CreditoConsulta(TenId);";
+                CREATE INDEX IF NOT EXISTS IX_CreditoConsulta_TenId ON CreditoConsulta(TenId);
+                CREATE TABLE IF NOT EXISTS PrecoConsulta (
+                    PcsId INTEGER PRIMARY KEY AUTOINCREMENT,
+                    PcsServico TEXT NOT NULL,
+                    PlaId INTEGER NULL,
+                    PcsCentavos INTEGER NOT NULL,
+                    PcsAtualizadoEm TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS IX_PrecoConsulta_PcsServico_PlaId ON PrecoConsulta(PcsServico, PlaId);";
                 crcCmd.ExecuteNonQuery();
             }
 
@@ -215,7 +223,32 @@ namespace ConnectVeiculos.Infrastructure.Tenancy
              // Tenants sem plano atribuido -> Free, com trial 30 dias a partir do
              // momento que essa migration roda (idempotente: so atribui se TenPlaId IS NULL).
              AtribuirPlanoDefaultParaTenantsExistentes(conn);
+
+             // Precos fixos das consultas (planilha de 27/11/2026): so com a
+             // tabela vazia, para nao passar por cima do que a tela de precos gravou.
+             SeedPrecosConsulta(conn);
         }
+
+         private static void SeedPrecosConsulta(System.Data.Common.DbConnection conn)
+         {
+             using (var check = conn.CreateCommand())
+             {
+                 check.CommandText = "SELECT COUNT(*) FROM PrecoConsulta";
+                 if (Convert.ToInt32(check.ExecuteScalar()) > 0) return;
+             }
+             var agora = DateTime.UtcNow.ToString("o");
+             foreach (var (servico, plano, preco) in ConnectVeiculos.Infrastructure.Services.ConsultaPlaca.PrecosConsultaIniciais.Valores)
+             {
+                 using var ins = conn.CreateCommand();
+                 ins.CommandText = @"INSERT INTO PrecoConsulta (PcsServico, PlaId, PcsCentavos, PcsAtualizadoEm)
+                     SELECT $servico, PlaId, $centavos, $dt FROM Planos WHERE PlaNome=$plano LIMIT 1";
+                 AddParam(ins, "$servico", servico);
+                 AddParam(ins, "$plano", plano);
+                 AddParam(ins, "$centavos", (long)Math.Round(preco * 100m));
+                 AddParam(ins, "$dt", agora);
+                 ins.ExecuteNonQuery();
+             }
+         }
 
          private static void SeedPlanoSeNaoExistir(System.Data.Common.DbConnection conn, string nome,
              decimal preco, int? maxVei, int? maxLojas, int? maxUsu, int? maxLeads, int ordem)

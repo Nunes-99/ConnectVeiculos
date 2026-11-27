@@ -14,6 +14,7 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
         public DbSet<WhatsAppNumeroMap> WhatsAppNumeroMaps => Set<WhatsAppNumeroMap>();
          public DbSet<Plano> Planos => Set<Plano>();
         public DbSet<CreditoConsulta> CreditosConsulta => Set<CreditoConsulta>();
+        public DbSet<PrecoConsulta> PrecosConsulta => Set<PrecoConsulta>();
 
         public MasterDbContext(DbContextOptions<MasterDbContext> options) : base(options) { }
 
@@ -72,6 +73,15 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
             c.HasIndex(x => x.CrcReferencia).IsUnique();
             c.Property(x => x.CrcDescricao).HasMaxLength(200);
             c.HasIndex(x => x.TenId);
+
+            // Preco fixo das consultas por servico/plano (ver PrecosConsultaService).
+            var pc = modelBuilder.Entity<PrecoConsulta>();
+            pc.ToTable("PrecoConsulta");
+            pc.HasKey(x => x.PcsId);
+            pc.Property(x => x.PcsId).ValueGeneratedOnAdd();
+            pc.Property(x => x.PcsServico).IsRequired().HasMaxLength(60);
+            pc.HasIndex(x => new { x.PcsServico, x.PlaId });
+            pc.Ignore(x => x.Preco);
 
             var u = modelBuilder.Entity<UserEmailMap>();
             u.ToTable("UserEmailMap");
