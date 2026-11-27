@@ -123,7 +123,7 @@ export interface ConsultaPlacaPainel {
 export interface PrecoPlano {
   planoId: number;
   plano: string;
-  margem: number;
+  acrescimo: number;
   preco: number | null;
   fixo: number | null;
 }

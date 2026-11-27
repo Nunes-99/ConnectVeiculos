@@ -66,10 +66,10 @@ services:
       # ZapCar: consulta por placa paga com creditos das lojas. zc_test_ = dados
       # ficticios (placas TST0001..); zc_live_ = consulta real (carteira ZapCar).
       - ZapCarSettings__ApiKey=${ZAPCAR_API_KEY:-}
-      # Preco = custo ZapCar + margem do plano da loja (ou valor fixo definido
+      # Preco = custo ZapCar + acrescimo (R$) do plano da loja (ou valor fixo definido
       # em /plataforma/precos-consultas). Pacotes = recargas por Pix.
-      - ZapCarSettings__MargemPadrao=${ZAPCAR_MARGEM_PADRAO:-30}
-      - ZapCarSettings__Margens=${ZAPCAR_MARGENS:-Free=50;Essencial=40;Profissional=30;Premium=20}
+      - ZapCarSettings__AcrescimoPadrao=${ZAPCAR_ACRESCIMO_PADRAO:-10}
+      - ZapCarSettings__Acrescimos=${ZAPCAR_ACRESCIMOS:-Free=20;Essencial=15;Profissional=10;Premium=5}
       - ZapCarSettings__Pacotes=${ZAPCAR_PACOTES:-30;60;150;300}
       - WHATSAPP_ACCESS_TOKEN=${WHATSAPP_ACCESS_TOKEN:-}
       - WHATSAPP_PHONE_ID=${WHATSAPP_PHONE_ID:-}

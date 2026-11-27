@@ -9,7 +9,7 @@ const CHAVE_TOKEN = 'cv_admin_token';
 /**
  * Precos das consultas por plano (so a plataforma). Entra com o
  * ADMIN_API_TOKEN do servidor, guardado so nesta aba do navegador.
- * Campo vazio = custo da ZapCar + margem do plano.
+ * Campo vazio = custo da ZapCar + acrescimo (R$) do plano.
  */
 @Component({
   selector: 'app-precos-consultas',
@@ -28,8 +28,8 @@ const CHAVE_TOKEN = 'cv_admin_token';
       } @else {
         <section class="caixa ajuda">
           <p>
-            Cada célula é o preço que a loja daquele plano paga. <strong>Vazio = custo da ZapCar + margem do plano</strong>
-            (o valor em cinza), arredondado para cima em ,90. Digite um valor e saia do campo para fixar; apague para voltar à margem.
+            Cada célula é o preço que a loja daquele plano paga. <strong>Vazio = custo da ZapCar + acréscimo do plano</strong>
+            (o valor em cinza). Digite um valor e saia do campo para fixar; apague para voltar ao acréscimo.
             A coluna <em>Todos</em> fixa o mesmo valor para os planos que não têm valor próprio.
           </p>
           @if (teste) { <p class="teste">A chave da ZapCar no servidor é a de teste: os custos são os reais, mas as consultas não cobram.</p> }
@@ -47,7 +47,7 @@ const CHAVE_TOKEN = 'cv_admin_token';
                     <th class="num">Custo</th>
                     <th class="num">Todos</th>
                     @for (p of servicos[0].planos; track p.planoId) {
-                      <th class="num">{{ p.plano }} <small>+{{ p.margem }}%</small></th>
+                      <th class="num">{{ p.plano }} <small>+{{ p.acrescimo | currency:'BRL':'symbol':'1.0-2':'pt-BR' }}</small></th>
                     }
                   </tr>
                 </thead>
@@ -57,7 +57,7 @@ const CHAVE_TOKEN = 'cv_admin_token';
                       <td>{{ s.nome }}</td>
                       <td class="num custo">{{ s.variaPorUf ? 'por estado' : (s.custo | currency:'BRL':'symbol':'1.2-2':'pt-BR') }}</td>
                       @if (s.variaPorUf) {
-                        <td class="num" [attr.colspan]="s.planos.length + 1"><small>custo do estado + margem do plano</small></td>
+                        <td class="num" [attr.colspan]="s.planos.length + 1"><small>custo do estado + acréscimo do plano</small></td>
                       } @else {
                         <td class="num">
                           <input type="number" min="0.01" step="0.01" [ngModel]="s.fixoTodos" [placeholder]="''"
@@ -161,7 +161,7 @@ export class PrecosConsultasComponent implements OnInit {
   salvar(s: PrecoServico, planoId: number | null, valor: string): void {
     const preco = valor === '' || valor === null ? null : Number(valor);
     if (preco !== null && (!isFinite(preco) || preco <= 0)) {
-      this.toast.error('Digite um valor maior que zero, ou apague para usar a margem.');
+      this.toast.error('Digite um valor maior que zero, ou apague para usar o acréscimo do plano.');
       return;
     }
     this.api.definirPreco(this.token, s.servico, planoId, preco).subscribe({
@@ -169,7 +169,7 @@ export class PrecosConsultasComponent implements OnInit {
         this.servicos = r.servicos;
         const custo = s.custo ?? 0;
         if (preco !== null && preco < custo) this.toast.error(`Atenção: ${s.nome} ficou abaixo do custo (R$ ${custo.toFixed(2)}).`);
-        else this.toast.success(preco === null ? `${s.nome}: voltou para a margem do plano.` : `${s.nome}: preço salvo.`);
+        else this.toast.success(preco === null ? `${s.nome}: voltou para o acréscimo do plano.` : `${s.nome}: preço salvo.`);
       },
       error: err => this.toast.error(err?.error?.error || 'Não consegui salvar.')
     });

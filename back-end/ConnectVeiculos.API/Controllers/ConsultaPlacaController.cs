@@ -165,7 +165,7 @@ namespace ConnectVeiculos.API.Controllers
             public string Servico { get; set; } = "";
             /// <summary>Null = valor para todos os planos.</summary>
             public int? PlanoId { get; set; }
-            /// <summary>Null = apaga o valor fixo (volta para custo + margem).</summary>
+            /// <summary>Null = apaga o valor fixo (volta para custo + acrescimo).</summary>
             public decimal? Preco { get; set; }
         }
 
@@ -177,12 +177,12 @@ namespace ConnectVeiculos.API.Controllers
             var catalogo = await _zapcar.ServicosAsync(ct);
             var servico = catalogo.FirstOrDefault(s => s.Id == input.Servico);
             if (servico == null) return UnprocessableEntity(new { error = "Serviço desconhecido." });
-            if (servico.PorUf.Count > 0) return UnprocessableEntity(new { error = "O CRLV varia por estado: o preço é sempre custo + margem do plano." });
-            if (input.Preco is <= 0) return UnprocessableEntity(new { error = "O preço precisa ser maior que zero (deixe vazio para usar a margem)." });
+            if (servico.PorUf.Count > 0) return UnprocessableEntity(new { error = "O CRLV varia por estado: o preço é sempre custo + acréscimo do plano." });
+            if (input.Preco is <= 0) return UnprocessableEntity(new { error = "O preço precisa ser maior que zero (deixe vazio para usar o acréscimo do plano)." });
             if (input.Preco > 10000) return UnprocessableEntity(new { error = "Preço alto demais." });
 
             await _precos.DefinirAsync(servico.Id, input.PlanoId, input.Preco, ct);
-            _logger.LogInformation("Preco da consulta {Servico} no plano {Plano} = {Preco}", servico.Id, input.PlanoId?.ToString() ?? "todos", input.Preco?.ToString() ?? "margem");
+            _logger.LogInformation("Preco da consulta {Servico} no plano {Plano} = {Preco}", servico.Id, input.PlanoId?.ToString() ?? "todos", input.Preco?.ToString() ?? "acrescimo");
             return Ok(new { servicos = await _precos.GradeAsync(catalogo, ct) });
         }
     }

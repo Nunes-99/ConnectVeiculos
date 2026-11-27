@@ -125,26 +125,36 @@ namespace ConnectVeiculos.Tests.Services
         }
 
         [Fact]
-        public void Margem_arredonda_para_cima_em_90_centavos()
+        public void Acrescimo_soma_o_valor_fixo_do_plano_ao_custo()
         {
-            PrecosConsultaService.ComMargem(36m, 50m).Should().Be(54.90m);
-            PrecosConsultaService.ComMargem(36m, 20m).Should().Be(43.90m);
-            PrecosConsultaService.ComMargem(5.98m, 50m).Should().Be(9.90m);
-            PrecosConsultaService.ComMargem(1.99m, 0m).Should().Be(2.90m);
-            PrecosConsultaService.ComMargem(0.25m, 0m).Should().Be(0.90m);
+            PrecosConsultaService.ComAcrescimo(36m, 20m).Should().Be(56m);
+            PrecosConsultaService.ComAcrescimo(36m, 5m).Should().Be(41m);
+            PrecosConsultaService.ComAcrescimo(5.98m, 20m).Should().Be(25.98m);
+            PrecosConsultaService.ComAcrescimo(1.99m, 0m).Should().Be(1.99m);
+        }
+
+        [Theory]
+        [InlineData("Free", 20)]
+        [InlineData("Essencial", 15)]
+        [InlineData("Profissional", 10)]
+        [InlineData("premium", 5)]
+        [InlineData("Plano novo", 10)]
+        public void Acrescimo_padrao_por_plano(string plano, decimal esperado)
+        {
+            new ZapCarSettings().AcrescimoDoPlano(plano).Should().Be(esperado);
         }
 
         [Fact]
-        public async Task Preco_depende_do_plano_e_o_valor_fixo_vence_a_margem()
+        public async Task Preco_depende_do_plano_e_o_valor_fixo_vence_o_acrescimo()
         {
             var (free, plano) = await _service.ServicosAsync(_loja);
             plano.Should().Be("Free");
-            free.Single(s => s.Id == "consulta-completa").Preco.Should().Be(54.90m); // 36 + 50%
+            free.Single(s => s.Id == "consulta-completa").Preco.Should().Be(56m); // 36 + R$ 20
 
             MudarPlano(_premium);
             var (premium, _) = await _service.ServicosAsync(_loja);
-            premium.Single(s => s.Id == "consulta-completa").Preco.Should().Be(43.90m); // 36 + 20%
-            premium.Single(s => s.Id == "crlv").PrecosUf.Single(u => u.Uf == "SP").Preco.Should().Be(36.90m);
+            premium.Single(s => s.Id == "consulta-completa").Preco.Should().Be(41m); // 36 + R$ 5
+            premium.Single(s => s.Id == "crlv").PrecosUf.Single(u => u.Uf == "SP").Preco.Should().Be(34.99m); // 29,99 + R$ 5
 
             await _precos.DefinirAsync("consulta-completa", null, 49.90m);
             (await _service.ServicosAsync(_loja)).Servicos.Single(s => s.Id == "consulta-completa").Preco.Should().Be(49.90m);
@@ -171,8 +181,8 @@ namespace ConnectVeiculos.Tests.Services
             var item = await _service.ConsultarAsync(_loja, Placa(ConsultaPlacaService.Completa, "abc-1d23"), 1);
 
             item.Placa.Should().Be("ABC1D23");
-            item.Valor.Should().Be(54.90m);
-            (await _creditos.SaldoAsync(_loja)).Should().Be(45.10m);
+            item.Valor.Should().Be(56m);
+            (await _creditos.SaldoAsync(_loja)).Should().Be(44m);
 
             _zapcar.Resultado = ZapCarClient.LerResultado("""
                 {"id":"zc-1","status":"concluido","dados":{"x":1},"pdf_url":"/v1/consultas/zc-1/pdf",

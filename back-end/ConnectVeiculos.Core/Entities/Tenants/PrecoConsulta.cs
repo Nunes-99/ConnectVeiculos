@@ -2,7 +2,7 @@ namespace ConnectVeiculos.Core.Entities.Tenants
 {
     /// <summary>
     /// Preco fixo de uma consulta (servico da ZapCar) para um plano, ou para
-    /// todos os planos quando PlaId e' nulo. Sem linha, vale custo + margem do
+    /// todos os planos quando PlaId e' nulo. Sem linha, vale custo + acrescimo do
     /// plano. Definido pela tela de precos da plataforma.
     /// </summary>
     public class PrecoConsulta
