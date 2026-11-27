@@ -42,7 +42,7 @@ namespace ConnectVeiculos.Core.Entities.Consultas
             CvcReferencia = referencia;
             CvcValor = valor;
             R_UsuId = usuarioId;
-            CvcCriadoEm = DateTime.Now;
+            CvcCriadoEm = DateTime.UtcNow;
         }
 
         public void Enviada(string externoId, decimal? custo, bool teste)
@@ -57,7 +57,7 @@ namespace ConnectVeiculos.Core.Entities.Consultas
             CvcStatus = Concluida;
             CvcResultadoJson = resultadoJson;
             CvcErro = null;
-            CvcConcluidoEm = DateTime.Now;
+            CvcConcluidoEm = DateTime.UtcNow;
         }
 
         public void Falhar(string erro, bool estornada)
@@ -65,7 +65,7 @@ namespace ConnectVeiculos.Core.Entities.Consultas
             CvcStatus = Erro;
             CvcErro = erro;
             CvcEstornada = estornada;
-            CvcConcluidoEm = DateTime.Now;
+            CvcConcluidoEm = DateTime.UtcNow;
         }
     }
 }
