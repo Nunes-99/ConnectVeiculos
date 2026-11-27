@@ -177,6 +177,7 @@ export class SidebarComponent implements AfterViewInit, OnDestroy {
         { label: 'Comissões', icon: 'payments', route: '/comissoes' },
         { label: 'Notas fiscais', icon: 'receipt_long', route: '/notas-fiscais', roles: GESTAO },
         { label: 'Financiamento', icon: 'account_balance', route: '/financiamentos' },
+        { label: 'Consulta de placa', icon: 'manage_search', route: '/consulta-placa' },
       ]
     },
     {

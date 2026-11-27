@@ -13,6 +13,7 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
         public DbSet<UserEmailMap> UserEmailMaps => Set<UserEmailMap>();
         public DbSet<WhatsAppNumeroMap> WhatsAppNumeroMaps => Set<WhatsAppNumeroMap>();
          public DbSet<Plano> Planos => Set<Plano>();
+        public DbSet<CreditoConsulta> CreditosConsulta => Set<CreditoConsulta>();
 
         public MasterDbContext(DbContextOptions<MasterDbContext> options) : base(options) { }
 
@@ -60,6 +61,17 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
              p.Property(x => x.PlaOrdem);
              p.Property(x => x.PlaAtivo);
              p.Property(x => x.PlaDtCriacao);
+
+            // Creditos de consulta por placa (ver CreditosConsultaService).
+            var c = modelBuilder.Entity<CreditoConsulta>();
+            c.ToTable("CreditoConsulta");
+            c.HasKey(x => x.CrcId);
+            c.Property(x => x.CrcId).ValueGeneratedOnAdd();
+            c.Property(x => x.CrcTipo).IsRequired().HasMaxLength(20);
+            c.Property(x => x.CrcReferencia).HasMaxLength(120);
+            c.HasIndex(x => x.CrcReferencia).IsUnique();
+            c.Property(x => x.CrcDescricao).HasMaxLength(200);
+            c.HasIndex(x => x.TenId);
 
             var u = modelBuilder.Entity<UserEmailMap>();
             u.ToTable("UserEmailMap");

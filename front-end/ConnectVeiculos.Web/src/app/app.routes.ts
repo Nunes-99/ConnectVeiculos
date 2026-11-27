@@ -147,6 +147,13 @@ export const routes: Routes = [
         data: { roles: ['Administrador', 'Gerente'] }
       },
       {
+        // Consulta por placa (ZapCar) paga com creditos; Visualizador so ve o historico.
+        path: 'consulta-placa',
+        loadComponent: () => import('./pages/consulta-placa/consulta-placa.component').then(m => m.ConsultaPlacaComponent),
+        canActivate: [roleGuard],
+        data: { roles: ['Administrador', 'Gerente', 'Vendedor', 'Visualizador'] }
+      },
+      {
         // Caixa da loja: so gestao (Visualizador so consulta; a API bloqueia escrita).
         path: 'financeiro',
         loadComponent: () => import('./pages/financeiro/financeiro.component').then(m => m.FinanceiroComponent),

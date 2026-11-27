@@ -22,6 +22,12 @@ namespace ConnectVeiculos.Core.Interfaces.Services
         /// </summary>
         Task<PixGerado> GerarPixAsync(int tenantId, int planoId, string emailPagador, CancellationToken ct = default);
 
+        /// <summary>
+        /// Pix para comprar creditos de consulta por placa (valor ja validado).
+        /// Os creditos entram quando o aviso do pagamento aprovado chegar.
+        /// </summary>
+        Task<PixGerado> GerarPixCreditosAsync(int tenantId, decimal valor, string emailPagador, CancellationToken ct = default);
+
         /// <summary>Volta ao Free as lojas cujo periodo pago por Pix acabou.</summary>
         Task<int> EncerrarPeriodosPixVencidosAsync(CancellationToken ct = default);
 

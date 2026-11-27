@@ -386,6 +386,13 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.AddHttpClient<Core.Interfaces.Services.INfeService, Services.NotasFiscais.NfeService>()
                 .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(15));
 
+            // Consulta veicular por placa (ZapCar, conta da plataforma) e creditos das lojas
+            services.Configure<Services.ConsultaPlaca.ZapCarSettings>(configuration.GetSection("ZapCarSettings"));
+            services.AddHttpClient<Services.ConsultaPlaca.IZapCarClient, Services.ConsultaPlaca.ZapCarClient>()
+                .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(30));
+            services.AddScoped<Core.Interfaces.Services.ICreditosConsultaService, Services.ConsultaPlaca.CreditosConsultaService>();
+            services.AddScoped<Services.ConsultaPlaca.ConsultaPlacaService>();
+
             // Assinatura mensal dos planos (Mercado Pago, conta da plataforma)
             services.Configure<Services.Pagamentos.MercadoPagoSettings>(configuration.GetSection("MercadoPagoSettings"));
             services.AddHttpClient<Core.Interfaces.Services.IAssinaturaService, Services.Pagamentos.MercadoPagoAssinaturaService>()
@@ -734,6 +741,29 @@ namespace ConnectVeiculos.Infrastructure.IoC
                       VnpPublicadoEm TEXT,
                       VnpAtualizadoEm TEXT,
                       VnpRemovidoEm TEXT");
+
+                // Consulta veicular por placa (ZapCar)
+                CreateTableIfNotExists(connection, "ConsultaVeicular",
+                    @"CvcId INTEGER PRIMARY KEY AUTOINCREMENT,
+                      CvcPlaca TEXT NOT NULL,
+                      CvcServico TEXT NOT NULL,
+                      CvcStatus TEXT NOT NULL,
+                      CvcExternoId TEXT,
+                      CvcReferencia TEXT NOT NULL,
+                      CvcValor TEXT NOT NULL,
+                      CvcCusto TEXT,
+                      CvcResultadoJson TEXT,
+                      CvcErro TEXT,
+                      CvcTeste INTEGER NOT NULL DEFAULT 0,
+                      CvcEstornada INTEGER NOT NULL DEFAULT 0,
+                      R_UsuId INTEGER NOT NULL,
+                      CvcCriadoEm TEXT NOT NULL,
+                      CvcConcluidoEm TEXT");
+                using (var idxCvc = connection.CreateCommand())
+                {
+                    idxCvc.CommandText = "CREATE INDEX IF NOT EXISTS IX_ConsultaVeicular_CvcCriadoEm ON ConsultaVeicular(CvcCriadoEm)";
+                    idxCvc.ExecuteNonQuery();
+                }
 
                 // OLX: anuncio de cada veiculo (codigos escolhidos e resultado do ultimo envio)
                 CreateTableIfNotExists(connection, "VeiculoOlx",

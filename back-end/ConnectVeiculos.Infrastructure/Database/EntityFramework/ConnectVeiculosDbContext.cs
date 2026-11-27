@@ -67,6 +67,7 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
         public DbSet<VeiculoWebmotors> VeiculosWebmotors { get; set; }
         public DbSet<VeiculoNapista> VeiculosNapista { get; set; }
         public DbSet<VeiculoOlx> VeiculosOlx { get; set; }
+        public DbSet<Core.Entities.Consultas.ConsultaVeicular> ConsultasVeiculares { get; set; }
         public DbSet<ConfiguracaoSistema> Configuracoes { get; set; }
         public DbSet<VeiculoDocumento> VeiculosDocumentos { get; set; }
         public DbSet<ModeloContrato> ModelosContrato { get; set; }
@@ -305,6 +306,23 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
                 entity.Ignore(e => e.TemAnuncio);
                 entity.Ignore(e => e.EstaPublicado);
                 entity.Ignore(e => e.Pausado);
+            });
+
+            // Consulta veicular por placa (ZapCar)
+            modelBuilder.Entity<Core.Entities.Consultas.ConsultaVeicular>(entity =>
+            {
+                entity.ToTable("ConsultaVeicular");
+                entity.HasKey(e => e.CvcId);
+                entity.Property(e => e.CvcId).ValueGeneratedOnAdd();
+                entity.Property(e => e.CvcPlaca).HasMaxLength(10).IsRequired();
+                entity.Property(e => e.CvcServico).HasMaxLength(40).IsRequired();
+                entity.Property(e => e.CvcStatus).HasMaxLength(20).IsRequired();
+                entity.Property(e => e.CvcExternoId).HasMaxLength(64);
+                entity.Property(e => e.CvcReferencia).HasMaxLength(64).IsRequired();
+                entity.Property(e => e.CvcValor).HasPrecision(10, 2);
+                entity.Property(e => e.CvcCusto).HasPrecision(10, 2);
+                entity.Property(e => e.CvcErro).HasMaxLength(500);
+                entity.HasIndex(e => e.CvcCriadoEm);
             });
 
             modelBuilder.Entity<VeiculoOlx>(entity =>
