@@ -236,8 +236,9 @@ namespace ConnectVeiculos.Infrastructure.Services.ConsultaPlaca
                     Estornada = c.CvcEstornada,
                     Teste = c.CvcTeste,
                     Usuario = nomes.TryGetValue(c.R_UsuId, out var u) ? u : null,
-                    CriadoEm = c.CvcCriadoEm,
-                    ConcluidoEm = c.CvcConcluidoEm,
+                    // Gravado em UTC: o "Z" no JSON faz o navegador mostrar no horario local.
+                    CriadoEm = DateTime.SpecifyKind(c.CvcCriadoEm, DateTimeKind.Utc),
+                    ConcluidoEm = c.CvcConcluidoEm.HasValue ? DateTime.SpecifyKind(c.CvcConcluidoEm.Value, DateTimeKind.Utc) : null,
                     Veiculo = veiculo,
                     Alertas = ResumoConsulta.Avaliar(c.CvcResultadoJson)
                 };
