@@ -37,6 +37,11 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/catalogo/catalogo.component').then(m => m.CatalogoComponent)
   },
   {
+    // Precos das consultas por plano: so a plataforma (token de administrador).
+    path: 'plataforma/precos-consultas',
+    loadComponent: () => import('./pages/consulta-placa/precos-consultas.component').then(m => m.PrecosConsultasComponent)
+  },
+  {
     path: 'login',
     loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent)
   },

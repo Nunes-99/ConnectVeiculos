@@ -392,6 +392,7 @@ namespace ConnectVeiculos.Infrastructure.IoC
             services.AddHttpClient<Services.ConsultaPlaca.IZapCarClient, Services.ConsultaPlaca.ZapCarClient>()
                 .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(30));
             services.AddScoped<Core.Interfaces.Services.ICreditosConsultaService, Services.ConsultaPlaca.CreditosConsultaService>();
+            services.AddScoped<Services.ConsultaPlaca.PrecosConsultaService>();
             services.AddScoped<Services.ConsultaPlaca.ConsultaPlacaService>();
 
             // Assinatura mensal dos planos (Mercado Pago, conta da plataforma)
@@ -760,6 +761,10 @@ namespace ConnectVeiculos.Infrastructure.IoC
                       R_UsuId INTEGER NOT NULL,
                       CvcCriadoEm TEXT NOT NULL,
                       CvcConcluidoEm TEXT");
+                // Consultas alem da placa (CPF/CNPJ, chassi, NF-e...) e laudo em PDF
+                AddColumnIfNotExists(connection, "ConsultaVeicular", "CvcIdentificador", "TEXT");
+                AddColumnIfNotExists(connection, "ConsultaVeicular", "CvcFinalidade", "TEXT");
+                AddColumnIfNotExists(connection, "ConsultaVeicular", "CvcTemDocumento", "INTEGER NOT NULL DEFAULT 0");
                 using (var idxCvc = connection.CreateCommand())
                 {
                     idxCvc.CommandText = "CREATE INDEX IF NOT EXISTS IX_ConsultaVeicular_CvcCriadoEm ON ConsultaVeicular(CvcCriadoEm)";

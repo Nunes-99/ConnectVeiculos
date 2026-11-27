@@ -322,6 +322,8 @@ namespace ConnectVeiculos.Infrastructure.Database.EntityFramework
                 entity.Property(e => e.CvcValor).HasPrecision(10, 2);
                 entity.Property(e => e.CvcCusto).HasPrecision(10, 2);
                 entity.Property(e => e.CvcErro).HasMaxLength(500);
+                entity.Property(e => e.CvcIdentificador).HasMaxLength(60);
+                entity.Property(e => e.CvcFinalidade).HasMaxLength(40);
                 entity.HasIndex(e => e.CvcCriadoEm);
             });
 

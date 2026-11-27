@@ -1,6 +1,6 @@
 <div class="page-container">
   <div class="page-header">
-    <h1>Consulta de placa</h1>
+    <h1>Consultas</h1>
     @if (gestao && painel?.disponivel) {
       <button class="btn-secondary" (click)="mostrarCompra = !mostrarCompra">
         <span class="material-icons">add_card</span> {{ mostrarCompra ? 'Fechar' : 'Comprar créditos' }}
@@ -14,14 +14,14 @@
     @if (!painel.disponivel) {
       <div class="aviso-box">
         <span class="material-icons">info</span>
-        <div>A consulta por placa ainda não está disponível. Em breve você poderá consultar gravame, leilão, sinistro, roubo e débitos antes de comprar um carro.</div>
+        <div>As consultas ainda não estão disponíveis. Em breve você poderá consultar gravame, leilão, sinistro, roubo, débitos, documentos e crédito direto pelo sistema.</div>
       </div>
     } @else {
       @if (painel.teste) {
         <div class="aviso-box teste">
           <span class="material-icons">science</span>
           <div>
-            <strong>Ambiente de teste:</strong> os dados são fictícios e nada é cobrado da base. Use as placas:
+            <strong>Ambiente de teste:</strong> os dados são fictícios e nada é cobrado da base. Nas consultas por placa, use:
             <span class="placas-teste">
               @for (t of placasTeste; track t.placa) {
                 <button type="button" (click)="usarPlacaTeste(t.placa)">{{ t.placa }} <small>{{ t.texto }}</small></button>
@@ -39,10 +39,11 @@
             <button type="button" class="link" (click)="mostrarExtrato = !mostrarExtrato">{{ mostrarExtrato ? 'Esconder extrato' : 'Ver extrato' }}</button>
           }
         </div>
-        @for (s of painel.servicos; track s.id) {
+        @if (painel.plano) {
           <div class="card">
-            <span>{{ s.nome }}</span>
-            <strong>{{ s.preco | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong>
+            <span>Preços do plano</span>
+            <strong>{{ painel.plano }}</strong>
+            <small>Planos maiores pagam menos por consulta.</small>
           </div>
         }
       </div>
@@ -76,9 +77,7 @@
               @for (v of painel.pacotes; track v) {
                 <button type="button" class="pacote" [class.ativo]="pacote === v" (click)="pacote = v">
                   <strong>{{ v | currency:'BRL':'symbol':'1.0-0':'pt-BR' }}</strong>
-                  @if (painel.servicos[0]) {
-                    <small>{{ v / painel.servicos[0].preco | number:'1.0-0' }} {{ v / painel.servicos[0].preco >= 2 ? 'consultas completas' : 'consulta completa' }}</small>
-                  }
+                  <small>{{ quantasCabem(v) }}</small>
                 </button>
               }
             </div>
@@ -110,44 +109,155 @@
       @if (podeConsultar) {
         <section class="painel-box">
           <h2>Nova consulta</h2>
-          <div class="consulta-form">
-            <div class="form-group placa">
-              <label for="placa">Placa</label>
-              <input id="placa" type="text" maxlength="8" placeholder="ABC1D23" autocomplete="off"
-                     [ngModel]="placa" (ngModelChange)="placa = ($event || '').toUpperCase()" (keyup.enter)="consultar()" />
-            </div>
-            <div class="servicos">
-              @for (s of painel.servicos; track s.id) {
-                <label class="servico" [class.ativo]="servico === s.id">
-                  <input type="radio" name="servico" [value]="s.id" [(ngModel)]="servico" />
-                  <span class="servico-topo">
-                    <strong>{{ s.nome }}</strong>
-                    @if (s.recomendado) { <em>recomendada</em> }
-                    <b>{{ s.preco | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</b>
-                  </span>
-                  <small>{{ s.descricao }}</small>
-                </label>
-              }
-            </div>
-          </div>
-          <div class="consulta-acoes">
-            <button class="btn-primary" [disabled]="!placaValida || consultando || semSaldo" (click)="consultar()">
-              <span class="material-icons">search</span>
-              {{ consultando ? 'Enviando...' : 'Consultar' + (escolhido ? ' (' + (escolhido.preco | currency:'BRL':'symbol':'1.2-2':'pt-BR') + ')' : '') }}
-            </button>
-            @if (semSaldo) {
-              <small class="sem-saldo">Créditos insuficientes.{{ gestao ? ' Use "Comprar créditos" no topo.' : ' Peça ao gerente para comprar créditos.' }}</small>
-            } @else if (placa && !placaValida) {
-              <small class="sem-saldo">Placa no formato ABC1234 ou ABC1D23.</small>
+
+          <div class="abas" role="tablist">
+            @for (a of abas; track a.id) {
+              <button type="button" role="tab" [class.ativa]="aba === a.id" [attr.aria-selected]="aba === a.id" (click)="trocarAba(a.id)">
+                <span class="material-icons">{{ a.icone }}</span> {{ a.nome }}
+              </button>
             }
           </div>
+
+          <div class="servicos">
+            @for (s of servicosDaAba; track s.id) {
+              <button type="button" class="servico" [class.ativo]="servicoId === s.id" (click)="escolher(s)">
+                <span class="servico-topo">
+                  <strong>{{ s.nome }}</strong>
+                  @if (s.recomendado) { <em>recomendada</em> }
+                </span>
+                <b>{{ s.preco !== null ? (s.preco | currency:'BRL':'symbol':'1.2-2':'pt-BR') : 'varia por estado' }}</b>
+              </button>
+            }
+          </div>
+
+          @if (escolhido; as s) {
+            <div class="detalhe">
+              <p class="descricao">{{ s.descricao }}</p>
+              @if (s.nota) { <p class="nota"><span class="material-icons">info</span> {{ s.nota }}</p> }
+
+              <div class="campos">
+                @if (campos.has('placa')) {
+                  <div class="form-group placa">
+                    <label for="c-placa">Placa</label>
+                    <input id="c-placa" type="text" maxlength="8" placeholder="ABC1D23" autocomplete="off"
+                           [ngModel]="form.placa" (ngModelChange)="form.placa = ($event || '').toUpperCase()" (keyup.enter)="consultar()" />
+                  </div>
+                }
+                @if (campos.has('uf')) {
+                  <div class="form-group">
+                    <label for="c-uf">Estado</label>
+                    <select id="c-uf" [(ngModel)]="form.uf">
+                      <option [ngValue]="undefined">Escolha</option>
+                      @if (s.precosUf.length) {
+                        @for (u of s.precosUf; track u.uf) {
+                          <option [ngValue]="u.uf">{{ u.uf }} — {{ u.preco | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</option>
+                        }
+                      } @else {
+                        @for (u of ufs; track u) { <option [ngValue]="u">{{ u }}</option> }
+                      }
+                    </select>
+                  </div>
+                }
+                @if (campos.has('renavam')) {
+                  <div class="form-group">
+                    <label for="c-renavam">Renavam</label>
+                    <input id="c-renavam" type="text" inputmode="numeric" maxlength="11" [(ngModel)]="form.renavam" />
+                  </div>
+                }
+                @if (campos.has('cpf')) {
+                  <div class="form-group">
+                    <label for="c-cpf">CPF/CNPJ do proprietário</label>
+                    <input id="c-cpf" type="text" inputmode="numeric" maxlength="18" [(ngModel)]="form.cpf" />
+                  </div>
+                }
+                @if (campos.has('chassi')) {
+                  <div class="form-group">
+                    <label for="c-chassi">Chassi</label>
+                    <input id="c-chassi" type="text" maxlength="17" [ngModel]="form.chassi" (ngModelChange)="form.chassi = ($event || '').toUpperCase()" />
+                  </div>
+                }
+                @if (campos.has('motor')) {
+                  <div class="form-group">
+                    <label for="c-motor">Número do motor</label>
+                    <input id="c-motor" type="text" maxlength="30" [ngModel]="form.motor" (ngModelChange)="form.motor = ($event || '').toUpperCase()" />
+                  </div>
+                }
+                @if (campos.has('documento')) {
+                  <div class="form-group">
+                    <label for="c-doc">{{ documentoRotulo }}</label>
+                    <input id="c-doc" type="text" inputmode="numeric" maxlength="18" [(ngModel)]="form.documento" />
+                  </div>
+                }
+                @if (campos.has('cnh')) {
+                  <div class="form-group">
+                    <label for="c-cnh">Registro da CNH</label>
+                    <input id="c-cnh" type="text" inputmode="numeric" maxlength="11" [(ngModel)]="form.cnh" />
+                  </div>
+                }
+                @if (campos.has('data_nascimento')) {
+                  <div class="form-group">
+                    <label for="c-nasc">Data de nascimento</label>
+                    <input id="c-nasc" type="date" [(ngModel)]="form.dataNascimento" />
+                  </div>
+                }
+                @if (campos.has('chave')) {
+                  <div class="form-group largo">
+                    <label for="c-chave">Chave de acesso da NF-e (44 números)</label>
+                    <input id="c-chave" type="text" inputmode="numeric" maxlength="54" [(ngModel)]="form.chave" />
+                  </div>
+                }
+              </div>
+
+              @if (s.exigeFinalidade) {
+                <div class="lgpd">
+                  <div class="form-group">
+                    <label for="c-fin">Finalidade da consulta (LGPD)</label>
+                    <select id="c-fin" [(ngModel)]="form.finalidade">
+                      <option [ngValue]="undefined">Escolha</option>
+                      @for (f of finalidades; track f.id) { <option [ngValue]="f.id">{{ f.nome }}</option> }
+                    </select>
+                  </div>
+                  <label class="check">
+                    <input type="checkbox" [(ngModel)]="form.declaracaoFinalidade" />
+                    Declaro que os dados pessoais serão usados só para a finalidade informada. A consulta fica registrada com o usuário, a data e a finalidade.
+                  </label>
+                </div>
+              }
+
+              @if (s.id === 'atpve') {
+                <div class="lgpd atpve">
+                  @if (aviso) {
+                    <p class="aviso-texto">{{ aviso.texto }}</p>
+                    <label class="check">
+                      <input type="checkbox" [(ngModel)]="aceiteAtpve" />
+                      {{ aviso.declaracao }}
+                    </label>
+                  } @else {
+                    <p class="aviso-texto">Carregando o aviso...</p>
+                  }
+                </div>
+              }
+
+              <div class="consulta-acoes">
+                <button class="btn-primary" [disabled]="!prontoParaConsultar || consultando || semSaldo" (click)="consultar()">
+                  <span class="material-icons">search</span>
+                  {{ consultando ? 'Enviando...' : 'Consultar' + (precoAtual !== null ? ' (' + (precoAtual | currency:'BRL':'symbol':'1.2-2':'pt-BR') + ')' : '') }}
+                </button>
+                @if (semSaldo) {
+                  <small class="sem-saldo">Créditos insuficientes.{{ gestao ? ' Use "Comprar créditos" no topo.' : ' Peça ao gerente para comprar créditos.' }}</small>
+                } @else if (s.prazo) {
+                  <small class="prazo">{{ s.prazo }}</small>
+                }
+              </div>
+            </div>
+          }
         </section>
       }
 
       @if (atual) {
         <section class="painel-box resultado" id="resultado">
           <div class="resultado-topo">
-            <h2>{{ atual.placa }} <small>{{ atual.servicoNome }} · {{ atual.criadoEm | date:'dd/MM/yy HH:mm':'':'pt-BR' }}</small></h2>
+            <h2>{{ alvo(atual) }} <small>{{ atual.servicoNome }} · {{ atual.criadoEm | date:'dd/MM/yy HH:mm':'':'pt-BR' }}</small></h2>
             <button type="button" class="btn-icon" title="Fechar" (click)="atual = null"><span class="material-icons">close</span></button>
           </div>
 
@@ -163,59 +273,75 @@
                 @if (atual.estornada) { <small>O valor voltou para os créditos da loja.</small> }</div>
             </div>
           } @else {
-            @if (atual.nadaConsta) {
-              <div class="veredito ok">
-                <span class="material-icons">verified</span>
-                <div><strong>Nada consta</strong><small>Nenhuma restrição, leilão, sinistro ou débito encontrado nas bases consultadas.</small></div>
-              </div>
-            } @else {
-              <div class="veredito" [class.grave]="classeResultado(atual) === 'grave'" [class.aviso]="classeResultado(atual) === 'aviso'">
-                <span class="material-icons">{{ classeResultado(atual) === 'grave' ? 'report' : 'warning_amber' }}</span>
-                <div>
-                  <strong>{{ classeResultado(atual) === 'grave' ? 'Atenção antes de comprar' : 'Pontos de atenção' }}</strong>
-                  <ul>
-                    @for (a of atual.alertas; track $index) { <li [class.grave]="a.grave">{{ a.texto }}</li> }
-                  </ul>
+            @if (atual.veiculo) {
+              @if (atual.nadaConsta) {
+                <div class="veredito ok">
+                  <span class="material-icons">verified</span>
+                  <div><strong>Nada consta</strong><small>Nenhuma restrição, leilão, sinistro ou débito encontrado nas bases consultadas.</small></div>
                 </div>
+              } @else {
+                <div class="veredito" [class.grave]="classeResultado(atual) === 'grave'" [class.aviso]="classeResultado(atual) === 'aviso'">
+                  <span class="material-icons">{{ classeResultado(atual) === 'grave' ? 'report' : 'warning_amber' }}</span>
+                  <div>
+                    <strong>{{ classeResultado(atual) === 'grave' ? 'Atenção antes de comprar' : 'Pontos de atenção' }}</strong>
+                    <ul>
+                      @for (a of atual.alertas; track $index) { <li [class.grave]="a.grave">{{ a.texto }}</li> }
+                    </ul>
+                  </div>
+                </div>
+              }
+
+              @if (atual.veiculo; as v) {
+                <dl class="dados">
+                  <div><dt>Veículo</dt><dd>{{ v.marca }} {{ v.modelo }}</dd></div>
+                  <div><dt>Ano</dt><dd>{{ v.ano_fabricacao }}/{{ v.ano_modelo }}</dd></div>
+                  <div><dt>Cor</dt><dd>{{ v.cor || '—' }}</dd></div>
+                  <div><dt>Combustível</dt><dd>{{ v.combustivel || '—' }}</dd></div>
+                  <div><dt>Chassi</dt><dd>{{ v.chassi || '—' }}</dd></div>
+                  <div><dt>Renavam</dt><dd>{{ v.renavam || '—' }}</dd></div>
+                  <div><dt>Cidade</dt><dd>{{ v.municipio ? v.municipio + '/' + v.uf : '—' }}</dd></div>
+                  <div><dt>Situação</dt><dd>{{ v.situacao || '—' }}</dd></div>
+                  <div><dt>Último licenciamento</dt><dd>{{ v.ultimo_licenciamento || '—' }}</dd></div>
+                  <div><dt>Leilão</dt><dd>{{ v.leilao === null || v.leilao === undefined ? 'não verificado' : (v.leilao.consta ? 'consta' : 'nada consta') }}</dd></div>
+                  <div><dt>Sinistro</dt><dd>{{ v.sinistro === null || v.sinistro === undefined ? 'não verificado' : (v.sinistro ? 'consta' : 'nada consta') }}</dd></div>
+                  @if (v.proprietario?.nome) {
+                    <div><dt>Proprietário</dt><dd>{{ v.proprietario?.nome }}</dd></div>
+                  }
+                </dl>
+
+                @if (v.debitos?.length) {
+                  <h3>Débitos</h3>
+                  <ul class="debitos">
+                    @for (d of v.debitos; track $index) {
+                      <li>
+                        <span>{{ nomeDebito(d.tipo) }}{{ d.descricao ? ' — ' + d.descricao : '' }}</span>
+                        <b>{{ d.valor_informado === false ? 'valor não informado' : (reais(d.valor_centavos) | currency:'BRL':'symbol':'1.2-2':'pt-BR') }}</b>
+                      </li>
+                    }
+                  </ul>
+                }
+              }
+            } @else {
+              <div class="veredito ok">
+                <span class="material-icons">task_alt</span>
+                <div><strong>Consulta concluída</strong><small>{{ atual.dados ? 'Veja abaixo o que a base devolveu.' : 'O resultado está no documento em PDF.' }}</small></div>
               </div>
             }
 
-            @if (atual.veiculo; as v) {
-              <dl class="dados">
-                <div><dt>Veículo</dt><dd>{{ v.marca }} {{ v.modelo }}</dd></div>
-                <div><dt>Ano</dt><dd>{{ v.ano_fabricacao }}/{{ v.ano_modelo }}</dd></div>
-                <div><dt>Cor</dt><dd>{{ v.cor || '—' }}</dd></div>
-                <div><dt>Combustível</dt><dd>{{ v.combustivel || '—' }}</dd></div>
-                <div><dt>Chassi</dt><dd>{{ v.chassi || '—' }}</dd></div>
-                <div><dt>Renavam</dt><dd>{{ v.renavam || '—' }}</dd></div>
-                <div><dt>Cidade</dt><dd>{{ v.municipio ? v.municipio + '/' + v.uf : '—' }}</dd></div>
-                <div><dt>Situação</dt><dd>{{ v.situacao || '—' }}</dd></div>
-                <div><dt>Último licenciamento</dt><dd>{{ v.ultimo_licenciamento || '—' }}</dd></div>
-                <div><dt>Leilão</dt><dd>{{ v.leilao === null || v.leilao === undefined ? 'não verificado' : (v.leilao.consta ? 'consta' : 'nada consta') }}</dd></div>
-                <div><dt>Sinistro</dt><dd>{{ v.sinistro === null || v.sinistro === undefined ? 'não verificado' : (v.sinistro ? 'consta' : 'nada consta') }}</dd></div>
-                @if (v.proprietario?.nome) {
-                  <div><dt>Proprietário</dt><dd>{{ v.proprietario?.nome }}</dd></div>
-                }
-              </dl>
-
-              @if (v.debitos?.length) {
-                <h3>Débitos</h3>
-                <ul class="debitos">
-                  @for (d of v.debitos; track $index) {
-                    <li>
-                      <span>{{ nomeDebito(d.tipo) }}{{ d.descricao ? ' — ' + d.descricao : '' }}</span>
-                      <b>{{ d.valor_informado === false ? 'valor não informado' : (reais(d.valor_centavos) | currency:'BRL':'symbol':'1.2-2':'pt-BR') }}</b>
-                    </li>
-                  }
-                </ul>
-              }
+            @if (atual.dados) {
+              <details class="dados-completos" [open]="!atual.veiculo">
+                <summary>{{ atual.veiculo ? 'Todos os dados devolvidos pela base' : 'Dados devolvidos pela base' }}</summary>
+                <app-dados-consulta [dados]="atual.dados" />
+              </details>
             }
 
             <div class="resultado-acoes">
-              <button class="btn-secondary" [disabled]="baixando" (click)="baixarDocumento(atual)">
-                <span class="material-icons">picture_as_pdf</span> {{ baixando ? 'Abrindo...' : 'Laudo em PDF' }}
-              </button>
-              <small>Consulta feita por {{ atual.usuario || '—' }}. Guarde o laudo junto com a documentação do carro.</small>
+              @if (atual.temDocumento) {
+                <button class="btn-secondary" [disabled]="baixando" (click)="baixarDocumento(atual)">
+                  <span class="material-icons">picture_as_pdf</span> {{ baixando ? 'Abrindo...' : 'Documento em PDF' }}
+                </button>
+              }
+              <small>Consulta feita por {{ atual.usuario || '—' }}. Guarde o resultado junto com a documentação.</small>
             </div>
           }
         </section>
@@ -225,13 +351,13 @@
       <div class="table-container">
         <table>
           <thead>
-            <tr><th>Data</th><th>Placa</th><th>Tipo</th><th>Resultado</th><th class="num">Valor</th><th>Por</th><th></th></tr>
+            <tr><th>Data</th><th>Consultado</th><th>Tipo</th><th>Resultado</th><th class="num">Valor</th><th>Por</th><th></th></tr>
           </thead>
           <tbody>
             @for (c of painel.consultas; track c.id) {
               <tr (click)="abrir(c)" class="clicavel" [class.selecionada]="atual?.id === c.id">
                 <td data-label="Data">{{ c.criadoEm | date:'dd/MM/yy HH:mm':'':'pt-BR' }}</td>
-                <td data-label="Placa"><strong>{{ c.placa }}</strong>@if (c.teste) { <small class="tag-teste">teste</small> }</td>
+                <td data-label="Consultado" class="alvo"><strong>{{ alvo(c) }}</strong>@if (c.teste) { <small class="tag-teste">teste</small> }</td>
                 <td data-label="Tipo">{{ c.servicoNome }}</td>
                 <td data-label="Resultado"><span class="resultado-tag" [ngClass]="classeResultado(c)">{{ resultadoCurto(c) }}</span></td>
                 <td data-label="Valor" class="num">{{ c.valor | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>

@@ -1,5 +1,11 @@
 @import '../../../styles/shared';
 
+// A tela nunca pode ficar mais larga que o espaco ao lado do menu: tabelas
+// largas rolam dentro do proprio cartao.
+:host { display: block; min-width: 0; }
+// width 0 + min-width 100%: a tabela nao entra na largura minima do layout.
+.table-container { overflow-x: auto; width: 0; min-width: 100%; }
+
 // Mesmo padrao das outras telas: cartoes de resumo, caixas brancas com
 // sombra, tabela que vira cartao no celular e cores do tema.
 
@@ -60,6 +66,7 @@ h3 { font-size: 0.95rem; color: var(--text-primary); margin: 16px 0 8px; }
 
     span { font-size: 13px; color: var(--text-secondary); }
     strong { font-size: 1.4rem; color: var(--text-primary); white-space: nowrap; }
+    small { font-size: 12px; color: var(--text-tertiary); }
     &:first-child strong { color: var(--status-success); }
     &.baixo strong { color: var(--status-error); }
   }
@@ -144,14 +151,59 @@ td.saida { color: var(--text-secondary); }
   small { display: inline-flex; align-items: center; gap: 4px; color: #4b5563; .material-icons { font-size: 16px; } }
 }
 
-.consulta-form {
-  display: grid;
-  grid-template-columns: 200px 1fr;
-  gap: 16px;
-  align-items: start;
+.abas {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid var(--border-light);
+  margin-bottom: 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
 
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 14px;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    background: none;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    .material-icons { font-size: 18px; }
+    &.ativa { color: var(--brand-primary); border-bottom-color: var(--brand-primary); }
+  }
+}
+
+.detalhe {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-light);
+
+  .descricao { margin: 0 0 6px; color: var(--text-primary); font-size: 14px; }
+  .nota {
+    display: flex;
+    gap: 6px;
+    align-items: flex-start;
+    margin: 0 0 8px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    .material-icons { font-size: 16px; color: var(--status-warning); }
+  }
+}
+
+.campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0 16px;
+  margin-top: 12px;
+
+  .largo { grid-column: 1 / -1; }
   .placa input {
-    font-size: 1.4rem;
+    font-size: 1.3rem;
     font-weight: 700;
     letter-spacing: 2px;
     text-transform: uppercase;
@@ -159,20 +211,50 @@ td.saida { color: var(--text-secondary); }
   }
 }
 
-.servicos { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.lgpd {
+  margin-top: 8px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--bg-tertiary);
+
+  .form-group { max-width: 420px; }
+  .aviso-texto { margin: 0 0 10px; white-space: pre-line; font-size: 13px; color: var(--text-primary); }
+}
+
+.check {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  input { margin-top: 2px; flex-shrink: 0; }
+}
+
+.prazo { color: var(--text-tertiary); font-size: 12px; }
+
+.dados-completos {
+  margin-top: 16px;
+  summary { cursor: pointer; font-weight: 600; color: var(--brand-primary); margin-bottom: 12px; }
+}
+
+.servicos { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
 .servico {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 12px 14px;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 10px 12px;
   border: 2px solid var(--border-secondary);
   border-radius: 10px;
+  background: var(--bg-primary);
   cursor: pointer;
   color: var(--text-primary);
+  text-align: left;
+  font: inherit;
 
-  input { position: absolute; opacity: 0; pointer-events: none; }
-  .servico-topo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .servico-topo b { margin-left: auto; white-space: nowrap; }
+  .servico-topo { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13px; }
+  b { font-size: 14px; white-space: nowrap; color: var(--brand-primary); }
   em {
     font-style: normal;
     font-size: 11px;
@@ -267,6 +349,9 @@ td.saida { color: var(--text-secondary); }
 tr.clicavel { cursor: pointer; }
 tr.selecionada td { background: var(--bg-tertiary); }
 td.acao { width: 32px; color: var(--text-tertiary); }
+// Chave de NF-e (44 numeros) e chassi nao podem alargar a tabela.
+td.alvo { max-width: 220px; word-break: break-all; }
+.resultado-topo h2 { overflow-wrap: anywhere; min-width: 0; }
 
 .tag-teste {
   margin-left: 6px;
@@ -294,7 +379,8 @@ td.acao { width: 32px; color: var(--text-tertiary); }
 @media (max-width: 768px) {
   .painel-box { padding: 16px; }
   .resumo { grid-template-columns: repeat(2, minmax(0, 1fr)); .card { padding: 12px 14px; strong { font-size: 1.05rem; } } }
-  .consulta-form { grid-template-columns: 1fr; }
+  .servicos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .campos { grid-template-columns: 1fr; }
   .consulta-acoes .btn-primary { width: 100%; justify-content: center; }
   .pacote { min-width: 0; flex: 1 1 calc(50% - 10px); }
   td.acao { display: none !important; }

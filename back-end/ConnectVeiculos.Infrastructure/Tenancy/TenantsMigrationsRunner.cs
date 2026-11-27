@@ -191,7 +191,15 @@ namespace ConnectVeiculos.Infrastructure.Tenancy
                     CrcDescricao TEXT NULL,
                     CrcCriadoEm TEXT NOT NULL
                 );
-                CREATE INDEX IF NOT EXISTS IX_CreditoConsulta_TenId ON CreditoConsulta(TenId);";
+                CREATE INDEX IF NOT EXISTS IX_CreditoConsulta_TenId ON CreditoConsulta(TenId);
+                CREATE TABLE IF NOT EXISTS PrecoConsulta (
+                    PcsId INTEGER PRIMARY KEY AUTOINCREMENT,
+                    PcsServico TEXT NOT NULL,
+                    PlaId INTEGER NULL,
+                    PcsCentavos INTEGER NOT NULL,
+                    PcsAtualizadoEm TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS IX_PrecoConsulta_PcsServico_PlaId ON PrecoConsulta(PcsServico, PlaId);";
                 crcCmd.ExecuteNonQuery();
             }
 
